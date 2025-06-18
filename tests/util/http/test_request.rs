@@ -1,3 +1,4 @@
+use console::style;
 use http_body_util::{BodyExt, Empty, Full};
 use hyper::{
     body::{Bytes, Incoming},
@@ -78,7 +79,7 @@ impl TestRequest {
         let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await.unwrap();
         tokio::task::spawn(async move {
             if let Err(err) = conn.await {
-                log::error!("connection failed: {:?}", err);
+                log::error!("{} to connect to server: {:?}", style("failed").red(), err);
             }
         });
 

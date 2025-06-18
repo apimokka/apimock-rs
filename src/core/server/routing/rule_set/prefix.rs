@@ -13,13 +13,15 @@ pub struct Prefix {
 
 impl Prefix {
     /// validate
-    pub fn validate(&self) -> bool {
+    pub fn validate(&self, rule_set_idx: usize) -> bool {
         let respond_dir_prefix_validate =
             if let Some(respond_dir_prefix) = self.respond_dir_prefix.as_ref() {
                 let exists = Path::new(respond_dir_prefix.as_str()).exists();
                 if !exists {
                     log::error!(
-                        "directory `{}` does not exist",
+                        "{} of prefix (rule set #{}):\n`{}`",
+                        style("directory not found").red(),
+                        rule_set_idx,
                         self.respond_dir_prefix.clone().unwrap().as_str()
                     );
                 }

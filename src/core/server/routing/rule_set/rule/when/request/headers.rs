@@ -1,3 +1,4 @@
+use console::style;
 use hyper::{header::HeaderValue, HeaderMap};
 use serde::Deserialize;
 
@@ -32,11 +33,12 @@ impl Headers {
                     Ok(x) => x,
                     Err(err) => {
                         log::error!(
-                            "failed to get request header value by key `{}` (rule #{} in rule set #{}) ({})",
-                            matcher_header_key,
+                            "{} to get request header value by key (rule #{} in rule set #{}):\n`{}`\n({})",
+                            style("failed").red(),
                             rule_idx + 1,
                             rule_set_idx + 1,
-                            err
+                            matcher_header_key,
+                            err,
                         );
                         return true;
                     }

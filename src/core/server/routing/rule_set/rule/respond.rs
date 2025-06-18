@@ -1,3 +1,4 @@
+use console::style;
 use hyper::StatusCode;
 use serde::Deserialize;
 use util::full_file_path;
@@ -47,7 +48,8 @@ impl Respond {
             let full_file_path = full_file_path(file_path.as_str(), dir_prefix);
             if full_file_path.is_none() {
                 log::error!(
-                    "{} (prefix = {}) is missing",
+                    "{}:\n{} (prefix = {})",
+                    style("file not found").red(),
                     self.file_path.clone().unwrap_or_default().as_str(),
                     dir_prefix
                 );
@@ -95,7 +97,8 @@ impl Respond {
             self.file_path.is_none() && self.text.is_none() && self.status.is_none();
         if all_missing_of_file_path_text_status {
             log::error!(
-                "require at least either of file_path, text or status (rule #{} in rule set #{})",
+                "{} at least either of: file_path, text or status (rule #{} in rule set #{})",
+                style("required").red(),
                 rule_idx + 1,
                 rule_set_idx + 1
             );
@@ -105,7 +108,8 @@ impl Respond {
         let duplicate_file_path_text = self.file_path.is_some() && self.text.is_some();
         if duplicate_file_path_text {
             log::error!(
-                "cannot set at both file_path and text (rule #{} in rule set #{})",
+                "{} set at both file_path and text (rule #{} in rule set #{})",
+                style("cannot").red(),
                 rule_idx + 1,
                 rule_set_idx + 1
             );
@@ -115,7 +119,8 @@ impl Respond {
         let file_path_with_status = self.file_path.is_some() && self.status.is_some();
         if file_path_with_status {
             log::error!(
-                "status only supports text. file_path is not (rule #{} in rule set #{})",
+                "{} use status with file_path. only with text (rule #{} in rule set #{})",
+                style("cannot").red(),
                 rule_idx + 1,
                 rule_set_idx + 1
             );
@@ -157,10 +162,11 @@ fn file_path_validate(
     let ret = p.exists();
     if !ret {
         log::error!(
-            "`{}` does not exist (rule #{} in rule set #{})",
-            p.to_str().unwrap_or_default(),
+            "{} (rule #{} in rule set #{}):\n`{}`",
+            style("file not found").red(),
             rule_idx + 1,
-            rule_set_idx + 1
+            rule_set_idx + 1,
+            p.to_str().unwrap_or_default(),
         );
     }
     ret

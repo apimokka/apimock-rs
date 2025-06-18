@@ -1,3 +1,4 @@
+use console::style;
 use http_method::HttpMethod;
 use serde::Deserialize;
 
@@ -68,7 +69,12 @@ impl Request {
             && self.headers.is_none()
             && self.body.is_none()
         {
-            log::error!("either of url_path, method, headers or body in when.request is required (rule #{} in rule set #{})", rule_idx + 1, rule_set_idx + 1);
+            log::error!(
+                "{} in when.request at least either of: url_path, method, headers or body (rule #{} in rule set #{})",
+                style("required").red(),
+                rule_idx + 1,
+                rule_set_idx + 1
+            );
             return false;
         }
 

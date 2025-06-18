@@ -122,8 +122,8 @@ impl ServiceConfig {
                 .iter()
                 .enumerate()
                 .all(|(rule_set_idx, rule_set)| {
-                    let prefix_validate =
-                        rule_set.prefix.is_none() || rule_set.prefix.as_ref().unwrap().validate();
+                    let prefix_validate = rule_set.prefix.is_none()
+                        || rule_set.prefix.as_ref().unwrap().validate(rule_set_idx);
 
                     let default_validate =
                         rule_set.default.is_none() || rule_set.default.as_ref().unwrap().validate();
@@ -151,7 +151,8 @@ impl ServiceConfig {
         let fallback_respond_dir_validate = Path::new(self.fallback_respond_dir.as_str()).exists();
         if !fallback_respond_dir_validate {
             log::error!(
-                "fallback_respond_dir is invalid: {}",
+                "{} fallback_respond_dir: {}",
+                style("invalid").red(),
                 self.fallback_respond_dir
             );
         }

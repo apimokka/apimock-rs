@@ -82,7 +82,7 @@ impl Server {
                     )
                     .await
                 {
-                    log::error!("error serving connection: {:?}", err);
+                    log::error!("{} to build connection: {:?}", style("failed").red(), err);
                 }
             });
         }
