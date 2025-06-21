@@ -1,9 +1,19 @@
+use std::sync::LazyLock;
+
 use hyper::StatusCode;
 
 use crate::util::{
     http::{test_request::TestRequest, test_response::response_body_str},
     test_setup::TestSetup,
 };
+
+const NEW_LINE: &str = if cfg!(windows) { "\r\n" } else { "\n" };
+static EXPECT: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        "<!DOCTYPE html>{}Hello from API mock (apimock-rs)",
+        NEW_LINE
+    )
+});
 
 #[tokio::test]
 async fn match_dyn_data_dir_html_1() {
@@ -19,10 +29,7 @@ async fn match_dyn_data_dir_html_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(
-        body_str.as_str(),
-        "<!DOCTYPE html>\nHello from API mock (apimock-rs)"
-    );
+    assert_eq!(body_str.as_str(), *EXPECT);
 }
 
 #[tokio::test]
@@ -39,10 +46,7 @@ async fn match_dyn_data_dir_html_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(
-        body_str.as_str(),
-        "<!DOCTYPE html>\nHello from API mock (apimock-rs)"
-    );
+    assert_eq!(body_str.as_str(), *EXPECT);
 }
 
 #[tokio::test]
@@ -59,8 +63,5 @@ async fn match_dyn_data_dir_html_3() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(
-        body_str.as_str(),
-        "<!DOCTYPE html>\nHello from API mock (apimock-rs)"
-    );
+    assert_eq!(body_str.as_str(), *EXPECT);
 }
