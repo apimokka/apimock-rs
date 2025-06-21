@@ -21,6 +21,7 @@ pub fn text_file_content_type(ext: impl AsRef<str>) -> String {
         "html" => "text/html; charset=utf-8",
         "css" => "text/css; charset=utf-8",
         "js" => "application/javascript; charset=utf-8",
+        "svg" => "image/svg+xml",
         _ => "text/plain; charset=utf-8",
     };
     ret.to_owned()
@@ -51,7 +52,6 @@ pub fn binary_content_type(file_path: &str) -> String {
         "gif" => "image/gif",
         "bmp" => "image/bmp",
         "webp" => "image/webp",
-        "svg" => "image/svg+xml",
 
         // - audio
         "mp3" => "audio/mpeg",
