@@ -22,13 +22,24 @@ return #{ "file_path": "some-dir/file.ext" };
 
 The server will send an `application/json` response. The associated value will be used directly as the HTTP response body. This allows you to generate dynamic JSON responses within your Rhai script.
 
-#### Example
+#### Examples
 
 ```js
 return #{ "json": "{ \"myjsonkey\": \"myjsonvalue\" }" };
 ```
 
 *Note: Remember to properly escape double quotes within your JSON string.*
+
+```js
+let json_str = "{ \"greetings\": \"Hello, world.\" }";
+
+// debug print:
+print(url_path);
+
+if url_path == "/middleware-test/map/json" {
+    return #{ "json": json_str };
+}
+```
 
 ### `text`
 

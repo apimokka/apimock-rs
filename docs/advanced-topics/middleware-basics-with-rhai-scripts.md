@@ -12,6 +12,18 @@ Our goal is to minimize the need for custom script creation and maintenance. We 
 
 Therefore, **we generally do not recommend using middlewares** unless you have a very specific and complex requirement that cannot be met by combining rules and operators.
 
+## File content response - `return` Statement
+
+Middleware scripts primarily return a file path string. If a middleware returns a value, the server will use it as the resource file path for response.
+
+```rust
+return "path/to/response.json";
+```
+
+### When the file path is relative
+
+it's resolved with **respect to the `.rhai` file's parent directory**.
+
 ## Variable Definition
 
 ```js
@@ -42,14 +54,6 @@ switch (url_path) {
     },
     _ => ()
 }
-```
-
-## Return Statement
-
-Middleware scripts primarily return a file path string. If a middleware returns a value, the server will use it as the response.
-
-```rust
-return "path/to/response.json";
 ```
 
 ## To learn more about Rhai's syntax and capabilities

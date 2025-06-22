@@ -61,6 +61,7 @@ flowchart TD
             MWR4(valid json ?)
             MWR5[return response]
             MWR6[error response]
+            MWRZ(("continue"))
         end
 
         Z(("continue"))
@@ -74,6 +75,7 @@ flowchart TD
     MWR2 -->|file_path| MWR3
     MWR2 -->|json| MWR4
     MWR2 -->|text| MWR5
+    MWR2 -->|"(none)"| MWRZ
     MWR3 -->|Yes| MWR5
     MWR3 -->|No| MWR6
     MWR4 -->|Yes| MWR5
