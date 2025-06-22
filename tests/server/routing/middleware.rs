@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[tokio::test]
-async fn middleware_url_path_handled() {
+async fn middleware_url_path_handled_string() {
     let port = setup().await;
 
     let response = TestRequest::default("/middleware-test", port).send().await;
@@ -22,7 +22,70 @@ async fn middleware_url_path_handled() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"thisIs\":\"missedByConfigToml\"}");
+    assert_eq!(
+        body_str.as_str(),
+        "{\"discovery\":\"reached by rhai script !\"}"
+    );
+}
+
+#[tokio::test]
+async fn middleware_url_path_handled_map_file_path() {
+    let port = setup().await;
+
+    let response = TestRequest::default("/middleware-test/map/file-path", port)
+        .send()
+        .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    assert_eq!(
+        response.headers().get("content-type").unwrap(),
+        "application/json"
+    );
+
+    let body_str = response_body_str(response).await;
+    assert_eq!(
+        body_str.as_str(),
+        "{\"discovery\":\"reached by rhai script !\"}"
+    );
+}
+
+#[tokio::test]
+async fn middleware_url_path_handled_map_json() {
+    let port = setup().await;
+
+    let response = TestRequest::default("/middleware-test/map/json", port)
+        .send()
+        .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    assert_eq!(
+        response.headers().get("content-type").unwrap(),
+        "application/json"
+    );
+
+    let body_str = response_body_str(response).await;
+    assert_eq!(body_str.as_str(), "{\"greetings\":\"Hello, world.\"}");
+}
+
+#[tokio::test]
+async fn middleware_url_path_handled_map_text() {
+    let port = setup().await;
+
+    let response = TestRequest::default("/middleware-test/map/text", port)
+        .send()
+        .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    assert_eq!(
+        response.headers().get("content-type").unwrap(),
+        "text/plain; charset=utf-8"
+    );
+
+    let body_str = response_body_str(response).await;
+    assert_eq!(body_str.as_str(), "Hello, world.");
 }
 
 #[tokio::test]

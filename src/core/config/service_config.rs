@@ -10,11 +10,8 @@ mod util;
 
 use super::constant::{PRINT_DELIMITER, SERVICE_DEFAULT_FALLBACK_RESPOND_DIR};
 use crate::core::server::{
-    middleware::Middleware,
-    parsed_request::ParsedRequest,
-    response::{error_response::internal_server_error_response, file_response::FileResponse},
-    routing::rule_set::RuleSet,
-    types::BoxBody,
+    middleware::middleware_handler::MiddlewareHandler, parsed_request::ParsedRequest,
+    routing::rule_set::RuleSet, types::BoxBody,
 };
 
 /// verbose logs
@@ -30,7 +27,7 @@ pub struct ServiceConfig {
     #[serde(rename = "middlewares")]
     pub middlewares_file_paths: Option<Vec<String>>,
     #[serde(skip)]
-    pub middlewares: Vec<Middleware>,
+    pub middlewares: Vec<MiddlewareHandler>,
 
     pub fallback_respond_dir: String,
 }
@@ -41,58 +38,18 @@ impl ServiceConfig {
         &self,
         parsed_request: &ParsedRequest,
     ) -> Option<Result<hyper::Response<BoxBody>, hyper::http::Error>> {
-        for middleware in self.middlewares.iter() {
-            let middleware_response_file_path = match middleware.handle(
-                parsed_request.url_path.as_str(),
-                parsed_request.body_json.as_ref(),
-            ) {
-                Some(x) => x,
-                None => continue,
-            };
-
-            let response_file_path =
-                if Path::new(middleware_response_file_path.as_str()).is_absolute() {
-                    middleware_response_file_path
-                } else {
-                    let middleware_dir_path = Path::new(middleware.file_path.as_str()).parent();
-
-                    let joined_file_path = match middleware_dir_path {
-                        Some(x) => x.join(middleware_response_file_path.as_str()),
-                        None => {
-                            return Some(internal_server_error_response(
-                                &format!(
-                                    "failed to get middleware parent dir: {}",
-                                    middleware.file_path.as_str(),
-                                ),
-                                &parsed_request.component_parts.headers,
-                            ))
-                        }
-                    };
-
-                    match joined_file_path.to_str() {
-                        Some(x) => x.to_owned(),
-                        None => {
-                            return Some(internal_server_error_response(
-                                &format!(
-                                    "middleware response file path is invalid: {}/{}",
-                                    middleware.file_path.as_str(),
-                                    middleware_response_file_path
-                                ),
-                                &parsed_request.component_parts.headers,
-                            ))
-                        }
-                    }
-                };
-
-            return Some(
-                FileResponse::new(
-                    response_file_path.as_str(),
-                    None,
+        for middleware_handler in self.middlewares.iter() {
+            match middleware_handler
+                .handle(
+                    parsed_request.url_path.as_str(),
+                    parsed_request.body_json.as_ref(),
                     &parsed_request.component_parts.headers,
                 )
-                .file_content_response()
-                .await,
-            );
+                .await
+            {
+                Some(x) => return Some(x),
+                None => continue,
+            };
         }
         None
     }
