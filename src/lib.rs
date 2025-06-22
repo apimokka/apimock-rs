@@ -1,4 +1,4 @@
-//! A developer-friendly, robust and functional HTTP mock server
+//! A developer-friendly, featherlight and functional HTTP mock server
 //! built in Rust, based on [hyper](https://hyper.rs/) and [tokio](https://tokio.rs/).
 
 pub mod core;

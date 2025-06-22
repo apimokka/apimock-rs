@@ -2,7 +2,7 @@
 
 ## Vision
 
-Aims to be a developer-friendly, robust and functional HTTP mock server which doesn't require complicated configuration and accepts rich customization around routing.
+Aims to be a developer-friendly, featherlight and functional HTTP mock server which doesn't require complicated configuration and accepts rich customization around routing.
 
 ### Designed in mind with
 
