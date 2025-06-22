@@ -26,7 +26,7 @@ A: You can use `url_path`, `method`, `headers` and `body.json` as conditions, wh
 ## Response via script
 
 **Q: Can I dynamically generate responses ?**    
-A: Yes, partially supported with rhai script to determine response file due to request condition. However, static, file-based or rule-based responses are expected to fulfill most cases.
+A: Yes, supported with rhai script to determine response file due to request condition. Moreover, custom JSON or text response body string is directly specified in script. Besides, static, file-based or rule-based responses are expected to fulfill most cases.
 
 ## Configuration
 
