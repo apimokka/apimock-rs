@@ -52,12 +52,15 @@ flowchart TD
 
     subgraph MW[for each middleware]
         MW1[run rhai]
-        MW2(file path returned ?)
+        MW2(response resource returned ?)
 
         subgraph MWR[return response]
-            MWR1(content got ?)
-            MWR2[return response]
-            MWR3[error response]
+            MWR1(resource type ?)
+            MWR2(which map key found ?)
+            MWR3(file content got ?)
+            MWR4(valid json ?)
+            MWR5[return response]
+            MWR6[error response]
         end
 
         Z(("continue"))
@@ -66,8 +69,15 @@ flowchart TD
     MW1 -->MW2
     MW2 -->|Yes| MWR
     MW2 -->|No| Z
-    MWR1 -->|Yes| MWR2
-    MWR1 -->|No| MWR3
+    MWR1 -->|string| MWR3
+    MWR1 -->|map| MWR2
+    MWR2 -->|file_path| MWR3
+    MWR2 -->|json| MWR4
+    MWR2 -->|text| MWR5
+    MWR3 -->|Yes| MWR5
+    MWR3 -->|No| MWR6
+    MWR4 -->|Yes| MWR5
+    MWR4 -->|No| MWR6
 ```
 
 ## Rule-based routing

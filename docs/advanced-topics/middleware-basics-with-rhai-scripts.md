@@ -1,12 +1,16 @@
-# Middleware with Rhai scripts
+# Middleware: Basics with Rhai scripts
 
-While your mock server supports **middlewares** written using **Rhai scripts** for highly dynamic scenarios, our goal is to minimize the need for custom script creation and maintenance. We believe that **file-based and rule-based matching definitions can cover almost all practical needs** you'll encounter.
+Our mock server supports **middlewares** written using **Rhai scripts** for highly dynamic scenarios.
 
-Therefore, **we generally do not recommend using middlewares** unless you have a very specific and complex requirement that cannot be met by combining rules and operators.
-
-However, for those unique cases, Rhai is a powerful, embedded scripting language that feels very similar to JavaScript or Rust.
+For some unique cases, Rhai is a powerful, embedded scripting language that feels very similar to JavaScript or Rust.
 
 Here are some basic Rhai code examples you might use.
+
+## Note: File-based and rule-based routing is preferred
+
+Our goal is to minimize the need for custom script creation and maintenance. We believe that **file-based and rule-based matching definitions can cover almost all practical needs** you'll encounter.
+
+Therefore, **we generally do not recommend using middlewares** unless you have a very specific and complex requirement that cannot be met by combining rules and operators.
 
 ## Variable Definition
 

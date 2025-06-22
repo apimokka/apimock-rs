@@ -1,6 +1,6 @@
 {
   "name": "@apimock-rs/bin-win32-x64-msvc",
-  "version": "4.2.3",
+  "version": "4.3.0",
   "os": [
     "win32"
   ],
@@ -10,7 +10,7 @@
   "files": [
     "apimock.exe"
   ],
-  "description": "A developer-friendly, robust and functional HTTP mock server built in Rust.",
+  "description": "A developer-friendly, featherlight and functional HTTP mock server built in Rust.",
   "author": "nabbisen<nabbisen@scqr.net>",
   "license": "Apache-2.0",
   "repository": {

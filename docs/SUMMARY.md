@@ -28,7 +28,8 @@
             - [`when` table](./advanced-topics/rule-set-config-structure/rules/when.md)
             - [`respond` table](./advanced-topics/rule-set-config-structure/rules/respond.md)
     - [Configuration overview](./advanced-topics/configuration-overview.md)
-    - [Middleware with Rhai scripts](./advanced-topics/middleware-with-rhai-scripts.md)
+    - [Middleware 1](./advanced-topics/middleware-basics-with-rhai-scripts.md)
+    - [Middleware 2](./advanced-topics/middleware-map-based-response-variation.md)
 
 ---
 

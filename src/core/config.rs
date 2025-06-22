@@ -7,7 +7,7 @@ use toml;
 
 use std::{fs, path::Path};
 
-use crate::core::server::middleware::Middleware;
+use crate::core::server::middleware::middleware_handler::MiddlewareHandler;
 
 use super::{
     server::routing::rule_set::RuleSet, util::path::current_dir_to_file_parent_dir_relative_path,
@@ -116,7 +116,7 @@ impl Config {
     }
 
     /// set middlewares from middlewares file paths
-    fn middlewares_from_file_paths(&mut self) -> Result<Vec<Middleware>, String> {
+    fn middlewares_from_file_paths(&mut self) -> Result<Vec<MiddlewareHandler>, String> {
         let relative_dir_path = self.current_dir_to_parent_dir_relative_path();
 
         match self.service.middlewares_file_paths.as_ref() {
@@ -135,7 +135,7 @@ impl Config {
                         .as_str(),
                     );
 
-                    Middleware::new(middlware_file_path)
+                    MiddlewareHandler::new(middlware_file_path)
                 })
                 .collect(),
             None => Ok(vec![]),
