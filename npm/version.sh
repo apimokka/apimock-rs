@@ -35,9 +35,14 @@ for dir in */; do
 done
 
 # (4) Cargo.toml を同期
+CARGO_TOML=../Cargo.toml
+CARGO_LOCK=../Cargo.lock
+
 update_cargo_toml() {
-  FILE="$1"
-  echo "Updating $FILE to version $VERSION"
+  _CARGO_TOML="$1"
+  _CARGO_LOCK="$2"
+
+  echo "Updating $_CARGO_TOML to version $VERSION"
 
   # version = "..." を書き換える（[package] セクション内に限る）
   awk -v ver="$VERSION" '
@@ -49,9 +54,11 @@ update_cargo_toml() {
       next
     }
     { print }
-  ' "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
+  ' "$_CARGO_TOML" > "$_CARGO_TOML.tmp" && mv "$_CARGO_TOML.tmp" "$_CARGO_TOML"
+
+  git add "$_CARGO_TOML" "$_CARGO_LOCK"
 }
 
-if [ -f ../Cargo.toml ]; then
-  update_cargo_toml ../Cargo.toml
+if [ -f $CARGO_TOML ]; then
+  update_cargo_toml "$CARGO_TOML" "$CARGO_LOCK"
 fi

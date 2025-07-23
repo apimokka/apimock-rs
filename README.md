@@ -50,7 +50,7 @@ For more details, **🧭 check out [the docs](https://apimokka.github.io/apimock
 
 ### 💻️ GUI wrapper (development in progress)
 
-[apimokka](https://github.com/apimokka/apimokka), featherlight GUI bundle, will be also available.
+[apimokka](https://github.com/apimokka/apimokka), an optimized GUI bundle, will be also available.
 
 ---
 
