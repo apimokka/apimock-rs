@@ -4,7 +4,6 @@ authors = ["nabbisen<nabbisen@scqr.net>"]
 description = "API mock (apimock-rs) Docs: A developer-friendly, featherlight and functional HTTP mock server built in Rust."
 
 language = "en"
-multilingual = false
 
 src = "."
 

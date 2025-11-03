@@ -1,6 +1,6 @@
 {
   "name": "apimock-rs",
-  "version": "4.3.4",
+  "version": "4.3.5",
   "description": "A developer-friendly, featherlight and functional HTTP mock server built in Rust.",
   "author": "nabbisen<nabbisen@scqr.net>",
   "license": "Apache-2.0",
@@ -19,9 +19,9 @@
     "postinstall": "node postinstall.js"
   },
   "optionalDependencies": {
-    "@apimock-rs/bin-linux-x64-gnu": "4.3.4",
-    "@apimock-rs/bin-darwin-arm64": "4.3.4",
-    "@apimock-rs/bin-win32-x64-msvc": "4.3.4"
+    "@apimock-rs/bin-linux-x64-gnu": "4.3.5",
+    "@apimock-rs/bin-darwin-arm64": "4.3.5",
+    "@apimock-rs/bin-win32-x64-msvc": "4.3.5"
   },
   "keywords": [
     "api",
