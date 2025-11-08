@@ -5,6 +5,6 @@ async fn main() {
         Some(x) => x,
         None => return (),
     };
-    let app = apimock::run(&env_args).await;
+    let app = apimock::new(&env_args).await;
     app.server.start().await
 }
