@@ -8,7 +8,7 @@
   Defines configuration structures for customizable parameters like the server port, root path, logging levels, etc.
 
 - **`src/server.rs`**  
-  The HTTP server entry point powered by `hyper`. It handles incoming requests and delegates them to the core logic.
+  The HTTP(S) server entry point powered by `hyper`. It handles incoming requests and delegates them to the core logic.
 
 - **`src/core/server/routing.rs`**  
   Contains core logic including request routing, matching rules, response rendering, and script evaluation.
