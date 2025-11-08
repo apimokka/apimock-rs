@@ -35,6 +35,10 @@ tokio = { version = "^1.44", features = ["full"] }
 hyper = { version = "1", features = ["server", "http1", "http2"] }
 hyper-util = { version = "0", features = ["server", "http1", "http2", "tokio"] }
 http-body-util = "0"
+
+rustls = "0"
+tokio-rustls = "0"
+
 log = "0"
 console = "0"
 serde = { version = "1", features = ["derive"] }

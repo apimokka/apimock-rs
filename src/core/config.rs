@@ -161,14 +161,40 @@ impl Config {
         self.service.fallback_respond_dir = fallback_respond_dir.to_owned();
     }
 
-    /// address listened to
-    pub fn listener_address(&self) -> String {
+    /// address http server listens to
+    pub fn listener_http_addr(&self) -> Option<String> {
+        let https_is_active = self.listener_https_addr().is_some();
+        if https_is_active {
+            let port_is_single = self.listener.clone().unwrap().tls.unwrap().port.is_none();
+            if port_is_single {
+                return None;
+            }
+        }
+
         let listener = if let Some(listener) = self.listener.as_ref() {
             listener
         } else {
             &ListenerConfig::default()
         };
-        format!("{}:{}", listener.ip_address, listener.port)
+
+        Some(format!("{}:{}", listener.ip_address, listener.port))
+    }
+
+    /// address https server listens to
+    pub fn listener_https_addr(&self) -> Option<String> {
+        let listener = if let Some(listener) = self.listener.clone() {
+            listener
+        } else {
+            return None;
+        };
+
+        if let Some(tls) = listener.tls {
+            if let Some(port) = tls.port {
+                return Some(format!("{}:{}", listener.ip_address, port));
+            }
+        }
+
+        Some(format!("{}:{}", listener.ip_address, listener.port))
     }
 
     /// update `fallback_respond_dir`
@@ -176,9 +202,18 @@ impl Config {
 
     /// validate settings in app config
     ///
-    /// note: as to ListenerConfig validation, tcp listener is expected to run afterward instead
     /// note: none requires validation in LogConfig
     fn validate(&self) -> bool {
+        if let Some(listener) = self.listener.as_ref() {
+            if !listener.validate() {
+                return false;
+            }
+
+            if self.listener_http_addr().is_none() && self.listener_https_addr().is_none() {
+                log::error!("at least one listener (http or https) is required");
+                return false;
+            }
+        }
         self.service.validate()
     }
 
@@ -210,6 +245,7 @@ impl Default for Config {
             listener: Some(ListenerConfig {
                 ip_address: LISTENER_DEFAULT_IP_ADDRESS.to_owned(),
                 port: LISTENER_DEFAULT_PORT,
+                tls: None,
             }),
             log: Some(LogConfig::default()),
             service: ServiceConfig::default(),
