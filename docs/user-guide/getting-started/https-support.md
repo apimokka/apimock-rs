@@ -17,8 +17,8 @@ How they work is:
 
 | `listener.tls.port` condition | result |
 | --- | --- |
-| Not specified (omitted) | `listener.port` is used as HTTPS port. |
-| Specified | `listener.tls.port` is used as HTTPS port. `listener.port` is as HTTP. |
+| Not specified (omitted) | `listener.port` is used as HTTPS port.<br>Only HTTPS listener will start. |
+| Specified | `listener.tls.port` is used as HTTPS port. `listener.port` is as HTTP.<br>Both of HTTP and HTTPS listeners will start. |
 
 ## Configuration example
 
@@ -29,7 +29,7 @@ How they work is:
 + [listener.tls]
 + cert = "./cert.pem"
 + key = "./key.pem"
-+ # port = 3002 # if omit, only https listener will start. if specified, both http and https listeners will start.
++ # port = 3002
 ```
 
 ### `openssl` command lines to generate private key and certificate
