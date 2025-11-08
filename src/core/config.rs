@@ -189,12 +189,15 @@ impl Config {
         };
 
         if let Some(tls) = listener.tls {
-            if let Some(port) = tls.port {
-                return Some(format!("{}:{}", listener.ip_address, port));
-            }
+            let port = if let Some(port) = tls.port {
+                port
+            } else {
+                listener.port
+            };
+            return Some(format!("{}:{}", listener.ip_address, port));
         }
 
-        Some(format!("{}:{}", listener.ip_address, listener.port))
+        None
     }
 
     /// update `fallback_respond_dir`
