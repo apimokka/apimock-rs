@@ -36,8 +36,8 @@ hyper = { version = "1", features = ["server", "http1", "http2"] }
 hyper-util = { version = "0", features = ["server", "http1", "http2", "tokio"] }
 http-body-util = "0"
 
-rustls = "0"
-tokio-rustls = "0"
+rustls = { version = "0", default-features = false, features = ["log", "ring"] }
+tokio-rustls = { version = "0", default-features = false, features = ["logging", "ring", "tls12"] }
 
 log = "0"
 console = "0"
