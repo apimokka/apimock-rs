@@ -147,8 +147,7 @@ impl Server {
         let mut config = ServerConfig::builder()
             .with_no_client_auth()
             .with_single_cert(certs, key)
-            .map_err(|e| format!("bad certificate/key configuration: {:?}", e))
-            .expect("failed ...");
+            .expect("failed to get tls certs / key");
 
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
 
