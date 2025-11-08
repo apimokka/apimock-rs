@@ -1,6 +1,6 @@
 [package]
 name = "apimock"
-version = "4.3.6"
+version = "4.4.0"
 edition = "2021"
 
 description = "A developer-friendly, featherlight and functional HTTP mock server built in Rust."
