@@ -38,7 +38,7 @@ A: Yes. Two ways: run with `-p` | `--port` argument followed by specific port nu
 **Q: Can I use https protocol ?**    
 A: Yes.
 
-**Q: Can I build servers to accept both protocols of http and https ?**    
+**Q: Can I build servers to accept both of http and https ?**    
 A: Yes.
 
 The detail about HTTPS support is [here](./getting-started/https-support.md).
