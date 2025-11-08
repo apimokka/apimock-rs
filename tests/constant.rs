@@ -21,4 +21,10 @@ pub mod root_config_dir {
     pub const RULE_RESPOND: &str = "apimock-rule-sets/server/routing/rule_set/rule/respond";
     pub const MIDDLEWARE: &str = "apimock-middleware";
     pub const CONFIG_FREE_ENV: &str = "apimock-rule-sets/@extra-test-cases/config-free-env";
+    pub const TLS: &str = "tls";
+}
+
+pub mod tls {
+    pub const CERT_FILE_PATH: &str = "tests/fixtures/tmp/cert.pem";
+    pub const KEY_FILE_PATH: &str = "tests/fixtures/tmp/key.pem";
 }

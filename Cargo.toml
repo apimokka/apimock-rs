@@ -49,5 +49,6 @@ csv = "1"
 rhai = { version = "1", features = ["sync", "serde"] }
 
 [dev-dependencies]
-hyper = { version = "1", features = ["client"] }
-rand = "0"
+rand = "^0"
+reqwest = "^0"
+rcgen = "^0"
