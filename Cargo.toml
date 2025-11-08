@@ -1,6 +1,6 @@
 [package]
 name = "apimock"
-version = "4.3.6"
+version = "4.4.0"
 edition = "2021"
 
 description = "A developer-friendly, featherlight and functional HTTP mock server built in Rust."
@@ -35,6 +35,10 @@ tokio = { version = "^1.44", features = ["full"] }
 hyper = { version = "1", features = ["server", "http1", "http2"] }
 hyper-util = { version = "0", features = ["server", "http1", "http2", "tokio"] }
 http-body-util = "0"
+
+rustls = "0"
+tokio-rustls = "0"
+
 log = "0"
 console = "0"
 serde = { version = "1", features = ["derive"] }
@@ -45,5 +49,6 @@ csv = "1"
 rhai = { version = "1", features = ["sync", "serde"] }
 
 [dev-dependencies]
-hyper = { version = "1", features = ["client"] }
-rand = "0"
+rand = "^0"
+reqwest = "^0"
+rcgen = "^0"

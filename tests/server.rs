@@ -4,5 +4,7 @@ pub mod constant;
 mod response;
 #[path = "server/routing.rs"]
 mod routing;
+#[path = "server/tls.rs"]
+pub mod tls;
 #[path = "util.rs"]
 pub mod util;

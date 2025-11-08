@@ -11,8 +11,10 @@ use hyper_util::{
     server::conn::auto::Builder,
 };
 use response_handler::default_response_headers;
+use rustls::ServerConfig;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
+use tokio_rustls::TlsAcceptor;
 
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::Arc;
@@ -27,7 +29,10 @@ mod routing_analysis;
 pub mod types;
 
 use crate::core::app::app_state::AppState;
-use crate::core::app::constant::APP_NAME;
+use crate::core::{
+    app::constant::APP_NAME,
+    util::tls::{load_certs, load_private_key},
+};
 use parsed_request::ParsedRequest;
 use response::error_response::internal_server_error_response;
 use routing::dyn_route::dyn_route_content;
@@ -35,32 +40,70 @@ use types::BoxBody;
 
 /// server
 pub struct Server {
-    pub addr: SocketAddr,
     pub app_state: AppState,
+    pub http_addr: Option<SocketAddr>,
+    pub https_addr: Option<SocketAddr>,
 }
 
 impl Server {
+    /// new
     pub async fn new(app_state: AppState) -> Self {
-        let addr = app_state
-            .config
-            .listener_address()
-            .to_socket_addrs()
-            .expect("invalid listend address or port")
-            .next()
-            .expect("failed to resolve address");
+        let http_addr_str = app_state.config.listener_http_addr();
+        let https_addr_str = app_state.config.listener_https_addr();
 
-        Server { addr, app_state }
+        let http_addr = if let Some(http_addr_str) = http_addr_str {
+            Some(
+                http_addr_str
+                    .to_socket_addrs()
+                    .expect("invalid listend address or port")
+                    .next()
+                    .expect("failed to resolve address"),
+            )
+        } else {
+            None
+        };
+
+        let https_addr = if let Some(https_addr_str) = https_addr_str {
+            Some(
+                https_addr_str
+                    .to_socket_addrs()
+                    .expect("invalid listend address or port")
+                    .next()
+                    .expect("failed to resolve address"),
+            )
+        } else {
+            None
+        };
+
+        Server {
+            http_addr,
+            https_addr,
+            app_state,
+        }
     }
 
-    /// app start
+    /// app starts
     pub async fn start(&self) {
-        let listener = TcpListener::bind(self.addr)
+        let http = self.http_start();
+        let https = self.https_start();
+        tokio::join!(http, https);
+    }
+
+    /// http listener server starts
+    async fn http_start(&self) {
+        let addr = if let Some(addr) = self.http_addr {
+            addr
+        } else {
+            return;
+        };
+
+        let listener = TcpListener::bind(addr)
             .await
             .expect("tcp listener failed to bind address");
 
         log::info!(
             "Greetings from {APP_NAME} !!\nListening on {} ...\n",
-            style(format!("http://{}", self.addr)).cyan()
+            style(format!("http://{}", addr)).cyan()
         );
 
         let app_state = Arc::new(Mutex::new(self.app_state.clone()));
@@ -84,6 +127,73 @@ impl Server {
                 {
                     log::error!("{} to build connection: {:?}", style("failed").red(), err);
                 }
+            });
+        }
+    }
+
+    /// https listener server starts
+    async fn https_start(&self) {
+        let addr = if let Some(addr) = self.https_addr {
+            addr
+        } else {
+            return;
+        };
+
+        let tls = self.app_state.config.listener.clone().unwrap().tls.unwrap();
+
+        let certs = load_certs(tls.cert.as_str());
+        let key = load_private_key(tls.key.as_str());
+
+        let mut config = ServerConfig::builder()
+            .with_no_client_auth()
+            .with_single_cert(certs, key)
+            .expect("failed to get tls certs / key");
+
+        config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+
+        let acceptor = TlsAcceptor::from(Arc::new(config));
+
+        let listener = TcpListener::bind(addr)
+            .await
+            .expect("tcp listener failed to bind address");
+
+        log::info!(
+            "Greetings from {APP_NAME} !!\nListening on {} ...\n",
+            style(format!("https://{}", addr)).cyan()
+        );
+
+        let app_state = Arc::new(Mutex::new(self.app_state.clone()));
+
+        loop {
+            let (stream, _) = listener.accept().await.expect("tcp accept failed");
+            let acceptor = acceptor.clone();
+            let app_state = app_state.clone();
+
+            tokio::spawn(async move {
+                let tls_stream = match acceptor.accept(stream).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        log::error!("TLS handshake failed: {:?}", e);
+                        return;
+                    }
+                };
+
+                let io = TokioIo::new(tls_stream);
+
+                let app_state = app_state.clone();
+                tokio::task::spawn(async move {
+                    if let Err(err) = Builder::new(TokioExecutor::new())
+                        .serve_connection(
+                            io,
+                            service_fn(move |request: hyper::Request<body::Incoming>| {
+                                service(request, app_state.clone())
+                            }),
+                        )
+                        .await
+                    {
+                        log::error!("{} to build connection: {:?}", style("failed").red(), err);
+                    }
+                });
             });
         }
     }

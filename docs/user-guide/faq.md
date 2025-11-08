@@ -33,6 +33,16 @@ A: Yes, supported with rhai script to determine response file due to request con
 **Q: Can I switch server port from the default ?**    
 A: Yes. Two ways: run with `-p` | `--port` argument followed by specific port number. Alternatively, define it in `[listener]` section in `apimock.toml`, the root configuration.  (See [Configuration overview](../advanced-topics/configuration-overview.md).)
 
+### HTTPS support
+
+**Q: Can I use https protocol ?**    
+A: Yes.
+
+**Q: Can I build servers to accept both of http and https ?**    
+A: Yes.
+
+The detail about HTTPS support is [here](./getting-started/https-support.md).
+
 ## Architecture
 
 **Q: How are rules loaded ?**    

@@ -8,7 +8,10 @@ use std::{
 
 use apimock::core::{app::App, args::EnvArgs};
 
-use super::constant::{CONFIG_FILE_NAME, CONFIG_TESTS_ROOT_DIR_PATH};
+use super::{
+    constant::{CONFIG_FILE_NAME, CONFIG_TESTS_ROOT_DIR_PATH},
+    tls::{generate_tls_credentials, tls_credentials_are_ready},
+};
 
 #[derive(Clone)]
 pub struct TestSetup {
@@ -43,6 +46,10 @@ impl TestSetup {
         } else {
             dynamic_port()
         };
+
+        if !tls_credentials_are_ready() {
+            generate_tls_credentials();
+        }
 
         let _ = self.launch_impl(port).await;
         port

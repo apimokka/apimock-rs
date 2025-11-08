@@ -1,12 +1,8 @@
-use console::style;
-use http_body_util::{BodyExt, Empty, Full};
 use hyper::{
-    body::{Bytes, Incoming},
     header::{HeaderMap, HeaderValue, CONTENT_TYPE},
-    Method, Request, Response, Uri,
+    Method,
 };
-use hyper_util::rt::TokioIo;
-use tokio::net::TcpStream;
+use reqwest::{Client, Response};
 
 pub struct TestRequest {
     pub port: u16,
@@ -14,6 +10,7 @@ pub struct TestRequest {
     pub http_method: Option<Method>,
     pub headers: Option<HeaderMap<HeaderValue>>,
     pub body: Option<String>,
+    pub https: bool,
 }
 
 impl TestRequest {
@@ -25,7 +22,14 @@ impl TestRequest {
             http_method: None,
             headers: None,
             body: None,
+            https: false,
         }
+    }
+
+    /// default with https protocol
+    pub fn with_https(mut self) -> Self {
+        self.https = true;
+        self
     }
 
     /// default with http method
@@ -59,51 +63,43 @@ impl TestRequest {
         self
     }
 
-    /// send request to get http response from mock server
-    pub async fn send(&self) -> Response<Incoming> {
-        let url: Uri = Uri::builder()
-            .scheme("http")
-            .authority(format!("127.0.0.1:{}", self.port.to_string()))
-            .path_and_query(self.url_path.as_str())
-            .build()
-            .unwrap();
+    /// send request to get http(s) response from mock server
+    pub async fn send(&self) -> Response {
+        let mut client_builder = Client::builder();
+        if self.https {
+            client_builder = client_builder.danger_accept_invalid_certs(true);
+        }
+        let client = client_builder.build().expect("failed to build client");
 
-        let host = url.host().expect("url has no host");
-        let port = url.port_u16().expect("some problem around port");
-        let addr = format!("{}:{}", host, port);
-        let stream = TcpStream::connect(addr)
-            .await
-            .expect(&format!("tcp connect failed with {}:{}", host, port));
-        let io = TokioIo::new(stream);
+        let protocol = if self.https { "https" } else { "http" };
+        let socket_addrs = format!("127.0.0.1:{}", self.port);
+        let url = format!("{}://{}{}", protocol, socket_addrs, self.url_path);
 
-        let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await.unwrap();
-        tokio::task::spawn(async move {
-            if let Err(err) = conn.await {
-                log::error!("{} to connect to server: {:?}", style("failed").red(), err);
-            }
-        });
-
-        let authority = url.authority().unwrap().clone();
-
-        let path = url.path();
-        let body = if self.body.is_none() {
-            Empty::new().boxed()
+        let http_method = if let Some(http_method) = self.http_method.as_ref() {
+            http_method.to_owned()
         } else {
-            Full::new(Bytes::from(self.body.as_ref().unwrap().to_owned())).boxed()
+            Method::GET
         };
-        let mut builder = Request::builder()
-            .uri(path)
-            .header(hyper::header::HOST, authority.as_str());
-        if let Some(http_method) = self.http_method.as_ref() {
-            builder = builder.method(http_method);
-        }
-        if let Some(headers) = self.headers.as_ref() {
-            for (header_key, header_value) in headers.iter() {
-                builder = builder.header(header_key, header_value);
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            hyper::header::HOST,
+            HeaderValue::from_str(socket_addrs.as_str())
+                .expect("failed to get header value on socket addrs"),
+        );
+        if let Some(h) = self.headers.as_ref() {
+            for (header_key, header_value) in h.iter() {
+                headers.insert(header_key, header_value.to_owned());
             }
         }
-        let req = builder.body(body).expect("failed to create http request");
 
-        sender.send_request(req).await.unwrap()
+        let mut request_builder = client.request(http_method, url).headers(headers);
+        if let Some(body) = self.body.clone() {
+            request_builder = request_builder.body(body);
+        }
+        request_builder
+            .send()
+            .await
+            .expect("failed to get https response")
     }
 }
