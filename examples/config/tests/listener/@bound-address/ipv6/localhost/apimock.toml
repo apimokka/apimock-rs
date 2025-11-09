@@ -1,9 +1,9 @@
 [listener]
-ip_address = "0.0.0.0"
+ip_address = "[::1]"
 port = 3001
 [log]
 verbose = { header = false, body = false }
 [service]
 rule_sets = []
 # middlewares = []
-fallback_respond_dir = "../../../apimock-dyn-route"
+fallback_respond_dir = "../../../../apimock-dyn-route"

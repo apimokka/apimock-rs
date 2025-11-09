@@ -75,15 +75,13 @@ impl TestRequest {
 
     /// send request to get http(s) response from mock server
     pub async fn send(&self) -> Response {
-        let mut client_builder = Client::builder();
-        if self.https {
-            client_builder = client_builder.danger_accept_invalid_certs(true);
-        }
-        let client = client_builder.build().expect("failed to build client");
-
         let protocol = if self.https { "https" } else { "http" };
         let socket_addrs = format!("{}:{}", self.host, self.port);
-        let url = format!("{}://{}{}", protocol, socket_addrs, self.url_path);
+        let url_str = format!("{}://{}{}", protocol, socket_addrs, self.url_path);
+        let url = match reqwest::Url::parse(url_str.as_str()) {
+            Ok(x) => x,
+            Err(err) => panic!("failed to parse url: {} ({:?})", url_str, err),
+        };
 
         let http_method = if let Some(http_method) = self.http_method.as_ref() {
             http_method.to_owned()
@@ -102,6 +100,12 @@ impl TestRequest {
                 headers.insert(header_key, header_value.to_owned());
             }
         }
+
+        let mut client_builder = Client::builder();
+        if self.https {
+            client_builder = client_builder.danger_accept_invalid_certs(true);
+        }
+        let client = client_builder.build().expect("failed to build client");
 
         let mut request_builder = client.request(http_method, url).headers(headers);
         if let Some(body) = self.body.clone() {

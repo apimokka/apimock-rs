@@ -6,8 +6,10 @@ pub const DUMMY_BINARY_DATA: &[u8] = b"Q\xb0\xd6wE\xc6\xbc\xaa\x1a\x01\xbf\x9e\x
 
 pub mod root_config_dir {
     pub mod listener {
-        pub const LOCALHOST: &str = "listener/@bound-address/localhost";
-        pub const GLOBAL: &str = "listener/@bound-address/global";
+        pub const IPV4_LOCALHOST: &str = "listener/@bound-address/ipv4/localhost";
+        pub const IPV4_GLOBAL: &str = "listener/@bound-address/ipv4/global";
+        pub const IPV6_LOCALHOST: &str = "listener/@bound-address/ipv6/localhost";
+        pub const IPV6_GLOBAL: &str = "listener/@bound-address/ipv6/global";
         pub const TLS: &str = "listener/tls";
     }
 

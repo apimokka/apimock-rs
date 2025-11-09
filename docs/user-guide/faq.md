@@ -32,11 +32,14 @@ A: Yes, supported with rhai script to determine response file due to request con
 
 ### Listener
 
+**Q: Can I switch server port from the default ?**    
+A: Yes. Two ways: run with `-p` | `--port` argument followed by specific port number. Alternatively, define it in `[listener]` section in `apimock.toml`, the root configuration.  (See [Configuration overview](../advanced-topics/configuration-overview.md).)
+
 **Q: Can I let server listen to the external instead of localhost ?**    
 A: Yes. See [listener](../advanced-topics/listener/README.md) in Advanced Topics.
 
-**Q: Can I switch server port from the default ?**    
-A: Yes. Two ways: run with `-p` | `--port` argument followed by specific port number. Alternatively, define it in `[listener]` section in `apimock.toml`, the root configuration.  (See [Configuration overview](../advanced-topics/configuration-overview.md).)
+**Q: Is IPv6 supported ?**    
+A: Yes. See [listener](../advanced-topics/listener/README.md) in Advanced Topics.
 
 ### HTTPS support
 
