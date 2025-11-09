@@ -43,10 +43,10 @@ A: Yes. See [listener](../advanced-topics/listener/README.md) in Advanced Topics
 
 ### HTTPS support
 
-**Q: Can I use https protocol ?**    
+**Q: Can I use HTTPS protocol ?**    
 A: Yes.
 
-**Q: Can I build servers to accept both of http and https ?**    
+**Q: Can I build servers to accept both of HTTP and HTTPS ?**    
 A: Yes.
 
 The detail about HTTPS support is [here](./advanced-topics/listener/https-support.md).
