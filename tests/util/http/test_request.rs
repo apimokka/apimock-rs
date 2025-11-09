@@ -4,7 +4,10 @@ use hyper::{
 };
 use reqwest::{Client, Response};
 
+const LOCALHOST: &str = "127.0.0.1";
+
 pub struct TestRequest {
+    pub host: String,
     pub port: u16,
     pub url_path: String,
     pub http_method: Option<Method>,
@@ -17,6 +20,7 @@ impl TestRequest {
     /// default
     pub fn default(url_path: &str, port: u16) -> Self {
         Self {
+            host: LOCALHOST.to_owned(),
             port,
             url_path: url_path.to_owned(),
             http_method: None,
@@ -29,6 +33,12 @@ impl TestRequest {
     /// default with https protocol
     pub fn with_https(mut self) -> Self {
         self.https = true;
+        self
+    }
+
+    /// default with server host
+    pub fn with_host(mut self, host: &str) -> Self {
+        self.host = host.to_owned();
         self
     }
 
@@ -72,7 +82,7 @@ impl TestRequest {
         let client = client_builder.build().expect("failed to build client");
 
         let protocol = if self.https { "https" } else { "http" };
-        let socket_addrs = format!("127.0.0.1:{}", self.port);
+        let socket_addrs = format!("{}:{}", self.host, self.port);
         let url = format!("{}://{}{}", protocol, socket_addrs, self.url_path);
 
         let http_method = if let Some(http_method) = self.http_method.as_ref() {

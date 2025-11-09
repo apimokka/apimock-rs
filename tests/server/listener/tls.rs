@@ -1,7 +1,7 @@
 use hyper::StatusCode;
 
 use crate::{
-    constant::root_config_dir,
+    constant::root_config_dir::listener::TLS,
     util::{
         http::{test_request::TestRequest, test_response::response_body_str},
         test_setup::TestSetup,
@@ -56,7 +56,7 @@ async fn nontls_server_nontls_client() {
 
 /// internal setup fn on https support config
 async fn tls_setup() -> u16 {
-    let test_setup = TestSetup::default_with_root_config_dir(root_config_dir::TLS);
+    let test_setup = TestSetup::default_with_root_config_dir(TLS);
     let port = test_setup.launch().await;
     port
 }

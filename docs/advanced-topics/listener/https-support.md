@@ -1,6 +1,6 @@
 # HTTPS support
 
-HTTPS protocol is supported.
+HTTPS protocol (SSL/TLS) is supported.
 You can build each of:
 
 - A single server to listen to only HTTPS.
@@ -15,10 +15,10 @@ The root configuration has two options on port number:
 
 How they work is:
 
-| `listener.tls.port` condition | result |
-| --- | --- |
-| Not specified (omitted) | `listener.port` is used as HTTPS port.<br>Only HTTPS listener will start. |
-| Specified | `listener.tls.port` is used as HTTPS port. `listener.port` is as HTTP.<br>Both of HTTP and HTTPS listeners will start. |
+| Condition: `listener.tls.port` | Result: Port(s) used | Result: Number of servers |
+| --- | --- | --- |
+| Not specified (omitted) | `listener.port` is used as HTTPS port. | Only HTTPS listener will start. |
+| Specified | `listener.tls.port` is used as HTTPS port. `listener.port` is as HTTP. | Both of HTTP and HTTPS listeners will start. |
 
 ## Configuration example
 

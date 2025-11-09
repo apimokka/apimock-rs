@@ -11,7 +11,6 @@
         - [Rule-based routing 1](./user-guide/getting-started/rule-based-routing-1.md)
         - [Rule-based routing 2](./user-guide/getting-started/rule-based-routing-2.md)
         - [TOML configuration](./user-guide/getting-started/toml-configuration.md)
-        - [HTTPS support](./user-guide/getting-started/https-support.md)
     - [Examples](./user-guide/examples/README.md)
         - [Combining conditions 1](./user-guide/examples/combining-conditions-1.md)
         - [Combining conditions 2](./user-guide/examples/combining-conditions-2.md)
@@ -31,6 +30,8 @@
     - [Configuration overview](./advanced-topics/configuration-overview.md)
     - [Middleware 1](./advanced-topics/middleware-basics-with-rhai-scripts.md)
     - [Middleware 2](./advanced-topics/middleware-map-based-response-variation.md)
+    - [Listener](./advanced-topics/listener/README.md)
+        - [HTTPS support](./advanced-topics/listener/https-support.md)
 
 ---
 

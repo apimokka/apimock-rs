@@ -1,6 +1,6 @@
 [package]
 name = "apimock"
-version = "4.4.0"
+version = "4.4.1"
 edition = "2021"
 
 description = "A developer-friendly, featherlight and functional HTTP(S) mock server built in Rust."
@@ -52,3 +52,4 @@ rhai = { version = "1", features = ["sync", "serde"] }
 rand = "^0"
 reqwest = "^0"
 rcgen = "^0"
+local-ip-address = "^0"
