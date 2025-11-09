@@ -1,14 +1,13 @@
-# API Mock (apimock-rs)
+# apimock-rs (API Mock)
 
-## 🪄 Mock APIs easily — no setup stress, just JSON and go
+## 🪄 Mock APIs easily — just JSON and go
 
-If you’re building or testing APIs, this tool makes mocking painless. You don’t need to write any config files — just use folders and JSON. It’s super fast, efficient, and flexible when you need it to be.
+If you’re building or testing APIs, this tool makes mocking painless. It’s super fast, efficient, and flexible when you need it to be.
+All you have to do to start up is just use folders and JSON without any config set.
 
-- 🎈 No config needed to get started
-- 🥷 Fast to launch, light on memory, out of your way
-- 🧩 Moreover, advanced matching and custom scripting supported
-
-It’s rebuilt from the ground up in version 4. Designed to help developers of all levels.
+- ❄️ Zero-config start.
+- 🌬️ Fast to boot, light on memory.
+- 🔱 File-based and rule-based matching. Scripting supported.
 
 ```sh
 # install
@@ -39,7 +38,7 @@ For more details, **🧭 check out [the docs](https://apimokka.github.io/apimock
 
 ## Open-source, with care
 
-This project is lovingly built and maintained by volunteers.  
+[This project](https://github.com/apimokka/apimock-rs) is lovingly built and maintained by volunteers.  
 We hope it helps streamline your API development.  
 Please understand that the project has its own direction — while we welcome feedback, it might not fit every edge case 🌱
 

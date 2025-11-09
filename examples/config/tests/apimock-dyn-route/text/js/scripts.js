@@ -1,3 +1,3 @@
 function hello() {
-    console.log("Hello from API mock (apimock-rs)")
+    console.log("Hello from apimock-rs (API Mock)")
 }

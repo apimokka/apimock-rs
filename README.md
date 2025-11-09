@@ -1,4 +1,4 @@
-# API mock (apimock-rs)
+# apimock-rs (API Mock)
 
 [![crates.io](https://img.shields.io/crates/v/apimock?label=latest)](https://crates.io/crates/apimock)
 [![Rust Documentation](https://docs.rs/apimock/badge.svg?version=latest)](https://docs.rs/apimock)
@@ -9,17 +9,18 @@
 
 ![logo](docs/.assets/logo.png)
 
-## 🪄 Mock APIs easily — no setup stress, just JSON and go
+## 🪄 Mock APIs easily — just JSON and go
 
-If you’re building or testing APIs, this tool makes mocking painless. You don’t need to write any config files — just use folders and JSON. It’s super fast, efficient, and flexible when you need it to be.
+If you’re building or testing APIs, this tool makes mocking painless. It’s super fast, efficient, and flexible when you need it to be.
+All you have to do to start up is just use folders and JSON without any config set.
 
-- 🎈 No config needed to get started
-- 🥷 Fast to launch, light on memory, out of your way
-- 🧩 Moreover, advanced matching and custom scripting supported
-
-It’s rebuilt from the ground up in version 4. Designed to help developers of all levels.
+- ❄️ Zero-config start.
+- 🌬️ Fast to boot, light on memory.
+- 🔱 File-based and rule-based matching. Scripting supported.
 
 ### Getting started
+
+Easy to start with [npm package](https://www.npmjs.com/package/apimock-rs).
 
 ```sh
 # install
@@ -47,18 +48,6 @@ npx apimock --init
 ### 📖 Documentation
 
 For more details, **🧭 check out [the docs](https://apimokka.github.io/apimock-rs/)**.
-
-### 💻️ GUI wrapper (development in progress)
-
-[apimokka](https://github.com/apimokka/apimokka), an optimized GUI bundle, will be also available.
-
----
-
-## 🛠️ App overhaul announcement
-
-### ⚠️ v4, our new major version, was released. Compatibility Note
-
-v4 is a complete rewrite, breaking compatibility with v3. A direct migration isn't supported; please opt to continue with v3 or start fresh with v4. V4's streamlined file-based and rule-based architecture aims to make new response configurations less burdensome.
 
 ---
 

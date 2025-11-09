@@ -1,4 +1,4 @@
-# API mock (apimock-rs) Documentation
+# apimock-rs (API Mock) Documentation
 
 <div class="logo">
   <style>
@@ -16,8 +16,6 @@
 
 A developer-friendly, featherlight and functional HTTP(S) mock server built in Rust.
 
-While this is a CLI tool, a featherlight GUI wrapper named [API mokka](https://github.com/apimokka/apimokka) will be also available. (development in progress)
-
 ### Who is this for?
 
 - Developers who want to quickly mock APIs without heavy setup.
@@ -25,6 +23,8 @@ While this is a CLI tool, a featherlight GUI wrapper named [API mokka](https://g
 - Advanced users needing logic-based response behavior.
 
 ### Quick Start
+
+Easy to start with [npm package](https://www.npmjs.com/package/apimock-rs).
 
 ```sh
 npm install -D apimock-rs

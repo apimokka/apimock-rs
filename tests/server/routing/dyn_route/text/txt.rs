@@ -1,9 +1,6 @@
 use hyper::StatusCode;
 
-use crate::util::{
-    env_args::SetupArgs,
-    
-};
+use crate::util::env_args::SetupArgs;
 
 #[tokio::test]
 async fn dyn_data_dir_txt() {
@@ -19,5 +16,5 @@ async fn dyn_data_dir_txt() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "Hello from API mock (apimock-rs)");
+    assert_eq!(body_str.as_str(), "Hello from apimock-rs (API Mock)");
 }

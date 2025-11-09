@@ -10,7 +10,7 @@ use crate::util::{
 const NEW_LINE: &str = if cfg!(windows) { "\r\n" } else { "\n" };
 static EXPECT: LazyLock<String> = LazyLock::new(|| {
     format!(
-        "<!DOCTYPE html>{}Hello from API mock (apimock-rs)",
+        "<!DOCTYPE html>{}Hello from apimock-rs (API Mock)",
         NEW_LINE
     )
 });
