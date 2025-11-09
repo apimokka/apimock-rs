@@ -49,7 +49,7 @@ A: Yes.
 **Q: Can I build servers to accept both of HTTP and HTTPS ?**    
 A: Yes.
 
-The detail about HTTPS support is [here](./advanced-topics/listener/https-support.md).
+The detail about HTTPS support is [here](../advanced-topics/listener/https-support.md).
 
 ## Architecture
 
