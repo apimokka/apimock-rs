@@ -9,14 +9,14 @@
 
 ![logo](docs/.assets/logo.png)
 
-## 🪄 Mock APIs easily — just JSON and go
+## Mock APIs easily 🎈 — just JSON and go
 
 If you’re building or testing APIs, this tool makes mocking painless. It’s super fast, efficient, and flexible when you need it to be.
 All you have to do to start up is just use folders and JSON without any config set.
 
 - ❄️ Zero-config start.
 - 🌬️ Fast to boot, light on memory.
-- 🔱 File-based and rule-based matching. Scripting supported.
+- 🪄 File-based and rule-based matching. Scripting supported.
 
 ### Getting started
 
