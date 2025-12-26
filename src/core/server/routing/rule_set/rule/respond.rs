@@ -30,7 +30,7 @@ pub struct Respond {
     #[serde(skip)]
     pub status_code: Option<StatusCode>,
     pub headers: Option<HashMap<String, Option<String>>>,
-    pub delay_response_milliseconds: Option<u16>,
+    pub delay_response_milliseconds: Option<u32>,
 }
 
 impl Respond {

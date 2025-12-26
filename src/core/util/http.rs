@@ -45,6 +45,6 @@ pub fn normalize_url_path(url_path: &str, url_path_prefix: Option<&str>) -> Stri
 }
 
 /// sleep
-pub async fn delay_response(milliseconds: u16) {
+pub async fn delay_response(milliseconds: u32) {
     time::sleep(Duration::from_millis(milliseconds.into())).await
 }
