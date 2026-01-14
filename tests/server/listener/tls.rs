@@ -25,7 +25,7 @@ async fn tls_server_tls_client() {
 }
 
 #[tokio::test]
-#[should_panic = "library: \"SSL routines\", function: \"tls_get_more_records\""]
+#[should_panic = "hyper_util::client::legacy::Error(Connect, Custom { kind: Other, error: Custom { kind: InvalidData, error: InvalidMessage(InvalidContentType) } })"]
 async fn nontls_server_tls_client() {
     let port = default_setup().await;
     let _ = TestRequest::default("/", port).with_https().send().await;
