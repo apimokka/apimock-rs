@@ -148,13 +148,14 @@ jobs:
             os: windows-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-      
-      - name: Checkout repository
-        uses: actions/checkout@v4
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
       
       - name: Download built binary
         uses: actions/download-artifact@v4
@@ -163,13 +164,11 @@ jobs:
           path: npm/${{ matrix.npm-target }}
       
       - name: npm publish
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: npm/${{ matrix.npm-target }}
         run: |
-          npm config set provenance true
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-          npm publish --access public
+          npm install --package-lock-only
+          npm ci
+          npm publish
 
   npm-core-publish:
     runs-on: ubuntu-latest
@@ -181,13 +180,12 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
       
       - name: npm publish
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: npm
         run: |
-          npm config set provenance true
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-          npm publish --access public
+          npm install --package-lock-only
+          npm ci
+          npm publish
