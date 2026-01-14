@@ -186,6 +186,6 @@ jobs:
       - name: npm publish
         working-directory: npm
         run: |
-          npm install --package-lock-only --ignore-scripts
+          env npm_config_ignore_scripts=true npm install --package-lock-only
           npm ci
           npm publish
