@@ -56,7 +56,9 @@ update_cargo_toml() {
     { print }
   ' "$_CARGO_TOML" > "$_CARGO_TOML.tmp" && mv "$_CARGO_TOML.tmp" "$_CARGO_TOML"
 
-  git add "$_CARGO_TOML" "$_CARGO_LOCK"
+  git add "$_CARGO_TOML"
+  sleep 5
+  git add "$_CARGO_LOCK"
 }
 
 if [ -f $CARGO_TOML ]; then
