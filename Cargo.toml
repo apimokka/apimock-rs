@@ -1,7 +1,7 @@
 [package]
 name = "apimock"
 version = "4.6.1"
-edition = "2021"
+edition = "2024"
 
 description = "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists."
 authors = ["nabbisen <nabbisen@scqr.net>"]
@@ -11,7 +11,7 @@ categories = ["web-programming", "development-tools", "command-line-utilities"]
 keywords = ["http", "api", "mock", "testing"]
 repository = "https://github.com/apimokka/apimock-rs"
 readme = "README.md"
-rust-version = "1.78.0"
+rust-version = "1.90.0"
 
 [profile.release]     # shrink executable size
 opt-level = "z"
