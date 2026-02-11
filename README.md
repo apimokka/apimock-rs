@@ -40,6 +40,8 @@ curl http://localhost:3001/api/v1/hello
 # --> {"hello":"world"}
 ```
 
+You may also check it out with browser to visit http://localhost:3001/api/v1/hello .
+
 You now have a running REST endpoint.
 
 ### Customization
