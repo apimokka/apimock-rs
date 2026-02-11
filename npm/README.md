@@ -110,11 +110,14 @@ As your project grows, your mock API grows, too. Large mock datasets often cause
 - Crashes during UI testing
 - Unstable CI runs
 
-apimock-rs does not preload responses. Each response file is read only when a request arrives using non-blocking I/O. This keeps (validated with k6 load testing):
+apimock-rs does not preload responses. Each response file is read only when a request arrives using non-blocking I/O. This keeps:
 
 - Startup nearly instant
 - Memory usage minimal
 - Stable behavior under repeated requests
+
+as validated with k6 load testing.
+You can run UI development and automated tests continuously without worrying about server instability.
 
 ### 📖 Documentation
 
