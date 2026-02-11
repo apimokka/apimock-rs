@@ -77,12 +77,12 @@ npm run dev
 
 ### `npx apimock` variation
 
-| command | effect |
+| command | result |
 | --- | --- |
-| `npx apimock` | Run with all default parameters |
-| `npx apimock -p 4000` | Run with custom port |
-| `npx apimock -d tests/integration` | Run with custom root dir on server response |
-| `npx apimock -c apimock.toml` | Run with config file giving rich features |
+| `npx apimock` | Run with all default parameters. |
+| `npx apimock -p 4000` | Run with custom port. |
+| `npx apimock -d tests/integration` | Run with custom root dir on server response. |
+| `npx apimock -c apimock.toml` | Run with config file giving rich features. Running `npx apimock --init` beforehand is required. |
 
 ## Mock APIs easily 🎈 — just JSON and go
 

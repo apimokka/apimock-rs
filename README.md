@@ -44,14 +44,6 @@ You may also check it out with browser to visit http://localhost:3001/api/v1/hel
 
 You now have a running REST endpoint.
 
-### Customization
-
-Also, there's room to tweak things later with optional config file(s):
-
-```sh
-npx apimock --init
-```
-
 ### Vite project integration
 
 An example of **scripts** section in **package.json** is as below.
@@ -79,12 +71,12 @@ npm run dev
 
 ### `npx apimock` variation
 
-| command | effect |
+| command | result |
 | --- | --- |
-| `npx apimock` | Run with all default parameters |
-| `npx apimock -p 4000` | Run with custom port |
-| `npx apimock -d tests/integration` | Run with custom root dir on server response |
-| `npx apimock -c apimock.toml` | Run with config file giving rich features |
+| `npx apimock` | Run with all default parameters. |
+| `npx apimock -p 4000` | Run with custom port. |
+| `npx apimock -d tests/integration` | Run with custom root dir on server response. |
+| `npx apimock -c apimock.toml` | Run with config file giving rich features. Running `npx apimock --init` beforehand is required. |
 
 ## Mock APIs easily 🎈 — just JSON and go
 
