@@ -15,8 +15,9 @@ use super::{
 
 #[derive(Clone)]
 pub struct TestSetup {
-    pub port: Option<u16>,
     pub root_config_file_path: Option<String>,
+    pub port: Option<u16>,
+    pub fallback_respond_dir_path: Option<String>,
     /// bound to set_current_dir(). **caution:** affects globally
     pub current_dir_path: Option<String>,
 }
@@ -80,6 +81,10 @@ impl TestSetup {
             app_env_args.config_file_path = Some(root_config_file_path.to_owned());
         }
 
+        if let Some(fallback_respond_dir_path) = self.fallback_respond_dir_path.as_ref() {
+            app_env_args.fallback_respond_dir_path = Some(fallback_respond_dir_path.to_owned());
+        }
+
         tokio::spawn(async move {
             let app = App::new(&app_env_args, None, true).await;
             app.server.start().await
@@ -93,7 +98,6 @@ impl TestSetup {
 impl Default for TestSetup {
     fn default() -> Self {
         Self {
-            port: None,
             root_config_file_path: Some(
                 Path::new(env!("CARGO_MANIFEST_DIR"))
                     .join(CONFIG_TESTS_ROOT_DIR_PATH)
@@ -102,6 +106,8 @@ impl Default for TestSetup {
                     .expect("failed to generate root config file path")
                     .to_string(),
             ),
+            port: None,
+            fallback_respond_dir_path: None,
             current_dir_path: None,
         }
     }
