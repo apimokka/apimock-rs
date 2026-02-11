@@ -32,7 +32,10 @@ pub struct Config {
 /// app config
 impl Config {
     /// create new instance
-    pub fn new(config_file_path: Option<&String>) -> Self {
+    pub fn new(
+        config_file_path: Option<&String>,
+        fallback_respond_dir_path: Option<&String>,
+    ) -> Self {
         let mut ret = Self::init(config_file_path);
 
         ret.set_rule_sets();
@@ -46,7 +49,7 @@ impl Config {
             Err(x) => panic!("{}", x),
         }
 
-        ret.compute_fallback_respond_dir();
+        ret.compute_fallback_respond_dir(fallback_respond_dir_path);
 
         if !ret.validate() {
             panic!("failed to start up due to invalid config");
@@ -143,7 +146,12 @@ impl Config {
     }
 
     /// compute relative fallback_respond_dir from current dir
-    pub fn compute_fallback_respond_dir(&mut self) {
+    pub fn compute_fallback_respond_dir(&mut self, fallback_respond_dir_path: Option<&String>) {
+        if let Some(fallback_respond_dir_path) = fallback_respond_dir_path {
+            self.service.fallback_respond_dir = fallback_respond_dir_path.to_owned();
+            return;
+        }
+
         if self.service.fallback_respond_dir.as_str() == SERVICE_DEFAULT_FALLBACK_RESPOND_DIR {
             return;
         }

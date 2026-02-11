@@ -1,6 +1,6 @@
 [package]
 name = "apimock"
-version = "4.5.10"
+version = "4.6.0"
 edition = "2021"
 
 description = "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists."

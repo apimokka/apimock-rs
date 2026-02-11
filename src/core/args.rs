@@ -11,6 +11,8 @@ pub struct EnvArgs {
     pub config_file_path: Option<String>,
     /// overwrites value in config file
     pub port: Option<u16>,
+    /// overwrites value in config file
+    pub fallback_respond_dir_path: Option<String>,
 }
 
 impl EnvArgs {
@@ -48,6 +50,15 @@ impl EnvArgs {
             }
         }
 
+        if let Some(fallback_respond_dir_path) = self.fallback_respond_dir_path.as_ref() {
+            if !Path::new(fallback_respond_dir_path.as_str()).exists() {
+                panic!(
+                    "fallback response dir doesn't exist: {}",
+                    fallback_respond_dir_path
+                );
+            }
+        }
+
         Ok(())
     }
 
@@ -67,6 +78,9 @@ impl EnvArgs {
         let ret = EnvArgs {
             config_file_path: args_option_value(CONFIG_FILE_PATH_OPTION_NAMES.to_vec().as_ref()),
             port,
+            fallback_respond_dir_path: args_option_value(
+                FALLBACK_RESPOND_DIR_PATH_OPTION_NAMES.to_vec().as_ref(),
+            ),
         };
 
         ret

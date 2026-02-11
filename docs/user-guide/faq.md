@@ -12,6 +12,16 @@ A: Yes. For requests like `/api/v1/myfunction` (without a file extension), rathe
 
 If an `index.json`, `.json5`, `.csv`, or `.html` file exists within that directory, it will be served as the response for directory access. If none of the index files are present, the server will return `404 NOT FOUND`.
 
+**Q: Can I switch directroy used as root at response from the default ?**    
+A: Yes. Two ways: run with `-d` | `--dir` argument followed by specific directory path. Alternatively, define it in `[service]` section in `apimock.toml`, the root configuration. For example:
+
+```ini
+[service]
+fallback_respond_dir = "tests/integration"
+```
+
+(See [Configuration overview](../advanced-topics/configuration-overview.md).)
+
 ## Rule-based routing
 
 **Q: I want to map specific HTTP requests to individual responses. Is this possible?**    
@@ -33,7 +43,14 @@ A: Yes, supported with rhai script to determine response file due to request con
 ### Listener
 
 **Q: Can I switch server port from the default ?**    
-A: Yes. Two ways: run with `-p` | `--port` argument followed by specific port number. Alternatively, define it in `[listener]` section in `apimock.toml`, the root configuration.  (See [Configuration overview](../advanced-topics/configuration-overview.md).)
+A: Yes. Two ways: run with `-p` | `--port` argument followed by specific port number. Alternatively, define it in `[listener]` section in `apimock.toml`, the root configuration. For example:
+
+```ini
+[listener]
+port = 3002
+```
+
+(See [Configuration overview](../advanced-topics/configuration-overview.md).)
 
 **Q: Can I let server listen to the external instead of localhost ?**    
 A: Yes. See [listener](../advanced-topics/listener/README.md) in Advanced Topics.

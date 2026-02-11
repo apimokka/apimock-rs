@@ -1,13 +1,24 @@
 # apimock-rs (API Mock)
 
-## Mock APIs easily 🎈 — just JSON and go
+![npm](https://img.shields.io/npm/v/apimock-rs.svg)
+[![License](https://img.shields.io/github/license/apimokka/apimock-rs)](https://github.com/apimokka/apimock-rs/blob/main/LICENSE)
 
-If you’re building or testing APIs, this tool makes mocking painless. It’s super fast, efficient, and flexible when you need it to be.
-All you have to do to start up is just use folders and JSON without any config set.
+[![crates.io](https://img.shields.io/crates/v/apimock?label=rust)](https://crates.io/crates/apimock)
+[![Rust Documentation](https://docs.rs/apimock/badge.svg?version=latest)](https://docs.rs/apimock)
+[![Dependency Status](https://deps.rs/crate/apimock/latest/status.svg)](https://deps.rs/crate/apimock)
+[![Releases Workflow](https://github.com/apimokka/apimock-rs/actions/workflows/release-executable.yaml/badge.svg)](https://github.com/apimokka/apimock-rs/actions/workflows/release-executable.yaml)
+[![App Docs Workflow](https://github.com/apimokka/apimock-rs/actions/workflows/docs.yaml/badge.svg)](https://github.com/apimokka/apimock-rs/actions/workflows/docs.yaml)
 
-- ❄️ Zero-config start.
-- 🌬️ Fast to boot, light on memory.
-- 🪄 File-based and rule-based matching. Scripting supported.
+Build a working REST API in seconds — without a backend.
+
+Frontend blocked by an unfinished backend ?
+Need stable API responses for UI tests or offline development ?
+
+Drop JSON files into a folder and your API immediately exists.
+
+## Quick start
+
+Easy to start with [npm package](https://www.npmjs.com/package/apimock-rs).
 
 ```sh
 # install
@@ -27,10 +38,60 @@ curl http://localhost:3001/api/v1/hello
 # --> {"hello":"world"}
 ```
 
+You now have a running REST endpoint.
+
+### Customization
+
+Also, there's room to tweak things later with optional config file(s):
+
 ```sh
-# also, there's room to tweak things later
 npx apimock --init
 ```
+
+### Vite project integration
+
+An example of **scripts** section in **package.json** is as below.
+
+**concurrently** is used to run the Vite and API mock servers simultaneously, while **cross-env** enables terminal output coloring. Before starting, ensure you run:
+
+```sh
+npm install -D concurrently cross-env
+```
+
+Edit package.json:
+
+```json
+  "scripts": {
+    "apimock": "npx apimock",
+    "dev": "cross-env CLICOLOR_FORCE=1 concurrently \"vite\" \"npm run apimock\""
+  }
+```
+
+Run:
+
+```sh
+npm run dev
+```
+
+### `npx apimock` variation
+
+| command | effect |
+| --- | --- |
+| `npx apimock` | Run with all default parameters |
+| `npx apimock -p 4000` | Run with custom port |
+| `npx apimock -d tests` | Run with custom root dir on server response |
+| `npx apimock -c apimock.toml` | Run with config file giving rich features |
+
+## Mock APIs easily 🎈 — just JSON and go
+
+If you’re building or testing APIs, this tool makes mocking painless. It’s super fast, efficient, and flexible when you need it to be.
+All you have to do to start up is just use folders and JSON without any config set.
+
+- ❄️ Zero-config start.
+- 🌬️ Fast to boot, light on memory.
+- 🪄 File-based and rule-based matching. Scripting supported.
+
+### 📖 Documentation
 
 For more details, **🧭 check out [the docs](https://apimokka.github.io/apimock-rs/)**.
 
