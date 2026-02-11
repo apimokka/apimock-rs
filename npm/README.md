@@ -91,6 +91,33 @@ All you have to do to start up is just use folders and JSON without any config s
 - 🌬️ Fast to boot, light on memory.
 - 🪄 File-based and rule-based matching. Scripting supported.
 
+### When should you use `apimock-rs` ?
+
+Use it when:
+
+- The backend is not ready yet.
+- You need stable API responses for UI testing.
+- You want offline development.
+- CI tests require a predictable API.
+- Your mock data is becoming large.
+
+#### Handles real project scale
+
+As your project grows, your mock API grows, too. Large mock datasets often cause problems:
+
+- Slow startup
+- High memory usage
+- Crashes during UI testing
+- Unstable CI runs
+
+apimock-rs does not preload responses. Each response file is read only when a request arrives using non-blocking I/O. This keeps:
+
+- Startup nearly instant
+- Memory usage minimal
+- Stable behavior under repeated requests
+
+You can run automated tests and frontend development against it continuously. (Validated with k6 load testing.)
+
 ### 📖 Documentation
 
 For more details, **🧭 check out [the docs](https://apimokka.github.io/apimock-rs/)**.
