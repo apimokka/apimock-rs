@@ -1,6 +1,6 @@
 # apimock-rs (API Mock)
 
-![npm](https://img.shields.io/npm/v/apimock-rs.svg)
+[![npm](https://img.shields.io/npm/v/apimock-rs)](https://www.npmjs.com/package/apimock-rs)
 [![License](https://img.shields.io/github/license/apimokka/apimock-rs)](https://github.com/apimokka/apimock-rs/blob/main/LICENSE)
 
 [![crates.io](https://img.shields.io/crates/v/apimock?label=rust)](https://crates.io/crates/apimock)
@@ -95,7 +95,7 @@ All you have to do to start up is just use folders and JSON without any config s
 - CI tests require a predictable API.
 - Your mock data is becoming large.
 
-#### Handles real project scale
+### Handles real project scale
 
 As your project grows, your mock API grows, too. Large mock datasets often cause problems:
 
