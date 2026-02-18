@@ -1,6 +1,6 @@
 [package]
 name = "apimock"
-version = "4.6.3"
+version = "4.6.4"
 edition = "2024"
 
 description = "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists."
@@ -43,7 +43,7 @@ log = "0"
 console = "0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0"
+toml = "1"
 json5 = "1"
 csv = "1"
 rhai = { version = "1", features = ["sync", "serde"] }

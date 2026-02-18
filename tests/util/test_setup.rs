@@ -1,5 +1,3 @@
-use rand::RngExt;
-
 use std::{
     env,
     net::{SocketAddr, TcpListener},
@@ -7,6 +5,7 @@ use std::{
 };
 
 use apimock::core::{app::App, args::EnvArgs};
+use rand::Rng;
 
 use super::{
     constant::{CONFIG_FILE_NAME, CONFIG_TESTS_ROOT_DIR_PATH},
