@@ -21,7 +21,7 @@ Drop JSON files into a folder and your API immediately exists.
 Easy to start with [npm package](https://www.npmjs.com/package/apimock-rs).
 
 ```sh
-# install
+# install into your app project
 npm install -D apimock-rs
 # and go
 npx apimock
