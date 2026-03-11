@@ -9,7 +9,7 @@
 [![Releases Workflow](https://github.com/apimokka/apimock-rs/actions/workflows/release-executable.yaml/badge.svg)](https://github.com/apimokka/apimock-rs/actions/workflows/release-executable.yaml)
 [![App Docs Workflow](https://github.com/apimokka/apimock-rs/actions/workflows/docs.yaml/badge.svg)](https://github.com/apimokka/apimock-rs/actions/workflows/docs.yaml)
 
-![logo](docs/.assets/logo.png)
+![logo](docs/assets/logo.png)
 
 Build a working REST API in seconds — without a backend.
 

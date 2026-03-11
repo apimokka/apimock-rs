@@ -11,7 +11,7 @@
         height: 4.4em;
     }
   </style>
-  <img src=".assets/logo.png">
+  <img src="assets/logo.png">
 </div>
 
 A developer-friendly, featherlight and functional HTTP(S) mock server built in Rust.
@@ -31,7 +31,7 @@ npm install -D apimock-rs
 npx apimock
 ```
 
-![demo](https://github.com/apimokka/apimock-rs/blob/main/docs/.assets/demo.gif?raw=true)
+![demo](https://github.com/apimokka/apimock-rs/blob/main/docs/assets/demo.gif?raw=true)
 
 ## For Users
 
