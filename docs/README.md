@@ -28,7 +28,10 @@ Easy to start with [npm package](https://www.npmjs.com/package/apimock-rs).
 
 ```sh
 npm install -D apimock-rs
+
 npx apimock
+# alternatively, starts with spefic root directory:
+# npx apimock -d tests
 ```
 
 ![demo](https://github.com/apimokka/apimock-rs/blob/main/docs/assets/demo.gif?raw=true)
