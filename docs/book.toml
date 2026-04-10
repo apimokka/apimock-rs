@@ -14,7 +14,7 @@ build-dir = ".book"
 [preprocessor.mermaid]
 command = "mdbook-mermaid"
 [output.html]
-additional-js = [".mdbook/mermaid.min.js", ".mdbook/mermaid-init.js"]
+additional-js = ["assets/mdbook/mermaid.min.js", "assets/mdbook/mermaid-init.js"]
 
 # general [output.html]
 git-repository-url = "https://github.com/apimokka/apimock-rs"
