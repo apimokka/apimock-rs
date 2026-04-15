@@ -42,8 +42,6 @@ jobs:
           sudo mv mdbook-mermaid /usr/local/bin/
       
       - name: mdbook build
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: docs
         run: |
           mdbook build
@@ -51,7 +49,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: docs/.book
+          path: docs/book
       
       - name: Deploy to GitHub Pages
         id: deployment

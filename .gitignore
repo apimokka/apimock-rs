@@ -16,3 +16,5 @@ target/
 # --- custom ---
 /tests/fixtures/tmp/*
 !/tests/fixtures/tmp/.gitkeep
+
+book/

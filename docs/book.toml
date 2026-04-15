@@ -5,17 +5,20 @@ description = "apimock-rs (API Mock) Docs: A developer-friendly, featherlight an
 
 language = "en"
 
-src = "."
+src = "src"
 
 [build]
-build-dir = ".book"
+build-dir = "book"
 
 # mermaid extension
 [preprocessor.mermaid]
 command = "mdbook-mermaid"
 [output.html]
-additional-js = ["assets/mdbook/mermaid.min.js", "assets/mdbook/mermaid-init.js"]
-
-# general [output.html]
 git-repository-url = "https://github.com/apimokka/apimock-rs"
 edit-url-template = "https://github.com/apimokka/apimock-rs/edit/main/docs/{path}"
+
+additional-js = ["src/assets/mdbook/mermaid.min.js", "src/assets/mdbook/mermaid-init.js"]
+
+[output.html.search]
+enable        = true
+limit-results = 20
