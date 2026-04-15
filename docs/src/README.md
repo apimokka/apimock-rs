@@ -34,7 +34,7 @@ npx apimock
 # npx apimock -d tests
 ```
 
-![demo](https://github.com/apimokka/apimock-rs/blob/main/docs/assets/demo.gif?raw=true)
+![demo](https://github.com/apimokka/apimock-rs/blob/main/docs/src/assets/demo.gif?raw=true)
 
 ## For Users
 
