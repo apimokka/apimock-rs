@@ -25,7 +25,7 @@ All you have to do to start up is just use folders and JSON without any config s
 - 🌬️ Fast to boot, light on memory.
 - 🪄 File-based and rule-based matching. Scripting supported.
 
-### Why `apimock-rs` ?
+### When to use ?
 
 - The backend is not ready yet.
 - You need stable API responses for UI testing.
@@ -33,7 +33,7 @@ All you have to do to start up is just use folders and JSON without any config s
 - CI tests require a predictable API.
 - Your mock data is becoming large.
 
-### Handles real project scale
+### `apimock-rs` handles real project scale
 
 As your project grows, your mock API grows, too. Large mock datasets often cause problems:
 
