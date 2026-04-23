@@ -25,14 +25,6 @@ All you have to do to start up is just use folders and JSON without any config s
 - 🌬️ Fast to boot, light on memory.
 - 🪄 File-based and rule-based matching. Scripting supported.
 
-### When to use ?
-
-- The backend is not ready yet.
-- You need stable API responses for UI testing.
-- You want offline development.
-- CI tests require a predictable API.
-- Your mock data is becoming large.
-
 ### `apimock-rs` handles real project scale
 
 As your project grows, your mock API grows, too. Large mock datasets often cause problems:
@@ -41,6 +33,16 @@ As your project grows, your mock API grows, too. Large mock datasets often cause
 - High memory usage
 - Crashes during UI testing
 - Unstable CI runs
+
+### When to use ?
+
+- The backend is not ready yet.
+- You need stable API responses for UI testing.
+- You want offline development.
+- CI tests require a predictable API.
+- Your mock data is becoming large.
+
+### Performance
 
 apimock-rs does not preload responses. Each response file is read only when a request arrives using non-blocking I/O. This keeps:
 
@@ -87,6 +89,11 @@ You now have a running REST endpoint.
 | `npx apimock -p 4000` | Run with custom port. |
 | `npx apimock -d tests/apimock-dyn-route` | Run with custom root dir on server response. |
 | `npx apimock -c apimock.toml` | Run with config file giving rich features. Running `npx apimock --init` beforehand is required. |
+| `npx apimock --init` | **Interactive setup.** Prompts for port / IP / fallback dir / whether to scaffold a rule-set file, middleware file, and TLS section, then writes `apimock.toml` (and optionally `apimock-rule-set.toml` / `apimock-middleware.rhai`) customised to your answers. |
+| `npx apimock --init --yes` | Non-interactive setup: skip every prompt and write the same defaults 4.7.0 wrote (`127.0.0.1:3001`, rule-set file included, TLS commented out). Useful in CI or Docker builds. |
+| `npx apimock --init --middleware` | Also scaffold `apimock-middleware.rhai`. Combines with `--yes`. |
+
+When stdin is not a TTY (piped, CI, Docker build), `--init` silently falls back to defaults even without `--yes` — so existing non-interactive usage of 4.7.0 keeps working unchanged.
 
 ### Vite project integration
 

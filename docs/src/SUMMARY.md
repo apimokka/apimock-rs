@@ -45,3 +45,4 @@
             - [Headers](./technical-referrence/design/response/headers/README.md)
                 - [CORS](./technical-referrence/design/response/headers/cors.md)
                 - [OPTIONS](./technical-referrence/design/response/headers/options.md)
+    - [Benchmarks](./technical-referrence/benchmarks.md)

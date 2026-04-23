@@ -1,6 +1,7 @@
 use std::{env, fs, io, path::Path};
 
 pub mod constant;
+pub mod init_interactive;
 
 use constant::*;
 
@@ -48,8 +49,13 @@ impl EnvArgs {
         if init_config {
             let includes_middleware =
                 args_option_value(INCLUDES_MIDDLEWARE_OPTION_NAMES.as_ref()).is_some();
-            // generate config files and quit
-            if let Err(err) = ret.init_config(includes_middleware) {
+            let force_defaults = args_option_value(YES_OPTION_NAMES.as_ref()).is_some();
+            // Drive the interactive prompt (or fall back to defaults in
+            // non-TTY / --yes contexts). We log but don't propagate the
+            // error: a failed init is a user-level problem, and forcing
+            // the binary to exit 1 on a partial write would be more
+            // disruptive than informative.
+            if let Err(err) = ret.init_config_interactive(includes_middleware, force_defaults) {
                 log::error!("failed to init config ({})", err);
             }
             return Ok(None);
@@ -115,28 +121,26 @@ impl EnvArgs {
         })
     }
 
-    /// Scaffold `apimock.toml` (and related files) into the current directory.
+    /// Scaffold `apimock.toml` (and related files) into the current directory,
+    /// driven by interactive prompts when stdin is a TTY.
     ///
-    /// Skips files that already exist — `--init` is a convenience, not an
-    /// overwrite tool. The caller logs results via `println!` so a user
-    /// running `apimock --init` for the first time sees what was created.
-    fn init_config(&mut self, includes_middleware: bool) -> Result<(), io::Error> {
-        if includes_middleware {
-            if !Path::new(DEFAULT_MIDDLEWARE_FILE_PATH).exists() {
-                let content = include_str!("../../examples/config/default/apimock-middleware.rhai");
-                fs::write(DEFAULT_MIDDLEWARE_FILE_PATH, content)?;
-                println!(
-                    "middleware scripting file is created: {}.",
-                    DEFAULT_MIDDLEWARE_FILE_PATH
-                );
-            } else {
-                println!(
-                    "[warn] middlware scripting file exists: {}.",
-                    DEFAULT_MIDDLEWARE_FILE_PATH
-                );
-            }
-        }
-
+    /// Files that already exist are left untouched — `--init` is a
+    /// convenience for fresh directories, not an overwrite tool.
+    ///
+    /// # Why this never returns an error for an existing config file
+    ///
+    /// If the operator already has an `apimock.toml`, bailing out with a
+    /// non-zero exit would break repeatable idempotent scripts that run
+    /// `--init` before starting the server. Printing a warning and
+    /// continuing preserves that usage pattern.
+    fn init_config_interactive(
+        &mut self,
+        cli_middleware_override: bool,
+        force_defaults: bool,
+    ) -> Result<(), io::Error> {
+        // Early exit if the root config already exists — we never overwrite
+        // it, and asking a barrage of questions we're about to ignore would
+        // waste the user's time.
         if Path::new(DEFAULT_CONFIG_FILE_PATH).exists() {
             println!(
                 "[warn] quit because default root config file exists: {}.",
@@ -145,11 +149,36 @@ impl EnvArgs {
             return Ok(());
         }
 
-        let config_content = include_str!("../../examples/config/default/apimock.toml");
+        let answers = init_interactive::run(force_defaults, cli_middleware_override)?;
+
+        // Middleware file — honours both the CLI flag and the interactive answer.
+        if answers.include_middleware {
+            if !Path::new(DEFAULT_MIDDLEWARE_FILE_PATH).exists() {
+                let content =
+                    include_str!("../../examples/config/default/apimock-middleware.rhai");
+                fs::write(DEFAULT_MIDDLEWARE_FILE_PATH, content)?;
+                println!(
+                    "middleware scripting file is created: {}.",
+                    DEFAULT_MIDDLEWARE_FILE_PATH
+                );
+            } else {
+                println!(
+                    "[warn] middleware scripting file exists: {}.",
+                    DEFAULT_MIDDLEWARE_FILE_PATH
+                );
+            }
+        }
+
+        // Root config — templated from the collected answers so the file
+        // reflects the user's actual choices rather than a fixed example.
+        let config_content = init_interactive::render_apimock_toml(&answers);
         fs::write(DEFAULT_CONFIG_FILE_PATH, config_content)?;
         println!("root config file is created: {}.", DEFAULT_CONFIG_FILE_PATH);
 
-        if !Path::new(DEFAULT_RULE_SET_FILE_PATH).exists() {
+        // Rule set file — still the example content, because customising
+        // rule shapes interactively would be a much larger prompt tree
+        // for diminishing value. Users are expected to edit this file.
+        if answers.include_rule_set && !Path::new(DEFAULT_RULE_SET_FILE_PATH).exists() {
             let rule_set_content =
                 include_str!("../../examples/config/default/apimock-rule-set.toml");
             fs::write(DEFAULT_RULE_SET_FILE_PATH, rule_set_content)?;
@@ -159,6 +188,7 @@ impl EnvArgs {
             );
         }
 
+        init_interactive::print_summary(&answers);
         Ok(())
     }
 
