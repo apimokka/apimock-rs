@@ -89,7 +89,12 @@ You now have a running REST endpoint.
 | `npx apimock -p 4000` | Run with custom port. |
 | `npx apimock -d tests/apimock-dyn-route` | Run with custom root dir on server response. |
 | `npx apimock -c apimock.toml` | Run with config file giving rich features. Running `npx apimock --init` beforehand is required. |
-| `npx apimock --init` | **Interactive setup.** Prompts for port / IP / fallback dir / whether to scaffold a rule-set file, middleware file, and TLS section, then writes `apimock.toml` (and optionally `apimock-rule-set.toml` / `apimock-middleware.rhai`) customised to your answers. |
+
+### Setup with `npx apimock --init`
+
+| command | result |
+| --- | --- |
+| `npx apimock --init` | Interactive setup. Prompts for port / IP / fallback dir / whether to scaffold a rule-set file, middleware file, and TLS section, then writes `apimock.toml` (and optionally `apimock-rule-set.toml` / `apimock-middleware.rhai`) customised to your answers. |
 | `npx apimock --init --yes` | Non-interactive setup: skip every prompt and write the same defaults 4.7.0 wrote (`127.0.0.1:3001`, rule-set file included, TLS commented out). Useful in CI or Docker builds. |
 | `npx apimock --init --middleware` | Also scaffold `apimock-middleware.rhai`. Combines with `--yes`. |
 
