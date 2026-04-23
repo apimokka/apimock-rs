@@ -186,6 +186,7 @@ jobs:
       - name: npm publish
         working-directory: npm
         run: |
+          cp -f ../README.md .
           npm install --package-lock-only --ignore-scripts
           npm ci --ignore-scripts
           npm publish
