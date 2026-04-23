@@ -10,7 +10,7 @@
   "files": [
     "apimock.exe"
   ],
-  "description": "A developer-friendly, featherlight and functional HTTP(S) mock server built in Rust.",
+  "description": "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists.",
   "author": "nabbisen<nabbisen@scqr.net>",
   "license": "Apache-2.0",
   "repository": {

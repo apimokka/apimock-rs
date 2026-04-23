@@ -6,14 +6,23 @@ use std::{
 #[cfg(test)]
 mod tests;
 
-/// relative path from current dir (working dir) to file parent dir
+/// Relative path from the current working directory to the parent
+/// directory of the given file.
+///
+/// # Why a file whose parent we can't determine is an `io::Error`
+///
+/// `Path::parent()` returns `None` for root-only paths (`"/"`) and empty
+/// paths. Neither is a valid config file location, so treating them as an
+/// I/O error keeps the caller's `?` chain clean instead of forcing them
+/// to handle an `Option` separately.
 pub fn current_dir_to_file_parent_dir_relative_path(file_path: &str) -> io::Result<PathBuf> {
-    relative_path(
-        env::current_dir()?.as_path(),
-        Path::new(file_path)
-            .parent()
-            .expect(&format!("failed to get parent dir: {}", file_path)),
-    )
+    let parent = Path::new(file_path).parent().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("failed to get parent dir: {}", file_path),
+        )
+    })?;
+    relative_path(env::current_dir()?.as_path(), parent)
 }
 
 /// relative path between two paths

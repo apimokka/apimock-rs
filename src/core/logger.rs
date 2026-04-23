@@ -47,12 +47,17 @@ impl log::Log for AppLogger {
                 } else {
                     Cow::from(args)
                 };
-                // message with log level
-                let msg_with_log_level = format!(
-                    "[{}] {}",
-                    record.level().to_string().chars().next().unwrap(),
-                    msg
-                );
+                // message with log level — log levels are always
+                // non-empty ASCII words ("INFO", "WARN", ...), so the
+                // first char always exists; the fallback to '?' is just
+                // defensive in case a future log crate does something odd.
+                let level_initial = record
+                    .level()
+                    .to_string()
+                    .chars()
+                    .next()
+                    .unwrap_or('?');
+                let msg_with_log_level = format!("[{}] {}", level_initial, msg);
 
                 let tx = tx.clone();
                 tokio::spawn(async move {
@@ -66,7 +71,16 @@ impl log::Log for AppLogger {
     fn flush(&self) {}
 }
 
-/// init logger
+/// Install the application logger as `log`'s global logger.
+///
+/// # Why this is idempotent-on-failure
+///
+/// `OnceLock::set` can only succeed once per process. If something else
+/// already set our logger (for example, a second `App::new` in tests),
+/// we silently swallow the `Err` and just reuse whatever logger is
+/// already installed. The only surprise this can cause is that a test
+/// that expected a channel-based output might still see stdout output
+/// from the prior test, which is acceptable for our setup.
 pub fn init_logger(
     tx: Option<Sender<String>>,
     includes_ansi_codes: bool,
@@ -83,7 +97,15 @@ pub fn init_logger(
             includes_ansi_codes,
         })
         .ok();
-    log::set_logger(LOGGER.get().unwrap())?;
+
+    // `LOGGER.get()` cannot return `None` here: either our `set` above
+    // succeeded (so it's populated), or an earlier call already populated
+    // it. The `expect` message exists only for future refactors that might
+    // accidentally remove the `set` above.
+    let logger = LOGGER
+        .get()
+        .expect("logger must have been initialized by the set() above");
+    log::set_logger(logger)?;
     log::set_max_level(log::LevelFilter::Info);
 
     Ok(())

@@ -4,20 +4,31 @@
 pub mod core;
 use core::app::App;
 use core::args::EnvArgs;
+use core::error::AppResult;
 
-/// return hyper http server
+/// Build the app (default feature).
+///
+/// Returns an `AppResult` so that configuration or startup errors become
+/// typed, formatted messages rather than panics. See `core::error` for
+/// rationale.
 #[cfg(not(feature = "spawn"))]
-pub async fn new(env_args: &EnvArgs) -> App {
+pub async fn new(env_args: &EnvArgs) -> AppResult<App> {
     App::new(env_args, None, true).await
 }
 
 #[cfg(feature = "spawn")]
 use tokio::sync::mpsc::Sender;
 
-/// accept sender to main proc set to logger and
-/// return hyper http server
-/// `includes_ansi_codes`: if true, log includes ansi escape codes for console text color
+/// Build the app under the `spawn` feature.
+///
+/// - `spawn_tx`: channel to forward log output to the embedding process.
+/// - `includes_ansi_codes`: if `true`, forwarded log lines retain ANSI
+///   colour escapes.
 #[cfg(feature = "spawn")]
-pub async fn new(env_args: &EnvArgs, spawn_tx: Sender<String>, includes_ansi_codes: bool) -> App {
+pub async fn new(
+    env_args: &EnvArgs,
+    spawn_tx: Sender<String>,
+    includes_ansi_codes: bool,
+) -> AppResult<App> {
     App::new(env_args, Some(spawn_tx), includes_ansi_codes).await
 }

@@ -34,7 +34,21 @@ pub struct Respond {
 }
 
 impl Respond {
-    /// generate response
+    /// Produce the HTTP response for a matched rule.
+    ///
+    /// # Why the branches are ordered file → text → status → error
+    ///
+    /// The fields are mutually specialised:
+    /// - `file_path` serves a file (possibly with CSV→JSON conversion).
+    /// - `text` + `status` yields a custom-status text response.
+    /// - `text` alone yields a plain 200 text response.
+    /// - `status` alone yields an empty body with that status.
+    ///
+    /// The validator (`Respond::validate`) already rejects combinations
+    /// that don't make sense (e.g. `file_path` + `text`). At runtime we
+    /// therefore only need to check the most specific field first and
+    /// fall through — this also keeps the `Err` branch minimal, since
+    /// reaching it means something slipped past validation.
     pub async fn response(
         &self,
         dir_prefix: &str,
@@ -44,51 +58,52 @@ impl Respond {
             delay_response(delay_response_milliseconds).await;
         }
 
+        let request_headers = &parsed_request.component_parts.headers;
+
+        // file_path → file/CSV/JSON response
         if let Some(file_path) = self.file_path.as_ref() {
-            let full_file_path = full_file_path(file_path.as_str(), dir_prefix);
-            if full_file_path.is_none() {
+            let Some(full_file_path) = full_file_path(file_path.as_str(), dir_prefix) else {
                 log::error!(
                     "{}:\n{} (prefix = {})",
                     style("file not found").red(),
-                    self.file_path.clone().unwrap_or_default().as_str(),
-                    dir_prefix
+                    file_path,
+                    dir_prefix,
                 );
                 return internal_server_error_response(
                     "failed to get response file",
-                    &parsed_request.component_parts.headers,
+                    request_headers,
                 );
-            }
-            FileResponse::new_with_csv_records_jsonpath(
-                full_file_path.unwrap().as_str(),
+            };
+
+            return FileResponse::new_with_csv_records_jsonpath(
+                full_file_path.as_str(),
                 self.headers.as_ref(),
                 self.csv_records_key.clone(),
-                &parsed_request.component_parts.headers,
+                request_headers,
             )
             .file_content_response()
-            .await
-        } else if let Some(text) = self.text.as_ref() {
-            if let Some(status_code) = self.status_code.as_ref() {
-                status_code_response_with_message(
+            .await;
+        }
+
+        // text (+ optional status) → text response
+        if let Some(text) = self.text.as_ref() {
+            return match self.status_code.as_ref() {
+                Some(status_code) => status_code_response_with_message(
                     status_code,
                     text.as_str(),
-                    &parsed_request.component_parts.headers,
-                )
-            } else {
-                text_response(
-                    text.as_str(),
-                    None,
-                    self.headers.as_ref(),
-                    &parsed_request.component_parts.headers,
-                )
-            }
-        } else if let Some(status_code) = self.status_code.as_ref() {
-            status_code_response(status_code, &parsed_request.component_parts.headers)
-        } else {
-            internal_server_error_response(
-                "invalid respond def",
-                &parsed_request.component_parts.headers,
-            )
+                    request_headers,
+                ),
+                None => text_response(text.as_str(), None, self.headers.as_ref(), request_headers),
+            };
         }
+
+        // status alone → empty-body status response
+        if let Some(status_code) = self.status_code.as_ref() {
+            return status_code_response(status_code, request_headers);
+        }
+
+        // validator should have caught this; defensive only
+        internal_server_error_response("invalid respond def", request_headers)
     }
 
     /// validate

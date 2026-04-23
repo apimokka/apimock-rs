@@ -8,14 +8,26 @@ mod prefix;
 pub mod rule;
 
 use crate::core::{
-    config::service_config::strategy::Strategy, server::parsed_request::ParsedRequest,
+    config::service_config::strategy::Strategy,
+    error::{AppError, AppResult},
+    server::parsed_request::ParsedRequest,
     util::http::normalize_url_path,
 };
 use default_respond::DefaultRespond;
 use guard::Guard;
 use prefix::Prefix;
-use rule::{respond::Respond, Rule};
+use rule::{Rule, respond::Respond};
 
+/// A named collection of routing rules, loaded from one TOML file.
+///
+/// # Why rule sets, not a single flat rule list
+///
+/// Large mock APIs tend to group related endpoints (e.g. all of `/api/v1`
+/// under one auth scheme). A rule set lets operators share a URL prefix
+/// and a respond-dir prefix across many rules, and to split their config
+/// across multiple files that can be enabled/disabled independently.
+/// Match order across sets is determined by the order in
+/// `service.rule_sets`, so the most specific set can be listed first.
 #[derive(Clone, Deserialize, Debug)]
 pub struct RuleSet {
     pub prefix: Option<Prefix>,
@@ -27,62 +39,74 @@ pub struct RuleSet {
 }
 
 impl RuleSet {
-    /// create instance
+    /// Load a rule set from a TOML file on disk.
+    ///
+    /// # Why errors are typed and not panics
+    ///
+    /// In 4.6.x this used `expect` + `panic!`, so a missing or malformed
+    /// rule set aborted the process. Because rule sets are edited
+    /// frequently during development, those panics were a common papercut.
+    /// Now any failure becomes an `AppError::RuleSetRead` / `::RuleSetParse`
+    /// that the caller can surface cleanly.
     pub fn new(
         rule_set_file_path: &str,
         current_dir_to_config_dir_relative_path: &str,
         rule_set_idx: usize,
-    ) -> Self {
-        let toml_string = fs::read_to_string(rule_set_file_path).expect(&format!(
-            "failed to read rule set toml `{}`",
-            rule_set_file_path
-        ));
-        let deserialized = toml::from_str::<Self>(&toml_string);
-        let mut ret = match deserialized {
-            Ok(x) => x,
-            Err(err) => panic!(
-                "invalid toml content: {} ({})\n({})",
-                rule_set_file_path,
-                Path::new(rule_set_file_path)
-                    .canonicalize()
-                    .unwrap_or_default()
-                    .to_string_lossy(),
-                err
-            ),
-        };
+    ) -> AppResult<Self> {
+        let path = Path::new(rule_set_file_path);
+        let toml_string = fs::read_to_string(rule_set_file_path).map_err(|e| {
+            AppError::RuleSetRead {
+                path: path.to_path_buf(),
+                source: e,
+            }
+        })?;
 
-        // - prefix
-        let mut prefix = match ret.prefix {
-            Some(x) => x.clone(),
-            None => Prefix::default(),
-        };
+        let mut ret: Self = toml::from_str(&toml_string).map_err(|e| AppError::RuleSetParse {
+            path: path.to_path_buf(),
+            canonical: path.canonicalize().ok(),
+            source: e,
+        })?;
 
-        // - prefix.url_path_prefix
-        prefix.url_path_prefix = match prefix.url_path_prefix {
-            Some(url_path_prefix) => Some(normalize_url_path(url_path_prefix.as_str(), None)),
-            None => None,
-        };
+        // - prefix: fill in defaults and normalize
+        let mut prefix = ret.prefix.clone().unwrap_or_default();
 
-        // - prefix.respond_dir_prefix
-        let respond_dir_prefix = match prefix.respond_dir_prefix.as_ref() {
-            Some(respond_dir_prefix) => respond_dir_prefix.as_str(),
-            None => ".",
-        };
+        // normalize `url_path` so later matching doesn't have to deal with
+        // leading/trailing slash variations
+        prefix.url_path_prefix = prefix
+            .url_path_prefix
+            .as_deref()
+            .map(|p| normalize_url_path(p, None));
+
+        // respond_dir prefix: default to "." and anchor it under the
+        // config-file directory so relative paths in rule sets are
+        // relative to the rule-set file, not the working directory
+        let respond_dir_prefix = prefix.respond_dir_prefix.as_deref().unwrap_or(".");
 
         let respond_dir_prefix =
             Path::new(current_dir_to_config_dir_relative_path).join(respond_dir_prefix);
-        let respond_dir_prefix = respond_dir_prefix.to_str().expect(
-            format!(
-                "failed to get path str: {}",
-                respond_dir_prefix.to_string_lossy()
-            )
-            .as_str(),
-        );
+        let respond_dir_prefix = respond_dir_prefix.to_str().ok_or_else(|| {
+            AppError::RuleSetRead {
+                path: path.to_path_buf(),
+                // We synthesize an io::Error here only because the variant
+                // needs one; the real failure is "path contains non-UTF-8
+                // bytes", which is vanishingly rare but not impossible on
+                // Unix. Using `InvalidData` keeps it distinguishable.
+                source: std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!(
+                        "respond_dir path contains non-UTF-8 bytes: {}",
+                        respond_dir_prefix.to_string_lossy()
+                    ),
+                ),
+            }
+        })?;
 
         prefix.respond_dir_prefix = Some(respond_dir_prefix.to_owned());
         ret.prefix = Some(prefix);
 
-        // - rules
+        // - rules: compute any derived fields (normalized URL path with
+        //   prefix already applied, resolved status code, etc.) so the
+        //   request-time hot path doesn't have to repeat the work
         ret.rules = ret
             .rules
             .iter()
@@ -90,10 +114,10 @@ impl RuleSet {
             .map(|(rule_idx, rule)| rule.compute_derived_fields(&ret, rule_idx, rule_set_idx))
             .collect();
 
-        // - file path
+        // - file path (kept for log/display only)
         ret.file_path = rule_set_file_path.to_owned();
 
-        ret
+        Ok(ret)
     }
 
     /// find rule matching request and return its respond content

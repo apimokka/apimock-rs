@@ -7,7 +7,10 @@ use toml;
 
 use std::{fs, path::Path};
 
-use crate::core::server::middleware::middleware_handler::MiddlewareHandler;
+use crate::core::{
+    error::{AppError, AppResult},
+    server::middleware::middleware_handler::MiddlewareHandler,
+};
 
 use super::{
     server::routing::rule_set::RuleSet, util::path::current_dir_to_file_parent_dir_relative_path,
@@ -18,9 +21,21 @@ pub mod listener_config;
 pub mod log_config;
 pub mod service_config;
 
-/// app config
+/// Top-level application configuration, corresponding one-to-one with
+/// `apimock.toml`.
+///
+/// # Why config lives in one struct, not one-per-section
+///
+/// TOML's section structure matches a single nested struct very naturally
+/// via `serde::Deserialize`. Splitting into multiple top-level structs
+/// would force us to parse the file more than once or to invent custom
+/// deserialization, for no real benefit — sections are already grouped
+/// inside this struct (`listener`, `log`, `service`).
 #[derive(Clone, Deserialize)]
 pub struct Config {
+    /// Where this config was loaded from. Kept so we can resolve relative
+    /// paths (rule sets, middlewares, respond dirs) against the config
+    /// file's parent directory — not the process's working directory.
     #[serde(skip)]
     file_path: Option<String>,
 
@@ -29,191 +44,226 @@ pub struct Config {
     pub service: ServiceConfig,
 }
 
-/// app config
 impl Config {
-    /// create new instance
+    /// Build a new `Config` by reading the given TOML file, resolving
+    /// rule-set and middleware paths, and validating the result.
+    ///
+    /// # Why a single entry point does all of loading, resolving and validating
+    ///
+    /// In 4.6.x these stages were scattered across `Config::new`, and each
+    /// failure mode either panicked or silently defaulted. Consolidating
+    /// them here means each failure becomes one typed `AppError` variant,
+    /// and the caller (`App::new`) can return a single `AppResult<Self>`.
     pub fn new(
         config_file_path: Option<&String>,
         fallback_respond_dir_path: Option<&String>,
-    ) -> Self {
-        let mut ret = Self::init(config_file_path);
+    ) -> AppResult<Self> {
+        let mut ret = Self::init(config_file_path)?;
 
-        ret.set_rule_sets();
-        match ret.middlewares_from_file_paths() {
-            Ok(x) => {
-                if !x.is_empty() {
-                    log::info!("middleware is activated: {} file(s)", x.len());
-                }
-                ret.service.middlewares = x
-            }
-            Err(x) => panic!("{}", x),
+        ret.set_rule_sets()?;
+
+        let middlewares = ret.middlewares_from_file_paths()?;
+        if !middlewares.is_empty() {
+            log::info!("middleware is activated: {} file(s)", middlewares.len());
         }
+        ret.service.middlewares = middlewares;
 
-        ret.compute_fallback_respond_dir(fallback_respond_dir_path);
+        ret.compute_fallback_respond_dir(fallback_respond_dir_path)?;
 
         if !ret.validate() {
-            panic!("failed to start up due to invalid config");
+            return Err(AppError::Validation);
         }
 
         log::info!("{}", ret);
 
-        ret
+        Ok(ret)
     }
 
-    /// initialize
-    fn init(config_file_path: Option<&String>) -> Self {
-        let ret = if let Some(config_file_path) = config_file_path {
-            log::info!("[config] {}\n", config_file_path);
-
-            let toml_string = fs::read_to_string(config_file_path.as_str()).unwrap();
-            let mut config: Config = match toml::from_str(&toml_string) {
-                Ok(x) => x,
-                Err(err) => panic!(
-                    "invalid toml content: {} ({})\n({})",
-                    config_file_path,
-                    Path::new(config_file_path)
-                        .canonicalize()
-                        .unwrap_or_default()
-                        .to_string_lossy(),
-                    err
-                ),
-            };
-
-            config.file_path = Some(config_file_path.to_owned());
-
-            config
-        } else {
-            Config::default()
+    /// Load + parse the TOML file. Returns `Config::default()` when no
+    /// path is provided (this is the zero-config "just serve a folder"
+    /// path).
+    fn init(config_file_path: Option<&String>) -> AppResult<Self> {
+        let Some(config_file_path) = config_file_path else {
+            return Ok(Config::default());
         };
 
-        ret
+        log::info!("[config] {}\n", config_file_path);
+
+        let path = Path::new(config_file_path);
+        let toml_string =
+            fs::read_to_string(config_file_path).map_err(|e| AppError::ConfigRead {
+                path: path.to_path_buf(),
+                source: e,
+            })?;
+
+        let mut config: Config = toml::from_str(&toml_string).map_err(|e| AppError::ConfigParse {
+            path: path.to_path_buf(),
+            canonical: path.canonicalize().ok(),
+            source: e,
+        })?;
+        config.file_path = Some(config_file_path.to_owned());
+
+        Ok(config)
     }
 
-    /// set rule sets from rule sets file paths
-    fn set_rule_sets(&mut self) {
-        let relative_dir_path = self.current_dir_to_parent_dir_relative_path();
+    /// Load every rule-set file listed in `service.rule_sets`.
+    fn set_rule_sets(&mut self) -> AppResult<()> {
+        let relative_dir_path = self.current_dir_to_parent_dir_relative_path()?;
 
-        let rule_sets_file_paths = match self.service.rule_sets_file_paths.as_ref() {
-            Some(x) => x,
-            None => return,
+        let Some(rule_sets_file_paths) = self.service.rule_sets_file_paths.as_ref() else {
+            return Ok(());
         };
 
-        self.service.rule_sets = rule_sets_file_paths
-            .iter()
-            .enumerate()
-            .map(|(rule_set_idx, rule_set_file_path)| {
-                let rule_set_file_path =
-                    Path::new(relative_dir_path.as_str()).join(rule_set_file_path);
-                let rule_set_file_path = rule_set_file_path.to_str().expect(
+        let mut rule_sets = Vec::with_capacity(rule_sets_file_paths.len());
+        for (rule_set_idx, rule_set_file_path) in rule_sets_file_paths.iter().enumerate() {
+            let joined = Path::new(relative_dir_path.as_str()).join(rule_set_file_path);
+            // Non-UTF-8 paths are rare but possible on Unix. We surface
+            // them as a `ConfigRead` error rather than panicking so the
+            // user gets a message that points at the offending entry.
+            let path_str = joined.to_str().ok_or_else(|| AppError::ConfigRead {
+                path: joined.clone(),
+                source: std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
                     format!(
-                        "failed to get relative path from current dir to rule set #{} ({})",
+                        "rule set #{} path contains non-UTF-8 bytes: {}",
                         rule_set_idx + 1,
-                        rule_set_file_path.to_string_lossy()
-                    )
-                    .as_str(),
-                );
+                        joined.to_string_lossy(),
+                    ),
+                ),
+            })?;
 
-                RuleSet::new(rule_set_file_path, relative_dir_path.as_str(), rule_set_idx)
-            })
-            .collect();
-    }
-
-    /// set middlewares from middlewares file paths
-    fn middlewares_from_file_paths(&mut self) -> Result<Vec<MiddlewareHandler>, String> {
-        let relative_dir_path = self.current_dir_to_parent_dir_relative_path();
-
-        match self.service.middlewares_file_paths.as_ref() {
-            Some(x) => x
-                .iter()
-                .enumerate()
-                .map(|(middleware_idx, middlware_file_path)| {
-                    let middlware_file_path =
-                        Path::new(relative_dir_path.as_str()).join(middlware_file_path);
-                    let middlware_file_path = middlware_file_path.to_str().expect(
-                        format!(
-                            "failed to get relative path from current dir to rule set #{} ({})",
-                            middleware_idx + 1,
-                            middlware_file_path.to_string_lossy()
-                        )
-                        .as_str(),
-                    );
-
-                    MiddlewareHandler::new(middlware_file_path)
-                })
-                .collect(),
-            None => Ok(vec![]),
+            rule_sets.push(RuleSet::new(
+                path_str,
+                relative_dir_path.as_str(),
+                rule_set_idx,
+            )?);
         }
+
+        self.service.rule_sets = rule_sets;
+        Ok(())
     }
 
-    /// compute relative fallback_respond_dir from current dir
-    pub fn compute_fallback_respond_dir(&mut self, fallback_respond_dir_path: Option<&String>) {
+    /// Compile every middleware file listed in `service.middlewares`.
+    fn middlewares_from_file_paths(&self) -> AppResult<Vec<MiddlewareHandler>> {
+        let relative_dir_path = self.current_dir_to_parent_dir_relative_path()?;
+
+        let Some(middleware_file_paths) = self.service.middlewares_file_paths.as_ref() else {
+            return Ok(Vec::new());
+        };
+
+        let mut handlers = Vec::with_capacity(middleware_file_paths.len());
+        for (middleware_idx, middleware_file_path) in middleware_file_paths.iter().enumerate() {
+            let joined = Path::new(relative_dir_path.as_str()).join(middleware_file_path);
+            let path_str = joined.to_str().ok_or_else(|| AppError::ConfigRead {
+                path: joined.clone(),
+                source: std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!(
+                        "middleware #{} path contains non-UTF-8 bytes: {}",
+                        middleware_idx + 1,
+                        joined.to_string_lossy(),
+                    ),
+                ),
+            })?;
+            handlers.push(MiddlewareHandler::new(path_str)?);
+        }
+
+        Ok(handlers)
+    }
+
+    /// Compute the resolved `fallback_respond_dir` used by the file-based
+    /// (a.k.a. "dyn route") fallback responder.
+    ///
+    /// # Why this needs special handling
+    ///
+    /// The user supplies either a CLI flag (`-d`) or a value in the config
+    /// file. A CLI flag wins unconditionally. Otherwise, the config value
+    /// must be resolved relative to the config file (not CWD) to match
+    /// user expectations — running `apimock -c path/to/conf.toml` from a
+    /// different directory must still find `./responses/` as defined
+    /// inside `conf.toml`.
+    pub fn compute_fallback_respond_dir(
+        &mut self,
+        fallback_respond_dir_path: Option<&String>,
+    ) -> AppResult<()> {
         if let Some(fallback_respond_dir_path) = fallback_respond_dir_path {
             self.service.fallback_respond_dir = fallback_respond_dir_path.to_owned();
-            return;
+            return Ok(());
         }
 
         if self.service.fallback_respond_dir.as_str() == SERVICE_DEFAULT_FALLBACK_RESPOND_DIR {
-            return;
+            return Ok(());
         }
 
-        let relative_path = self.current_dir_to_parent_dir_relative_path();
-        let fallback_respond_dir =
+        let relative_path = self.current_dir_to_parent_dir_relative_path()?;
+        let joined =
             Path::new(relative_path.as_str()).join(self.service.fallback_respond_dir.as_str());
-        let fallback_respond_dir = fallback_respond_dir.to_str().expect(
-            format!(
-                "failed to get path str: {}",
-                fallback_respond_dir.to_string_lossy()
-            )
-            .as_str(),
-        );
-        self.service.fallback_respond_dir = fallback_respond_dir.to_owned();
+        let resolved = joined.to_str().ok_or_else(|| AppError::PathResolve {
+            path: joined.clone(),
+            source: std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "fallback_respond_dir path contains non-UTF-8 bytes: {}",
+                    joined.to_string_lossy(),
+                ),
+            ),
+        })?;
+        self.service.fallback_respond_dir = resolved.to_owned();
+        Ok(())
     }
 
-    /// address http server listens to
+    /// HTTP listener address, if HTTP is enabled.
+    ///
+    /// # Why HTTP can be disabled even when `[listener]` is present
+    ///
+    /// When TLS is configured without a dedicated `tls.port`, we treat the
+    /// single listener port as HTTPS-only. This is the "just serve HTTPS
+    /// on 3001" shape — the most common TLS configuration, and avoiding
+    /// accidentally binding a duplicate plaintext listener on the same
+    /// port. Returning `None` is how we signal "skip the HTTP listener".
     pub fn listener_http_addr(&self) -> Option<String> {
         let https_is_active = self.listener_https_addr().is_some();
         if https_is_active {
-            let port_is_single = self.listener.clone().unwrap().tls.unwrap().port.is_none();
+            let port_is_single = self
+                .listener
+                .as_ref()
+                .and_then(|l| l.tls.as_ref())
+                .map(|t| t.port.is_none())
+                .unwrap_or(false);
             if port_is_single {
                 return None;
             }
         }
 
-        let listener = if let Some(listener) = self.listener.as_ref() {
-            listener
-        } else {
-            &ListenerConfig::default()
+        let listener_default;
+        let listener = match self.listener.as_ref() {
+            Some(l) => l,
+            None => {
+                listener_default = ListenerConfig::default();
+                &listener_default
+            }
         };
 
         Some(format!("{}:{}", listener.ip_address, listener.port))
     }
 
-    /// address https server listens to
+    /// HTTPS listener address, if TLS is configured.
     pub fn listener_https_addr(&self) -> Option<String> {
-        let listener = if let Some(listener) = self.listener.clone() {
-            listener
-        } else {
-            return None;
-        };
-
-        if let Some(tls) = listener.tls {
-            let port = if let Some(port) = tls.port {
-                port
-            } else {
-                listener.port
-            };
-            return Some(format!("{}:{}", listener.ip_address, port));
-        }
-
-        None
+        let listener = self.listener.as_ref()?;
+        let tls = listener.tls.as_ref()?;
+        let port = tls.port.unwrap_or(listener.port);
+        Some(format!("{}:{}", listener.ip_address, port))
     }
 
-    /// update `fallback_respond_dir`
-    // pub fn update_fallback_respond_dir(&mut self, data_dir: &str, old_data_dir: &str) {}
-
-    /// validate settings in app config
+    /// Validate settings.
     ///
-    /// note: none requires validation in LogConfig
+    /// # Why validation is a bool, not an `AppResult`
+    ///
+    /// Individual validators log detailed error messages at the call site
+    /// (so the user can see *every* problem in one pass, not just the
+    /// first). This function only reports whether the config as a whole
+    /// is acceptable — the `AppError::Validation` wrapping is added once
+    /// by `Config::new`.
     fn validate(&self) -> bool {
         if let Some(listener) = self.listener.as_ref() {
             if !listener.validate() {
@@ -228,24 +278,38 @@ impl Config {
         self.service.validate()
     }
 
-    /// get relative path from current dir (working dir) to parent dir of this file
-    fn current_dir_to_parent_dir_relative_path(&self) -> String {
-        match self.file_path.as_ref() {
-            Some(x) => {
-                let relative_dir_path =
-                    current_dir_to_file_parent_dir_relative_path(x.as_str())
-                    .expect(&format!("failed to get relative path from current dir to config toml file dir: config toml = {}", self.file_path.clone().unwrap_or_default()));
-                let relative_dir_path = relative_dir_path.to_str().expect(
+    /// Relative path from CWD to the parent dir of the config file.
+    ///
+    /// Used to resolve every other path in the config (rule sets,
+    /// middlewares, respond dirs) relative to the config file's location,
+    /// not the process's working directory.
+    fn current_dir_to_parent_dir_relative_path(&self) -> AppResult<String> {
+        let Some(file_path) = self.file_path.as_ref() else {
+            return Ok(String::from("."));
+        };
+
+        let relative_dir_path =
+            current_dir_to_file_parent_dir_relative_path(file_path.as_str()).map_err(|e| {
+                AppError::PathResolve {
+                    path: Path::new(file_path).to_path_buf(),
+                    source: e,
+                }
+            })?;
+
+        let as_str = relative_dir_path
+            .to_str()
+            .ok_or_else(|| AppError::PathResolve {
+                path: relative_dir_path.clone(),
+                source: std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
                     format!(
-                        "failed to get relative file str: {}",
+                        "relative path contains non-UTF-8 bytes: {}",
                         relative_dir_path.to_string_lossy()
-                    )
-                    .as_str(),
-                );
-                relative_dir_path.to_owned()
-            }
-            None => String::from("."),
-        }
+                    ),
+                ),
+            })?;
+
+        Ok(as_str.to_owned())
     }
 }
 

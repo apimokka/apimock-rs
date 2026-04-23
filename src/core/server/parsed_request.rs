@@ -12,14 +12,38 @@ use crate::core::{
     util::http::{content_type_is_application_json, normalize_url_path},
 };
 
+/// Request metadata and body, decoded once per request.
+///
+/// # Why we eagerly collect the body
+///
+/// Routing decisions depend on body contents (rule-set `body.json`
+/// conditions, middleware evaluation). Rather than re-collecting the
+/// body each time a matcher asks for it, we consume the `Incoming`
+/// stream once here and keep the parsed JSON around for the lifetime of
+/// the request. This is appropriate for a mock server where payloads
+/// are small; a production proxy would want streaming instead.
 #[derive(Debug)]
 pub struct ParsedRequest {
     pub url_path: String,
     pub component_parts: Parts,
+    /// Parsed JSON body, if the request had one that parsed successfully.
+    /// `None` here means either "no body" or "body present but not JSON";
+    /// the two are indistinguishable at the matcher layer and we don't
+    /// currently need to distinguish them.
     pub body_json: Option<Value>,
 }
 
 impl ParsedRequest {
+    /// Consume an incoming hyper request into a parsed form.
+    ///
+    /// # Why a non-JSON body is logged but not rejected
+    ///
+    /// Some rule sets key only on URL path or headers and don't inspect
+    /// the body at all. Failing the whole request because an operator
+    /// sent a form-encoded payload would be more aggressive than needed;
+    /// we log a warning and continue so the URL-path-only rules still
+    /// apply. Only *claimed* JSON (`Content-Type: application/json`) that
+    /// fails to parse becomes a hard `Err` — that is a real client bug.
     pub async fn from(request: hyper::Request<Incoming>) -> Result<Self, String> {
         let (component_parts, body) = request.into_parts();
 
@@ -31,32 +55,47 @@ impl ParsedRequest {
             }
         };
 
-        let has_body = body_bytes.is_some() && !body_bytes.as_ref().unwrap().is_empty();
+        let has_body = body_bytes
+            .as_ref()
+            .map(|b| !b.is_empty())
+            .unwrap_or(false);
 
-        let mut body_json: Option<Value> = None;
-        if has_body {
-            let raw_body_json = serde_json::from_slice::<Option<Value>>(&body_bytes.unwrap());
+        let body_json = if has_body {
+            // Safe: `has_body` implies `body_bytes.is_some()`.
+            let bytes = body_bytes.as_ref().expect("body_bytes presence checked by has_body");
+            let raw_body_json = serde_json::from_slice::<Option<Value>>(bytes);
 
-            let _ = match content_type_is_application_json(&component_parts.headers) {
-                // case application/json: get json body
-                Some(x) if x && raw_body_json.is_err() => {
+            match (
+                content_type_is_application_json(&component_parts.headers),
+                raw_body_json,
+            ) {
+                // declared application/json but body didn't parse → hard error
+                (Some(true), Err(err)) => {
                     return Err(format!(
                         "failed to get json value from request body: {}",
-                        raw_body_json.unwrap_err()
+                        err
                     ));
                 }
-                // todo: support other types than json (such as form value) in the future
-                Some(x) if !x => {
-                    log::warn!("request has body but its content-type is not application/json")
+                // declared application/json and body parsed → use it
+                (Some(true), Ok(v)) => v,
+                // body parsed as JSON even without the declaration → use it
+                // (this is a common reality for lazy clients)
+                (_, Ok(v)) => {
+                    if matches!(content_type_is_application_json(&component_parts.headers), Some(false)) {
+                        log::warn!(
+                            "request has body but its content-type is not application/json"
+                        );
+                    } else if content_type_is_application_json(&component_parts.headers).is_none() {
+                        log::warn!("request has body but doesn't have content-type");
+                    }
+                    v
                 }
-                None => log::warn!("request has body but doesn't have content-type"),
-                _ => (),
-            };
-
-            if raw_body_json.is_ok() {
-                body_json = raw_body_json.unwrap();
+                // body present but not JSON and not claimed as JSON → ignore
+                (_, Err(_)) => None,
             }
-        }
+        } else {
+            None
+        };
 
         let url_path = normalize_url_path(component_parts.uri.path(), None);
 
@@ -67,13 +106,24 @@ impl ParsedRequest {
         })
     }
 
-    /// print out logs
+    /// Emit the request to the log.
+    ///
+    /// # Why this is a method on `ParsedRequest` and not a logger plugin
+    ///
+    /// The verbose log contains pretty-printed JSON body, which requires
+    /// an allocation. Doing it inside a dedicated method means we can
+    /// short-circuit before paying that cost when verbose mode is off —
+    /// the default for non-debug use — without the logger trait having
+    /// to know anything about request shape.
     pub fn capture_in_log(&self, verbose: VerboseConfig) {
         // server log (timestamp)
+        // `unwrap_or_default` here: if the system clock is before 1970
+        // we fall back to 0 rather than panicking; this is pure log
+        // cosmetics and should never take down the server.
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+            .map(|d| d.as_secs())
+            .unwrap_or_default();
         let hours = (now / 3600) % 24;
         let minutes = (now / 60) % 60;
         let seconds = now % 60;
@@ -87,15 +137,11 @@ impl ParsedRequest {
             _ => "HTTP/1.0 or earlier, or HTTP/4 or later",
         };
 
-        let origin = if let Some(origin) = self.component_parts.headers.get(ORIGIN) {
-            if let Ok(origin) = origin.to_str() {
-                Some(origin)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        let origin = self
+            .component_parts
+            .headers
+            .get(ORIGIN)
+            .and_then(|v| v.to_str().ok());
 
         // print
         // - server info and request info
@@ -117,16 +163,20 @@ impl ParsedRequest {
             printed.push_str("\n");
         }
         if verbose.header {
+            // Header values that aren't valid UTF-8 are rare but legal.
+            // We render them as `<non-utf8>` rather than panicking — a
+            // log line is not worth taking the request down over.
             let headers = self
                 .component_parts
                 .headers
                 .iter()
-                .map(|x| format!("\n{}: {}", x.0, x.1.to_str().unwrap()))
+                .map(|(name, value)| {
+                    format!("\n{}: {}", name, value.to_str().unwrap_or("<non-utf8>"))
+                })
                 .collect::<String>();
-            let printed_headers = format!("{}", headers);
             printed.push_str(&format!(
                 "   [request.headers]{}\n",
-                style(printed_headers).magenta()
+                style(headers).magenta()
             ));
         }
 

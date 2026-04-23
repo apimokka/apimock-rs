@@ -4,48 +4,63 @@ pub mod app_state;
 pub mod constant;
 
 use super::args::EnvArgs;
-use super::config::listener_config::ListenerConfig;
 use super::config::Config;
+use super::error::AppResult;
 use super::logger::init_logger;
 use super::server::Server;
 use app_state::AppState;
 
-/// app
+/// Top-level application wiring: logger, config, and server.
+///
+/// # Why this layer exists on top of `Server`
+///
+/// `Server` is concerned with listening and dispatching requests. `App`
+/// is concerned with everything that has to happen *before* we start
+/// listening: initializing the global logger exactly once, reading and
+/// validating config, and applying CLI overrides. Keeping these concerns
+/// apart means `Server` can be tested in isolation without reaching into
+/// the filesystem or installing a global logger.
 pub struct App {
     pub server: Server,
 }
 
 impl App {
-    /// create new app
+    /// Construct the app.
     ///
-    /// - listener_port_to_overwrite: ignores port in config toml. used in both arguments and tests
+    /// - `env_args`: command-line arguments (already parsed by
+    ///   `EnvArgs::default`).
+    /// - `spawn_tx`: only under the `spawn` feature — a channel to forward
+    ///   log output to the embedding process.
+    /// - `includes_ansi_codes`: whether forwarded logs should retain ANSI
+    ///   colour escapes. Ignored without the `spawn` feature.
     pub async fn new(
         env_args: &EnvArgs,
         spawn_tx: Option<Sender<String>>,
         includes_ansi_codes: bool,
-    ) -> Self {
+    ) -> AppResult<Self> {
+        // `init_logger` is only fallible if something else in the process
+        // already installed a global logger. In a normal binary run that
+        // can't happen; in tests / embedding scenarios a prior init is a
+        // no-op we tolerate deliberately.
         let _ = init_logger(spawn_tx, includes_ansi_codes);
 
         let mut config = Config::new(
             env_args.config_file_path.as_ref(),
             env_args.fallback_respond_dir_path.as_ref(),
-        );
+        )?;
 
-        // overwrite port if the arg is specified
+        // Overwrite port if `--port` was supplied. We apply the override
+        // *after* loading config (not before) so that validation has run
+        // against the as-written file first.
         if let Some(port) = env_args.port {
-            let mut listener = if let Some(listener) = config.listener {
-                listener
-            } else {
-                ListenerConfig::default()
-            };
+            let mut listener = config.listener.unwrap_or_default();
             listener.port = port;
             config.listener = Some(listener);
         }
 
         let app_state = AppState { config };
+        let server = Server::new(app_state).await?;
 
-        let server = Server::new(app_state).await;
-
-        Self { server }
+        Ok(Self { server })
     }
 }

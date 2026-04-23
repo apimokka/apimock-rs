@@ -14,7 +14,22 @@ use crate::core::{
     util::json::JSON_COMPATIBLE_EXTENSIONS,
 };
 
-/// handle on `fallback_respond_dir` (dynamic json responses)
+/// Serve a request from the fallback `respond_dir` (the file-based "just
+/// drop JSON in a folder" mode).
+///
+/// # Why the matching is case-insensitive and extension-tolerant
+///
+/// This handler powers the zero-config experience where URL paths map
+/// onto files on disk. The two accommodations we make are:
+///
+/// 1. **Case-insensitive filename match** — browsers often canonicalize
+///    paths (`/Users` vs `/users`), and operators rarely care. If a file
+///    matches in a case-insensitive compare we use it.
+/// 2. **Extension inference** — a request to `/foo` with no extension
+///    looks for `foo.json`, `foo.json5`, `foo.csv` in that order, then
+///    `foo/index.*`. This means operators can drop a single JSON file
+///    and use the shortened URL, which matches how most REST APIs are
+///    described in docs.
 pub async fn dyn_route_content(
     url_path: &str,
     fallback_respond_dir: &str,
@@ -29,112 +44,100 @@ pub async fn dyn_route_content(
         .to_str()
         .unwrap_or_default();
 
-    let dir = match request_path.parent() {
-        Some(dir) => {
-            if dir.exists() {
-                dir.to_owned()
-            } else {
-                return not_found_response(request_headers);
-            }
-        }
-        None => {
-            return internal_server_error_response(
-                &format!("parent dir not found: url_path = {}", url_path),
-                request_headers,
-            )
-        }
+    // Locate the parent dir. Missing parent → 404. No parent at all
+    // (e.g. path was empty) → 500, since that indicates a bug elsewhere.
+    let Some(parent) = request_path.parent() else {
+        return internal_server_error_response(
+            &format!("parent dir not found: url_path = {}", url_path),
+            request_headers,
+        );
     };
+    if !parent.exists() {
+        return not_found_response(request_headers);
+    }
+    let dir = parent.to_owned();
 
+    // Read the directory off the async runtime.
+    //
+    // # Why `spawn_blocking` and not `tokio::fs`
+    //
+    // `tokio::fs` is a thin async wrapper that internally calls
+    // `spawn_blocking` itself. Using it directly would add a layer of
+    // indirection while we iterate a `DirEntry` stream. Since we want
+    // the whole directory listing at once (and it's bounded in size),
+    // doing one `spawn_blocking` for the full listing is simpler and
+    // uses the same thread pool underneath.
     let dir_for_blocking_task = dir.clone();
-    let entries = task::spawn_blocking(move || {
-        let mut ret = Vec::new();
-        let dir = dir_for_blocking_task.clone();
-        match fs::read_dir(dir.as_path()) {
-            Ok(entries) => {
-                for entry in entries {
-                    match entry {
-                        Ok(entry) => ret.push(entry),
-                        Err(err) => {
-                            let err_msg = format!(
-                                "failed to get dir entry from dir: {} ({})",
-                                dir.to_string_lossy(),
-                                err
-                            );
-                            return Err(err_msg.clone());
-                        }
-                    }
-                }
-                Ok(ret)
-            }
-            Err(err) => {
-                let err_msg = format!("failed to get dir: {} ({})", dir.to_string_lossy(), err);
-                return Err(err_msg.clone());
-            }
-        }
+    let read_dir_result = task::spawn_blocking(move || -> Result<Vec<_>, String> {
+        let entries = fs::read_dir(dir_for_blocking_task.as_path()).map_err(|err| {
+            format!(
+                "failed to get dir: {} ({})",
+                dir_for_blocking_task.to_string_lossy(),
+                err
+            )
+        })?;
+        entries
+            .map(|entry| {
+                entry.map_err(|err| {
+                    format!(
+                        "failed to get dir entry from dir: {} ({})",
+                        dir_for_blocking_task.to_string_lossy(),
+                        err
+                    )
+                })
+            })
+            .collect()
     })
     .await;
 
-    let mut found = None;
-
-    let entries = match entries {
-        Ok(entries) => match entries {
-            Ok(entries) => entries,
-            Err(err) => return internal_server_error_response(err.as_str(), request_headers),
-        },
+    let entries = match read_dir_result {
+        Ok(Ok(v)) => v,
+        Ok(Err(err)) => {
+            return internal_server_error_response(err.as_str(), request_headers);
+        }
         Err(err) => {
             return internal_server_error_response(
-                &format!(
-                    "failed to get dir entries (async handling: {})",
-                    err.to_string()
-                ),
+                &format!("failed to get dir entries (async handling: {})", err),
                 request_headers,
             );
         }
     };
 
-    for entry in entries {
-        let entry_path = entry.path();
-
-        if entry_path
+    // Case-insensitive exact match within the directory listing.
+    let mut found = entries.into_iter().find_map(|entry| {
+        let path = entry.path();
+        let name = path
             .file_name()
             .unwrap_or_default()
             .to_str()
             .unwrap_or_default()
-            .to_string()
-            .to_ascii_lowercase()
-            == request_file_name.to_ascii_lowercase()
-        {
-            found = Some(entry_path.as_path().to_owned());
-            break;
+            .to_owned();
+        if name.eq_ignore_ascii_case(request_file_name) {
+            Some(path)
+        } else {
+            None
         }
-    }
+    });
 
+    // Extension inference: `/foo` → `foo.json` / `foo.json5` / `foo.csv`.
     if found.is_none() && request_path.extension().is_none() {
-        let request_file_stem = match request_path.file_stem() {
-            Some(file_stem_os_str) => match file_stem_os_str.to_str() {
-                Some(file_stem) => Some(file_stem),
-                None => None,
-            },
-            None => None,
-        };
-        if let Some(request_file_stem) = request_file_stem {
+        if let Some(stem) = request_path.file_stem().and_then(|s| s.to_str()) {
             for ext in JSON_COMPATIBLE_EXTENSIONS {
-                let file_path = dir.join(format!("{}.{}", request_file_stem, ext));
+                let file_path = dir.join(format!("{}.{}", stem, ext));
                 if file_path.exists() {
-                    found = Some(file_path.as_path().to_owned());
+                    found = Some(file_path);
                     break;
                 }
             }
         }
     }
 
-    match found {
-        Some(found) => {
-            let file_path = found.to_str().unwrap_or_default();
-            FileResponse::new(file_path, None, request_headers)
-                .file_content_response()
-                .await
-        }
-        None => not_found_response(request_headers),
-    }
+    let Some(found) = found else {
+        return not_found_response(request_headers);
+    };
+
+    let file_path = found.to_str().unwrap_or_default();
+    FileResponse::new(file_path, None, request_headers)
+        .file_content_response()
+        .await
 }

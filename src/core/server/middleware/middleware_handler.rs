@@ -1,11 +1,28 @@
 use hyper::HeaderMap;
-use rhai::{serde::to_dynamic, Dynamic, Engine, Map, Scope, AST};
+use rhai::{AST, Dynamic, Engine, Map, Scope, serde::to_dynamic};
 use serde_json::Value;
 
 use std::{path::Path, sync::Arc};
 
-use crate::core::server::{middleware::middleware_response::MiddlewareResponse, types::BoxBody};
+use crate::core::{
+    error::{AppError, AppResult},
+    server::{middleware::middleware_response::MiddlewareResponse, types::BoxBody},
+};
 
+/// Handler for a single Rhai middleware script.
+///
+/// # Why the AST is compiled once at startup
+///
+/// Rhai offers both "compile on every evaluation" and "compile once, re-run
+/// the AST" modes. Middleware is invoked on the hot path (every request),
+/// so we keep the compiled `AST` alongside the `Engine` and only evaluate
+/// at request time. This trades a small amount of memory for a large
+/// throughput win and keeps parse errors as startup failures instead of
+/// per-request 500s.
+///
+/// The `Engine` is wrapped in `Arc` so that `MiddlewareHandler` can be
+/// cloned cheaply into each request task without deep-cloning the
+/// interpreter state.
 #[derive(Clone)]
 pub struct MiddlewareHandler {
     pub engine: Arc<Engine>,
@@ -14,31 +31,54 @@ pub struct MiddlewareHandler {
 }
 
 impl MiddlewareHandler {
-    pub fn new(file_path: &str) -> Result<Self, String> {
-        if !Path::new(file_path).exists() {
-            return Err(format!("middleware file path must be wrong: {}", file_path));
+    /// Compile a middleware script from disk into a reusable handler.
+    ///
+    /// Returns an `AppError` on either a missing file or a compile-time
+    /// Rhai parse error. Callers treat both as startup-time failures —
+    /// we deliberately do not try to recover by, say, skipping the offending
+    /// script, because silently ignoring a misconfigured middleware would
+    /// produce confusing request-time behaviour.
+    pub fn new(file_path: &str) -> AppResult<Self> {
+        let path = Path::new(file_path);
+        if !path.exists() {
+            return Err(AppError::MiddlewareMissing {
+                path: path.to_path_buf(),
+            });
         }
 
         let engine = Engine::new();
         // todo: watch source file change - `notify` crate ?
-        let ast = engine.compile_file(file_path.into()).expect(
-            format!(
-                "failed to compile middleware file to get ast: {}",
-                file_path
-            )
-            .as_str(),
-        );
+        let ast = engine
+            .compile_file(file_path.into())
+            .map_err(|e| AppError::MiddlewareCompile {
+                path: path.to_path_buf(),
+                reason: e.to_string(),
+            })?;
 
-        let middleware = MiddlewareHandler {
+        Ok(MiddlewareHandler {
             engine: Arc::new(engine),
             file_path: file_path.to_owned(),
             ast,
-        };
-
-        Ok(middleware)
+        })
     }
 
-    /// return response if middleware returns valid value
+    /// Evaluate the middleware for one request.
+    ///
+    /// Returns:
+    /// - `Some(Ok(response))` — the script decided to handle the request
+    ///   and produced a response.
+    /// - `Some(Err(_))` — the script tried to handle the request but the
+    ///   response could not be built (e.g. invalid header value).
+    /// - `None` — the script returned a value that is neither a string nor
+    ///   a map, which is the convention for "let the next layer handle it".
+    ///
+    /// # Why errors here are logged and converted, not propagated
+    ///
+    /// A Rhai runtime error during per-request evaluation is a script bug,
+    /// not a startup config bug. Turning it into an `AppError` would
+    /// force the whole process down, which is the opposite of what an
+    /// HTTP server should do. We instead log and fall through to the
+    /// next handler, producing an HTTP response rather than aborting.
     pub async fn handle(
         &self,
         request_url_path: &str,
@@ -48,18 +88,36 @@ impl MiddlewareHandler {
         let mut scope = Scope::new();
         scope.push("url_path", request_url_path.to_owned());
         if let Some(request_body_json_value) = request_body_json_value {
-            scope.push(
-                "body",
-                to_dynamic(request_body_json_value)
-                    .expect("failed to request body to dynamic for middleware"),
-            );
+            match to_dynamic(request_body_json_value) {
+                Ok(body_dynamic) => {
+                    scope.push("body", body_dynamic);
+                }
+                Err(err) => {
+                    log::warn!(
+                        "middleware `{}`: failed to convert request body to Rhai Dynamic: {}",
+                        self.file_path,
+                        err
+                    );
+                    return None;
+                }
+            }
         }
 
         // middleware response
-        let rhai_response = self
+        let rhai_response = match self
             .engine
             .eval_ast_with_scope::<Dynamic>(&mut scope, &self.ast)
-            .expect("failed to evaluate middleware");
+        {
+            Ok(v) => v,
+            Err(err) => {
+                log::warn!(
+                    "middleware `{}`: script evaluation failed: {}",
+                    self.file_path,
+                    err
+                );
+                return None;
+            }
+        };
 
         if !rhai_response.is_string() && !rhai_response.is_map() {
             return None;

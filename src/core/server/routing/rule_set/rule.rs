@@ -23,6 +23,22 @@ pub struct Rule {
 }
 
 impl Rule {
+    /// Pre-compute derived fields that don't change per request.
+    ///
+    /// # Why this is a separate pass
+    ///
+    /// Deserialization gives us the raw TOML structure. A few fields need
+    /// post-processing: URL paths must be joined with the rule-set prefix
+    /// and normalized, and the HTTP status code stored as a `u16` in the
+    /// config needs to be validated into a `StatusCode`. Doing it once at
+    /// startup keeps the per-request match path allocation-free and
+    /// panic-free.
+    ///
+    /// If the configured status is invalid (e.g. `9999`) we log and leave
+    /// `status_code` as `None`; the surrounding validate pass will catch
+    /// it and prevent the server from starting. Previously this used
+    /// `expect` and aborted immediately — that's worse for debugging
+    /// because the user only gets one error at a time.
     pub fn compute_derived_fields(
         &self,
         rule_set: &RuleSet,
@@ -53,20 +69,22 @@ impl Rule {
         };
         ret.when.request.url_path = url_path;
 
-        // - status_code
+        // - status_code: fail soft here, fail hard in validate()
         if let Some(status) = ret.respond.status {
-            let status_code = Some(
-                StatusCode::from_u16(status).expect(
-                    format!(
-                        "failed to get status code from status {} (rule #{} in rule set #{})",
+            match StatusCode::from_u16(status) {
+                Ok(status_code) => ret.respond.status_code = Some(status_code),
+                Err(err) => {
+                    log::error!(
+                        "{} status code {} (rule #{} in rule set #{}): {}",
+                        style("invalid").red(),
                         status,
                         rule_idx + 1,
-                        rule_set_idx + 1
-                    )
-                    .as_str(),
-                ),
-            );
-            ret.respond.status_code = status_code;
+                        rule_set_idx + 1,
+                        err,
+                    );
+                    ret.respond.status_code = None;
+                }
+            }
         }
 
         ret

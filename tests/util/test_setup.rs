@@ -85,7 +85,9 @@ impl TestSetup {
         }
 
         tokio::spawn(async move {
-            let app = App::new(&app_env_args, None, true).await;
+            let app = App::new(&app_env_args, None, true)
+                .await
+                .expect("App::new failed in test setup");
             app.server.start().await
         });
 
@@ -125,12 +127,12 @@ fn dynamic_port() -> u16 {
 
 /// env args for testing
 fn env_args(port: u16) -> EnvArgs {
-    let mut ret = EnvArgs::default().expect("failed to get env args");
+    let mut ret = EnvArgs::default()
+        .expect("failed to parse env args")
+        .expect("no env args returned (unexpected --init short-circuit in tests)");
 
     ret.port = Some(port);
 
-    match ret.validate() {
-        Ok(_) => ret,
-        Err(_) => panic!("something wrong in env args"),
-    }
+    ret.validate().expect("env args validation failed");
+    ret
 }
