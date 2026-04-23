@@ -134,15 +134,17 @@ jobs:
           # - name: Linux-aarch64-musl
           #   target: aarch64-unknown-linux-musl
           #   os: ubuntu-latest
-          - name: Linux-x64-gnu
-            npm-target: linux-x64-gnu
-            os: ubuntu-latest
+          # already published. temporarily stopped for workflow success
+          # - name: Linux-x64-gnu
+          #   npm-target: linux-x64-gnu
+          #   os: ubuntu-latest
           # - name: Linux-x64-musl
           #   target: x86_64-unknown-linux-musl
           #   os: ubuntu-latest
-          - name: macOS-aarch64
-            npm-target: darwin-arm64
-            os: macos-latest
+          # already published. temporarily stopped for workflow success
+          # - name: macOS-aarch64
+          #   npm-target: darwin-arm64
+          #   os: macos-latest
           - name: Windows-x64
             npm-target: win32-x64-msvc
             os: windows-latest
