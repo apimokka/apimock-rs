@@ -11,6 +11,7 @@
         - [Rule-based routing 1](./user-guide/getting-started/rule-based-routing-1.md)
         - [Rule-based routing 2](./user-guide/getting-started/rule-based-routing-2.md)
         - [TOML configuration](./user-guide/getting-started/toml-configuration.md)
+    - [Configuration reference](./user-guide/configuration-reference.md)
     - [Examples](./user-guide/examples/README.md)
         - [Combining conditions 1](./user-guide/examples/combining-conditions-1.md)
         - [Combining conditions 2](./user-guide/examples/combining-conditions-2.md)
