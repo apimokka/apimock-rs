@@ -25,8 +25,8 @@
 
 use std::hint::black_box;
 
-use apimock::core::server::parsed_request::ParsedRequest;
-use apimock::core::server::routing::rule_set::RuleSet;
+use apimock_routing::ParsedRequest;
+use apimock_routing::RuleSet;
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use hyper::Request;
 

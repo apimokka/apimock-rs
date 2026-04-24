@@ -49,7 +49,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
-use apimock::core::{app::App, args::EnvArgs};
+use apimock::{App, EnvArgs};
 use tokio::sync::Semaphore;
 
 #[derive(Clone)]

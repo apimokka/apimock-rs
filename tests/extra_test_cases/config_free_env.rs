@@ -1,4 +1,4 @@
-use apimock::core::server::constant::CSV_RECORDS_DEFAULT_KEY;
+use apimock_server::constant::CSV_RECORDS_DEFAULT_KEY;
 use hyper::StatusCode;
 use serde_json::json;
 

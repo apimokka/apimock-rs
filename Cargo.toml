@@ -1,17 +1,78 @@
-[package]
-name = "apimock"
-version = "4.8.0"
-edition = "2024"
+# Workspace root.
+#
+# # Why a workspace, not a single crate
+#
+# 5.0.0 splits apimock into three library crates by responsibility:
+# `apimock-config` (read / validate / edit / save), `apimock-routing` (rule
+# definitions, matching, read-only views for a future GUI), and
+# `apimock-server` (HTTP listener and request handling). The top-level
+# `apimock` crate is retained as a thin façade: it re-exports the new
+# crates, keeps the existing binary entry point, and preserves source
+# compatibility for anyone doing `cargo add apimock`.
+#
+# # Why the façade lives at the workspace root
+#
+# `src/`, `benches/`, `examples/`, and `tests/` were all at the repo root
+# pre-5.0.0. Keeping the façade's package definition at the root means
+# those paths work without edits, and `cargo run` / `cargo bench` at the
+# top level continue to build the binary that users actually ship.
 
-description = "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists."
+[workspace]
+members = [
+    ".",
+    "crates/apimock-config",
+    "crates/apimock-routing",
+    "crates/apimock-server",
+]
+resolver = "2"
+
+# Shared across every crate in the workspace so version / license / edition
+# don't drift between the members.
+[workspace.package]
+version = "5.0.0"
+edition = "2024"
+rust-version = "1.91.0"
 authors = ["nabbisen <nabbisen@scqr.net>"]
 license = "Apache-2.0"
+repository = "https://github.com/apimokka/apimock-rs"
+
+# Shared external deps. Each crate still lists its own dependency line but
+# pulls the version from here to keep them in lockstep.
+[workspace.dependencies]
+tokio = { version = "^1.44", features = ["full"] }
+hyper = { version = "1", features = ["server", "http1", "http2"] }
+hyper-util = { version = "0", features = ["server", "http1", "http2", "tokio"] }
+http-body-util = "0"
+rustls = { version = "0.23.38", default-features = false, features = ["log", "ring"] }
+tokio-rustls = { version = "0.26.4", default-features = false, features = ["logging", "ring", "tls12"] }
+log = "0"
+console = "0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1"
+json5 = "1"
+csv = "1"
+rhai = { version = "1", features = ["sync", "serde"] }
+thiserror = "2"
+anyhow = "1"
+
+# ---------------------------------------------------------------------------
+# apimock façade crate (the package that has always been called "apimock")
+# ---------------------------------------------------------------------------
+[package]
+name = "apimock"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+description = "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists."
 
 categories = ["web-programming", "development-tools", "command-line-utilities"]
 keywords = ["http", "api", "mock", "testing"]
-repository = "https://github.com/apimokka/apimock-rs"
 readme = "README.md"
-rust-version = "1.91.0"
 
 [profile.release]     # shrink executable size
 opt-level = "z"
@@ -31,50 +92,39 @@ default = []
 spawn = [] # offers another entry point for subprocess
 
 [dependencies]
-tokio = { version = "^1.44", features = ["full"] }
-hyper = { version = "1", features = ["server", "http1", "http2"] }
-hyper-util = { version = "0", features = ["server", "http1", "http2", "tokio"] }
-http-body-util = "0"
+# The three newly-split member crates. The façade re-exports their public
+# surface and otherwise stays as thin as possible.
+apimock-config = { path = "crates/apimock-config", version = "5.0.0" }
+apimock-routing = { path = "crates/apimock-routing", version = "5.0.0" }
+apimock-server = { path = "crates/apimock-server", version = "5.0.0" }
 
-rustls = { version = "0.23.38", default-features = false, features = ["log", "ring"] }
-tokio-rustls = { version = "0.26.4", default-features = false, features = ["logging", "ring", "tls12"] }
-
-log = "0"
-console = "0"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-toml = "1"
-json5 = "1"
-csv = "1"
-rhai = { version = "1", features = ["sync", "serde"] }
-# Error handling: `thiserror` provides the derive for our structured `AppError`
-# enum (see `core::error`), and `anyhow` is used at the process boundary
-# (binary entry point) where we want to flatten any error source into a single
-# printable value without pattern-matching on the variant.
-thiserror = "2"
-anyhow = "1"
+# The façade keeps direct deps only for crates it uses itself (logger, CLI
+# entry point, error wrapping). Everything else flows through the members.
+tokio = { workspace = true }
+log = { workspace = true }
+console = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
 
 [dev-dependencies]
 rand = "^0"
 reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
 rcgen = "^0"
 local-ip-address = "^0"
-# Scratch-dir helper for benches that write rule-set TOML to disk.
 tempfile = "3"
-# `log` is already a runtime dep without the `std` feature; benches and
-# examples need the `std` feature so they can install their own logger
-# (bench_load uses `log::set_boxed_logger` to silence server-side
-# request logs that would otherwise pollute the CSV output stream).
+# serde_json is used by the integration tests directly (construct JSON
+# values for request bodies). In 4.x it was pulled in transitively via
+# `apimock::core::server::...`; after the 5.0 split the tests need to
+# list it themselves.
+serde_json = { workspace = true }
+# `log` needs the `std` feature for `set_boxed_logger` — used by benches
+# and examples that install their own logger to silence server output.
 log = { version = "0", features = ["std"] }
-# Benchmarking: criterion 0.8 for latency/throughput microbenchmarks
-# (see `benches/`), with async_tokio so HTTP benchmarks can drive the
-# real server. MSRV for criterion 0.8 is 1.88 — well below our 1.91.
 criterion = { version = "0.8", features = ["html_reports", "async_tokio"] }
+hyper = { workspace = true }
 
-# Custom harnesses: each bench file sets `harness = false` so cargo uses
-# criterion's runner (via `criterion_main!`) instead of libtest. Keeping
-# the two benches separate means `cargo bench --bench routing` runs the
-# fast pure-CPU benches without waiting for the HTTP server to spin up.
+# Custom criterion harnesses. Each bench file sets `harness = false` so
+# cargo uses criterion's runner instead of libtest.
 [[bench]]
 name = "routing"
 harness = false

@@ -39,6 +39,7 @@
 - [Technical Referrence](./technical-referrence/README.md)
     - [Vision and Goals](./technical-referrence/vision-and-goals.md)
     - [Architecture](./technical-referrence/architecture.md)
+    - [Workspace](./technical-referrence/workspace.md)
     - [Design](./technical-referrence/design/README.md)
         - [Server](./technical-referrence/design/server/README.md)
         - [Response](./technical-referrence/design/response/README.md)

@@ -5,6 +5,89 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-04-23
+
+5.0.0 splits apimock into a Cargo workspace with three responsibility-
+focused library crates behind a thin façade, in preparation for a GUI
+front-end that can depend on a stable config + routing API without
+reaching into the HTTP runtime.
+
+This is a **breaking change** for library consumers. CLI behaviour,
+config file formats, and on-disk layouts are unchanged — `cargo install
+apimock` / `npx apimock` work exactly as before.
+
+### Workspace layout
+
+| crate | responsibility |
+| --- | --- |
+| `apimock-config` | TOML config model — loading, validation, relative-path resolution, and the stage-1 GUI-facing edit / snapshot API shape. |
+| `apimock-routing` | Rule-set definitions, request matching, and the stage-1 read-only view types a future GUI binds against. |
+| `apimock-server` | HTTP(S) listener, per-request dispatch, Rhai middleware compilation, response building. |
+| `apimock` (façade) | CLI entry point, logger installation, `App` composition. Re-exports the three member crates for backwards-compatible `use apimock::routing::...` paths. |
+
+### Added
+
+- **GUI-facing stage-1 view API.** Every type a future GUI will depend
+  on is defined with its field shape + rustdoc — ready to be populated
+  in stage 2 without further signature churn. Highlights:
+  - Routing: `RouteCatalogSnapshot`, `RuleSetView`, `RuleView`,
+    `RespondView`, `RouteMatchView`, `RouteValidation`.
+  - Config: `WorkspaceSnapshot`, `ConfigFileView`, `ConfigNodeView`,
+    `EditCommand`, `EditTarget`, `EditValue`, `ApplyResult`, `SaveResult`,
+    `ReloadHint`, `Diagnostic`.
+  - Server: `ServerHandle`, `ServerControl`, `ServerState`, `ReloadHint`.
+  - All are `#[non_exhaustive]` so stage-2 fills in fields additively.
+
+- **Per-crate error types.** `apimock_routing::RoutingError`,
+  `apimock_config::ConfigError`, `apimock_server::ServerError`. Each
+  `#[from]`-wraps the layer below, so `?` propagation works unchanged
+  in practice; pattern-matching callers can now see which layer the
+  failure originated in.
+
+### Changed (breaking)
+
+- Module paths changed for all library consumers. Map:
+
+  | 4.8.0 path | 5.0.0 path |
+  | --- | --- |
+  | `apimock::core::config::Config` | `apimock::config::Config` or `apimock_config::Config` |
+  | `apimock::core::server::routing::rule_set::RuleSet` | `apimock::routing::RuleSet` or `apimock_routing::RuleSet` |
+  | `apimock::core::server::Server` | `apimock::server::Server` or `apimock_server::Server` |
+  | `apimock::core::error::AppError` | split into the three per-crate errors above |
+  | `apimock::core::app::App` | `apimock::App` |
+  | `apimock::core::args::EnvArgs` | `apimock::EnvArgs` |
+
+- `ServiceConfig` no longer carries `Vec<MiddlewareHandler>`.
+  Compiled Rhai middlewares are now a separate
+  `apimock_server::LoadedMiddlewares` value, built from
+  `ServiceConfig::middlewares_file_paths` at server startup. This
+  removes a cross-layer leak (a config struct must not hold hyper-
+  producing runtime objects).
+- `Respond::response(...)` method removed. The equivalent free
+  function `apimock_server::respond_response::respond_response(...)`
+  replaces it. Rationale: the routing crate must stay free of hyper
+  body-construction so a GUI can depend on it cheaply.
+- `Server::new(AppState)` → `Server::new(Config)`. `AppState` is now
+  internal to `apimock-server` and combines `Config` + `LoadedMiddlewares`.
+
+### Not changed
+
+- Binary behaviour (`apimock`, `npx apimock`, `apimock --init`, `apimock -p`, `-d`, `-c`) is byte-identical to 4.8.0.
+- Config file formats (`apimock.toml`, rule-set TOML, middleware `.rhai`) are unchanged.
+- Performance: both bench suites produce the same numbers as on 4.8.0 (expected — the same code runs, just organised differently).
+- Interactive `--init` flow from 4.8.0: unchanged.
+- Existing CHANGELOG entries below.
+
+### Migration note
+
+If you were importing from `apimock::core::...` directly, the simplest
+migration is to replace the `core::` prefix with the member crate name
+(`config::`, `routing::`, or `server::`). The façade re-exports all
+three under those names. If you had a `use apimock::core::error::AppError;`,
+pick whichever of `ConfigError` / `RoutingError` / `ServerError`
+matches the failure you were catching — or use `anyhow::Error` at your
+process boundary (that's what the binary does now).
+
 ## [4.8.0] - 2026-04-23
 
 4.8.0 focuses on making the project approachable on first contact and on

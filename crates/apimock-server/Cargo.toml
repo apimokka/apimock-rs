@@ -1,0 +1,30 @@
+[package]
+name = "apimock-server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+description = "HTTP(S) server runtime for apimock: listener loop, request handling, response building."
+
+[dependencies]
+apimock-config = { path = "../apimock-config", version = "5.0.0" }
+apimock-routing = { path = "../apimock-routing", version = "5.0.0" }
+
+tokio = { workspace = true }
+hyper = { workspace = true }
+hyper-util = { workspace = true }
+http-body-util = { workspace = true }
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
+
+log = { workspace = true }
+console = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+json5 = { workspace = true }
+csv = { workspace = true }
+rhai = { workspace = true }
+thiserror = { workspace = true }

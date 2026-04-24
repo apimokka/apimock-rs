@@ -38,7 +38,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Duration;
 
-use apimock::core::{app::App, args::EnvArgs};
+use apimock::{App, EnvArgs};
 use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use tokio::runtime::Runtime;
 
