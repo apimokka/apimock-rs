@@ -29,7 +29,7 @@ resolver = "2"
 # Shared across every crate in the workspace so version / license / edition
 # don't drift between the members.
 [workspace.package]
-version = "5.0.0"
+version = "5.0.1"
 edition = "2024"
 rust-version = "1.91.0"
 authors = ["nabbisen <nabbisen@scqr.net>"]

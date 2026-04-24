@@ -5,8 +5,7 @@ use std::{
 };
 
 use apimock::{App, EnvArgs};
-#[allow(unused_imports)]
-use rand::{Rng, RngExt};
+use rand::Rng;
 
 use super::{
     constant::{CONFIG_FILE_NAME, CONFIG_TESTS_ROOT_DIR_PATH},
