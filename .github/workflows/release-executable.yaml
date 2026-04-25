@@ -82,9 +82,9 @@ jobs:
           
           mkdir -p "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}"
 
-          cp "examples/config/default/apimock.toml" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
-          cp "examples/config/default/apimock-rule-set.toml" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
-          cp "examples/config/default/apimock-middleware.rhai" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
+          cp "crates/apimock/examples/config/default/apimock.toml" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
+          cp "crates/apimock/examples/config/default/apimock-rule-set.toml" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
+          cp "crates/apimock/examples/config/default/apimock-middleware.rhai" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
           cp "${BUILT_FILE_PATH}" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
           
           echo "RELEASE_SRC_DIR=${RELEASE_SRC_DIR}" >> $GITHUB_ENV
