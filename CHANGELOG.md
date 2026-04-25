@@ -12,6 +12,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.1] - 2026-04-26
+
+5.1.1 is a project-layout refactor with no behavioural change. Each
+member crate of the workspace now lives in its own directory under
+`crates/`, including the `apimock` façade itself which was previously
+co-located with the workspace root.
+
+### Changed
+
+- **`apimock` façade moved to `crates/apimock/`.** Source files
+  (`src/`), benches, examples, and integration tests followed it.
+  The workspace root now contains only the workspace definition and
+  shared metadata — no individual crate's package data.
+- **Workspace root `Cargo.toml` slimmed** to four sections:
+  `[workspace]`, `[workspace.package]`, `[workspace.dependencies]`,
+  and the `[profile.*]` blocks (which must live at workspace root for
+  cargo to apply them). Everything that used to belong to the
+  `apimock` package — features, deps, dev-deps, bench registrations —
+  moved to `crates/apimock/Cargo.toml`.
+- **`apimock-config::workspace` test module extracted** to a sibling
+  file `src/workspace/tests.rs`. The implementation file
+  (`workspace.rs`) drops from 1,843 to 1,395 lines; behaviour is
+  unchanged.
+
+### Why
+
+The 5.0–5.1 series accumulated a layout where the workspace root and
+the façade crate were mixed in one `Cargo.toml`. That worked but mixed
+two levels of concern in a single file. Splitting them out makes each
+file responsible for one thing and brings the façade in line with how
+the other member crates are organised. End users (`cargo install
+apimock` / `npx apimock`) see no change.
+
+### Tests
+
+`cargo test --workspace --lib` reports 44 passing — same as 5.1.0.
+
 ## [5.1.0] - 2026-04-26
 
 5.1.0 implements the GUI-facing extension layer specified in the

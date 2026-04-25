@@ -1,0 +1,69 @@
+[package]
+name = "apimock"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+description = "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists."
+
+categories = ["web-programming", "development-tools", "command-line-utilities"]
+keywords = ["http", "api", "mock", "testing"]
+
+# README is one level up at the workspace root and shared with the npm
+# wrapper. Pointing at it explicitly means `cargo publish` packages the
+# real README, not a per-crate placeholder.
+readme = "../../README.md"
+
+[features]
+default = []
+spawn = [] # offers another entry point for subprocess
+
+[dependencies]
+# The three responsibility-split member crates. The façade re-exports
+# their public surface and otherwise stays as thin as possible.
+apimock-config = { path = "../apimock-config", version = "5.1.1" }
+apimock-routing = { path = "../apimock-routing", version = "5.1.1" }
+apimock-server = { path = "../apimock-server", version = "5.1.1" }
+
+# The façade keeps direct deps only for crates it uses itself (logger,
+# CLI entry point, error wrapping). Everything else flows through the
+# member crates.
+tokio = { workspace = true }
+log = { workspace = true }
+console = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+# Pin rand to ^0.9 because tests use `Rng::random_range`; rand 0.10
+# renamed back to `gen_range`. The ^0 spec used to work but the
+# registry now publishes 0.10, so we lock the major to 0.9 to keep
+# the existing test surface.
+rand = "^0.9"
+reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
+rcgen = "^0"
+local-ip-address = "^0"
+tempfile = "3"
+# serde_json is used by the integration tests directly (construct JSON
+# values for request bodies). In 4.x it was pulled in transitively via
+# `apimock::core::server::...`; after the 5.0 split the tests need to
+# list it themselves.
+serde_json = { workspace = true }
+# `log` needs the `std` feature for `set_boxed_logger` — used by benches
+# and examples that install their own logger to silence server output.
+log = { version = "0", features = ["std"] }
+criterion = { version = "0.8", features = ["html_reports", "async_tokio"] }
+hyper = { workspace = true }
+
+# Custom criterion harnesses. Each bench file sets `harness = false` so
+# cargo uses criterion's runner instead of libtest.
+[[bench]]
+name = "routing"
+harness = false
+
+[[bench]]
+name = "response_latency"
+harness = false

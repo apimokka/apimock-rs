@@ -1,25 +1,31 @@
 # Workspace root.
 #
-# # Why a workspace, not a single crate
+# # Why this file is workspace-only
 #
-# 5.0.0 splits apimock into three library crates by responsibility:
-# `apimock-config` (read / validate / edit / save), `apimock-routing` (rule
-# definitions, matching, read-only views for a future GUI), and
-# `apimock-server` (HTTP listener and request handling). The top-level
-# `apimock` crate is retained as a thin façade: it re-exports the new
-# crates, keeps the existing binary entry point, and preserves source
-# compatibility for anyone doing `cargo add apimock`.
+# Until 5.1.0, the `apimock` façade package lived at the workspace root
+# alongside the workspace definition itself. That worked but mixed two
+# levels of concern in one file — workspace-wide settings *and* a single
+# crate's package metadata — which is awkward when you want to read
+# either level in isolation. 5.1.1 splits the façade out into
+# `crates/apimock/`, leaving this file responsible only for:
 #
-# # Why the façade lives at the workspace root
+# - listing workspace members
+# - the `[workspace.package]` metadata that every member inherits
+# - the `[workspace.dependencies]` table that pins shared external deps
+# - workspace-wide build profiles (release size optimisation, dev
+#   incremental, etc.)
 #
-# `src/`, `benches/`, `examples/`, and `tests/` were all at the repo root
-# pre-5.0.0. Keeping the façade's package definition at the root means
-# those paths work without edits, and `cargo run` / `cargo bench` at the
-# top level continue to build the binary that users actually ship.
+# # Why we still ship `apimock` (façade) as a separate publishable crate
+#
+# `cargo install apimock` and `npx apimock` both depend on a crate
+# literally named "apimock". Splitting the workspace into responsibility
+# crates (config / routing / server) but folding their re-export into a
+# façade keeps the install story simple — end users keep typing the
+# same name.
 
 [workspace]
 members = [
-    ".",
+    "crates/apimock",
     "crates/apimock-config",
     "crates/apimock-routing",
     "crates/apimock-server",
@@ -29,7 +35,7 @@ resolver = "2"
 # Shared across every crate in the workspace so version / license / edition
 # don't drift between the members.
 [workspace.package]
-version = "5.1.0"
+version = "5.1.1"
 edition = "2024"
 rust-version = "1.91.0"
 authors = ["nabbisen <nabbisen@scqr.net>"]
@@ -56,24 +62,10 @@ rhai = { version = "1", features = ["sync", "serde"] }
 thiserror = "2"
 anyhow = "1"
 
-# ---------------------------------------------------------------------------
-# apimock façade crate (the package that has always been called "apimock")
-# ---------------------------------------------------------------------------
-[package]
-name = "apimock"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-rust-version.workspace = true
-
-description = "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists."
-
-categories = ["web-programming", "development-tools", "command-line-utilities"]
-keywords = ["http", "api", "mock", "testing"]
-readme = "README.md"
-
+# Workspace-wide build profiles. Profile sections only take effect when
+# specified in the root Cargo.toml of a workspace, regardless of which
+# member is being built — so they live here, not in any individual
+# crate's manifest.
 [profile.release]     # shrink executable size
 opt-level = "z"
 lto = true
@@ -86,53 +78,3 @@ opt-level = 1         # slightly optimize
 lto = false           # disable link-time optimizations
 # strip = "debuginfo" # reduce size
 incremental = true
-
-[features]
-default = []
-spawn = [] # offers another entry point for subprocess
-
-[dependencies]
-# The three newly-split member crates. The façade re-exports their public
-# surface and otherwise stays as thin as possible.
-apimock-config = { path = "crates/apimock-config", version = "5.1.0" }
-apimock-routing = { path = "crates/apimock-routing", version = "5.1.0" }
-apimock-server = { path = "crates/apimock-server", version = "5.1.0" }
-
-# The façade keeps direct deps only for crates it uses itself (logger, CLI
-# entry point, error wrapping). Everything else flows through the members.
-tokio = { workspace = true }
-log = { workspace = true }
-console = { workspace = true }
-thiserror = { workspace = true }
-anyhow = { workspace = true }
-
-[dev-dependencies]
-# Pin rand to ^0.9 because tests use `Rng::random_range`; rand 0.10
-# renamed back to `gen_range`. The ^0 spec used to work but the
-# registry now publishes 0.10, so we lock the major to 0.9 to keep
-# the existing test surface.
-rand = "^0.9"
-reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
-rcgen = "^0"
-local-ip-address = "^0"
-tempfile = "3"
-# serde_json is used by the integration tests directly (construct JSON
-# values for request bodies). In 4.x it was pulled in transitively via
-# `apimock::core::server::...`; after the 5.0 split the tests need to
-# list it themselves.
-serde_json = { workspace = true }
-# `log` needs the `std` feature for `set_boxed_logger` — used by benches
-# and examples that install their own logger to silence server output.
-log = { version = "0", features = ["std"] }
-criterion = { version = "0.8", features = ["html_reports", "async_tokio"] }
-hyper = { workspace = true }
-
-# Custom criterion harnesses. Each bench file sets `harness = false` so
-# cargo uses criterion's runner instead of libtest.
-[[bench]]
-name = "routing"
-harness = false
-
-[[bench]]
-name = "response_latency"
-harness = false
