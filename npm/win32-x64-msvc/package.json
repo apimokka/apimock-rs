@@ -1,6 +1,6 @@
 {
   "name": "@apimock-rs/bin-win32-x64-msvc",
-  "version": "5.0.1",
+  "version": "5.1.0",
   "os": [
     "win32"
   ],

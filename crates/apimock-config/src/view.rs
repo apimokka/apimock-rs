@@ -1,51 +1,90 @@
-//! Read-only + edit-command views on config state for GUI tooling.
+//! Read-only views on workspace state, and the command + result types
+//! the editing API uses.
 //!
-//! # Stage-1 scope (5.0.0)
+//! # 5.1.0 — spec alignment
 //!
-//! Per the 5.0.0 brief (§4.1), this module defines the *shape* of the
-//! editable API a future GUI will depend on. Types are declared with
-//! their fields and rustdoc-annotated responsibilities. Populating them
-//! from a live `Config` — and mutating a `Config` via `EditCommand` — is
-//! stage-2 work.
+//! In 5.0.0 this module carried a placeholder shape defined only by
+//! rustdoc; 5.1.0 re-aligns it with the 5.1 spec:
 //!
-//! Every type here is `#[non_exhaustive]` so later stages can add
-//! fields / variants without breaking downstream code that depends on
-//! the stage-1 shape.
+//! - `WorkspaceSnapshot { files, routes, diagnostics }` (spec §4.2)
+//! - each node carries `id: NodeId` + `source_file` + `toml_path` +
+//!   `display_name` + `kind` + `validation`
+//! - `EditCommand` is eight variants covering every editable action
+//!   (spec §4.3)
+//! - `ApplyResult { changed_nodes, diagnostics, requires_reload }`
+//!   (spec §4.4)
+//! - `SaveResult { changed_files, diff_summary, requires_reload }`
+//!   (spec §4.5) — populated in Step 4
+//! - `ValidationReport { diagnostics, is_valid }` (spec §4.6)
+//! - `Diagnostic { node_id, file, severity, message }` (spec §4.7)
 //!
-//! # The model this API assumes
+//! # Why UUIDs and not positional IDs
 //!
-//! A GUI sees a *workspace* — the root `apimock.toml` plus every file
-//! referenced from it (rule sets, middlewares). Each editable value in
-//! the workspace lives in exactly one of those files; tracking the
-//! origin is essential so the GUI knows which file a "Save" button
-//! should write.
+//! The spec's §4.3 says "すべて NodeId で対象を指定". Positional IDs
+//! (`rule_sets[0].rules[3]`) would shift on every insert / delete /
+//! move, forcing the GUI to re-index its selection set after every
+//! edit. UUIDs are stable within a `Workspace` instance regardless of
+//! reordering.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
+use uuid::Uuid;
 
 use std::path::PathBuf;
 
-/// A snapshot of the whole workspace — every loaded file and the
-/// editable nodes inside each.
+use apimock_routing::view::RouteCatalogSnapshot;
+
+/// Stable identifier for an editable node.
+///
+/// # Stability contract
+///
+/// Stable within one `Workspace` instance — that is, across any
+/// sequence of `apply()` calls. IDs are reassigned on fresh `load()`,
+/// which matches spec §10 "Workspace はメモリ上に独立インスタンスを持つ".
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct NodeId(pub Uuid);
+
+impl NodeId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for NodeId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Display for NodeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+/// Complete snapshot of the workspace state.
+///
+/// Shape matches spec §4.2 exactly. Consumed read-only by the GUI;
+/// mutated indirectly via `Workspace::apply`.
 #[derive(Clone, Debug, Serialize)]
 #[non_exhaustive]
 pub struct WorkspaceSnapshot {
-    /// The root `apimock.toml` file.
-    pub root: ConfigFileView,
-    /// Rule-set files referenced from `root`, in the same order they
-    /// appear in `service.rule_sets`.
-    pub rule_sets: Vec<ConfigFileView>,
-    /// Middleware files referenced from `root`.
-    pub middlewares: Vec<ConfigFileView>,
-    /// Issues found during the most recent load. `ok` iff empty.
+    /// All editable TOML files in the workspace, flattened. Each file
+    /// carries its own list of editable nodes.
+    pub files: Vec<ConfigFileView>,
+    /// Route overview pulled from the routing crate.
+    pub routes: RouteCatalogSnapshot,
+    /// Workspace-scoped issues (e.g. a root file that failed to load).
+    /// Per-node diagnostics live inside each `ConfigNodeView.validation`.
     pub diagnostics: Vec<Diagnostic>,
 }
 
 impl WorkspaceSnapshot {
     pub fn empty() -> Self {
         Self {
-            root: ConfigFileView::empty(PathBuf::new()),
-            rule_sets: Vec::new(),
-            middlewares: Vec::new(),
+            files: Vec::new(),
+            routes: RouteCatalogSnapshot::empty(),
             diagnostics: Vec::new(),
         }
     }
@@ -57,156 +96,301 @@ impl WorkspaceSnapshot {
 pub struct ConfigFileView {
     /// Absolute path on disk.
     pub path: PathBuf,
-    /// Path as written inside the parent config (e.g.
-    /// `"apimock-rule-set.toml"`). Useful for displaying without the
-    /// full absolute path noise.
-    pub source_relative: Option<String>,
-    /// The editable nodes extracted from the file, flat for list-rendering.
+    /// Display name — typically the file name. Used as a tab title in
+    /// the GUI.
+    pub display_name: String,
+    /// What kind of file this is (root config, rule set, middleware).
+    pub kind: ConfigFileKind,
+    /// Editable nodes extracted from the file.
     pub nodes: Vec<ConfigNodeView>,
 }
 
-impl ConfigFileView {
-    pub fn empty(path: PathBuf) -> Self {
-        Self {
-            path,
-            source_relative: None,
-            nodes: Vec::new(),
-        }
-    }
+#[derive(Clone, Copy, Debug, Serialize)]
+pub enum ConfigFileKind {
+    Root,
+    RuleSet,
+    Middleware,
 }
 
 /// One editable value inside a `ConfigFileView`.
 ///
-/// # Why a flat list of nodes instead of a tree
-///
-/// The TOML the user writes is nested, but the UI surface a GUI renders
-/// is usually flat (a properties panel, a form). Keeping the API flat
-/// with a dotted `path` string trades a tiny bit of GUI cleverness for
-/// a much simpler cross-language contract.
+/// Each node carries the six fields spec §4.2 makes mandatory.
 #[derive(Clone, Debug, Serialize)]
 #[non_exhaustive]
 pub struct ConfigNodeView {
-    /// Dotted TOML path (e.g. `"listener.port"`, `"service.rule_sets"`).
-    pub path: String,
-    /// Current value, stringified for display. A GUI can format this
-    /// however it wants; the value's original type is in `kind`.
-    pub display_value: String,
-    /// What shape of value this node holds.
+    /// Stable identifier — survives moves / renames within a Workspace
+    /// instance.
+    pub id: NodeId,
+    /// File the node was loaded from.
+    pub source_file: PathBuf,
+    /// Dotted TOML path inside `source_file` (e.g. `"listener.port"`,
+    /// `"rules[2].respond"`).
+    pub toml_path: String,
+    /// Human-readable label for UI list rendering (e.g. the rule's
+    /// `url_path` value, or `"Rule #3"` for a rule without one).
+    pub display_name: String,
+    /// Shape of the underlying value.
     pub kind: NodeKind,
-    /// Whether the GUI should allow editing this field.
-    pub editable: bool,
+    /// Per-node validation results.
+    pub validation: NodeValidation,
 }
 
+/// What shape of value a node holds. The variants are what the
+/// spec-defined `EditCommand` variants act on.
 #[derive(Clone, Copy, Debug, Serialize)]
 pub enum NodeKind {
-    String,
-    Integer,
-    Boolean,
-    StringList,
-    Table,
+    /// Root config node — listener / log / service fields.
+    RootSetting,
+    /// One rule set loaded from a referenced TOML file.
+    RuleSet,
+    /// One rule inside a rule set.
+    Rule,
+    /// The `respond` block of a rule.
+    Respond,
+    /// File-based response node (fallback dir entry).
+    FileNode,
+    /// Script / middleware route.
+    Script,
 }
 
-/// A structured edit to apply to the workspace.
+/// Per-node validation result.
 ///
-/// # Why commands instead of free-form text edits
+/// # Why validation is a field on the node and not a separate pass
 ///
-/// The brief (§6.1, §6.2) spells this out: free-form text edits are too
-/// coarse for a GUI that needs to reason about the change. Commands
-/// carry exactly the intent — "add rule set", "update field at path" —
-/// which the apply-layer can validate before writing anything.
+/// GUIs render validation inline ("this field has a red underline").
+/// Keeping the validation result stapled to the node the GUI is about
+/// to render avoids a second lookup step in every render frame.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct NodeValidation {
+    /// Convenience flag — true iff `issues` is empty.
+    pub ok: bool,
+    /// Human-readable issues scoped to this node.
+    pub issues: Vec<ValidationIssue>,
+}
+
+impl NodeValidation {
+    pub fn ok() -> Self {
+        Self {
+            ok: true,
+            issues: Vec::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ValidationIssue {
+    pub severity: Severity,
+    pub message: String,
+}
+
+/// Structured edit command applied via `Workspace::apply`.
+///
+/// # Shape comes straight from spec §4.3
+///
+/// Each variant targets a node by NodeId (never by positional index).
+/// This guarantees edits remain well-defined across previous inserts /
+/// removes in the same GUI session.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum EditCommand {
-    /// Add a rule-set file to the workspace.
-    AddRuleSet { path: String },
-    /// Remove a rule-set file by its index in the list.
-    RemoveRuleSet { index: usize },
-    /// Update an editable field. `target` identifies which file; `path`
-    /// is the dotted TOML path inside that file.
-    UpdateField {
-        target: EditTarget,
+    /// Add a rule set file to the workspace.
+    ///
+    /// `path` is relative to the root config's directory — the same
+    /// convention as the value stored in `service.rule_sets`.
+    AddRuleSet {
         path: String,
+    },
+    /// Remove a rule set by its NodeId. The underlying TOML file is
+    /// NOT deleted from disk — the workspace only removes the reference.
+    RemoveRuleSet {
+        id: NodeId,
+    },
+    /// Add a rule to an existing rule set.
+    AddRule {
+        parent: NodeId,
+        rule: RulePayload,
+    },
+    /// Update a rule's `when` / `respond` block.
+    UpdateRule {
+        id: NodeId,
+        rule: RulePayload,
+    },
+    /// Remove a rule by NodeId.
+    DeleteRule {
+        id: NodeId,
+    },
+    /// Reorder a rule within its parent rule set.
+    MoveRule {
+        id: NodeId,
+        new_index: usize,
+    },
+    /// Update the `respond` block of a rule.
+    UpdateRespond {
+        id: NodeId,
+        respond: RespondPayload,
+    },
+    /// Update a root-level setting (listener, log, service-level flags).
+    UpdateRootSetting {
+        key: RootSettingKey,
         value: EditValue,
     },
-    /// Change the fallback respond dir.
-    SetFallbackRespondDir { path: String },
 }
 
-/// Which file inside the workspace an edit applies to.
-#[derive(Clone, Debug)]
-pub enum EditTarget {
-    Root,
-    RuleSet { index: usize },
-    Middleware { index: usize },
+/// Payload for `AddRule` / `UpdateRule`.
+#[derive(Clone, Debug, Default)]
+pub struct RulePayload {
+    pub url_path: Option<String>,
+    pub method: Option<String>,
+    pub respond: RespondPayload,
 }
 
-/// A value in an `UpdateField` edit. Kept intentionally small — this is
-/// the union of types our TOML config actually uses.
+/// Payload for `UpdateRespond`.
+///
+/// The three fields are mutually specialised: exactly one of
+/// `file_path` / `text` / `status` should be populated. Validation
+/// catches cases that violate this.
+#[derive(Clone, Debug, Default)]
+pub struct RespondPayload {
+    pub file_path: Option<String>,
+    pub text: Option<String>,
+    pub status: Option<u16>,
+    pub delay_milliseconds: Option<u32>,
+}
+
+/// Enumerated root-level setting. Typed enum rather than free-form
+/// path so the apply-layer can exhaustively match without parsing.
+#[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
+pub enum RootSettingKey {
+    ListenerIpAddress,
+    ListenerPort,
+    ServiceFallbackRespondDir,
+    ServiceStrategy,
+}
+
+/// Value provided with an edit command.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum EditValue {
     String(String),
     Integer(i64),
     Boolean(bool),
     StringList(Vec<String>),
+    /// For settings whose domain is a small enum value (e.g.
+    /// `ServiceStrategy` → `"first_match"`).
+    Enum(String),
+    /// For completeness — callers can pass a raw JSON value when the
+    /// spec-defined key set is extended by stage-3 tooling. Currently
+    /// reserved; no stage-1 setting uses it.
+    Json(JsonValue),
 }
 
-/// What happened when an `EditCommand` was applied.
+/// Outcome of a successful `apply`.
 #[derive(Clone, Debug, Serialize)]
 #[non_exhaustive]
 pub struct ApplyResult {
-    /// Whether the edit succeeded.
-    pub ok: bool,
-    /// Files whose in-memory model was changed. Use this to drive the
-    /// GUI's "unsaved changes" indicator.
-    pub modified_files: Vec<PathBuf>,
-    /// Problems found during apply. Non-empty when `ok` is false.
+    /// Node IDs whose content (or position) changed.
+    pub changed_nodes: Vec<NodeId>,
+    /// Issues surfaced by applying the command (validation during apply
+    /// may add diagnostics — e.g. a new rule pointing at a missing file).
     pub diagnostics: Vec<Diagnostic>,
-    /// Whether the running server would need a reload / restart to see
-    /// this change. Informational — the server control layer decides
-    /// what to do with the hint.
-    pub reload_hint: ReloadHint,
+    /// `true` iff the server should reload to see this change. An edit
+    /// that changes the listener port needs a restart, not just a
+    /// reload — see `Workspace::save` for the richer `ReloadHint`.
+    pub requires_reload: bool,
 }
 
-/// How much of the server needs to restart after a change.
-///
-/// A GUI can show this as a banner ("restart required") and a supervisor
-/// can use it to decide between reload-in-place and full restart.
-#[derive(Clone, Copy, Debug, Serialize)]
-pub enum ReloadHint {
-    /// No reload needed — change was purely cosmetic or to comments.
-    None,
-    /// Rule-set / middleware reload is sufficient.
-    Reload,
-    /// A full restart is needed (e.g. listener port changed).
-    Restart,
-}
-
-/// Result of writing in-memory changes back to disk.
+/// Outcome of `Workspace::save`.
 #[derive(Clone, Debug, Serialize)]
 #[non_exhaustive]
 pub struct SaveResult {
-    pub ok: bool,
-    /// Files actually written.
-    pub written: Vec<PathBuf>,
-    pub diagnostics: Vec<Diagnostic>,
+    /// TOML files actually written to disk.
+    pub changed_files: Vec<PathBuf>,
+    /// One entry per node that changed since last load.
+    pub diff_summary: Vec<DiffItem>,
+    pub requires_reload: bool,
 }
 
-/// Human-readable notice about something in the workspace.
-///
-/// Severities follow the same convention as `RouteValidationIssue` in
-/// the routing crate so a GUI can render them uniformly.
+/// One summary row in a `SaveResult::diff_summary`.
 #[derive(Clone, Debug, Serialize)]
-#[non_exhaustive]
+pub struct DiffItem {
+    pub kind: DiffKind,
+    pub target: NodeId,
+    pub summary: String,
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+pub enum DiffKind {
+    Added,
+    Updated,
+    Removed,
+}
+
+/// Workspace-wide validation result. Mirrors spec §4.6.
+#[derive(Clone, Debug, Serialize)]
+pub struct ValidationReport {
+    pub diagnostics: Vec<Diagnostic>,
+    pub is_valid: bool,
+}
+
+impl ValidationReport {
+    pub fn ok() -> Self {
+        Self {
+            diagnostics: Vec::new(),
+            is_valid: true,
+        }
+    }
+}
+
+/// Human-readable notice about the workspace.
+#[derive(Clone, Debug, Serialize)]
 pub struct Diagnostic {
-    pub severity: DiagnosticSeverity,
-    /// Which file the diagnostic is about, if applicable.
+    /// Target node, if any. `None` means "workspace-wide".
+    pub node_id: Option<NodeId>,
+    /// Target file, if the diagnostic is best reported at file level
+    /// (e.g. "could not read apimock-rule-set.toml"). May be `None` for
+    /// purely in-memory errors.
     pub file: Option<PathBuf>,
+    pub severity: Severity,
     pub message: String,
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
-pub enum DiagnosticSeverity {
+pub enum Severity {
     Error,
     Warning,
     Info,
+}
+
+// ---------------------------------------------------------------------------
+// Reload hint — spec §9. The same enum shape was defined in 5.0.0;
+// 5.1 reuses it unchanged so existing consumers keep working.
+// ---------------------------------------------------------------------------
+
+/// Advisory indicating what, if anything, the server needs to do in
+/// response to a config change.
+#[derive(Clone, Copy, Debug, Default, Serialize)]
+pub struct ReloadHint {
+    pub requires_reload: bool,
+    pub requires_restart: bool,
+}
+
+impl ReloadHint {
+    pub fn none() -> Self {
+        Self::default()
+    }
+
+    pub fn reload() -> Self {
+        Self {
+            requires_reload: true,
+            requires_restart: false,
+        }
+    }
+
+    pub fn restart() -> Self {
+        Self {
+            requires_reload: false,
+            requires_restart: true,
+        }
+    }
 }

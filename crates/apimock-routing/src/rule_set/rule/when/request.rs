@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 mod body;
 mod headers;
-mod http_method;
+pub mod http_method;
 pub mod rule_op;
 pub mod url_path;
 mod util;

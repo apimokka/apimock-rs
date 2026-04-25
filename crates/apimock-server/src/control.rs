@@ -67,14 +67,14 @@ pub enum ServerState {
 
 /// How much of the server needs to restart after a config change.
 ///
-/// # Why this type also lives in `apimock-config`
+/// # Why this lives here alongside `apimock_config::ReloadHint`
 ///
-/// The config crate defines the *same* `ReloadHint` enum as its
-/// `view::ReloadHint` because it's what an `ApplyResult` carries — the
-/// GUI consumes the hint via the config-layer API without pulling the
-/// server crate. The server's copy exists so that runtime code can
-/// also produce hints without depending on the config crate's
-/// GUI-shaped module. Both types convert into each other trivially.
+/// The config crate carries the same concept as a `view::ReloadHint`
+/// struct because it's what an `ApplyResult` / `SaveResult` carries;
+/// GUIs consume it from the config layer without pulling server.
+/// The server-side mirror is an enum for more ergonomic pattern
+/// matching on the server's own code paths. The `From` impls below
+/// bridge the two.
 #[derive(Clone, Copy, Debug, Serialize)]
 pub enum ReloadHint {
     /// No reload required.
@@ -87,10 +87,13 @@ pub enum ReloadHint {
 
 impl From<apimock_config::ReloadHint> for ReloadHint {
     fn from(value: apimock_config::ReloadHint) -> Self {
-        match value {
-            apimock_config::ReloadHint::None => ReloadHint::None,
-            apimock_config::ReloadHint::Reload => ReloadHint::Reload,
-            apimock_config::ReloadHint::Restart => ReloadHint::Restart,
+        // `Restart` implies `Reload`, so restart wins if both flags are set.
+        if value.requires_restart {
+            ReloadHint::Restart
+        } else if value.requires_reload {
+            ReloadHint::Reload
+        } else {
+            ReloadHint::None
         }
     }
 }
@@ -98,9 +101,9 @@ impl From<apimock_config::ReloadHint> for ReloadHint {
 impl From<ReloadHint> for apimock_config::ReloadHint {
     fn from(value: ReloadHint) -> Self {
         match value {
-            ReloadHint::None => apimock_config::ReloadHint::None,
-            ReloadHint::Reload => apimock_config::ReloadHint::Reload,
-            ReloadHint::Restart => apimock_config::ReloadHint::Restart,
+            ReloadHint::None => apimock_config::ReloadHint::none(),
+            ReloadHint::Reload => apimock_config::ReloadHint::reload(),
+            ReloadHint::Restart => apimock_config::ReloadHint::restart(),
         }
     }
 }

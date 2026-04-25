@@ -5,6 +5,101 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [5.1.0] - 2026-04-26
+
+5.1.0 implements the GUI-facing extension layer specified in the
+project's "GUI 向け機能拡張開発指示書". The headline addition is
+`apimock_config::Workspace` — an editable façade that lets a future
+GUI manipulate apimock configuration through structured commands
+without touching TOML directly.
+
+This is **not a breaking change** for existing users. The CLI binary,
+the on-disk file formats, and every pre-5.0 import path that 5.0.0
+already preserved continue to work unchanged.
+
+### Added
+
+- **`apimock_config::Workspace`** — the new top-level handle a GUI
+  uses to edit a loaded configuration:
+  - `Workspace::load(path)` reads `apimock.toml` and every file it
+    references (sharing `Config::new`'s loader so the running server
+    sees the same data).
+  - `Workspace::snapshot()` produces a fully-owned `WorkspaceSnapshot`
+    suitable for serialisation, IPC, or rendering.
+  - `Workspace::apply(EditCommand)` mutates the in-memory model.
+  - `Workspace::validate()` runs per-node validation.
+  - `Workspace::save()` is reserved for 5.2.0; the placeholder
+    returns `SaveError::Inconsistent` so callers see the gap clearly.
+
+- **Stable per-node identifiers (`NodeId`).** Every editable node is
+  assigned a v4 UUID at load time. IDs survive `apply()` calls within
+  one Workspace instance, including operations that shift positions
+  (Delete / Move). A GUI selection set anchored on NodeIds therefore
+  remains valid across edits.
+
+- **Eight `EditCommand` variants** matching the spec exactly:
+  - `AddRuleSet { path }` / `RemoveRuleSet { id }`
+  - `AddRule { parent, rule }` / `UpdateRule { id, rule }` /
+    `DeleteRule { id }` / `MoveRule { id, new_index }`
+  - `UpdateRespond { id, respond }`
+  - `UpdateRootSetting { key, value }` with a typed
+    `RootSettingKey` enum (`ListenerIpAddress`, `ListenerPort`,
+    `ServiceFallbackRespondDir`, `ServiceStrategy`)
+
+- **Per-node validation.** `validate()` produces a `ValidationReport`
+  whose `diagnostics` carry `NodeId` + file + severity + message.
+  Apply-time validation runs the same pass so `ApplyResult.diagnostics`
+  reflects the post-mutation state. A GUI can render a red underline
+  on the offending node directly from the diagnostic's `node_id`.
+
+- **`uuid = "1"` (with `v4` and `serde` features) is now a direct
+  dependency of `apimock-config`.**
+
+### Changed
+
+- `view::ReloadHint` reshape: was a 3-variant enum
+  (`None / Reload / Restart`) in 5.0.0; is now a struct
+  `{ requires_reload, requires_restart }` per spec §9. The
+  `apimock-server::control::ReloadHint` enum mirror remains and the
+  bidirectional `From` impls have been updated so existing server-side
+  pattern matching still works.
+
+- `view::WorkspaceSnapshot` reshape: now `{ files, routes, diagnostics }`
+  per spec §4.2 (was `{ root, rule_sets, middlewares, diagnostics }`).
+  Each `ConfigNodeView` now carries the six spec-mandated fields
+  (`id`, `source_file`, `toml_path`, `display_name`, `kind`, `validation`).
+
+- `view::EditCommand` reshape: was 4 placeholder variants in 5.0.0; is
+  now the 8 spec-defined variants, all targeted by NodeId rather than
+  positional path.
+
+### Status against the spec
+
+- ✅ §12 Step 1 (Workspace + snapshot) — implemented.
+- ✅ §12 Step 2 (EditCommand + apply) — implemented; all 8 variants.
+- ✅ §12 Step 3 (validation + diagnostics) — implemented; per-node.
+- ⏳ §12 Step 4 (save + diff) — placeholder; planned for 5.2.0.
+- ⏳ §12 Step 5 (richer routing snapshot) — placeholder; planned for 5.2.0.
+
+This matches the (A)=3 scope agreed before implementation.
+
+### Tests
+
+`cargo test --workspace --lib` reports 44 passing (was 31 at 5.0.0):
+- 19 in `apimock-config` (6 path_util + 13 Workspace tests covering
+  every `EditCommand` variant, ID stability across shift / move,
+  validation diagnostics, and the three `ApplyError` paths)
+- 15 in `apimock-routing` (unchanged from 5.0.0)
+- 10 in `apimock` façade (unchanged from 5.0.0)
+- 0 in `apimock-server` (none ported when the crate was carved out)
+
 ## [5.0.0] - 2026-04-23
 
 5.0.0 splits apimock into a Cargo workspace with three responsibility-

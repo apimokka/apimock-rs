@@ -29,7 +29,7 @@ resolver = "2"
 # Shared across every crate in the workspace so version / license / edition
 # don't drift between the members.
 [workspace.package]
-version = "5.0.1"
+version = "5.1.0"
 edition = "2024"
 rust-version = "1.91.0"
 authors = ["nabbisen <nabbisen@scqr.net>"]
@@ -94,9 +94,9 @@ spawn = [] # offers another entry point for subprocess
 [dependencies]
 # The three newly-split member crates. The façade re-exports their public
 # surface and otherwise stays as thin as possible.
-apimock-config = { path = "crates/apimock-config", version = "5.0.0" }
-apimock-routing = { path = "crates/apimock-routing", version = "5.0.0" }
-apimock-server = { path = "crates/apimock-server", version = "5.0.0" }
+apimock-config = { path = "crates/apimock-config", version = "5.1.0" }
+apimock-routing = { path = "crates/apimock-routing", version = "5.1.0" }
+apimock-server = { path = "crates/apimock-server", version = "5.1.0" }
 
 # The façade keeps direct deps only for crates it uses itself (logger, CLI
 # entry point, error wrapping). Everything else flows through the members.
@@ -107,7 +107,11 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 [dev-dependencies]
-rand = "^0"
+# Pin rand to ^0.9 because tests use `Rng::random_range`; rand 0.10
+# renamed back to `gen_range`. The ^0 spec used to work but the
+# registry now publishes 0.10, so we lock the major to 0.9 to keep
+# the existing test surface.
+rand = "^0.9"
 reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
 rcgen = "^0"
 local-ip-address = "^0"
