@@ -1,7 +1,7 @@
 #!/bin/sh
 
 cd crates
-crates="apimock-routing apimock-config apimock-server"
+crates="apimock-routing apimock-config apimock-server apimock"
 for crate in $crates; do
     cd $crate
     cargo package
@@ -9,6 +9,3 @@ for crate in $crates; do
     cd ..
 done
 cd ..
-
-cargo package
-cargo publish
