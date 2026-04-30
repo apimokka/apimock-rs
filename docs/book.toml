@@ -1,6 +1,6 @@
 [book]
 title = "apimock-rs (API Mock) Docs"
-authors = ["nabbisen<nabbisen@scqr.net>"]
+authors = ["nabbisen"]
 description = "apimock-rs (API Mock) Docs: A developer-friendly, featherlight and functional HTTP(S) mock server built in Rust."
 
 language = "en"

@@ -11,7 +11,7 @@
     "apimock"
   ],
   "description": "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists.",
-  "author": "nabbisen<nabbisen@scqr.net>",
+  "author": "nabbisen",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
