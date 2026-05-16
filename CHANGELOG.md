@@ -80,6 +80,81 @@ grouping.
   of plain private. They remain unreachable from outside the
   workspace module.
 
+## [5.6.0] - 2026-04-28
+
+5.6.0 closes ROADMAP's second deferred item: routing-crate test
+coverage for `Headers::is_match` and `Body::is_match`. 36 dedicated
+tests now exercise these matchers and their TOML deserialise surface
+directly inside the `apimock-routing` crate. No public-API changes;
+no behavioural changes.
+
+### Added
+
+- **`apimock_routing::rule_set::rule::when::request::headers::tests`**
+  — 19 tests:
+  - 10 covering `is_match` operator variants: default `Equal` (op
+    omitted), explicit `Equal`, `NotEqual` (match and no-match),
+    `StartsWith` (match and no-match), `Contains` (match and
+    no-match), `WildCard` (match).
+  - 4 covering `is_match` request-shape edges: missing header key →
+    false, multi-condition AND with all matching, multi-condition AND
+    with one failing, UTF-8 decode failure → `true` (pinning the
+    log-and-allow contract).
+  - 2 covering `validate()`: empty `Headers` → false, non-empty →
+    true.
+  - 3 covering TOML deserialise: value-only shape (op omitted), all
+    five op variants in one document, multiple keys.
+
+- **`apimock_routing::rule_set::rule::when::request::body::tests`**
+  — 17 tests:
+  - 3 covering `is_match` request-shape edges: no body, no `Json`
+    `BodyKind`, empty inner map.
+  - 4 covering jsonpath hits with operators: `Equal`, `StartsWith`,
+    `Contains`, plus a jsonpath-miss path returning false.
+  - 2 covering value coercion: `Number` → `"42"`, `Object` →
+    compact JSON `{"k":"v"}`.
+  - 2 covering multi-jsonpath AND.
+  - 3 covering `validate()`: empty outer, empty inner, non-empty.
+  - 3 covering TOML deserialise: simple jsonpath, nested jsonpath,
+    multiple jsonpaths.
+
+### Changed (internal)
+
+- `headers.rs` and `body.rs` now declare `#[cfg(test)] mod tests;`.
+  The corresponding `headers/` and `body/` directories receive the
+  test files. (`body/` already existed for `body_kind.rs`; `headers/`
+  is new.)
+
+### Findings during this work
+
+A test-fixture issue was discovered in 5.5.0's round-trip tests: they
+used `body.json` keys like `"$.user.name"` and `"$.action"`, syntax
+that resembles canonical JSONPath but isn't recognised by the routing
+crate. The routing crate's path resolver supports only dotted paths
+(`a.b.c` for object keys, `items.2.name` for array indexing); the
+leading `$.` is treated as a literal object key and never matches a
+real request.
+
+The 5.5.0 tests still pass because they only verify that the
+*string* round-trips through TOML — they don't call `is_match`. The
+fixtures are misleading but not broken. A 5.7.0-or-later release will
+rewrite them to use the supported syntax, bundled with broader
+documentation work. Recorded in ROADMAP.md.
+
+### Roadmap
+
+ROADMAP.md is updated:
+- The "Routing crate test coverage" item is marked resolved.
+- A new cosmetic item is recorded for 5.7.0 candidacy: rewriting
+  5.5.0's misleading `$.foo` test fixtures to use the routing
+  crate's actual dotted-path syntax.
+
+### Tests
+
+`cargo test --workspace --lib` reports **97 passing** (was 61 in
+5.5.0; +36 = 97). The new tests all live in `apimock-routing`; other
+crates' counts are unchanged.
+
 ## [5.5.0] - 2026-04-28
 
 5.5.0 closes the highest-priority deferred item from ROADMAP.md:

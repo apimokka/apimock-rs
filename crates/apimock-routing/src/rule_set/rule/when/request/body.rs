@@ -88,3 +88,6 @@ impl std::fmt::Display for Body {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

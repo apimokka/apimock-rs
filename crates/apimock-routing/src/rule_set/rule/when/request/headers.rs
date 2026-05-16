@@ -73,3 +73,6 @@ impl std::fmt::Display for Headers {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

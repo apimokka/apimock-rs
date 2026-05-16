@@ -10,8 +10,8 @@ rust-version.workspace = true
 description = "HTTP(S) server runtime for apimock: listener loop, request handling, response building."
 
 [dependencies]
-apimock-config = { path = "../apimock-config", version = "5.5.0" }
-apimock-routing = { path = "../apimock-routing", version = "5.5.0" }
+apimock-config = { path = "../apimock-config", version = "5.6.0" }
+apimock-routing = { path = "../apimock-routing", version = "5.6.0" }
 
 tokio = { workspace = true }
 hyper = { workspace = true }

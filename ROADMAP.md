@@ -64,16 +64,18 @@ existing file-tree builder.
 
 ### Routing crate test coverage for `Headers::is_match` and `Body::is_match`
 
-**Identified during:** 5.5.0 design discussion.
+**Status:** ✅ **Resolved in 5.6.0.** Added 36 dedicated tests in the routing crate covering every operator variant of `Headers::is_match`, the request-shape edge cases (key missing, UTF-8 decode failure), `Body::is_match` across jsonpath hits / misses / value-type coercion, multi-condition AND for both Headers and Body, `validate()` for both, and the TOML deserialise surface. Tests live in `headers/tests.rs` and `body/tests.rs` to follow the existing routing-crate convention.
 
-**Status:** Deferred to **5.6.0**. Tracked as a separate routing-crate-focused release.
+### 5.5.0 round-trip test fixtures used non-existent JSONPath syntax
 
-**Description.** Routing-crate test coverage today is concentrated in `RuleOp::is_match` (5 tests across the `Equal` / `NotEqual` / `StartsWith` / `Contains` / `WildCard` variants) and `util::glob`. The broader matching pipeline that wires those operators into request evaluation — `Headers::is_match`, `Body::is_match`, and the TOML deserialisation surface for both — has *no* dedicated tests in the routing crate. The 5.5.0 round-trip tests in `apimock-config` exercise the deserialise → serialise path indirectly, but the routing crate alone has no contract tests for these types.
+**Identified during:** 5.6.0 routing-crate test work.
 
-**Why this is deferred.** The 5.5.0 release scope was "fix the round-trip bug surfaced in 5.2.0"; broadening into a routing-crate test campaign would have mixed two concerns into one CHANGELOG entry. 5.6.0 will add ~28 dedicated tests covering:
+**Status:** Cosmetic issue. **5.7.0 candidate.**
 
-- `Headers::is_match`: every operator variant (with and without match), missing-key behaviour, the UTF-8 decode failure path that returns `true` after logging, and multi-condition AND evaluation.
-- `Body::is_match`: non-JSON body, jsonpath miss, jsonpath hits with each operator, multi-jsonpath AND, and value coercion (`Number` / `Object` → string for matching).
-- TOML deserialise: simple and detailed shapes, nested jsonpath keys, the `op` default (`Equal`) when omitted.
+**Description.** The 5.5.0 round-trip tests in `apimock_config::toml_writer::tests` and `apimock_config::workspace::tests` used `body.json` keys like `"$.user.name"` and `"$.action"` — syntax that *looks* like canonical JSONPath but isn't supported by the routing crate. The routing crate's path resolver (`apimock_routing::util::json::json_value_by_jsonpath`) only understands a dotted-path mini-syntax: `a.b.c` for nested object keys and `items.2.name` for array indexing. The leading `$.` form is not recognised — the resolver treats `$` as a literal object key, which never matches.
 
-**Suggested approach.** Keep tests inside the routing crate's existing `tests` submodule pattern (`headers/tests.rs`, `body/tests.rs`). Use `toml::from_str` to construct fixtures rather than building `Headers` / `Body` values by hand — this verifies the serde wiring at the same time. A `RuleSet::new` test path may also be useful to cover the prefix-resolution + validation flow with these conditions present.
+**Why the 5.5.0 tests still pass.** The 5.5.0 tests verify *round-trip* (load → save → reload preserves the string), and arbitrary strings round-trip just fine. They never call `is_match`, so the syntax error has no observable effect.
+
+**Why this is deferred.** Fixing the test fixtures is purely cosmetic — they pass, just with misleading example paths. Rewriting them in a 5.7.0-or-later release lets us bundle the change with broader documentation work (e.g. the `apimock` example TOML files could carry richer `body.json` examples too). 5.6.0's tests use the correct dotted-path format, so the documentation truth is now in the codebase.
+
+**Suggested approach.** When eventually addressed: rewrite the 5.5.0 fixtures to use forms like `"action"`, `"user.name"`, etc. Add a brief note to `apimock_routing::util::json` rustdoc and `apimock_config::toml_writer` reminding writers that `body.json` keys are dotted paths, not canonical JSONPath.
