@@ -142,7 +142,7 @@ fn service_table(s: &ServiceConfig) -> Table {
     t
 }
 
-fn rule_table(r: &Rule) -> Table {
+pub(crate) fn rule_table(r: &Rule) -> Table {
     let mut t = Table::new();
     t.insert("when".to_owned(), Value::Table(when_table(&r.when)));
     t.insert("respond".to_owned(), Value::Table(respond_table(&r.respond)));

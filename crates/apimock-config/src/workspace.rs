@@ -291,9 +291,34 @@ impl Workspace {
             }
         }
 
-        // Route catalog — placeholder for Step 5. Currently an empty
-        // snapshot; stage-2 of routing will populate.
-        let routes = apimock_routing::view::RouteCatalogSnapshot::empty();
+        // Route catalog — assemble from rule sets, fallback dir,
+        // file tree (depth-1 eager), and middleware script routes.
+        // Builders live in `apimock_routing::view::build`; the config
+        // crate just feeds them the data they need.
+        let fallback_dir = self.config.service.fallback_respond_dir.as_str();
+        let fallback_abs = self.resolve_relative(fallback_dir);
+        let file_tree = apimock_routing::view::build::build_file_tree(&fallback_abs);
+
+        let script_routes: Vec<apimock_routing::view::ScriptRouteView> = self
+            .config
+            .service
+            .middlewares_file_paths
+            .as_ref()
+            .map(|paths| {
+                paths
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, p)| apimock_routing::view::build::build_script_route_view(idx, p))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let routes = apimock_routing::view::build::build_route_catalog(
+            &self.config.service.rule_sets,
+            Some(fallback_dir),
+            file_tree,
+            script_routes,
+        );
 
         WorkspaceSnapshot {
             files,
@@ -1186,35 +1211,43 @@ impl Workspace {
     /// space, compare the in-memory state to a re-parsed snapshot of
     /// the baseline, and emit `DiffItem`s keyed by `NodeId`.
     ///
-    /// 5.2.0 implements the comparison at rule-set granularity
-    /// (Updated / Added / Removed) rather than per-rule. Per-rule
-    /// diffing is a stage-5 candidate — it would require parsing the
-    /// baseline TOML back into the in-memory model, which adds a
-    /// second loader path. Stage-5 also benefits from the same parse
-    /// for richer routing snapshots.
+    /// # Granularity
+    ///
+    /// 5.3.0 emits diffs at three granularities, in this order:
+    ///
+    /// 1. **Per-rule** `Updated` / `Added` / `Removed` for changes
+    ///    inside a rule set whose top-level structure (rule count,
+    ///    prefixes) is otherwise stable.
+    /// 2. **Per-rule-set** `Added` for newly-introduced rule sets the
+    ///    baseline didn't have at all.
+    /// 3. **Root file** `Updated` when listener / log / service-level
+    ///    fields changed.
     fn compute_diff_summary(&self) -> Vec<crate::view::DiffItem> {
         use crate::view::{DiffItem, DiffKind};
 
         let mut out = Vec::new();
 
-        // Did any rule set's rendered TOML diverge from baseline?
+        // Per-rule diffs for rule sets that exist in baseline and current.
         for (rs_idx, rule_set) in self.config.service.rule_sets.iter().enumerate() {
             let path = PathBuf::from(rule_set.file_path.as_str());
             let rendered = crate::toml_writer::render_rule_set_toml(rule_set);
-            let baseline_matches = self
-                .baseline_files
-                .get(&path)
+            let baseline_text = self.baseline_files.get(&path);
+            let baseline_matches = baseline_text
                 .map(|s| s.as_str() == rendered.as_str())
                 .unwrap_or(false);
-            if !baseline_matches {
+            if baseline_matches {
+                continue;
+            }
+
+            if let Some(baseline) = baseline_text {
+                // Both baseline and current exist — try a per-rule diff.
+                self.append_per_rule_diff(rs_idx, rule_set, baseline, &mut out);
+            } else {
+                // Newly added rule set (no baseline file). Surface as
+                // a single rule-set-level Added.
                 if let Some(rs_id) = self.ids.id_for(NodeAddress::RuleSet { rule_set: rs_idx }) {
-                    let kind = if self.baseline_files.contains_key(&path) {
-                        DiffKind::Updated
-                    } else {
-                        DiffKind::Added
-                    };
                     out.push(DiffItem {
-                        kind,
+                        kind: DiffKind::Added,
                         target: rs_id,
                         summary: format!(
                             "rule set #{} ({}): rules={}",
@@ -1248,6 +1281,109 @@ impl Workspace {
         }
 
         out
+    }
+
+    /// Walk the rules in `rule_set` against the baseline TOML's `rules`
+    /// array, emitting one `DiffItem` per rule that changed.
+    ///
+    /// # Pairing strategy
+    ///
+    /// Matching by *index* (rule[0] vs baseline_rule[0], rule[1] vs
+    /// baseline_rule[1], ...). After an insert / delete in the middle
+    /// of a list, this would over-report — every rule past the
+    /// insertion point would look "updated". A stage-5 candidate is to
+    /// match by NodeId so insertions don't fan out. For 5.3.0,
+    /// index-pairing is the simplest correct choice; the over-report
+    /// is observably accurate (all those rules' on-disk positions
+    /// *did* change) just not minimal.
+    fn append_per_rule_diff(
+        &self,
+        rs_idx: usize,
+        rule_set: &apimock_routing::RuleSet,
+        baseline_text: &str,
+        out: &mut Vec<crate::view::DiffItem>,
+    ) {
+        use crate::view::{DiffItem, DiffKind};
+        use toml::Value;
+
+        // Parse baseline back to a TOML value to walk its rules array.
+        let baseline_value: Value = match toml::from_str(baseline_text) {
+            Ok(v) => v,
+            Err(_) => return, // baseline malformed; skip per-rule detail
+        };
+        let baseline_rules: &[Value] = match baseline_value
+            .get("rules")
+            .and_then(|v| v.as_array())
+        {
+            Some(arr) => arr.as_slice(),
+            None => &[],
+        };
+
+        let cur_len = rule_set.rules.len();
+        let base_len = baseline_rules.len();
+        let common = cur_len.min(base_len);
+
+        // Compare overlapping rules.
+        for rule_idx in 0..common {
+            let cur_rendered = rule_to_string(&rule_set.rules[rule_idx]);
+            let base_rendered = toml::to_string_pretty(&baseline_rules[rule_idx])
+                .unwrap_or_default();
+            if cur_rendered == base_rendered {
+                continue;
+            }
+            let target = self
+                .ids
+                .id_for(NodeAddress::Rule {
+                    rule_set: rs_idx,
+                    rule: rule_idx,
+                })
+                .unwrap_or_else(NodeId::new);
+            out.push(DiffItem {
+                kind: DiffKind::Updated,
+                target,
+                summary: format!(
+                    "rule #{} in rule set #{}",
+                    rule_idx + 1,
+                    rs_idx + 1
+                ),
+            });
+        }
+
+        // Rules added in the current model that weren't in baseline.
+        for rule_idx in common..cur_len {
+            let target = self
+                .ids
+                .id_for(NodeAddress::Rule {
+                    rule_set: rs_idx,
+                    rule: rule_idx,
+                })
+                .unwrap_or_else(NodeId::new);
+            out.push(DiffItem {
+                kind: DiffKind::Added,
+                target,
+                summary: format!(
+                    "added rule #{} in rule set #{}",
+                    rule_idx + 1,
+                    rs_idx + 1
+                ),
+            });
+        }
+
+        // Rules removed: present in baseline, not in current. We
+        // can't attribute these to a NodeId (the rule's id was deleted
+        // from the index when DeleteRule ran), so we emit a fresh id
+        // and a clear summary; the GUI surfaces these as removals.
+        for rule_idx in common..base_len {
+            out.push(DiffItem {
+                kind: DiffKind::Removed,
+                target: NodeId::new(),
+                summary: format!(
+                    "removed rule #{} from rule set #{}",
+                    rule_idx + 1,
+                    rs_idx + 1
+                ),
+            });
+        }
     }
 
     /// True when at least one editable file's rendered output differs
@@ -1405,6 +1541,31 @@ impl Workspace {
     pub fn root_path(&self) -> &Path {
         &self.root_path
     }
+
+    /// Expand a directory in the file tree on demand.
+    ///
+    /// # When the GUI calls this
+    ///
+    /// `Workspace::snapshot()` returns a `FileTreeView` populated with
+    /// just the top-level entries of the fallback respond dir. Each
+    /// directory entry carries `children: Some(Vec::new())` to flag it
+    /// as expandable. When a user clicks to expand one of those nodes,
+    /// the GUI calls `list_directory(&entry.path)` and gets back the
+    /// next depth's entries (still not recursed past that depth — the
+    /// same lazy contract holds).
+    ///
+    /// # Why path-based and not NodeId-based
+    ///
+    /// File-tree entries don't carry NodeIds (see `FileNodeView`). The
+    /// reason is lifecycle: the editable node space (rules, rule sets,
+    /// respond blocks) is small, stable, and survives `apply()` calls
+    /// — perfect for UUID-keyed state. The file tree is large,
+    /// transient, and reflects the filesystem rather than the model;
+    /// keying it by path keeps the API simple and avoids mixing two
+    /// kinds of identity.
+    pub fn list_directory(&self, path: &Path) -> Vec<apimock_routing::view::FileNodeView> {
+        apimock_routing::view::build::list_directory(path)
+    }
 }
 
 /// Collapse a `Respond` into a one-line display label.
@@ -1487,6 +1648,15 @@ fn file_basename(path: &Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.to_string_lossy().into_owned())
+}
+
+/// Render a single rule to canonical TOML text. Used by per-rule diff
+/// to compare baseline rules to current rules in a format-agnostic
+/// way (the same canonicalisation `toml_writer` applies to whole
+/// files).
+fn rule_to_string(rule: &apimock_routing::Rule) -> String {
+    let table = crate::toml_writer::rule_table(rule);
+    toml::to_string_pretty(&toml::Value::Table(table)).unwrap_or_default()
 }
 
 /// Write `text` to `path` atomically.

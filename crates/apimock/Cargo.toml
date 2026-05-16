@@ -24,9 +24,9 @@ spawn = [] # offers another entry point for subprocess
 [dependencies]
 # The three responsibility-split member crates. The façade re-exports
 # their public surface and otherwise stays as thin as possible.
-apimock-config = { path = "../apimock-config", version = "5.2.0" }
-apimock-routing = { path = "../apimock-routing", version = "5.2.0" }
-apimock-server = { path = "../apimock-server", version = "5.2.0" }
+apimock-config = { path = "../apimock-config", version = "5.3.0" }
+apimock-routing = { path = "../apimock-routing", version = "5.3.0" }
+apimock-server = { path = "../apimock-server", version = "5.3.0" }
 
 # The façade keeps direct deps only for crates it uses itself (logger,
 # CLI entry point, error wrapping). Everything else flows through the

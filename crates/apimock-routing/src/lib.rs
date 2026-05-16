@@ -44,6 +44,7 @@ pub use parsed_request::ParsedRequest;
 pub use rule_set::{RuleSet, rule::Rule, rule::respond::Respond};
 pub use strategy::Strategy;
 pub use view::{
-    MatchConsidered, MatchedRule, RespondView, RouteCatalogSnapshot, RouteMatchView,
-    RouteValidation, RouteValidationIssue, RuleSetView, RuleView, ValidationSeverity,
+    FileNodeKind, FileNodeView, FileTreeView, MatchConsidered, MatchedRule, RespondView,
+    RouteCatalogSnapshot, RouteMatchView, RouteValidation, RouteValidationIssue, RuleSetView,
+    RuleView, ScriptRouteView, UrlPathView, ValidationSeverity, WhenView,
 };

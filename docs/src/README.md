@@ -46,5 +46,5 @@ npx apimock
 
 ## Contribution
 
-- [Technical Referrence](technical-referrence/)
+- [Technical Reference](technical-reference/)
 - [Source code (GitHub)](https://github.com/apimokka/apimock-rs)

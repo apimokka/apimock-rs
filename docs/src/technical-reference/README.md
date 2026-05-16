@@ -1,4 +1,4 @@
-# Technical referrence: A Guide for Developers and Contributors
+# Technical reference: A Guide for Developers and Contributors
 
 This document serves as the comprehensive technical reference for our app, designed for developers and contributors. It provides an in-depth understanding of the project's foundational elements.
 

@@ -12,6 +12,96 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.0] - 2026-04-27
+
+5.3.0 implements Step 5 of the GUI extension plan: a populated
+routing snapshot. The `RouteCatalogSnapshot` returned by
+`Workspace::snapshot()` now carries real data instead of an empty
+placeholder, plus a depth-1 eager file-tree view of the fallback
+respond directory and minimal script-route info for Rhai middlewares.
+
+This release also extends the per-save diff summary (a 5.2.0 carry-
+over) to surface per-rule changes, not just per-rule-set changes.
+
+### Added
+
+- **`apimock_routing::view::build`** — public builder functions for
+  every view type. The config crate uses these to populate
+  `Workspace::snapshot().routes`. Free functions rather than `From`
+  impls because the views need contextual data (positional indices)
+  that the source types don't carry.
+- **Structured `WhenView`** replaces the 5.0–5.2 `RuleView.when_summary:
+  String`. Now `RuleView.when: WhenView { url_path, method,
+  has_header_conditions, has_body_conditions }` per spec §5.3.
+  `RuleView::summary()` reproduces the old string format for callers
+  that want a one-line label.
+- **`UrlPathView { value, op }`** — URL-path predicate detail with
+  the matching operator name in lowercase TOML form (`equal`,
+  `starts_with`, etc.).
+- **`FileTreeView` + `FileNodeView` + `FileNodeKind`** — depth-1
+  eager view of the fallback respond directory. Each top-level entry
+  is reported; subdirectories carry `children: Some(Vec::new())` to
+  flag them as "expandable but not yet expanded". The embedder calls
+  `Workspace::list_directory(path)` to load a subdirectory's
+  contents on demand. Files include a `route_hint` (the URL path the
+  dyn-route fallback would serve them at, e.g. `/users` for
+  `users.json`).
+- **`ScriptRouteView { index, source_file, display_name }`** —
+  minimal info for each Rhai middleware. Static analysis of "what
+  URLs does this script handle" isn't feasible without parsing Rhai;
+  the view reports only what we know statically.
+- **`Workspace::list_directory(&Path) -> Vec<FileNodeView>`** — the
+  on-demand expansion API for file-tree subdirectories. Path-based
+  rather than NodeId-based because file-tree entries don't share the
+  editable-node ID space (their lifecycle reflects the filesystem,
+  not the model).
+- **Per-rule diff in `SaveResult.diff_summary`.** When a rule set
+  diverges from its baseline, the diff now walks the rules pairwise
+  and emits one `DiffItem` per changed rule (`Updated` for content
+  changes, `Added` for rules past the baseline length, `Removed`
+  for rules dropped from the baseline). Rule-set-level `Added`
+  still appears for newly-introduced rule sets.
+
+### Changed
+
+- **`RouteCatalogSnapshot` shape** extended (additive — the type was
+  already `#[non_exhaustive]`):
+  - `+ file_tree: Option<FileTreeView>`
+  - `+ script_routes: Vec<ScriptRouteView>`
+- **`RuleView.when_summary: String` removed**, replaced by `when:
+  WhenView`. The new `RuleView::summary()` accessor produces the same
+  string the old field did, so call sites that just wanted a one-line
+  label keep working with a one-character `.summary()` change.
+
+### Project documentation
+
+- **`ROADMAP.md` added** at the workspace root. Currently records
+  two deferred items: (1) hidden-folder filtering in `FileTreeView`
+  and (2) header / body.json round-trip through `toml_writer`. Both
+  have full rationale recorded so the original context isn't lost
+  between releases.
+
+### Tests
+
+`cargo test --workspace --lib` reports 54 passing (was 49 in 5.2.0).
+The 5 new tests cover the route-catalog populate path, structured
+`WhenView` summary formatting, file-tree depth-1 eager population
+with on-demand subdirectory expansion, per-rule diff after a rule
+edit, and `ScriptRouteView` presence with middlewares configured.
+
+### Status against the spec §13 受け入れ条件
+
+| condition | status |
+| --- | --- |
+| GUI が TOML を意識せず編集できる | 5.1.0 |
+| ルール追加・削除・更新が可能 | 5.1.0 |
+| 保存前に検証できる | 5.1.0 |
+| 差分が取得できる | 5.2.0 (rule-set granularity), 5.3.0 (per-rule) |
+| reload 必要性が判断できる | 5.2.0 |
+| 既存サーバー動作が維持される | all releases |
+
+§12 Steps 1–5 all complete.
+
 ## [5.2.0] - 2026-04-26
 
 5.2.0 implements Step 4 of the GUI extension plan: `Workspace::save()`

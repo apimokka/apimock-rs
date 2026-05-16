@@ -26,6 +26,8 @@
 
 use serde::Serialize;
 
+pub mod build;
+
 /// A complete snapshot of the server's routing configuration at one moment.
 ///
 /// # Why a snapshot rather than a live reference
@@ -41,15 +43,24 @@ pub struct RouteCatalogSnapshot {
     pub rule_sets: Vec<RuleSetView>,
     /// Fallback respond dir (file-based zero-config responder).
     pub fallback_respond_dir: Option<String>,
+    /// Top-level entries of the fallback respond dir, depth-1 eager.
+    /// `None` when no fallback dir is configured or it doesn't exist
+    /// on disk. Subdirectory contents are not pre-populated; the
+    /// embedder calls `Workspace::list_directory(parent_id)` to expand
+    /// nodes on demand.
+    pub file_tree: Option<FileTreeView>,
+    /// Middleware-script routes, keyed by `service.middlewares` order.
+    pub script_routes: Vec<ScriptRouteView>,
 }
 
 impl RouteCatalogSnapshot {
-    /// Return a snapshot with no content. Used as the stage-1 placeholder
-    /// and as the "no rule sets configured" shape.
+    /// Return a snapshot with no content.
     pub fn empty() -> Self {
         Self {
             rule_sets: Vec::new(),
             fallback_respond_dir: None,
+            file_tree: None,
+            script_routes: Vec::new(),
         }
     }
 }
@@ -77,11 +88,94 @@ pub struct RuleSetView {
 pub struct RuleView {
     /// Zero-based index within the parent rule set.
     pub index: usize,
-    /// Human-readable summary of the match conditions (e.g.
-    /// `"GET /api/v1/users starts_with"`). GUI uses this for list rows.
-    pub when_summary: String,
+    /// Structured match conditions. Spec §5.3 — URL / method /
+    /// headers / JSON conditions. Each field is `Option`-typed so a
+    /// rule that only matches on URL doesn't carry stub values in the
+    /// other slots.
+    pub when: WhenView,
     /// The declarative response shape.
     pub respond: RespondView,
+}
+
+impl RuleView {
+    /// One-line text label for list-row rendering. Backwards-compat
+    /// helper that produces the same shape as 5.0–5.2's
+    /// `when_summary: String` field.
+    pub fn summary(&self) -> String {
+        self.when.summary()
+    }
+}
+
+/// Structured representation of a rule's `when` clause (spec §5.3).
+///
+/// # Why each field is `Option`
+///
+/// A rule with `when.request.url_path = "/api"` and no other clauses
+/// matches every request whose URL is `/api`, regardless of method or
+/// headers. Carrying explicit `None`s for unset fields keeps the
+/// distinction between "not constrained" and "constrained to empty"
+/// — the GUI renders the former as a blank field and the latter as
+/// "method = (none)".
+#[derive(Clone, Debug, Default, Serialize)]
+#[non_exhaustive]
+pub struct WhenView {
+    /// URL-path predicate as written in the rule. Carries the matching
+    /// operator (`equals` / `starts_with` / `contains` / `wild_card`
+    /// / `pattern`).
+    pub url_path: Option<UrlPathView>,
+    /// HTTP method — uppercase string like `"GET"` to match the
+    /// underlying `HttpMethod::as_str()` representation.
+    pub method: Option<String>,
+    /// `true` iff the rule restricts on request headers. We don't
+    /// surface the actual header conditions yet (the routing crate's
+    /// `Headers` type isn't publicly inspectable at this stage); the
+    /// boolean tells the GUI whether to render a "headers constraint
+    /// present" badge.
+    pub has_header_conditions: bool,
+    /// `true` iff the rule restricts on request body JSON.
+    pub has_body_conditions: bool,
+}
+
+impl WhenView {
+    /// Compact human-readable summary built from the populated fields
+    /// in priority order (method → path → constraint badges).
+    pub fn summary(&self) -> String {
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(method) = self.method.as_deref() {
+            parts.push(method.to_owned());
+        }
+        if let Some(url) = self.url_path.as_ref() {
+            parts.push(url.summary());
+        }
+        if self.has_header_conditions {
+            parts.push("+headers".to_owned());
+        }
+        if self.has_body_conditions {
+            parts.push("+body".to_owned());
+        }
+        if parts.is_empty() {
+            "(matches everything)".to_owned()
+        } else {
+            parts.join(" ")
+        }
+    }
+}
+
+/// URL-path predicate detail.
+#[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
+pub struct UrlPathView {
+    /// The path string from the rule, e.g. `"/api/v1/users"`.
+    pub value: String,
+    /// Matching operator name in lowercase TOML form, e.g.
+    /// `"equals"` or `"starts_with"`.
+    pub op: String,
+}
+
+impl UrlPathView {
+    pub fn summary(&self) -> String {
+        format!("{} {}", self.op, self.value)
+    }
 }
 
 /// GUI-facing view of one response shape.
@@ -170,4 +264,76 @@ pub struct RouteValidationIssue {
 pub enum ValidationSeverity {
     Error,
     Warning,
+}
+
+// ---------------------------------------------------------------------
+// File-tree view (spec §5.5)
+// ---------------------------------------------------------------------
+
+/// Top-level view of the fallback respond directory, depth-1 eager.
+///
+/// # Why depth-1 and not full recursion
+///
+/// Fallback dirs in real projects can hold thousands of files; full
+/// recursive enumeration would make `snapshot()` expensive. The
+/// `Workspace` provides a separate `list_directory(parent_id)` API
+/// the GUI calls when a user clicks to expand a subdirectory.
+#[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
+pub struct FileTreeView {
+    /// Absolute path to the fallback respond directory.
+    pub root_path: String,
+    /// Direct children of `root_path`. Subdirectories carry no
+    /// children (`children: None`) — the embedder loads them on demand.
+    pub entries: Vec<FileNodeView>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
+pub struct FileNodeView {
+    /// Display name (just the last path component, e.g. `"users.json"`).
+    pub name: String,
+    /// Absolute path on disk.
+    pub path: String,
+    /// What kind of filesystem node this is.
+    pub kind: FileNodeKind,
+    /// For files only — the URL path that would serve this file under
+    /// the dyn-route fallback (e.g. `"/users"` for `users.json`).
+    /// `None` for directories.
+    pub route_hint: Option<String>,
+    /// `Some(empty)` for an unexpanded subdirectory, populated when
+    /// the embedder calls `list_directory` to expand. Always `None`
+    /// for files.
+    pub children: Option<Vec<FileNodeView>>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+pub enum FileNodeKind {
+    File,
+    Directory,
+}
+
+// ---------------------------------------------------------------------
+// Script-route view (spec §5)
+// ---------------------------------------------------------------------
+
+/// Minimal display info for a Rhai middleware script route.
+///
+/// # Why fields are intentionally minimal
+///
+/// A Rhai middleware can run arbitrary logic to decide whether to
+/// match. Static analysis of "what URLs does this script handle" isn't
+/// feasible without parsing Rhai (and would be unreliable even then).
+/// The view reports only what we *do* know statically — file path and
+/// display label — and leaves any deeper inspection to a hypothetical
+/// future editor feature.
+#[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
+pub struct ScriptRouteView {
+    /// Index within `service.middlewares_file_paths`.
+    pub index: usize,
+    /// Source file path as recorded in `service.middlewares`.
+    pub source_file: String,
+    /// Human-readable label (typically the file's basename).
+    pub display_name: String,
 }
