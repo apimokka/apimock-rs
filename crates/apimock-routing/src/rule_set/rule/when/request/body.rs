@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use std::collections::HashMap;
 
-mod body_kind;
+pub mod body_kind;
 
 use super::util::fmt_condition_connector;
 use crate::{

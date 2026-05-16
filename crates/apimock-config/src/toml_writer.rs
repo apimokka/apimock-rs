@@ -28,7 +28,11 @@ use apimock_routing::{
         Rule,
         when::{
             When,
-            request::{Request, http_method::HttpMethod, url_path::UrlPathConfig},
+            condition_statement::ConditionStatement,
+            request::{
+                Request, body::body_kind::BodyKind, http_method::HttpMethod,
+                url_path::UrlPathConfig,
+            },
         },
     },
 };
@@ -167,9 +171,16 @@ fn request_table(req: &Request) -> Table {
                 let mut dt = Table::new();
                 dt.insert("value".to_owned(), Value::String(detail.value.clone()));
                 if let Some(op) = detail.op.as_ref() {
-                    // Display impl on RuleOp gives the canonical TOML name
-                    // (`equals`, `starts_with`, `wild_card`, etc.).
-                    dt.insert("op".to_owned(), Value::String(format!("{}", op)));
+                    // RuleOp's `Display` impl produces a human-readable
+                    // form (`" == "`, `" starts with "`) for log output.
+                    // The TOML representation needs the snake_case
+                    // serde tag (`equal`, `starts_with`). Use the
+                    // routing crate's `op_name` helper so the round-
+                    // trip is faithful.
+                    dt.insert(
+                        "op".to_owned(),
+                        Value::String(apimock_routing::view::build::op_name(op)),
+                    );
                 }
                 t.insert("url_path".to_owned(), Value::Table(dt));
             }
@@ -180,21 +191,78 @@ fn request_table(req: &Request) -> Table {
         t.insert("method".to_owned(), Value::String(http_method_name(method)));
     }
 
-    // headers and body conditions: these have nested complex shapes.
-    // Stage-1 GUI editing doesn't expose them, so the editor never
-    // reaches in. If the loaded TOML had them, the `When::Request`
-    // model preserves them — but we don't have a reverse path because
-    // the routing crate's `Headers` / `Body` types aren't `Serialize`
-    // and don't expose their internal `HashMap` shape publicly. For
-    // 5.2.0 we accept that headers/body conditions in a rule will be
-    // dropped on save; this is documented in the SaveResult.diagnostics.
-    //
-    // A future stage can add `Serialize` (or expose the maps) and
-    // round-trip those clauses faithfully. Until then, the GUI is
-    // strongly encouraged to warn users editing rule-sets that
-    // contain them.
+    // Headers conditions. The routing crate exposes `Headers` as a
+    // newtype `pub struct Headers(pub HashMap<String, ConditionStatement>)`,
+    // so we walk that map and emit one TOML sub-table per condition
+    // statement: `[when.request.headers.<key>] op = "...", value = "..."`.
+    if let Some(headers) = req.headers.as_ref() {
+        let mut headers_table = Table::new();
+        // Sort by key for determinism — TOML's `HashMap` deserialize
+        // doesn't preserve order, so the round-trip text won't either,
+        // but explicit sorting at write time means a save → save
+        // sequence produces byte-identical output.
+        let mut keys: Vec<&String> = headers.0.keys().collect();
+        keys.sort();
+        for key in keys {
+            let stmt = &headers.0[key];
+            headers_table.insert(key.clone(), Value::Table(condition_statement_table(stmt)));
+        }
+        if !headers_table.is_empty() {
+            t.insert("headers".to_owned(), Value::Table(headers_table));
+        }
+    }
+
+    // Body conditions. `Body` is keyed first by `BodyKind` (currently
+    // only `Json`) and then by jsonpath string. The TOML form is
+    // `[when.request.body.json."$.path"] op = "...", value = "..."`.
+    if let Some(body) = req.body.as_ref() {
+        let mut body_table = Table::new();
+        let mut kinds: Vec<&BodyKind> = body.0.keys().collect();
+        kinds.sort_by_key(|k| body_kind_key(k));
+        for kind in kinds {
+            let kind_str = body_kind_key(kind);
+            let inner = &body.0[kind];
+            let mut kind_table = Table::new();
+            let mut keys: Vec<&String> = inner.keys().collect();
+            keys.sort();
+            for key in keys {
+                let stmt = &inner[key];
+                kind_table.insert(key.clone(), Value::Table(condition_statement_table(stmt)));
+            }
+            if !kind_table.is_empty() {
+                body_table.insert(kind_str.to_owned(), Value::Table(kind_table));
+            }
+        }
+        if !body_table.is_empty() {
+            t.insert("body".to_owned(), Value::Table(body_table));
+        }
+    }
 
     t
+}
+
+/// Render a `ConditionStatement` (used by both Headers entries and
+/// Body inner entries) as a TOML table with `op` (optional) and
+/// `value` keys.
+fn condition_statement_table(stmt: &ConditionStatement) -> Table {
+    let mut t = Table::new();
+    if let Some(op) = stmt.op.as_ref() {
+        t.insert(
+            "op".to_owned(),
+            Value::String(apimock_routing::view::build::op_name(op)),
+        );
+    }
+    t.insert("value".to_owned(), Value::String(stmt.value.clone()));
+    t
+}
+
+/// Snake-case TOML key for a `BodyKind` variant. Matches the
+/// `serde(rename_all = "snake_case")` tag the routing crate uses
+/// when deserialising — guarantees the round-trip works.
+fn body_kind_key(kind: &BodyKind) -> &'static str {
+    match kind {
+        BodyKind::Json => "json",
+    }
 }
 
 /// Serialize an HTTP method back to its TOML form. Inverse of the
@@ -234,4 +302,106 @@ fn respond_table(r: &Respond) -> Table {
         );
     }
     t
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Compose a minimal rule-set TOML containing the given inner
+    /// rules block and parse it back to a `RuleSet` for assertions.
+    fn parse_rule_set(toml_text: &str) -> RuleSet {
+        // Use a temp dir as the rule-set's owning location so the
+        // RuleSet::new path-resolution logic has somewhere real.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("apimock-rule-set.toml");
+        std::fs::write(&path, toml_text).expect("write");
+        RuleSet::new(path.to_str().unwrap(), ".", 0).expect("parse rule set")
+    }
+
+    #[test]
+    fn round_trip_rule_with_single_header() {
+        let original = concat!(
+            "[[rules]]\n",
+            "when.request.url_path = \"/api\"\n",
+            "when.request.headers.x-api-key = { value = \"secret\" }\n",
+            "respond = { text = \"ok\" }\n",
+        );
+        let rs = parse_rule_set(original);
+        assert!(rs.rules[0].when.request.headers.is_some());
+
+        // Render and re-parse — headers should still be present.
+        let rendered = render_rule_set_toml(&rs);
+        let rs2 = parse_rule_set(&rendered);
+        let h = rs2.rules[0]
+            .when
+            .request
+            .headers
+            .as_ref()
+            .expect("headers preserved across round trip");
+        assert!(h.0.contains_key("x-api-key"));
+        assert_eq!(h.0["x-api-key"].value, "secret");
+    }
+
+    #[test]
+    fn round_trip_rule_with_header_op() {
+        let original = concat!(
+            "[[rules]]\n",
+            "when.request.url_path = \"/api\"\n",
+            "when.request.headers.user-agent = { op = \"starts_with\", value = \"Mozilla\" }\n",
+            "respond = { text = \"ok\" }\n",
+        );
+        let rs = parse_rule_set(original);
+        let rendered = render_rule_set_toml(&rs);
+        let rs2 = parse_rule_set(&rendered);
+        let h = rs2.rules[0].when.request.headers.as_ref().unwrap();
+        let stmt = &h.0["user-agent"];
+        assert!(matches!(
+            stmt.op,
+            Some(apimock_routing::rule_set::rule::when::request::rule_op::RuleOp::StartsWith)
+        ));
+        assert_eq!(stmt.value, "Mozilla");
+    }
+
+    #[test]
+    fn round_trip_rule_with_multiple_headers() {
+        let original = concat!(
+            "[[rules]]\n",
+            "when.request.url_path = \"/api\"\n",
+            "when.request.headers.x-api-key = { value = \"secret\" }\n",
+            "when.request.headers.x-tenant = { op = \"equal\", value = \"acme\" }\n",
+            "respond = { text = \"ok\" }\n",
+        );
+        let rs = parse_rule_set(original);
+        let rendered = render_rule_set_toml(&rs);
+        let rs2 = parse_rule_set(&rendered);
+        let h = rs2.rules[0].when.request.headers.as_ref().unwrap();
+        assert_eq!(h.0.len(), 2);
+        assert!(h.0.contains_key("x-api-key"));
+        assert!(h.0.contains_key("x-tenant"));
+    }
+
+    #[test]
+    fn round_trip_rule_with_body_json() {
+        let original = concat!(
+            "[[rules]]\n",
+            "when.request.url_path = \"/api\"\n",
+            "when.request.body.json.\"$.user.name\" = { value = \"alice\" }\n",
+            "respond = { text = \"ok\" }\n",
+        );
+        let rs = parse_rule_set(original);
+        let rendered = render_rule_set_toml(&rs);
+        let rs2 = parse_rule_set(&rendered);
+        let b = rs2.rules[0]
+            .when
+            .request
+            .body
+            .as_ref()
+            .expect("body preserved across round trip");
+        // Body has BodyKind::Json keyed map containing "$.user.name".
+        let json_kind = apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind::Json;
+        let inner = b.0.get(&json_kind).expect("json body kind present");
+        assert!(inner.contains_key("$.user.name"));
+        assert_eq!(inner["$.user.name"].value, "alice");
+    }
 }

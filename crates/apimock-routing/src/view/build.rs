@@ -119,7 +119,7 @@ fn build_url_path_view(cfg: Option<&UrlPathConfig>) -> Option<UrlPathView> {
 /// GUI can match against. We translate to the same `snake_case` form
 /// `serde(rename_all = "snake_case")` produces on the way in, so the
 /// view round-trips back to the original TOML keyword.
-fn op_name(op: &RuleOp) -> String {
+pub fn op_name(op: &RuleOp) -> String {
     match op {
         RuleOp::Equal => "equal",
         RuleOp::NotEqual => "not_equal",

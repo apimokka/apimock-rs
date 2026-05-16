@@ -60,24 +60,20 @@ existing file-tree builder.
 
 ### Header / body.json round-trip through `toml_writer`
 
-**Identified during:** 5.2.0 implementation.
+**Status:** ✅ **Resolved in 5.5.0.** The headers / body / condition_statement / body_kind modules in the routing crate were promoted to `pub mod`, exposing the existing public-field `Headers`, `Body`, `ConditionStatement`, and `BodyKind` types. `toml_writer::request_table` now round-trips these conditions, and `EditCommand::UpdateRule` preserves them when the GUI's `RulePayload` (which doesn't surface these fields) calls back into the apply layer.
 
-**Status:** Deferred. Pending routing-crate changes.
+### Routing crate test coverage for `Headers::is_match` and `Body::is_match`
 
-**Description.** Rule-set rules with `headers` or `body.json` match
-conditions parse cleanly into the in-memory model but are *not*
-re-serialised by `apimock_config::toml_writer`. Saving a rule set
-that contains such conditions drops them from the on-disk file.
+**Identified during:** 5.5.0 design discussion.
 
-**Why this is deferred.** The routing crate's `Headers` and `Body`
-types don't expose their internal map shape outside the crate, so
-the writer can't read them. Adding accessors is a routing-crate API
-change with its own design decisions (which structure to expose:
-the original TOML form, or the parsed-and-validated form?). Better
-to address as a focused change in a routing-crate-only release than
-to mix it into a config-crate release.
+**Status:** Deferred to **5.6.0**. Tracked as a separate routing-crate-focused release.
 
-**Suggested approach.** Add `Headers::iter()` and a public accessor
-on `Body` that yields the JSON-path / value pairs. Then extend
-`toml_writer::request_table` to read them. Add round-trip tests in
-`apimock-config` covering rule sets with both kinds of condition.
+**Description.** Routing-crate test coverage today is concentrated in `RuleOp::is_match` (5 tests across the `Equal` / `NotEqual` / `StartsWith` / `Contains` / `WildCard` variants) and `util::glob`. The broader matching pipeline that wires those operators into request evaluation — `Headers::is_match`, `Body::is_match`, and the TOML deserialisation surface for both — has *no* dedicated tests in the routing crate. The 5.5.0 round-trip tests in `apimock-config` exercise the deserialise → serialise path indirectly, but the routing crate alone has no contract tests for these types.
+
+**Why this is deferred.** The 5.5.0 release scope was "fix the round-trip bug surfaced in 5.2.0"; broadening into a routing-crate test campaign would have mixed two concerns into one CHANGELOG entry. 5.6.0 will add ~28 dedicated tests covering:
+
+- `Headers::is_match`: every operator variant (with and without match), missing-key behaviour, the UTF-8 decode failure path that returns `true` after logging, and multi-condition AND evaluation.
+- `Body::is_match`: non-JSON body, jsonpath miss, jsonpath hits with each operator, multi-jsonpath AND, and value coercion (`Number` / `Object` → string for matching).
+- TOML deserialise: simple and detailed shapes, nested jsonpath keys, the `op` default (`Equal`) when omitted.
+
+**Suggested approach.** Keep tests inside the routing crate's existing `tests` submodule pattern (`headers/tests.rs`, `body/tests.rs`). Use `toml::from_str` to construct fixtures rather than building `Headers` / `Body` values by hand — this verifies the serde wiring at the same time. A `RuleSet::new` test path may also be useful to cover the prefix-resolution + validation flow with these conditions present.

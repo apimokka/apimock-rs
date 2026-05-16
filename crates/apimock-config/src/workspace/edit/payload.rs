@@ -13,10 +13,24 @@
 use crate::error::{ApplyError, ConfigError};
 use crate::view::EditValue;
 
+/// Build a `Rule` from a GUI-shaped payload.
+///
+/// # `existing` — preserving unspecified fields
+///
+/// The GUI's `RulePayload` carries only `url_path` / `method` /
+/// `respond` because those are the fields the GUI form exposes today.
+/// Routing rules can also carry `headers` and `body.json` match
+/// conditions that the GUI doesn't surface. When this function is
+/// called from `UpdateRule` (a rule that already exists), those
+/// untouched conditions must be carried forward so a save doesn't
+/// silently strip them. Pass `Some(existing_rule)` in that case.
+///
+/// For `AddRule` (no prior rule to preserve from), pass `None`.
 pub(super) fn build_rule_from_payload(
     payload: crate::view::RulePayload,
     rule_set: &apimock_routing::RuleSet,
     rs_idx: usize,
+    existing: Option<&apimock_routing::Rule>,
 ) -> Result<apimock_routing::Rule, ApplyError> {
     use apimock_routing::rule_set::rule::Rule;
     use apimock_routing::rule_set::rule::when::When;
@@ -27,8 +41,8 @@ pub(super) fn build_rule_from_payload(
     // Build the Request shape from the simple payload. We use the
     // simple UrlPath variant (Simple(String)) because the payload's
     // url_path is a plain string; the richer variants (op, etc.) are
-    // out of scope for 5.1 — a GUI can round-trip them once Step-5
-    // exposes richer form controls.
+    // out of scope here — a GUI can use Detailed UrlPath via direct
+    // `Config` editing if needed.
     let url_path_config = payload.url_path.as_ref().map(|s| UrlPathConfig::Simple(s.clone()));
 
     let http_method = match payload.method.as_deref() {
@@ -47,12 +61,19 @@ pub(super) fn build_rule_from_payload(
         None => None,
     };
 
+    // Carry headers / body forward from the previous rule when this
+    // is an UpdateRule call. Cloning is cheap (small HashMaps).
+    let (headers, body) = match existing {
+        Some(prev) => (prev.when.request.headers.clone(), prev.when.request.body.clone()),
+        None => (None, None),
+    };
+
     let request = Request {
         url_path_config,
         url_path: None, // derived below
         http_method,
-        headers: None,
-        body: None,
+        headers,
+        body,
     };
 
     let rule = Rule {
@@ -64,10 +85,6 @@ pub(super) fn build_rule_from_payload(
     // set's prefix and validates the status code. Running it here means
     // the freshly-created rule is ready for matching without a second
     // pass.
-    //
-    // `rule_idx` at this point is whatever position the rule will
-    // occupy after being pushed — use `rule_set.rules.len()` because
-    // the push happens immediately after.
     Ok(rule.compute_derived_fields(rule_set, rule_set.rules.len(), rs_idx))
 }
 

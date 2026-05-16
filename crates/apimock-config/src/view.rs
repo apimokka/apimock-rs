@@ -211,6 +211,20 @@ pub enum EditCommand {
         rule: RulePayload,
     },
     /// Update a rule's `when` / `respond` block.
+    ///
+    /// # Preservation of unspecified fields
+    ///
+    /// `RulePayload` carries `url_path`, `method`, and `respond` —
+    /// the fields a stage-1 GUI form exposes. A rule may also carry
+    /// `headers` and `body.json` match conditions that aren't part of
+    /// the payload shape. Those clauses are **preserved** across an
+    /// `UpdateRule`: the new rule keeps whatever headers / body
+    /// conditions the previous rule had, even though the payload
+    /// doesn't mention them.
+    ///
+    /// Without this preservation, every `UpdateRule` would silently
+    /// strip the unsurfaced clauses, which is a save-time bug when a
+    /// GUI re-saves a rule it loaded from a hand-edited TOML file.
     UpdateRule {
         id: NodeId,
         rule: RulePayload,

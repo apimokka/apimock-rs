@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-mod condition_statement;
+pub mod condition_statement;
 pub mod request;
 
 use crate::parsed_request::ParsedRequest;

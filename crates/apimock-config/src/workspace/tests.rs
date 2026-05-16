@@ -818,3 +818,179 @@ fn snapshot_script_routes_present_when_middlewares_configured() {
     assert_eq!(snap.routes.script_routes[0].source_file, "noop.rhai");
     assert_eq!(snap.routes.script_routes[0].display_name, "noop.rhai");
 }
+
+// -----------------------------------------------------------------
+// 5.5.0 — Headers / Body round-trip through Workspace
+// -----------------------------------------------------------------
+
+/// Build a workspace whose rule set carries one header and one body
+/// match condition, plus a fallback dir so validation passes.
+fn make_workspace_with_headers_and_body() -> (tempfile::TempDir, PathBuf) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let fallback = dir.path().join("fallback");
+    std::fs::create_dir_all(&fallback).unwrap();
+
+    let rs_toml = concat!(
+        "[[rules]]\n",
+        "when.request.url_path = \"/api/protected\"\n",
+        "when.request.headers.x-api-key = { value = \"shh\" }\n",
+        "when.request.body.json.\"$.action\" = { op = \"equal\", value = \"go\" }\n",
+        "respond = { text = \"ok\" }\n",
+    );
+    let rs_path = dir.path().join("apimock-rule-set.toml");
+    std::fs::write(&rs_path, rs_toml).unwrap();
+
+    let root_toml = format!(
+        "[listener]\n\
+         ip_address = \"127.0.0.1\"\n\
+         port = 3001\n\
+         \n\
+         [service]\n\
+         rule_sets = [\"{}\"]\n\
+         fallback_respond_dir = \"{}\"\n",
+        rs_path.file_name().unwrap().to_string_lossy(),
+        fallback.file_name().unwrap().to_string_lossy(),
+    );
+    let root_path = dir.path().join("apimock.toml");
+    std::fs::write(&root_path, root_toml).unwrap();
+    (dir, root_path)
+}
+
+#[test]
+fn save_preserves_headers_through_disk_round_trip() {
+    // Load → no edits → save → reload. Headers must survive.
+    let (_dir, root) = make_workspace_with_headers_and_body();
+    let mut ws = Workspace::load(root.clone()).expect("load");
+
+    // Force a save by editing the URL path of the rule. (No-edit
+    // saves are no-ops because baseline == rendered, so the file
+    // wouldn't actually be written and we couldn't observe the
+    // round-trip.)
+    let snap = ws.snapshot();
+    let rule_id = snap
+        .files
+        .iter()
+        .find(|f| matches!(f.kind, ConfigFileKind::RuleSet))
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|n| matches!(n.kind, NodeKind::Rule))
+        .unwrap()
+        .id;
+    ws.apply(EditCommand::UpdateRule {
+        id: rule_id,
+        rule: crate::view::RulePayload {
+            url_path: Some("/api/protected/v2".to_owned()),
+            method: None,
+            respond: crate::view::RespondPayload {
+                text: Some("ok".to_owned()),
+                ..Default::default()
+            },
+        },
+    })
+    .expect("apply UpdateRule");
+    let result = ws.save().expect("save");
+    assert!(!result.changed_files.is_empty());
+
+    // Re-load and verify the header condition survived the round trip.
+    let ws2 = Workspace::load(root).expect("reload");
+    let rule = &ws2.config().service.rule_sets[0].rules[0];
+    let h = rule
+        .when
+        .request
+        .headers
+        .as_ref()
+        .expect("headers preserved through Workspace save → reload");
+    assert!(h.0.contains_key("x-api-key"));
+    assert_eq!(h.0["x-api-key"].value, "shh");
+}
+
+#[test]
+fn save_preserves_body_through_disk_round_trip() {
+    let (_dir, root) = make_workspace_with_headers_and_body();
+    let mut ws = Workspace::load(root.clone()).expect("load");
+
+    // Same trick: force a save via UpdateRule, verify body survives.
+    let snap = ws.snapshot();
+    let rule_id = snap
+        .files
+        .iter()
+        .find(|f| matches!(f.kind, ConfigFileKind::RuleSet))
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|n| matches!(n.kind, NodeKind::Rule))
+        .unwrap()
+        .id;
+    ws.apply(EditCommand::UpdateRule {
+        id: rule_id,
+        rule: crate::view::RulePayload {
+            url_path: Some("/api/protected".to_owned()),
+            method: Some("POST".to_owned()),
+            respond: crate::view::RespondPayload {
+                text: Some("ok".to_owned()),
+                ..Default::default()
+            },
+        },
+    })
+    .expect("apply UpdateRule");
+    let _ = ws.save().expect("save");
+
+    let ws2 = Workspace::load(root).expect("reload");
+    let rule = &ws2.config().service.rule_sets[0].rules[0];
+    let b = rule
+        .when
+        .request
+        .body
+        .as_ref()
+        .expect("body preserved through Workspace save → reload");
+    let json_kind = apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind::Json;
+    let inner = b.0.get(&json_kind).expect("json body kind present");
+    assert!(inner.contains_key("$.action"));
+    assert_eq!(inner["$.action"].value, "go");
+}
+
+#[test]
+fn update_rule_does_not_strip_unspecified_headers_or_body() {
+    // The semantics-change test: even though RulePayload doesn't
+    // carry headers / body fields, UpdateRule must preserve them on
+    // the in-memory rule (not just at save time).
+    let (_dir, root) = make_workspace_with_headers_and_body();
+    let mut ws = Workspace::load(root).expect("load");
+
+    let snap = ws.snapshot();
+    let rule_id = snap
+        .files
+        .iter()
+        .find(|f| matches!(f.kind, ConfigFileKind::RuleSet))
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|n| matches!(n.kind, NodeKind::Rule))
+        .unwrap()
+        .id;
+
+    ws.apply(EditCommand::UpdateRule {
+        id: rule_id,
+        rule: crate::view::RulePayload {
+            url_path: Some("/api/different".to_owned()),
+            method: None,
+            respond: crate::view::RespondPayload {
+                text: Some("changed".to_owned()),
+                ..Default::default()
+            },
+        },
+    })
+    .expect("apply");
+
+    // In-memory check: headers and body must STILL be present.
+    let rule = &ws.config().service.rule_sets[0].rules[0];
+    assert!(
+        rule.when.request.headers.is_some(),
+        "UpdateRule should preserve headers even though RulePayload doesn't carry them"
+    );
+    assert!(
+        rule.when.request.body.is_some(),
+        "UpdateRule should preserve body even though RulePayload doesn't carry them"
+    );
+}

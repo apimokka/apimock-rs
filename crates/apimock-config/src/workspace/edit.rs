@@ -263,7 +263,7 @@ impl Workspace {
                 reason: format!("rule set index {} out of range", rs_idx),
             })?;
 
-        let new_rule = build_rule_from_payload(rule_payload, rule_set, rs_idx)?;
+        let new_rule = build_rule_from_payload(rule_payload, rule_set, rs_idx, None)?;
         let new_rule_idx = rule_set.rules.len();
         rule_set.rules.push(new_rule);
 
@@ -304,7 +304,17 @@ impl Workspace {
                 reason: format!("rule set index {} out of range", rs_idx),
             })?;
 
-        let new_rule = build_rule_from_payload(rule_payload, rule_set, rs_idx)?;
+        // Preserve headers / body match conditions that the GUI's
+        // `RulePayload` doesn't expose — without this, every
+        // `UpdateRule` would silently strip those clauses from the
+        // existing rule. See `build_rule_from_payload`'s rustdoc.
+        let existing = rule_set.rules.get(rule_idx).cloned();
+        let new_rule = build_rule_from_payload(
+            rule_payload,
+            rule_set,
+            rs_idx,
+            existing.as_ref(),
+        )?;
         *rule_set
             .rules
             .get_mut(rule_idx)

@@ -80,6 +80,91 @@ grouping.
   of plain private. They remain unreachable from outside the
   workspace module.
 
+## [5.5.0] - 2026-04-28
+
+5.5.0 closes the highest-priority deferred item from ROADMAP.md:
+header and body match conditions now round-trip cleanly through
+`Workspace::save()`. A rule loaded from a TOML file with `[when.request.headers.*]`
+or `[when.request.body.json.*]` sections will preserve those clauses
+across save → reload, and edits via `EditCommand::UpdateRule` no
+longer silently strip them.
+
+### Fixed
+
+- **`toml_writer` now serialises `Headers` and `Body` conditions.**
+  In 5.2.0–5.4.0, `request_table` stripped these clauses on save;
+  the only public note was a CHANGELOG line and a long comment in
+  the writer source. 5.5.0 produces faithful TOML for both:
+  - `[when.request.headers.<key>] op = "...", value = "..."`
+  - `[when.request.body.json."<jsonpath>"] op = "...", value = "..."`
+  Keys are sorted at write time so a save → save sequence produces
+  byte-identical output (the underlying `HashMap` deserialise
+  doesn't preserve order, so the round-trip text won't either, but
+  re-saves after the first will be stable).
+- **`UrlPathConfig::Detailed` operator round-trip.** The previous
+  writer used `format!("{}", op)` for `RuleOp`, which produced the
+  human-readable `Display` form (`" == "`, `" starts with "`).
+  Deserialisation expects the snake_case serde form (`equal`,
+  `starts_with`). Detail-shape URL-path rules now use the routing
+  crate's canonical `op_name` helper.
+
+### Changed (behaviour, not API signature)
+
+- **`EditCommand::UpdateRule` now preserves unspecified fields.** The
+  GUI's `RulePayload` carries only `url_path`, `method`, and `respond`.
+  In 5.1.0–5.4.0, an `UpdateRule` would silently strip any `headers`
+  or `body.json` conditions that lived on the rule but weren't
+  surfaced through the payload. 5.5.0 carries those clauses forward:
+  the new rule keeps whatever conditions the previous rule had.
+  - This is a *behaviour* change but not a *signature* change. The
+    `EditCommand` and `RulePayload` shapes are byte-identical to
+    5.4.0; consumers that were silently relying on the field-stripping
+    behaviour need to add an `UpdateRule` variant that explicitly
+    blanks the clauses they want gone (none exist today since the
+    payload doesn't carry the relevant fields). In practice, every
+    consumer is a beneficiary, not a victim.
+  - `EditCommand::UpdateRule`'s rustdoc documents the preservation
+    semantics so future readers understand the contract.
+
+### Routing crate API surface
+
+The following modules were promoted to `pub mod` so the round-trip
+writer can read them:
+- `apimock_routing::rule_set::rule::when::condition_statement`
+- `apimock_routing::rule_set::rule::when::request::body`
+- `apimock_routing::rule_set::rule::when::request::body::body_kind`
+- `apimock_routing::rule_set::rule::when::request::headers`
+
+`apimock_routing::view::build::op_name` was promoted to `pub fn` for
+use by `apimock_config::toml_writer`.
+
+These are additive; no existing item changed visibility downward.
+
+### Tests
+
+Added 7 round-trip tests:
+- 4 in `apimock_config::toml_writer::tests` — single header, header
+  with operator, multiple headers, `body.json` with jsonpath.
+- 3 in `apimock_config::workspace::tests` — header preservation
+  through Workspace save/reload, body preservation through save/reload,
+  in-memory preservation across an `UpdateRule` apply (the
+  semantics-change verification).
+
+`cargo test --workspace --lib` reports 61 passing (was 54 in 5.4.0;
++7 = 61).
+
+### Roadmap
+
+ROADMAP.md is updated:
+- The "Header / body.json round-trip" item from 5.2.0 is marked
+  resolved.
+- A new deferred item is recorded for 5.6.0: routing-crate test
+  coverage for `Headers::is_match`, `Body::is_match`, and the TOML
+  deserialisation surface for both. The 5.5.0 round-trip tests
+  exercise these paths indirectly via `apimock-config`, but the
+  routing crate has no dedicated tests for them. 5.6.0 will add
+  ~28 dedicated tests as a focused routing-crate release.
+
 ## [5.4.0] - 2026-04-28
 
 5.4.0 is a refactor with no behavioural change. The

@@ -2,8 +2,8 @@ use console::style;
 use http_method::HttpMethod;
 use serde::Deserialize;
 
-mod body;
-mod headers;
+pub mod body;
+pub mod headers;
 pub mod http_method;
 pub mod rule_op;
 pub mod url_path;
