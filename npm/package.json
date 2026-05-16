@@ -1,6 +1,6 @@
 {
   "name": "apimock-rs",
-  "version": "5.3.0",
+  "version": "5.4.0",
   "description": "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists.",
   "author": "nabbisen",
   "license": "Apache-2.0",

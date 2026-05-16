@@ -8,15 +8,15 @@
 //! editors / IDEs jump between the two halves quickly. The behaviour is
 //! identical to a sibling-`mod tests` arrangement; the only difference
 //! is file layout.
-//!
-//! `super::*` here resolves to the contents of `workspace.rs` (i.e. the
-//! `Workspace` struct, its associated `EditCommand` / `ApplyError`
-//! re-exports through `crate::view`, and the private helpers — every
-//! item is in scope because the tests are still semantically a
-//! `mod tests` inside the parent).
 
 use super::*;
+use crate::error::ApplyError;
+use crate::view::{
+    ConfigFileKind, ConfigNodeView, EditCommand, EditValue, NodeId, NodeKind,
+    Severity,
+};
 use std::fs;
+use std::path::PathBuf;
 
 /// Create a minimal on-disk workspace and return the tempdir guard
 /// + absolute path to the root apimock.toml.

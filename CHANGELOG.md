@@ -12,6 +12,134 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.0] - 2026-04-27
+
+5.4.0 is a refactor-only release. The behaviour of the library and
+the CLI is byte-identical to 5.3.0; the source tree of
+`apimock-config::workspace` is reorganised so the implementation file
+no longer exceeds 1,800 lines.
+
+### Changed
+
+- **`crates/apimock-config/src/workspace.rs` split into a parent
+  module + 9 sibling files.** The parent file now holds only the
+  `Workspace` struct definition, the `load` / `seed_ids` lifecycle,
+  and the small public accessors (`config`, `root_path`,
+  `list_directory`, plus the `config_relative_dir` /
+  `resolve_relative` helpers used by sibling modules). Every other
+  concern moves to a dedicated file:
+
+  | file | content |
+  | --- | --- |
+  | `workspace/id_index.rs` | `NodeAddress` + `IdIndex` machinery |
+  | `workspace/snapshot.rs` | `Workspace::snapshot()` + per-file view builders |
+  | `workspace/edit.rs` | `Workspace::apply()` + the eight `cmd_*` handlers |
+  | `workspace/edit/id_shift.rs` | `shift_rule_sets_down`, `shift_rules_down`, `reorder_rule_ids` |
+  | `workspace/edit/payload.rs` | `EditCommand` payload → routing-model converters |
+  | `workspace/validate.rs` | `Workspace::validate()` + `respond_node_validation` |
+  | `workspace/save.rs` | `Workspace::save()` + `has_unsaved_changes()` + `atomic_write` |
+  | `workspace/diff.rs` | `compute_diff_summary` + per-rule diff walker |
+  | `workspace/path_helpers.rs` | `file_basename`, `resolve_root` |
+
+  `workspace/tests.rs` is unchanged in content; only its import lines
+  were updated to name `crate::view::*` items explicitly now that
+  `super::*` resolves to the slimmed parent module.
+
+- **Field visibility on `Workspace`** changed from private to
+  `pub(super)` so sibling modules under `workspace/` can read
+  `config`, `root_path`, `ids`, `diagnostics`, and `baseline_files`
+  directly. The struct itself remains `pub`; nothing changes for
+  external consumers.
+
+- **`apimock_config::toml_writer::rule_table`** stays at `pub(crate)`
+  (already the case in 5.3.0). No change to the `toml_writer`
+  surface.
+
+- **One dead helper removed**: `routing_to_config` was marked
+  `#[allow(dead_code)]` in 5.3.0 with no callers; deleted.
+
+### Why this refactor
+
+A single 1,847-line implementation file made navigation and code
+review increasingly costly. Splitting along responsibility lines —
+*identity*, *reading*, *mutating*, *persisting*, *validating* — keeps
+each file focused on one concern and lets readers jump to the right
+file by name. Per-module `//!` docs explain the why for each
+grouping.
+
+### No behavioural change
+
+- `cargo test --workspace --lib`: 54/54 pass (same as 5.3.0).
+- `cargo check --release`: clean.
+- `cargo check --benches --examples`: clean.
+- `cargo doc --no-deps`: clean.
+- Public API surface: identical. The only signature-level change is
+  that internal helper methods on `Workspace` (`collect_diagnostics`,
+  `shift_rule_sets_down`, `shift_rules_down`, `reorder_rule_ids`,
+  `compute_diff_summary`) now carry `pub(super)` visibility instead
+  of plain private. They remain unreachable from outside the
+  workspace module.
+
+## [5.4.0] - 2026-04-28
+
+5.4.0 is a refactor with no behavioural change. The
+`apimock_config::workspace` module — which had grown to almost 1,900
+lines as features stacked up over 5.0–5.3 — splits into nine focused
+sibling files. The public API is unchanged; every signature, every
+field, every visibility level is the same as in 5.3.0.
+
+### Changed (internal layout only)
+
+- **`crates/apimock-config/src/workspace.rs`** trimmed from 1,847 to
+  259 lines. Now contains only:
+  - the `Workspace` struct definition
+  - `load()` and `seed_ids()`
+  - the small accessors (`config`, `root_path`, `list_directory`,
+    `config_relative_dir`, `resolve_relative`)
+  - module declarations for the submodules below.
+
+- **New submodules under `crates/apimock-config/src/workspace/`:**
+
+  | file | content |
+  | --- | --- |
+  | `id_index.rs` | `NodeAddress` enum + `IdIndex` map |
+  | `snapshot.rs` | `snapshot()`, `root_file_nodes()`, `rule_set_file_view()`, `summarise_respond()` |
+  | `validate.rs` | `validate()`, `collect_diagnostics()`, `respond_node_validation()` |
+  | `save.rs` | `save()`, `has_unsaved_changes()`, `atomic_write()` |
+  | `diff.rs` | `compute_diff_summary()`, `append_per_rule_diff()`, `rule_to_string()` |
+  | `edit.rs` | `apply()` dispatch + the eight `cmd_*` handlers |
+  | `edit/id_shift.rs` | `shift_rule_sets_down()`, `shift_rules_down()`, `reorder_rule_ids()` |
+  | `edit/payload.rs` | `build_rule_from_payload()`, `build_respond_from_payload()`, `value_as_*`, `internal_path_err()` |
+  | `path_helpers.rs` | `file_basename()`, `resolve_root()` |
+  | `tests.rs` | added explicit imports (was `use super::*;` from a `Workspace` parent that re-imported view types); behaviour unchanged |
+
+  Each file gets a module-level rustdoc explaining what it owns and
+  why it's grouped that way.
+
+### Why
+
+The single-file `workspace.rs` had become a navigability problem.
+Every new feature (Step 2 apply, Step 3 validate, Step 4 save, Step 5
+routing snapshot, per-rule diff) appended to the same file, leaving
+nine logical concerns sharing one buffer. Splitting along
+responsibility lines makes each file readable on its own and clarifies
+the dependency direction (id_index ← edit ← snapshot/validate/save).
+
+### Verified
+
+- `cargo check` (dev + release): clean
+- `cargo check --benches --examples`: clean
+- `cargo test --workspace --lib`: **54 passed** (same as 5.3.0)
+- `cargo doc --no-deps`: clean (one pre-existing warning in
+  `apimock-server`, unrelated to this refactor)
+
+### Public API impact
+
+None. The crate's external surface — `Workspace`, `EditCommand`,
+`SaveResult`, `DiffItem`, etc. — has the same signatures, the same
+field shapes, the same visibility. Existing consumers don't need to
+change anything.
+
 ## [5.3.0] - 2026-04-27
 
 5.3.0 implements Step 5 of the GUI extension plan: a populated
