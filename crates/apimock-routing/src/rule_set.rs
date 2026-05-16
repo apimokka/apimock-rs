@@ -4,7 +4,7 @@ use std::{fs, path::Path};
 
 mod default_respond;
 mod guard;
-mod prefix;
+pub mod prefix;
 pub mod rule;
 
 use crate::{

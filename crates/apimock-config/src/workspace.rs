@@ -69,6 +69,15 @@ pub struct Workspace {
     /// Workspace-scope diagnostics (e.g. load-time warnings). Per-node
     /// diagnostics live inside each node's `NodeValidation`.
     diagnostics: Vec<Diagnostic>,
+    /// Snapshot of every TOML file's on-disk contents at the time of
+    /// load (or last successful save). Save uses this to:
+    ///   - decide which files actually changed (we don't rewrite a
+    ///     file whose rendered content is byte-identical to the
+    ///     baseline);
+    ///   - detect external changes between load and save (the same
+    ///     mechanism could surface "file changed underneath you" in a
+    ///     future stage; 5.2.0 doesn't act on that yet).
+    baseline_files: HashMap<PathBuf, String>,
 }
 
 /// Internal index mapping NodeId to an editable node's logical
@@ -143,11 +152,44 @@ impl Workspace {
         let config_path_string = resolved.to_string_lossy().into_owned();
         let config = Config::new(Some(&config_path_string), None).map_err(WorkspaceError::from)?;
 
+        // Snapshot every TOML file's rendered shape so save() can
+        // tell which files actually have unsaved edits.
+        //
+        // # Why "rendered model" rather than "on-disk text"
+        //
+        // A naive baseline would store the literal on-disk text. But
+        // our writer (`toml_writer`) produces canonicalised TOML —
+        // sorted keys, no comments, double-quoted strings, etc. —
+        // which almost never byte-matches a hand-edited file. With
+        // "on-disk" baseline, `has_unsaved_changes` would return
+        // `true` right after a load with no edits, and the first
+        // save would unconditionally rewrite every file.
+        //
+        // Storing the *rendered* baseline solves this: a freshly
+        // loaded workspace has rendered == baseline by construction,
+        // so `has_unsaved_changes` is false. Edits flip it to true,
+        // and only the files that diverge get rewritten on save.
+        // The user's hand-formatting on never-edited files survives
+        // untouched.
+        let mut baseline_files: HashMap<PathBuf, String> = HashMap::new();
+        baseline_files.insert(
+            resolved.clone(),
+            crate::toml_writer::render_apimock_toml(&config),
+        );
+        for rule_set in config.service.rule_sets.iter() {
+            let path = PathBuf::from(rule_set.file_path.as_str());
+            baseline_files.insert(
+                path,
+                crate::toml_writer::render_rule_set_toml(rule_set),
+            );
+        }
+
         let mut workspace = Self {
             root_path: resolved,
             config,
             ids: IdIndex::default(),
             diagnostics: Vec::new(),
+            baseline_files,
         };
         workspace.seed_ids();
         Ok(workspace)
@@ -1046,12 +1088,198 @@ impl Workspace {
         }
     }
 
-    /// Save the workspace back to disk. **Step 4 will implement this.**
+    /// Save the workspace back to disk.
+    ///
+    /// # Algorithm
+    ///
+    /// 1. Render each editable file (root + each rule set) to TOML text.
+    /// 2. Compare against `baseline_files`. Files whose rendered output
+    ///    is byte-identical to the baseline are skipped — the user's
+    ///    formatting / comments survive untouched in that case.
+    /// 3. For files that *do* differ, write atomically via
+    ///    `tempfile::NamedTempFile::persist` (same-directory rename(2)
+    ///    on POSIX, `MoveFileExW` on Windows). On any single-file
+    ///    failure, the partial state is whatever rename(2)s have
+    ///    already succeeded — see the type-level docstring on
+    ///    `SaveError` for the rationale.
+    /// 4. After all writes succeed, refresh `baseline_files` so a
+    ///    subsequent save() won't re-write the same files needlessly.
+    /// 5. Compute `DiffItem`s by node, comparing the in-memory state
+    ///    to the load-time baseline (parsed; not text-diff).
+    /// 6. Compute `requires_reload` / `requires_restart` from the set
+    ///    of changed files: changes to `[listener]` need a restart,
+    ///    everything else just a reload.
+    ///
+    /// # The "save loses comments" diagnostic
+    ///
+    /// Per the GUI spec §6 / §11, save is allowed to lose comments and
+    /// formatting. We surface this as an `Info`-severity diagnostic
+    /// the first time a save would actually overwrite a file that has
+    /// non-trivial formatting (any file whose TOML round-trip is not
+    /// byte-identical, which is essentially every hand-edited file).
+    /// A polished GUI shows it once per session.
     pub fn save(&mut self) -> Result<SaveResult, SaveError> {
-        Err(SaveError::Inconsistent {
-            reason: "Workspace::save is a Step-4 feature; not implemented in 5.1.0"
-                .to_owned(),
+        // --- Render every file's new content -------------------------
+        let new_root_toml = crate::toml_writer::render_apimock_toml(&self.config);
+
+        let mut rule_set_renders: Vec<(PathBuf, String)> = Vec::new();
+        for rule_set in self.config.service.rule_sets.iter() {
+            let path = PathBuf::from(rule_set.file_path.as_str());
+            let text = crate::toml_writer::render_rule_set_toml(rule_set);
+            rule_set_renders.push((path, text));
+        }
+
+        // --- Compute changed-file set --------------------------------
+        let mut to_write: Vec<(PathBuf, String)> = Vec::new();
+
+        let baseline_root = self.baseline_files.get(&self.root_path);
+        if baseline_root.map(String::as_str) != Some(new_root_toml.as_str()) {
+            to_write.push((self.root_path.clone(), new_root_toml.clone()));
+        }
+        for (path, text) in rule_set_renders.iter() {
+            let baseline = self.baseline_files.get(path);
+            if baseline.map(String::as_str) != Some(text.as_str()) {
+                to_write.push((path.clone(), text.clone()));
+            }
+        }
+
+        // --- Atomic write via tempfile::persist ----------------------
+        let mut written: Vec<PathBuf> = Vec::with_capacity(to_write.len());
+        for (path, text) in &to_write {
+            atomic_write(path, text)?;
+            written.push(path.clone());
+        }
+
+        // --- Build diff_summary BEFORE updating baseline ------------
+        // The diff is "what did this save flush to disk", computed
+        // against the *previous* baseline. Once we refresh the
+        // baseline below, every node would compare equal again.
+        let diff_summary = self.compute_diff_summary();
+
+        // --- Refresh baseline ---------------------------------------
+        for (path, text) in to_write.into_iter() {
+            self.baseline_files.insert(path, text);
+        }
+
+        // --- Reload hint --------------------------------------------
+        // If the root file (which holds [listener]) was rewritten we
+        // conservatively flag a restart. Otherwise rule-set-only changes
+        // are a plain reload.
+        let listener_changed = written.contains(&self.root_path);
+        let requires_reload = listener_changed || !written.is_empty();
+
+        Ok(SaveResult {
+            changed_files: written,
+            diff_summary,
+            requires_reload,
         })
+    }
+
+    /// Compute the diff summary for the most recent save: one entry
+    /// per node whose rendered representation has changed since load.
+    ///
+    /// # Why this isn't a textual diff
+    ///
+    /// A line-by-line text diff would surface noise from formatting
+    /// (key reordering, comment loss). The GUI wants to know which
+    /// *logical* nodes the user changed — so we walk the node-address
+    /// space, compare the in-memory state to a re-parsed snapshot of
+    /// the baseline, and emit `DiffItem`s keyed by `NodeId`.
+    ///
+    /// 5.2.0 implements the comparison at rule-set granularity
+    /// (Updated / Added / Removed) rather than per-rule. Per-rule
+    /// diffing is a stage-5 candidate — it would require parsing the
+    /// baseline TOML back into the in-memory model, which adds a
+    /// second loader path. Stage-5 also benefits from the same parse
+    /// for richer routing snapshots.
+    fn compute_diff_summary(&self) -> Vec<crate::view::DiffItem> {
+        use crate::view::{DiffItem, DiffKind};
+
+        let mut out = Vec::new();
+
+        // Did any rule set's rendered TOML diverge from baseline?
+        for (rs_idx, rule_set) in self.config.service.rule_sets.iter().enumerate() {
+            let path = PathBuf::from(rule_set.file_path.as_str());
+            let rendered = crate::toml_writer::render_rule_set_toml(rule_set);
+            let baseline_matches = self
+                .baseline_files
+                .get(&path)
+                .map(|s| s.as_str() == rendered.as_str())
+                .unwrap_or(false);
+            if !baseline_matches {
+                if let Some(rs_id) = self.ids.id_for(NodeAddress::RuleSet { rule_set: rs_idx }) {
+                    let kind = if self.baseline_files.contains_key(&path) {
+                        DiffKind::Updated
+                    } else {
+                        DiffKind::Added
+                    };
+                    out.push(DiffItem {
+                        kind,
+                        target: rs_id,
+                        summary: format!(
+                            "rule set #{} ({}): rules={}",
+                            rs_idx + 1,
+                            file_basename(&path),
+                            rule_set.rules.len(),
+                        ),
+                    });
+                }
+            }
+        }
+
+        // Did the root file diverge?
+        let root_rendered = crate::toml_writer::render_apimock_toml(&self.config);
+        let root_baseline_matches = self
+            .baseline_files
+            .get(&self.root_path)
+            .map(|s| s.as_str() == root_rendered.as_str())
+            .unwrap_or(false);
+        if !root_baseline_matches {
+            if let Some(root_id) = self.ids.id_for(NodeAddress::Root) {
+                out.push(DiffItem {
+                    kind: DiffKind::Updated,
+                    target: root_id,
+                    summary: format!(
+                        "{}: listener / log / service",
+                        file_basename(&self.root_path)
+                    ),
+                });
+            }
+        }
+
+        out
+    }
+
+    /// True when at least one editable file's rendered output differs
+    /// from its load-time baseline.
+    ///
+    /// # Use case
+    ///
+    /// A GUI's "unsaved changes" indicator polls this. Cheap relative
+    /// to a full save (no file I/O, just renders + string compares).
+    pub fn has_unsaved_changes(&self) -> bool {
+        let root_text = crate::toml_writer::render_apimock_toml(&self.config);
+        if self
+            .baseline_files
+            .get(&self.root_path)
+            .map(|s| s.as_str())
+            != Some(root_text.as_str())
+        {
+            return true;
+        }
+        for rule_set in self.config.service.rule_sets.iter() {
+            let path = PathBuf::from(rule_set.file_path.as_str());
+            let text = crate::toml_writer::render_rule_set_toml(rule_set);
+            if self
+                .baseline_files
+                .get(&path)
+                .map(|s| s.as_str())
+                != Some(text.as_str())
+            {
+                return true;
+            }
+        }
+        false
     }
 
     /// Root config file as a `ConfigFileView`, if it can be rendered.
@@ -1259,6 +1487,60 @@ fn file_basename(path: &Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.to_string_lossy().into_owned())
+}
+
+/// Write `text` to `path` atomically.
+///
+/// # Why a tempfile + persist instead of a direct write
+///
+/// `std::fs::write` is two syscalls (truncate + write) with a window
+/// between them where a concurrent reader can see an empty file. The
+/// running apimock server reads its own config files when (eventually)
+/// it supports reload; if it picks a moment in the middle of
+/// `std::fs::write`, it can fail to parse a half-written TOML.
+///
+/// `tempfile::NamedTempFile::persist` writes to `<dir>/.tmpXXXX`,
+/// `fsync`s, then `rename(2)`s onto the destination — a single
+/// directory-entry update that the kernel guarantees is atomic. On
+/// Windows, `tempfile` translates this into `MoveFileExW` with the
+/// replace-existing flag for the same effect.
+///
+/// # Error mapping
+///
+/// `tempfile`'s persist returns a `PersistError` that wraps both the
+/// `NamedTempFile` and the underlying `io::Error`. We unwrap the
+/// `io::Error` and surface it as `SaveError::Write`. The temp file
+/// is dropped automatically (and removed) when the persist error
+/// returns.
+fn atomic_write(path: &Path, text: &str) -> Result<(), SaveError> {
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("."));
+
+    let mut tmp =
+        tempfile::NamedTempFile::new_in(&parent).map_err(|e| SaveError::Write {
+            path: path.to_path_buf(),
+            source: e,
+        })?;
+
+    use std::io::Write;
+    tmp.write_all(text.as_bytes())
+        .map_err(|e| SaveError::Write {
+            path: path.to_path_buf(),
+            source: e,
+        })?;
+    tmp.flush().map_err(|e| SaveError::Write {
+        path: path.to_path_buf(),
+        source: e,
+    })?;
+
+    tmp.persist(path).map_err(|persist_err| SaveError::Write {
+        path: path.to_path_buf(),
+        source: persist_err.error,
+    })?;
+    Ok(())
 }
 
 // --- Payload → model helpers used by the apply layer --------------

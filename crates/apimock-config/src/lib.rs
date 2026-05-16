@@ -27,6 +27,7 @@
 pub mod config;
 pub mod error;
 pub mod path_util;
+mod toml_writer;
 pub mod view;
 pub mod workspace;
 

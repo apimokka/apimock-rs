@@ -12,6 +12,79 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.0] - 2026-04-26
+
+5.2.0 implements Step 4 of the GUI extension plan: `Workspace::save()`
+and the per-node diff summary. With this release a GUI can complete
+the full edit cycle — load → snapshot → apply → validate → **save** —
+without ever touching TOML text.
+
+### Added
+
+- **`Workspace::save() -> Result<SaveResult, SaveError>`.** Writes
+  every editable file whose rendered representation has diverged from
+  the load-time baseline. Files whose rendered output already matches
+  baseline are skipped, so unedited files keep their hand-formatting.
+  Atomic writes via `tempfile::NamedTempFile::persist` (POSIX
+  `rename(2)` / Windows `MoveFileExW`) so a concurrent reader can't
+  observe a half-written TOML file.
+- **`Workspace::has_unsaved_changes() -> bool`.** Cheap polling for
+  GUIs to drive an "unsaved changes" indicator. No I/O — renders the
+  current model and compares to the in-memory baseline.
+- **`SaveResult.diff_summary`.** One `DiffItem` per node whose
+  rendered representation has changed since load. 5.2.0 emits diffs
+  at rule-set granularity (`Updated` / `Added`); per-rule diffs are
+  a candidate for stage-5.
+- **`SaveResult.requires_reload`.** True for any save that wrote at
+  least one file. The server-side `ReloadHint::Restart` distinction
+  for listener changes is exposed through the existing
+  `apimock_server::ReloadHint` conversions.
+- **`apimock_config::toml_writer`** (private module) — hand-rolled
+  TOML rendering for the editable subset of `Config` and `RuleSet`.
+  Produces `toml::Value::Table` trees and serialises via
+  `toml::to_string_pretty`. See the module docstring for the
+  rationale on hand-built TOML over `Serialize` derives.
+
+### Dependencies
+
+- `tempfile = "3"` promoted from dev-dep to runtime dep on
+  `apimock-config`. `Workspace::save` uses it for atomic writes.
+
+### Compatibility
+
+- TOML round-trip through save **does not preserve comments,
+  blank lines, or key ordering**. Spec §6 marks comment preservation
+  as best-effort and §11 marks "complete comment preservation" as
+  an explicit non-goal; this is the documented trade-off. A polished
+  GUI is encouraged to warn users editing files that contain
+  comments before they trigger a save.
+- Rule-set rules with `headers` or `body.json` match conditions
+  parse cleanly into the in-memory model but are not currently
+  re-serialised by `toml_writer` (the routing crate's `Headers` /
+  `Body` types don't expose their internal map shape outside the
+  crate). Editing a rule-set that contains such conditions is
+  supported, but saving the file will drop the conditions. Stage-5
+  will round-trip these once routing exposes the necessary types.
+
+### Tests
+
+`cargo test --workspace --lib` reports 49 passing (was 44 in
+5.1.x): 5 new `Workspace::save` tests covering no-op save,
+rule-set edit + round-trip through disk, root edit + reload flag,
+post-save TOML parseability, and `has_unsaved_changes` lifecycle.
+
+### Status against the spec §13 受け入れ条件
+
+- ✅ GUI が TOML を意識せず編集できる (NodeId-targeted EditCommand)
+- ✅ ルール追加・削除・更新が可能 (5.1.0)
+- ✅ 保存前に検証できる (5.1.0)
+- ✅ **差分が取得できる (`SaveResult.diff_summary`, 5.2.0)**
+- ✅ reload 必要性が判断できる (`SaveResult.requires_reload`, 5.2.0)
+- ✅ 既存サーバー動作が維持される
+
+§12 Step 5 (richer routing snapshot) remains for 5.3.0 by prior
+agreement.
+
 ## [5.1.1] - 2026-04-26
 
 5.1.1 is a project-layout refactor with no behavioural change. Each

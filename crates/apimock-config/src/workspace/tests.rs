@@ -462,3 +462,151 @@ fn validate_surfaces_per_node_diagnostics() {
     let report = ws.validate();
     assert!(!report.is_valid);
 }
+
+// -----------------------------------------------------------------
+// 5.2.0 — save() + diff tests
+// -----------------------------------------------------------------
+
+#[test]
+fn save_is_noop_when_nothing_changed() {
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root).expect("load");
+
+    // Newly-loaded workspace has no edits → save should write 0 files.
+    // (Actually, if the rendered output differs from the on-disk
+    // formatting the baseline check still skips writing because
+    // baseline holds the on-disk text byte-for-byte. So even though
+    // round-trip isn't formatting-stable, the no-edit path is safe.)
+    let result = ws.save().expect("save");
+    assert_eq!(result.changed_files.len(), 0);
+    assert_eq!(result.diff_summary.len(), 0);
+    assert!(!result.requires_reload);
+}
+
+#[test]
+fn save_persists_rule_set_edit_and_round_trips() {
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root.clone()).expect("load");
+
+    // Find the first rule and update its text.
+    let snap = ws.snapshot();
+    let resp_id = snap
+        .files
+        .iter()
+        .find(|f| matches!(f.kind, ConfigFileKind::RuleSet))
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|n| matches!(n.kind, NodeKind::Respond))
+        .unwrap()
+        .id;
+
+    ws.apply(EditCommand::UpdateRespond {
+        id: resp_id,
+        respond: crate::view::RespondPayload {
+            text: Some("HELLO_FROM_SAVE".to_owned()),
+            ..Default::default()
+        },
+    })
+    .expect("apply");
+
+    assert!(ws.has_unsaved_changes());
+
+    let save = ws.save().expect("save");
+    assert!(save.changed_files.iter().any(|p| p.file_name()
+        .map(|n| n.to_string_lossy().contains("apimock-rule-set"))
+        .unwrap_or(false)));
+    assert!(!save.diff_summary.is_empty());
+    // After save, has_unsaved_changes is now false (baseline updated).
+    assert!(!ws.has_unsaved_changes());
+
+    // Re-load from disk: the edit must be visible.
+    let ws2 = Workspace::load(root).expect("reload");
+    let snap2 = ws2.snapshot();
+    let any_respond_has_text = snap2
+        .files
+        .iter()
+        .flat_map(|f| f.nodes.iter())
+        .any(|n| n.display_name.contains("HELLO_FROM_SAVE"));
+    assert!(
+        any_respond_has_text,
+        "expected the saved text to round-trip through disk"
+    );
+}
+
+#[test]
+fn save_persists_root_edit_and_flags_reload() {
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root.clone()).expect("load");
+
+    ws.apply(EditCommand::UpdateRootSetting {
+        key: crate::view::RootSettingKey::ListenerPort,
+        value: EditValue::Integer(8888),
+    })
+    .expect("apply");
+
+    let save = ws.save().expect("save");
+    assert!(
+        save.changed_files.iter().any(|p| p == &root),
+        "root file should be in changed_files"
+    );
+    assert!(
+        save.requires_reload,
+        "listener port change should request reload"
+    );
+
+    // Diff summary should mention the root node.
+    assert!(save.diff_summary.iter().any(|d| matches!(
+        d.kind,
+        crate::view::DiffKind::Updated
+    )));
+
+    // Round-trip: re-load and verify the port stuck.
+    let ws2 = Workspace::load(root).expect("reload");
+    assert_eq!(
+        ws2.config.listener.as_ref().unwrap().port,
+        8888,
+        "port edit must round-trip through disk"
+    );
+}
+
+#[test]
+fn save_atomic_write_does_not_corrupt_on_concurrent_read() {
+    // We can't really exercise a race here, but we *can* verify the
+    // file is always parseable after save — i.e. there's no observable
+    // moment where the file is empty / half-written.
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root.clone()).expect("load");
+
+    // Make a bunch of edits then save.
+    ws.apply(EditCommand::UpdateRootSetting {
+        key: crate::view::RootSettingKey::ListenerPort,
+        value: EditValue::Integer(9001),
+    })
+    .expect("apply");
+
+    let _ = ws.save().expect("save");
+
+    // File should be fully readable + parseable.
+    let text = std::fs::read_to_string(&root).expect("read after save");
+    assert!(text.contains("port"));
+    assert!(text.contains("9001"));
+    let _: toml::Value = toml::from_str(&text).expect("post-save TOML must parse");
+}
+
+#[test]
+fn has_unsaved_changes_tracks_edit_state() {
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root).expect("load");
+    assert!(!ws.has_unsaved_changes());
+
+    ws.apply(EditCommand::UpdateRootSetting {
+        key: crate::view::RootSettingKey::ListenerPort,
+        value: EditValue::Integer(8080),
+    })
+    .expect("apply");
+    assert!(ws.has_unsaved_changes());
+
+    let _ = ws.save().expect("save");
+    assert!(!ws.has_unsaved_changes());
+}
