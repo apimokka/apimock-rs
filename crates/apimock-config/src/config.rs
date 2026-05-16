@@ -27,6 +27,7 @@ use crate::{
 };
 
 pub mod constant;
+pub mod file_tree_config;
 pub mod listener_config;
 pub mod log_config;
 pub mod service_config;
@@ -44,6 +45,10 @@ pub struct Config {
     pub listener: Option<ListenerConfig>,
     pub log: Option<LogConfig>,
     pub service: ServiceConfig,
+    /// Optional filter configuration for `FileTreeView`. When absent,
+    /// [`FileTreeViewConfig::default()`] applies (dotfiles hidden,
+    /// built-in excludes on).
+    pub file_tree_view: Option<file_tree_config::FileTreeViewConfig>,
 }
 
 impl Config {
@@ -262,6 +267,7 @@ impl Default for Config {
             }),
             log: Some(LogConfig::default()),
             service: ServiceConfig::default(),
+            file_tree_view: None,
         }
     }
 }

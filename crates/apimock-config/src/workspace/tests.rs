@@ -998,3 +998,287 @@ fn update_rule_does_not_strip_unspecified_headers_or_body() {
         "UpdateRule should preserve body even though RulePayload doesn't carry them"
     );
 }
+
+// ── RFC 013: url_path / url_path_op validation ────────────────────────
+
+#[test]
+fn url_path_op_without_path_is_invalid_payload() {
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root).expect("load");
+
+    let snap = ws.snapshot();
+    let rs_id = snap
+        .files
+        .iter()
+        .find(|f| matches!(f.kind, ConfigFileKind::RuleSet))
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|n| matches!(n.kind, NodeKind::RuleSet))
+        .unwrap()
+        .id;
+
+    let result = ws.apply(EditCommand::AddRule {
+        parent: rs_id,
+        rule: crate::view::RulePayload {
+            url_path: None,
+            url_path_op: Some(crate::view::UrlPathOp::StartsWith),
+            respond: crate::view::RespondPayload {
+                text: Some("hi".to_owned()),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    });
+
+    assert!(
+        result.is_err(),
+        "url_path_op: Some(_) with url_path: None should be an error"
+    );
+    let err_msg = format!("{:?}", result.unwrap_err());
+    assert!(
+        err_msg.contains("url_path_op requires url_path"),
+        "error message should mention url_path_op: {}", err_msg
+    );
+}
+
+#[test]
+fn url_path_op_without_path_errors_on_update_rule_too() {
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root).expect("load");
+
+    let snap = ws.snapshot();
+    let rule_id = snap
+        .files
+        .iter()
+        .find(|f| matches!(f.kind, ConfigFileKind::RuleSet))
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|n| matches!(n.kind, NodeKind::Rule))
+        .unwrap()
+        .id;
+
+    let result = ws.apply(EditCommand::UpdateRule {
+        id: rule_id,
+        rule: crate::view::RulePayload {
+            url_path: None,
+            url_path_op: Some(crate::view::UrlPathOp::Contains),
+            respond: crate::view::RespondPayload {
+                text: Some("hi".to_owned()),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    });
+
+    assert!(result.is_err(), "UpdateRule with op but no path should error");
+}
+
+#[test]
+fn url_path_and_op_both_none_is_valid() {
+    // Both None → no URL constraint → valid (preserve for UpdateRule,
+    // absent for AddRule). Must not be rejected.
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root).expect("load");
+
+    let snap = ws.snapshot();
+    let rs_id = snap
+        .files
+        .iter()
+        .find(|f| matches!(f.kind, ConfigFileKind::RuleSet))
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|n| matches!(n.kind, NodeKind::RuleSet))
+        .unwrap()
+        .id;
+
+    // A rule with method but no URL constraint is valid.
+    let result = ws.apply(EditCommand::AddRule {
+        parent: rs_id,
+        rule: crate::view::RulePayload {
+            url_path: None,
+            url_path_op: None,
+            method: Some("POST".to_owned()),
+            respond: crate::view::RespondPayload {
+                text: Some("ok".to_owned()),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    });
+
+    assert!(result.is_ok(), "url_path: None, url_path_op: None should be accepted");
+}
+
+#[test]
+fn url_path_some_with_op_is_valid() {
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root).expect("load");
+
+    let snap = ws.snapshot();
+    let rs_id = snap
+        .files
+        .iter()
+        .find(|f| matches!(f.kind, ConfigFileKind::RuleSet))
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|n| matches!(n.kind, NodeKind::RuleSet))
+        .unwrap()
+        .id;
+
+    let result = ws.apply(EditCommand::AddRule {
+        parent: rs_id,
+        rule: crate::view::RulePayload {
+            url_path: Some("/api".to_owned()),
+            url_path_op: Some(crate::view::UrlPathOp::StartsWith),
+            respond: crate::view::RespondPayload {
+                text: Some("ok".to_owned()),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    });
+
+    assert!(result.is_ok(), "url_path: Some + url_path_op: Some should succeed");
+}
+
+// ── RFC 012: config-driven FileTreeFilter ────────────────────────────
+
+fn make_workspace_with_fallback_dir(
+    extras: &[(&str, bool)], // (name, is_dir)
+) -> (tempfile::TempDir, PathBuf, PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let fallback = dir.path().join("fallback");
+    std::fs::create_dir_all(&fallback).unwrap();
+    // Base file always present
+    std::fs::write(fallback.join("users.json"), "{}").unwrap();
+    for (name, is_dir) in extras {
+        if *is_dir {
+            std::fs::create_dir_all(fallback.join(name)).unwrap();
+        } else {
+            std::fs::write(fallback.join(name), "{}").unwrap();
+        }
+    }
+    let rs_toml = "[[rules]]\nwhen.request.url_path = \"/api\"\nrespond = { text = \"ok\" }\n";
+    std::fs::write(dir.path().join("apimock-rule-set.toml"), rs_toml).unwrap();
+    (dir, fallback.clone(), fallback)
+}
+
+fn write_apimock_toml(dir: &Path, fallback_name: &str, extra: &str) -> PathBuf {
+    let content = format!(
+        "[listener]\nip_address = \"127.0.0.1\"\nport = 3002\n\
+         [service]\nrule_sets = [\"apimock-rule-set.toml\"]\n\
+         fallback_respond_dir = \"{}\"\n{}",
+        fallback_name, extra
+    );
+    let p = dir.join("apimock.toml");
+    std::fs::write(&p, content).unwrap();
+    p
+}
+
+#[test]
+fn snapshot_default_filter_hides_dotfiles_and_target() {
+    let dir = tempfile::tempdir().unwrap();
+    let fallback = dir.path().join("fallback");
+    std::fs::create_dir_all(&fallback).unwrap();
+    std::fs::write(fallback.join("users.json"), "{}").unwrap();
+    std::fs::write(fallback.join(".env"), "SECRET=1").unwrap();
+    std::fs::create_dir_all(fallback.join("target")).unwrap();
+
+    let rs_toml = "[[rules]]\nwhen.request.url_path = \"/api\"\nrespond = { text = \"ok\" }\n";
+    std::fs::write(dir.path().join("apimock-rule-set.toml"), rs_toml).unwrap();
+    let cfg_path = write_apimock_toml(dir.path(), "fallback", "");
+
+    let ws = Workspace::load(cfg_path).unwrap();
+    let snap = ws.snapshot();
+    let tree = snap.routes.file_tree.as_ref().expect("file tree present");
+
+    let names: Vec<&str> = tree.entries.iter().map(|e| e.name.as_str()).collect();
+    assert!(names.contains(&"users.json"), "users.json must be visible");
+    assert!(!names.contains(&".env"), ".env must be hidden by default filter");
+    assert!(!names.contains(&"target"), "target/ must be hidden by default filter");
+}
+
+#[test]
+fn snapshot_show_hidden_exposes_dotfiles() {
+    let dir = tempfile::tempdir().unwrap();
+    let fallback = dir.path().join("fallback");
+    std::fs::create_dir_all(&fallback).unwrap();
+    std::fs::write(fallback.join("users.json"), "{}").unwrap();
+    std::fs::write(fallback.join(".env"), "SECRET=1").unwrap();
+
+    let rs_toml = "[[rules]]\nwhen.request.url_path = \"/api\"\nrespond = { text = \"ok\" }\n";
+    std::fs::write(dir.path().join("apimock-rule-set.toml"), rs_toml).unwrap();
+    let extra_toml = "[file_tree_view]\nshow_hidden = true\n";
+    let cfg_path = write_apimock_toml(dir.path(), "fallback", extra_toml);
+
+    let ws = Workspace::load(cfg_path).unwrap();
+    let snap = ws.snapshot();
+    let tree = snap.routes.file_tree.as_ref().expect("file tree present");
+
+    let names: Vec<&str> = tree.entries.iter().map(|e| e.name.as_str()).collect();
+    assert!(names.contains(&".env"), ".env should be visible when show_hidden=true");
+}
+
+#[test]
+fn snapshot_extra_excludes_hides_named_dir() {
+    let dir = tempfile::tempdir().unwrap();
+    let fallback = dir.path().join("fallback");
+    std::fs::create_dir_all(&fallback).unwrap();
+    std::fs::write(fallback.join("users.json"), "{}").unwrap();
+    std::fs::create_dir_all(fallback.join("generated")).unwrap();
+
+    let rs_toml = "[[rules]]\nwhen.request.url_path = \"/api\"\nrespond = { text = \"ok\" }\n";
+    std::fs::write(dir.path().join("apimock-rule-set.toml"), rs_toml).unwrap();
+    let extra_toml = "[file_tree_view]\nextra_excludes = [\"generated\"]\n";
+    let cfg_path = write_apimock_toml(dir.path(), "fallback", extra_toml);
+
+    let ws = Workspace::load(cfg_path).unwrap();
+    let snap = ws.snapshot();
+    let tree = snap.routes.file_tree.as_ref().expect("file tree present");
+
+    let names: Vec<&str> = tree.entries.iter().map(|e| e.name.as_str()).collect();
+    assert!(!names.contains(&"generated"), "generated/ should be excluded");
+    assert!(names.contains(&"users.json"));
+}
+
+#[test]
+fn snapshot_include_filter_shows_only_matching_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let fallback = dir.path().join("fallback");
+    std::fs::create_dir_all(&fallback).unwrap();
+    std::fs::write(fallback.join("users.json"), "{}").unwrap();
+    std::fs::write(fallback.join("schema.toml"), "").unwrap();
+
+    let rs_toml = "[[rules]]\nwhen.request.url_path = \"/api\"\nrespond = { text = \"ok\" }\n";
+    std::fs::write(dir.path().join("apimock-rule-set.toml"), rs_toml).unwrap();
+    let extra_toml = "[file_tree_view]\ninclude = [\".json\"]\n";
+    let cfg_path = write_apimock_toml(dir.path(), "fallback", extra_toml);
+
+    let ws = Workspace::load(cfg_path).unwrap();
+    let snap = ws.snapshot();
+    let tree = snap.routes.file_tree.as_ref().expect("file tree present");
+
+    let names: Vec<&str> = tree.entries.iter().map(|e| e.name.as_str()).collect();
+    assert!(names.contains(&"users.json"), "json file should be included");
+    assert!(!names.contains(&"schema.toml"), "toml file should be excluded by include filter");
+}
+
+#[test]
+fn update_root_setting_file_tree_show_hidden() {
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root).expect("load");
+
+    let result = ws.apply(EditCommand::UpdateRootSetting {
+        key: crate::view::RootSettingKey::FileTreeShowHidden,
+        value: crate::view::EditValue::Boolean(true),
+    });
+    assert!(result.is_ok(), "FileTreeShowHidden update should succeed");
+    assert!(
+        ws.config().file_tree_view.as_ref().map(|c| c.show_hidden).unwrap_or(false),
+        "show_hidden should be persisted on config"
+    );
+}

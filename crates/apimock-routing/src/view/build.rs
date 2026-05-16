@@ -193,6 +193,7 @@ fn body_op_name(op: &crate::rule_set::rule::when::request::body::body_operator::
         BodyOperator::ArrayLengthEqual => "array_length_equal",
         BodyOperator::ArrayLengthAtLeast => "array_length_at_least",
         BodyOperator::ArrayContains => "array_contains",
+        BodyOperator::EqualInteger => "equal_integer",
     }
     .to_owned()
 }

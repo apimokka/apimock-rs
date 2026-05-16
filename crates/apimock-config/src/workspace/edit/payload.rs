@@ -36,6 +36,18 @@ pub(super) fn build_rule_from_payload(
         Request, http_method::HttpMethod, url_path::UrlPathConfig,
     };
 
+    // ── RFC 013: url_path_op requires url_path ───────────────────────
+    // Operator without a path value is always a misconfiguration — the
+    // caller set an operator (e.g. StartsWith) but forgot to provide the
+    // path string. Fail loudly rather than silently discarding the op.
+    if payload.url_path.is_none() && payload.url_path_op.is_some() {
+        return Err(ApplyError::InvalidPayload {
+            reason: "url_path_op requires url_path to be set \
+                     (received url_path: None, url_path_op: Some(_))"
+                .to_owned(),
+        });
+    }
+
     // ── URL path (RFC 001) ────────────────────────────────────────────
     let url_path_config = payload.url_path.as_ref().map(|s| {
         match payload.url_path_op {
@@ -183,6 +195,7 @@ fn body_op_to_routing(op: BodyOp) -> apimock_routing::rule_set::rule::when::requ
         BodyOp::ArrayLengthEqual => BodyOperator::ArrayLengthEqual,
         BodyOp::ArrayLengthAtLeast => BodyOperator::ArrayLengthAtLeast,
         BodyOp::ArrayContains => BodyOperator::ArrayContains,
+        BodyOp::EqualInteger => BodyOperator::EqualInteger,
     }
 }
 
@@ -231,6 +244,17 @@ pub(super) fn value_as_bool(value: &EditValue) -> Result<bool, ApplyError> {
         EditValue::Boolean(b) => Ok(*b),
         other => Err(ApplyError::InvalidPayload {
             reason: format!("expected a boolean, got {:?}", other),
+        }),
+    }
+}
+
+pub(super) fn value_as_string_list(value: &EditValue) -> Result<Vec<String>, ApplyError> {
+    match value {
+        EditValue::StringList(v) => Ok(v.clone()),
+        // A single String is also acceptable as a one-element list.
+        EditValue::String(s) => Ok(vec![s.clone()]),
+        other => Err(ApplyError::InvalidPayload {
+            reason: format!("expected a string list, got {:?}", other),
         }),
     }
 }

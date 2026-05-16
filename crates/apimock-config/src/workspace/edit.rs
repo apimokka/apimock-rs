@@ -32,7 +32,7 @@ use super::Workspace;
 use super::id_index::NodeAddress;
 use payload::{
     build_rule_from_payload, build_respond_from_payload, internal_path_err, value_as_bool,
-    value_as_integer, value_as_string,
+    value_as_integer, value_as_string, value_as_string_list,
 };
 
 impl Workspace {
@@ -543,6 +543,7 @@ impl Workspace {
                     "priority" => Strategy::Priority {
                         tiebreaker: apimock_routing::strategy::PriorityTiebreaker::FirstMatch,
                     },
+                    "round_robin" => Strategy::RoundRobin,
                     other => {
                         return Err(ApplyError::InvalidPayload {
                             reason: format!("unknown strategy: `{}`", other),
@@ -625,6 +626,36 @@ impl Workspace {
                     });
                 }
                 let _ = s; // future: set on LogConfig.format field
+            }
+
+            // ── file tree view (RFC 012) ───────────────────────────────
+            FileTreeShowHidden => {
+                let b = value_as_bool(&value)?;
+                self.config
+                    .file_tree_view
+                    .get_or_insert_with(Default::default)
+                    .show_hidden = b;
+            }
+            FileTreeBuiltinExcludes => {
+                let b = value_as_bool(&value)?;
+                self.config
+                    .file_tree_view
+                    .get_or_insert_with(Default::default)
+                    .builtin_excludes = b;
+            }
+            FileTreeExtraExcludes => {
+                let list = value_as_string_list(&value)?;
+                self.config
+                    .file_tree_view
+                    .get_or_insert_with(Default::default)
+                    .extra_excludes = list;
+            }
+            FileTreeInclude => {
+                let list = value_as_string_list(&value)?;
+                self.config
+                    .file_tree_view
+                    .get_or_insert_with(Default::default)
+                    .include = list;
             }
         }
 

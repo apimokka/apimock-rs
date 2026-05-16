@@ -376,6 +376,8 @@ pub enum BodyOp {
     ArrayLengthEqual,
     ArrayLengthAtLeast,
     ArrayContains,
+    // exact integer (RFC 010)
+    EqualInteger,
 }
 
 /// Payload for `UpdateRespond`.
@@ -417,6 +419,13 @@ pub enum RootSettingKey {
     LogLevel,
     LogFile,
     LogFormat,
+    // ── file tree view (RFC 012) ──────────────────────────────────────
+    FileTreeShowHidden,
+    FileTreeBuiltinExcludes,
+    /// Value: `EditValue::StringList`
+    FileTreeExtraExcludes,
+    /// Value: `EditValue::StringList`
+    FileTreeInclude,
 }
 
 /// Value provided with an edit command.
@@ -569,7 +578,9 @@ impl ReloadHint {
         match key {
             ListenerIpAddress | ListenerPort | TlsEnabled | TlsCertFile | TlsKeyFile
             | LogFile => Self::restart(),
-            ServiceFallbackRespondDir | ServiceStrategy | LogLevel | LogFormat => Self::reload(),
+            ServiceFallbackRespondDir | ServiceStrategy | LogLevel | LogFormat
+            | FileTreeShowHidden | FileTreeBuiltinExcludes | FileTreeExtraExcludes
+            | FileTreeInclude => Self::reload(),
         }
     }
 }

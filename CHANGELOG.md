@@ -5,7 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [5.8.0] - 2026-05-16
+## [5.9.0] - 2026-05-16
+
+### Added (RFC 009–013 — quality and completeness pass)
+
+- **RFC 009** — Trace socket transport. `TraceTransport::accept_loop` is now fully
+  implemented (no longer `unimplemented!()`). UDS (`TraceTransportConfig::Uds`) on
+  Unix/macOS removes any stale socket path at startup and accepts up to 4 concurrent
+  subscribers. TCP loopback (`TraceTransportConfig::Tcp`) is the portable fallback.
+  Subscribers receive newline-delimited JSON with `schema_version: 1` and `dropped_count`
+  for gap detection. `MatchTraceEvent` now derives `Serialize`. New TCP integration test.
+  (`apimock-server`)
+
+- **RFC 010** — Body match semantics clarified and extended. `null` semantics for
+  `Exists`/`Absent` are now documented and tested: a field present with value `null`
+  satisfies `Exists`; `Absent` requires the path to be truly missing. New `EqualInteger`
+  operator uses `i64` arithmetic to avoid `f64` precision loss for integers above 2^53
+  (e.g. snowflake IDs). `BodyOp::EqualInteger` added to `apimock-config`.
+  (`apimock-routing`, `apimock-config`)
+
+- **RFC 011** — `RoundRobin` strategy. Cycles through matching rules in list order, one
+  per request. State is kept in an `Arc<AtomicUsize>` per rule set (lock-free, shared
+  across concurrent handler tasks). Counter resets on server reload. `ServiceStrategy`
+  editing accepts `"round_robin"`. (`apimock-routing`, `apimock-config`)
+
+- **RFC 012** — Config-driven `FileTreeFilter`. New `[file_tree_view]` TOML section
+  persists filter preferences (`show_hidden`, `builtin_excludes`, `extra_excludes`,
+  `include`). `Workspace::snapshot()` and `Workspace::list_directory()` now use the
+  configured filter automatically. `RootSettingKey` gains four new variants
+  (`FileTreeShowHidden`, `FileTreeBuiltinExcludes`, `FileTreeExtraExcludes`,
+  `FileTreeInclude`), all returning `SoftReload`. TOML writer emits the section when
+  non-default. (`apimock-config`)
+
+- **RFC 013** — `RulePayload` validation: `url_path_op: Some(_)` with `url_path: None`
+  is now a `ApplyError::InvalidPayload` instead of silently discarding the operator.
+  Applies to both `AddRule` and `UpdateRule`. (`apimock-config`)
+
+### Test count
+
+| Crate | v5.8.0 | v5.9.0 | Delta |
+|---|---|---|---|
+| apimock (façade) | 10 | 10 | — |
+| apimock-config | 40 | 45 | +5 |
+| apimock-routing | 62 | 76 | +14 |
+| apimock-server | 3 | 5 | +2 |
+| **Total** | **111** | **136** | **+25** |
+
+
 
 ### Added (stage-2 GUI editing surface — RFCs 001–008)
 

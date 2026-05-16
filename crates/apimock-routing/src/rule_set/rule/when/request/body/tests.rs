@@ -223,3 +223,41 @@ json."c" = { op = "starts_with", value = "3" }"#,
     let inner = body.0.get(&BodyKind::Json).unwrap();
     assert_eq!(inner.len(), 3);
 }
+
+// ── RFC 010: null/Exists semantics ────────────────────────────────────
+
+#[test]
+fn exists_matches_null_value() {
+    // A field present with value null satisfies Exists (RFC 010 §null semantics).
+    let body = parse_body(r#"json."user_id" = { op = "exists", value = "" }"#);
+    let req = make_parsed_request(Some(json!({"user_id": null})));
+    assert!(
+        body.is_match(&req),
+        "Exists should match when field is present with null value"
+    );
+}
+
+#[test]
+fn absent_does_not_match_null_value() {
+    // Absent requires the field to be truly missing, not present-but-null.
+    let body = parse_body(r#"json."user_id" = { op = "absent", value = "" }"#);
+    let req = make_parsed_request(Some(json!({"user_id": null})));
+    assert!(
+        !body.is_match(&req),
+        "Absent should NOT match when field is present with null value"
+    );
+}
+
+#[test]
+fn absent_matches_truly_missing_field() {
+    let body = parse_body(r#"json."missing" = { op = "absent", value = "" }"#);
+    let req = make_parsed_request(Some(json!({"present": 1})));
+    assert!(body.is_match(&req), "Absent should match when field is truly absent");
+}
+
+#[test]
+fn exists_does_not_match_missing_field() {
+    let body = parse_body(r#"json."missing" = { op = "exists", value = "" }"#);
+    let req = make_parsed_request(Some(json!({"other": 1})));
+    assert!(!body.is_match(&req), "Exists should not match a missing field");
+}

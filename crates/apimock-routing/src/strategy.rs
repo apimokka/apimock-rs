@@ -36,6 +36,9 @@ pub enum Strategy {
         #[serde(default)]
         tiebreaker: PriorityTiebreaker,
     },
+    /// Cycle through matching rules in order, one per request.
+    /// State is kept in an `Arc<AtomicUsize>` on the parent `RuleSet`.
+    RoundRobin,
 }
 
 /// Tiebreaker applied within a priority group by [`Strategy::Priority`].
@@ -60,6 +63,7 @@ impl std::fmt::Display for Strategy {
             Self::UniformRandom { .. } => write!(f, "uniform_random"),
             Self::WeightedRandom { .. } => write!(f, "weighted_random"),
             Self::Priority { .. } => write!(f, "priority"),
+            Self::RoundRobin => write!(f, "round_robin"),
         }
     }
 }

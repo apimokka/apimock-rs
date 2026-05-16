@@ -257,6 +257,12 @@ impl Workspace {
     /// keying it by path keeps the API simple and avoids mixing two
     /// kinds of identity.
     pub fn list_directory(&self, path: &Path) -> Vec<apimock_routing::view::FileNodeView> {
-        apimock_routing::view::build::list_directory(path)
+        let filter = self
+            .config
+            .file_tree_view
+            .as_ref()
+            .map(|c| c.to_filter())
+            .unwrap_or_default();
+        apimock_routing::view::build::list_directory_with(path, &filter)
     }
 }

@@ -55,6 +55,12 @@ pub fn render_apimock_toml(config: &Config) -> String {
     }
     root.insert("service".to_owned(), Value::Table(service_table(&config.service)));
 
+    if let Some(ftv) = config.file_tree_view.as_ref() {
+        if let Some(t) = file_tree_view_table(ftv) {
+            root.insert("file_tree_view".to_owned(), Value::Table(t));
+        }
+    }
+
     toml::to_string_pretty(&Value::Table(root))
         .unwrap_or_else(|err| format!("# failed to render apimock.toml: {}\n", err))
 }
@@ -121,6 +127,42 @@ fn log_table(l: &LogConfig) -> Option<Table> {
     verbose.insert("header".to_owned(), Value::Boolean(v.header));
     verbose.insert("body".to_owned(), Value::Boolean(v.body));
     t.insert("verbose".to_owned(), Value::Table(verbose));
+    Some(t)
+}
+
+/// Render `[file_tree_view]` section. Returns `None` when the config is
+/// entirely default (omitting the section keeps the file clean).
+fn file_tree_view_table(
+    c: &crate::config::file_tree_config::FileTreeViewConfig,
+) -> Option<Table> {
+    // Only emit the section when at least one field differs from the default.
+    let is_default = !c.show_hidden
+        && c.builtin_excludes
+        && c.extra_excludes.is_empty()
+        && c.include.is_empty();
+    if is_default {
+        return None;
+    }
+
+    let mut t = Table::new();
+    if c.show_hidden {
+        t.insert("show_hidden".to_owned(), Value::Boolean(true));
+    }
+    if !c.builtin_excludes {
+        t.insert("builtin_excludes".to_owned(), Value::Boolean(false));
+    }
+    if !c.extra_excludes.is_empty() {
+        let arr = toml::value::Array::from_iter(
+            c.extra_excludes.iter().map(|s| Value::String(s.clone())),
+        );
+        t.insert("extra_excludes".to_owned(), Value::Array(arr));
+    }
+    if !c.include.is_empty() {
+        let arr = toml::value::Array::from_iter(
+            c.include.iter().map(|s| Value::String(s.clone())),
+        );
+        t.insert("include".to_owned(), Value::Array(arr));
+    }
     Some(t)
 }
 

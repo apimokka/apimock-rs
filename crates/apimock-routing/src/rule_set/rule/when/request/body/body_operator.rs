@@ -89,6 +89,14 @@ pub enum BodyOperator {
     /// Value at path is an array that contains the configured value
     /// (typed JSON equality).
     ArrayContains,
+
+    // ── exact integer (RFC 010) ──────────────────────────────────────
+    /// Exact integer equality using i64 arithmetic, avoiding f64 precision
+    /// loss for integers above 2^53. The JSON value at the path must be a
+    /// JSON Number that is representable as i64 (or a String that parses
+    /// as i64); other types do not match. The configured `value` must also
+    /// parse as i64 — a non-integer `value` is a validation error.
+    EqualInteger,
 }
 
 impl Default for BodyOperator {
@@ -117,6 +125,7 @@ impl std::fmt::Display for BodyOperator {
             Self::ArrayLengthEqual => write!(f, " array_length == "),
             Self::ArrayLengthAtLeast => write!(f, " array_length >= "),
             Self::ArrayContains => write!(f, " array_contains "),
+            Self::EqualInteger => write!(f, " == (integer) "),
         }
     }
 }
@@ -209,6 +218,27 @@ impl BodyOperator {
                 }
                 _ => false,
             },
+
+            // ── exact integer (RFC 010) ──────────────────────────────────
+            // Uses i64 arithmetic to avoid f64 precision loss for integers
+            // above 2^53 (e.g. snowflake IDs, large database primary keys).
+            Self::EqualInteger => {
+                let lhs: i64 = match resolved {
+                    Value::Number(n) => match n.as_i64() {
+                        Some(i) => i,
+                        None => return false, // float or out-of-i64 range
+                    },
+                    Value::String(s) => match s.parse::<i64>() {
+                        Ok(i) => i,
+                        Err(_) => return false,
+                    },
+                    _ => return false,
+                };
+                match configured_value.parse::<i64>() {
+                    Ok(rhs) => lhs == rhs,
+                    Err(_) => false,
+                }
+            }
         }
     }
 }
@@ -339,5 +369,55 @@ mod tests {
         assert!(!BodyOperator::ArrayContains.is_match(&json!([1, 2, 3]), "4"));
         assert!(BodyOperator::ArrayContains.is_match(&json!(["a", "b"]), "\"a\""));
         assert!(!BodyOperator::ArrayContains.is_match(&json!("not_array"), "1"));
+    }
+
+// ── RFC 010: equal_integer ────────────────────────────────────────
+
+    #[test]
+    fn equal_integer_normal() {
+        assert!(BodyOperator::EqualInteger.is_match(&json!(42), "42"));
+        assert!(!BodyOperator::EqualInteger.is_match(&json!(42), "43"));
+    }
+
+    #[test]
+    fn equal_integer_large_value_above_f64_precision() {
+        // 2^53 + 1 — would lose precision as f64.
+        let large = 9_007_199_254_740_993i64;
+        let v = serde_json::Value::Number(serde_json::Number::from(large));
+        assert!(
+            BodyOperator::EqualInteger.is_match(&v, "9007199254740993"),
+            "large integer must match exactly"
+        );
+        // One less should NOT match.
+        assert!(
+            !BodyOperator::EqualInteger.is_match(&v, "9007199254740992"),
+            "adjacent integer must not match"
+        );
+    }
+
+    #[test]
+    fn equal_integer_string_value_in_body() {
+        // JSON string that parses as i64 is accepted.
+        assert!(BodyOperator::EqualInteger.is_match(&json!("42"), "42"));
+        assert!(!BodyOperator::EqualInteger.is_match(&json!("42"), "99"));
+    }
+
+    #[test]
+    fn equal_integer_rejects_float() {
+        assert!(!BodyOperator::EqualInteger.is_match(&json!(42.5), "42"));
+    }
+
+    #[test]
+    fn equal_integer_rejects_non_numeric_json() {
+        assert!(!BodyOperator::EqualInteger.is_match(&json!("hello"), "42"));
+        assert!(!BodyOperator::EqualInteger.is_match(&json!(null), "0"));
+        assert!(!BodyOperator::EqualInteger.is_match(&json!(true), "1"));
+    }
+
+    #[test]
+    fn equal_integer_invalid_configured_value_returns_false() {
+        // A non-integer configured value never matches (no panic).
+        assert!(!BodyOperator::EqualInteger.is_match(&json!(42), "not_a_number"));
+        assert!(!BodyOperator::EqualInteger.is_match(&json!(42), "42.5"));
     }
 }

@@ -28,6 +28,13 @@ use rule::{Rule, respond::Respond};
 /// across multiple files that can be enabled/disabled independently.
 /// Match order across sets is determined by the order in
 /// `service.rule_sets`, so the most specific set can be listed first.
+
+use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+
+fn default_counter() -> Arc<AtomicUsize> {
+    Arc::new(AtomicUsize::new(0))
+}
+
 #[derive(Clone, Deserialize, Debug)]
 pub struct RuleSet {
     pub prefix: Option<Prefix>,
@@ -36,6 +43,9 @@ pub struct RuleSet {
     pub rules: Vec<Rule>,
     #[serde(skip)]
     pub file_path: String,
+    /// Per-rule-set round-robin counter. Shared across clones via `Arc`.
+    #[serde(skip, default = "default_counter")]
+    pub round_robin_counter: Arc<AtomicUsize>,
 }
 
 impl RuleSet {
@@ -116,6 +126,8 @@ impl RuleSet {
 
         // - file path (kept for log/display only)
         ret.file_path = rule_set_file_path.to_owned();
+        // - round-robin counter (starts at 0; shared across clones via Arc)
+        ret.round_robin_counter = Arc::new(AtomicUsize::new(0));
 
         Ok(ret)
     }
@@ -230,6 +242,30 @@ impl RuleSet {
                     }
                 }
             }
+
+            Strategy::RoundRobin => {
+                let matches: Vec<&Rule> = self
+                    .rules
+                    .iter()
+                    .enumerate()
+                    .filter(|(idx, r)| r.when.is_match(parsed_request, *idx, rule_set_idx))
+                    .map(|(_, r)| r)
+                    .collect();
+
+                if matches.is_empty() {
+                    return None;
+                }
+
+                // Relaxed ordering: atomicity without sequential consistency
+                // is sufficient for a mock server (slight counter reorder
+                // on concurrent requests is acceptable).
+                let idx = self
+                    .round_robin_counter
+                    .fetch_add(1, Ordering::Relaxed)
+                    % matches.len();
+
+                Some(matches[idx].respond.clone())
+            }
         }
     }
 
@@ -263,5 +299,142 @@ impl std::fmt::Display for RuleSet {
             let _ = write!(f, "{}", rule);
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::strategy::Strategy;
+    use crate::parsed_request::ParsedRequest;
+    use crate::rule_set::rule::{Rule, respond::Respond, when::{When, request::Request}};
+
+    /// Build a minimal `ParsedRequest` matching `url_path`.
+    fn get_req(url_path: &str) -> ParsedRequest {
+        let req = hyper::Request::builder()
+            .method("GET")
+            .uri(url_path)
+            .body(())
+            .unwrap();
+        let (parts, _) = req.into_parts();
+        ParsedRequest {
+            url_path: url_path.to_owned(),
+            component_parts: parts,
+            body_json: None,
+        }
+    }
+
+    /// Build a `RuleSet` with `n` rules, all matching `url_path`,
+    /// responding with `"response_0"`, `"response_1"`, …
+    fn make_round_robin_set(n: usize, url_path: &str) -> RuleSet {
+        use crate::rule_set::rule::when::request::{
+            url_path::{UrlPath, UrlPathConfig},
+            http_method::HttpMethod,
+        };
+
+        let rules = (0..n)
+            .map(|i| Rule {
+                when: When {
+                    request: Request {
+                        url_path_config: Some(UrlPathConfig::Simple(url_path.to_owned())),
+                        url_path: Some(UrlPath {
+                            value: url_path.to_owned(),
+                            value_with_prefix: url_path.to_owned(),
+                            op: None,
+                        }),
+                        http_method: None,
+                        headers: None,
+                        body: None,
+                    },
+                },
+                respond: Respond {
+                    text: Some(format!("response_{}", i)),
+                    file_path: None,
+                    csv_records_key: None,
+                    status: None,
+                    status_code: None,
+                    headers: None,
+                    delay_response_milliseconds: None,
+                },
+                weight: None,
+                priority: None,
+            })
+            .collect();
+
+        RuleSet {
+            prefix: None,
+            default: None,
+            guard: None,
+            rules,
+            file_path: String::new(),
+            round_robin_counter: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    #[test]
+    fn round_robin_cycles_through_matching_rules() {
+        let rs = make_round_robin_set(2, "/api");
+        let req = get_req("/api");
+        let strategy = Strategy::RoundRobin;
+
+        let r0 = rs.find_matched(&req, Some(&strategy), 0).expect("match 0");
+        let r1 = rs.find_matched(&req, Some(&strategy), 0).expect("match 1");
+        let r2 = rs.find_matched(&req, Some(&strategy), 0).expect("match 2");
+
+        assert_eq!(r0.text.as_deref(), Some("response_0"));
+        assert_eq!(r1.text.as_deref(), Some("response_1"));
+        assert_eq!(r2.text.as_deref(), Some("response_0"), "cycle back");
+    }
+
+    #[test]
+    fn round_robin_three_rules_full_cycle() {
+        let rs = make_round_robin_set(3, "/api");
+        let req = get_req("/api");
+        let strategy = Strategy::RoundRobin;
+
+        let texts: Vec<String> = (0..6)
+            .map(|_| {
+                rs.find_matched(&req, Some(&strategy), 0)
+                    .unwrap()
+                    .text
+                    .clone()
+                    .unwrap()
+            })
+            .collect();
+
+        assert_eq!(
+            texts,
+            vec![
+                "response_0", "response_1", "response_2",
+                "response_0", "response_1", "response_2",
+            ]
+        );
+    }
+
+    #[test]
+    fn round_robin_no_match_does_not_advance_counter() {
+        let rs = make_round_robin_set(2, "/api");
+        let strategy = Strategy::RoundRobin;
+
+        // Non-matching request must not advance counter.
+        let miss = rs.find_matched(&get_req("/other"), Some(&strategy), 0);
+        assert!(miss.is_none(), "non-matching path should miss");
+
+        // Counter at 0 still — first hit returns response_0.
+        let hit = rs.find_matched(&get_req("/api"), Some(&strategy), 0)
+            .expect("should match");
+        assert_eq!(hit.text.as_deref(), Some("response_0"));
+    }
+
+    #[test]
+    fn round_robin_single_match_always_same() {
+        let rs = make_round_robin_set(1, "/api");
+        let req = get_req("/api");
+        let strategy = Strategy::RoundRobin;
+
+        for _ in 0..5 {
+            let r = rs.find_matched(&req, Some(&strategy), 0).expect("match");
+            assert_eq!(r.text.as_deref(), Some("response_0"));
+        }
     }
 }

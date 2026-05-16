@@ -21,7 +21,13 @@ ready for review.
 
 ## Proposed
 
-*(none — all stage-2 RFCs implemented in v5.8.0)*
+RFCs open for review. Design may still change.
+
+| ID  | Title | Priority |
+|-----|-------|----------|
+| 014 | [Header order preservation via IndexMap](./proposed/014-header-indexmap-order.md) | Medium |
+| 015 | [`apimock match-test` CLI subcommand](./proposed/015-match-test-cli.md) | Medium |
+| 016 | [Per-condition NodeId addressability](./proposed/016-per-condition-node-id.md) | Medium |
 
 ## Done (Implemented)
 

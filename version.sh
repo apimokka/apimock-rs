@@ -93,16 +93,14 @@ if [ "$UPDATE_MODE" -eq 1 ]; then
 
     printf 'Starting update to version "%s"...\n' "$NEW_VERSION"
 
-    # cargo metadata から各クレートのパスを抽出
+    # 2-a. cargo metadata から各クレートのパスを抽出して更新
     echo "$METADATA_JSON" | jq -r '.packages[] | .manifest_path' | while read -r cargo_toml; do
         crate_dir=$(dirname "$cargo_toml")
         
         # 1. Cargo.toml 更新
         update_file "$cargo_toml" "toml" "$NEW_VERSION"
 
-        # 2. [拡張] 直下のサブディレクトリにある package.json を検索・更新
-        # find で crate_dir の直下 (-maxdepth 1) のディレクトリを探し、
-        # その中にある package.json を見つける
+        # 2. 直下のサブディレクトリにある package.json を検索・更新
         find "$crate_dir" -mindepth 1 -maxdepth 2 -type d -print0 2>/dev/null | \
         while IFS= read -r -d '' subdir; do
             sub_pkg_json="$subdir/package.json"
@@ -118,6 +116,20 @@ if [ "$UPDATE_MODE" -eq 1 ]; then
         # 3. 同一ディレクトリ内の pyproject.toml をチェック
         update_file "$crate_dir/pyproject.toml" "toml" "$NEW_VERSION"
     done
+
+    # 2-b. [拡張] crates 管理外の npm ディレクトリ配下を更新
+    if [ -d "npm" ]; then
+        find npm -maxdepth 2 -name "package.json" -print0 2>/dev/null | \
+        while IFS= read -r -d '' pkg_json; do
+            update_file "$pkg_json" "json" "$NEW_VERSION"
+            
+            # 対になる package-lock.json が存在すれば一緒に更新
+            pkg_lock_json="${pkg_json%.json}-lock.json"
+            if [ -f "$pkg_lock_json" ]; then
+                update_file "$pkg_lock_json" "json" "$NEW_VERSION"
+            fi
+        done
+    fi
 
     # Cargo.lock の更新（dry-run でない場合のみ）
     if [ "$DRY_RUN" -eq 0 ]; then

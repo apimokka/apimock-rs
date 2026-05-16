@@ -83,7 +83,14 @@ impl Workspace {
         // crate just feeds them the data they need.
         let fallback_dir = self.config.service.fallback_respond_dir.as_str();
         let fallback_abs = self.resolve_relative(fallback_dir);
-        let file_tree = apimock_routing::view::build::build_file_tree(&fallback_abs);
+        let filter = self
+            .config
+            .file_tree_view
+            .as_ref()
+            .map(|c| c.to_filter())
+            .unwrap_or_default();
+        let file_tree =
+            apimock_routing::view::build::build_file_tree_with(&fallback_abs, &filter);
 
         let script_routes: Vec<apimock_routing::view::ScriptRouteView> = self
             .config
