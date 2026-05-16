@@ -834,7 +834,7 @@ fn make_workspace_with_headers_and_body() -> (tempfile::TempDir, PathBuf) {
         "[[rules]]\n",
         "when.request.url_path = \"/api/protected\"\n",
         "when.request.headers.x-api-key = { value = \"shh\" }\n",
-        "when.request.body.json.\"$.action\" = { op = \"equal\", value = \"go\" }\n",
+        "when.request.body.json.\"action\" = { op = \"equal\", value = \"go\" }\n",
         "respond = { text = \"ok\" }\n",
     );
     let rs_path = dir.path().join("apimock-rule-set.toml");
@@ -946,8 +946,8 @@ fn save_preserves_body_through_disk_round_trip() {
         .expect("body preserved through Workspace save → reload");
     let json_kind = apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind::Json;
     let inner = b.0.get(&json_kind).expect("json body kind present");
-    assert!(inner.contains_key("$.action"));
-    assert_eq!(inner["$.action"].value, "go");
+    assert!(inner.contains_key("action"));
+    assert_eq!(inner["action"].value, "go");
 }
 
 #[test]

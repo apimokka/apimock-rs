@@ -68,14 +68,4 @@ existing file-tree builder.
 
 ### 5.5.0 round-trip test fixtures used non-existent JSONPath syntax
 
-**Identified during:** 5.6.0 routing-crate test work.
-
-**Status:** Cosmetic issue. **5.7.0 candidate.**
-
-**Description.** The 5.5.0 round-trip tests in `apimock_config::toml_writer::tests` and `apimock_config::workspace::tests` used `body.json` keys like `"$.user.name"` and `"$.action"` — syntax that *looks* like canonical JSONPath but isn't supported by the routing crate. The routing crate's path resolver (`apimock_routing::util::json::json_value_by_jsonpath`) only understands a dotted-path mini-syntax: `a.b.c` for nested object keys and `items.2.name` for array indexing. The leading `$.` form is not recognised — the resolver treats `$` as a literal object key, which never matches.
-
-**Why the 5.5.0 tests still pass.** The 5.5.0 tests verify *round-trip* (load → save → reload preserves the string), and arbitrary strings round-trip just fine. They never call `is_match`, so the syntax error has no observable effect.
-
-**Why this is deferred.** Fixing the test fixtures is purely cosmetic — they pass, just with misleading example paths. Rewriting them in a 5.7.0-or-later release lets us bundle the change with broader documentation work (e.g. the `apimock` example TOML files could carry richer `body.json` examples too). 5.6.0's tests use the correct dotted-path format, so the documentation truth is now in the codebase.
-
-**Suggested approach.** When eventually addressed: rewrite the 5.5.0 fixtures to use forms like `"action"`, `"user.name"`, etc. Add a brief note to `apimock_routing::util::json` rustdoc and `apimock_config::toml_writer` reminding writers that `body.json` keys are dotted paths, not canonical JSONPath.
+**Status:** ✅ **Resolved in 5.7.0.** The 5.5.0 round-trip tests in `apimock_config::toml_writer::tests` and `apimock_config::workspace::tests` used `body.json` keys like `"$.user.name"` and `"$.action"` — syntax that *looks* like canonical JSONPath but isn't supported by the routing crate's dotted-path mini-syntax (`apimock_routing::util::json::json_value_by_jsonpath`). The tests still passed because they only verified round-trip preservation, never calling `is_match`. 5.7.0 rewrote the fixtures to use the correct dotted form (`"user.name"`, `"action"`), strengthened the rustdoc on `apimock_routing::util::json`, `apimock_routing::rule_set::rule::when::request::body::Body`, and `apimock_config::toml_writer::request_table` with explicit "not canonical JSONPath / RFC 9535" warnings, expanded the `apimock` example TOML's `body.json` block with realistic dotted-path examples, and added a JSONPath-mismatch note to `docs/src/advanced-topics/rule-set-config-structure/rules/when.md`.

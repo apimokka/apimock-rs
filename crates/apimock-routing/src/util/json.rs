@@ -19,13 +19,21 @@ pub const JSON_COMPATIBLE_EXTENSIONS: [&str; 3] = ["json", "json5", "csv"];
 
 /// Look up a value inside a JSON document using a dotted-path key.
 ///
-/// # Why a home-rolled mini-JSONPath instead of a crate
+/// # Why a home-rolled mini-syntax instead of canonical JSONPath
 ///
 /// We only support the "object key" and "array index" forms — no
-/// wildcards, no filters. Those two cover every real use inside this
-/// codebase (`body.json` matchers, CSV record-wrapping key). Pulling
-/// in a full JSONPath crate would add weight and expose features we
-/// would then have to teach users to avoid.
+/// wildcards, no filters, no expression language. Those two cover
+/// every real use inside this codebase (`body.json` matchers, CSV
+/// record-wrapping key). Pulling in a full JSONPath crate would add
+/// weight and expose features we would then have to teach users to
+/// avoid.
+///
+/// **This is not canonical JSONPath / RFC 9535.** The leading `$.`
+/// of canonical JSONPath is *not* recognised — `$` is treated as a
+/// literal object key, which is almost never what the writer
+/// intended. A path like `"$.foo.bar"` therefore matches an object
+/// that has a top-level `$` key, *not* the value at `foo.bar`. Use
+/// the dotted form below.
 ///
 /// Supported shapes:
 /// - `a.b.c` for nested object keys

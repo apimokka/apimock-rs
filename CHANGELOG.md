@@ -80,6 +80,75 @@ grouping.
   of plain private. They remain unreachable from outside the
   workspace module.
 
+## [5.7.0] - 2026-04-28
+
+5.7.0 is a cosmetic / documentation-only release. It closes ROADMAP's
+last cosmetic item — 5.5.0 round-trip test fixtures used `body.json`
+keys that *looked* like canonical JSONPath (`"$.user.name"`,
+`"$.action"`) but aren't supported by the routing crate's dotted-path
+mini-syntax (`apimock_routing::util::json::json_value_by_jsonpath`).
+The fixtures still passed because they only asserted round-trip
+preservation; they never invoked `is_match`. 5.7.0 corrects the
+fixtures and strengthens the documentation around the path syntax so
+future readers don't repeat the mistake. There are **no behavioural
+changes**, **no public-API changes**, and **no new tests** — the same
+97 workspace tests pass before and after.
+
+### Changed
+
+- **Test fixtures (`apimock_config::toml_writer::tests` and
+  `apimock_config::workspace::tests`).** The two 5.5.0 round-trip
+  tests `round_trip_rule_with_body_json` and
+  `save_preserves_body_through_disk_round_trip` (the test name is
+  approximate — the latter lives near the workspace save tests) now
+  use `"user.name"` and `"action"` instead of `"$.user.name"` and
+  `"$.action"`. Assertion keys updated accordingly. Tests still
+  exercise round-trip preservation; semantics unchanged.
+- **Code comment in `apimock_config::toml_writer::request_table`.**
+  The block comment that previously documented the body-condition
+  TOML form using a `"$.path"` example now uses `"<dotted.path>"`
+  with `"order.items.0.product_id"` as a concrete example, plus an
+  explicit "not canonical JSONPath" cross-reference to the routing
+  crate's `util::json` module.
+
+### Documentation
+
+- **`apimock_routing::util::json::json_value_by_jsonpath` rustdoc.**
+  Section header retitled from "Why a home-rolled mini-JSONPath
+  instead of a crate" to "Why a home-rolled mini-syntax instead of
+  canonical JSONPath", and a paragraph added that explicitly states
+  **"This is not canonical JSONPath / RFC 9535"** and explains what
+  `"$.foo.bar"` actually matches in this resolver (a top-level `$`
+  key — almost certainly not what the writer intended).
+- **`apimock_routing::rule_set::rule::when::request::body::Body`
+  rustdoc.** Previously had only an `is_match` doc comment. Now the
+  type itself carries a docblock describing the dotted-path key
+  syntax, explicitly contrasting with canonical JSONPath, and
+  cross-linking to `crate::util::json::json_value_by_jsonpath` for
+  the full contract.
+- **`crates/apimock/examples/config/default/apimock-rule-set.toml`.**
+  The single commented-out `body.json` example (`"a.b.c" = { value
+  = "d", op = "starts_with" }`) was expanded to three commented
+  examples covering nested keys, array indexing
+  (`"order.items.0.product_id"`), and a different operator
+  (`"user.role" = { op = "contains", value = "admin" }`), with a
+  block comment heading that explicitly warns "NOT canonical
+  JSONPath — do not write `\"$.a.b.c\"`."
+- **`docs/src/advanced-topics/rule-set-config-structure/rules/when.md`.**
+  Added a "Note: not canonical JSONPath" blockquote under the
+  `when.request.body.json` section, linking to RFC 9535. Other docs
+  pages were audited (`getting-started/rule-based-routing-2.md`,
+  `examples/combining-conditions-2.md`, `faq.md`,
+  `advanced-topics/.../rules/README.md`) and confirmed already
+  correct — they use the dotted form throughout.
+
+### ROADMAP
+
+- "5.5.0 round-trip test fixtures used non-existent JSONPath syntax"
+  moved from deferred to resolved. The only remaining deferred item
+  is now hidden / VCS / build-artifact directory filtering in
+  `FileTreeView`.
+
 ## [5.6.0] - 2026-04-28
 
 5.6.0 closes ROADMAP's second deferred item: routing-crate test

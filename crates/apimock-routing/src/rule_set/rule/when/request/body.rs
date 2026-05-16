@@ -13,6 +13,21 @@ use crate::{
 };
 use body_kind::BodyKind;
 
+/// Body match conditions, keyed by [`BodyKind`] (currently only
+/// [`BodyKind::Json`]) and then by a path identifying the value
+/// inside the request body to compare.
+///
+/// # Path syntax
+///
+/// The inner key is a **dotted path** — *not* canonical JSONPath.
+/// `a.b.c` reaches into nested object keys; numeric segments index
+/// arrays (`items.0.name`). Wildcards, filters, and the canonical
+/// `$.` prefix are not supported. A path written as `"$.foo"` will
+/// only match a JSON document with a top-level `$` key, almost
+/// never what the writer intended.
+///
+/// See [`crate::util::json::json_value_by_jsonpath`] for the full
+/// contract.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
 pub struct Body(pub HashMap<BodyKind, HashMap<ConditionKey, ConditionStatement>>);

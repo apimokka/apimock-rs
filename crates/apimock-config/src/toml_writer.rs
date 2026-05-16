@@ -213,8 +213,16 @@ fn request_table(req: &Request) -> Table {
     }
 
     // Body conditions. `Body` is keyed first by `BodyKind` (currently
-    // only `Json`) and then by jsonpath string. The TOML form is
-    // `[when.request.body.json."$.path"] op = "...", value = "..."`.
+    // only `Json`) and then by a dotted-path string identifying the
+    // value inside the JSON body to compare. The TOML form is
+    // `[when.request.body.json."<dotted.path>"] op = "...", value = "..."`,
+    // for example
+    // `[when.request.body.json."order.items.0.product_id"] value = "X"`.
+    //
+    // Note: this is the routing crate's mini-syntax (object keys
+    // joined by `.`, with numeric segments addressing array indices),
+    // not canonical JSONPath. See `apimock_routing::util::json` for
+    // the supported shapes.
     if let Some(body) = req.body.as_ref() {
         let mut body_table = Table::new();
         let mut kinds: Vec<&BodyKind> = body.0.keys().collect();
@@ -386,7 +394,7 @@ mod tests {
         let original = concat!(
             "[[rules]]\n",
             "when.request.url_path = \"/api\"\n",
-            "when.request.body.json.\"$.user.name\" = { value = \"alice\" }\n",
+            "when.request.body.json.\"user.name\" = { value = \"alice\" }\n",
             "respond = { text = \"ok\" }\n",
         );
         let rs = parse_rule_set(original);
@@ -398,10 +406,10 @@ mod tests {
             .body
             .as_ref()
             .expect("body preserved across round trip");
-        // Body has BodyKind::Json keyed map containing "$.user.name".
+        // Body has BodyKind::Json keyed map containing the dotted path.
         let json_kind = apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind::Json;
         let inner = b.0.get(&json_kind).expect("json body kind present");
-        assert!(inner.contains_key("$.user.name"));
-        assert_eq!(inner["$.user.name"].value, "alice");
+        assert!(inner.contains_key("user.name"));
+        assert_eq!(inner["user.name"].value, "alice");
     }
 }

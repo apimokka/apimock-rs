@@ -36,6 +36,16 @@ Matches content within the request body. Currently, this supports matching speci
 when.request.body.json.order.items.0.product_id = { value = "123" }
 ```
 
+> **Note: not canonical JSONPath.** The path syntax is apimock's
+> own dotted-path mini-syntax — object keys joined by `.`, with
+> numeric segments indexing into arrays. The leading `$.` of
+> [RFC 9535 JSONPath][rfc9535] is **not** supported; a key written
+> as `"$.foo.bar"` will only match a JSON document whose top level
+> contains a literal `$` key, which is almost never what the writer
+> intended.
+>
+> [rfc9535]: https://datatracker.ietf.org/doc/html/rfc9535
+
 ## Multiple conditions strategy
 
 **Important:** If you define multiple conditions (e.g., a path, a header, and a body match) within a single `[[rules]]` block, they are all evaluated using **AND logic**. All conditions must be met for the rule to match the incoming request.
