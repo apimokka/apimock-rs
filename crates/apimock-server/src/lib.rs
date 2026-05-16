@@ -29,6 +29,7 @@ pub mod response;
 pub mod response_handler;
 pub mod server;
 pub mod tls;
+pub mod trace;
 pub mod types;
 
 pub use control::{ReloadHint, ServerControl, ServerHandle, ServerState};

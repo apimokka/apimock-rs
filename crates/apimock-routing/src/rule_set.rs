@@ -139,17 +139,98 @@ impl RuleSet {
             _ => (),
         };
 
-        for (rule_idx, rule) in self.rules.iter().enumerate() {
-            let is_match = rule.when.is_match(parsed_request, rule_idx, rule_set_idx);
-            if is_match {
-                // todo: last match in the future ?
-                match strategy {
-                    Some(&Strategy::FirstMatch) | None => return Some(rule.respond.to_owned()),
+        let strategy = strategy.unwrap_or(&Strategy::FirstMatch);
+
+        match strategy {
+            Strategy::FirstMatch => {
+                for (rule_idx, rule) in self.rules.iter().enumerate() {
+                    if rule.when.is_match(parsed_request, rule_idx, rule_set_idx) {
+                        return Some(rule.respond.clone());
+                    }
+                }
+                None
+            }
+
+            Strategy::UniformRandom { seed } => {
+                // Collect all matching rules, then pick uniformly at random.
+                let matches: Vec<&Rule> = self
+                    .rules
+                    .iter()
+                    .enumerate()
+                    .filter(|(idx, r)| r.when.is_match(parsed_request, *idx, rule_set_idx))
+                    .map(|(_, r)| r)
+                    .collect();
+
+                if matches.is_empty() {
+                    return None;
+                }
+                let mut rng = crate::strategy::make_rng(*seed);
+                let idx = rng.next_index(matches.len());
+                Some(matches[idx].respond.clone())
+            }
+
+            Strategy::WeightedRandom { seed } => {
+                // Collect matching rules with their effective weights.
+                let candidates: Vec<(&Rule, u32)> = self
+                    .rules
+                    .iter()
+                    .enumerate()
+                    .filter(|(idx, r)| r.when.is_match(parsed_request, *idx, rule_set_idx))
+                    .map(|(_, r)| (r, r.weight.unwrap_or(1)))
+                    .filter(|(_, w)| *w > 0)
+                    .collect();
+
+                if candidates.is_empty() {
+                    return None;
+                }
+
+                let total: u32 = candidates.iter().map(|(_, w)| w).sum();
+                let mut rng = crate::strategy::make_rng(*seed);
+                let pick = (rng.next() % total as u64) as u32;
+                let mut acc = 0u32;
+                for (rule, weight) in &candidates {
+                    acc += weight;
+                    if pick < acc {
+                        return Some(rule.respond.clone());
+                    }
+                }
+                // Fallback (rounding edge): return last candidate.
+                candidates.last().map(|(r, _)| r.respond.clone())
+            }
+
+            Strategy::Priority { tiebreaker } => {
+                // Collect matching rules with their priority.
+                let matches: Vec<(&Rule, i32)> = self
+                    .rules
+                    .iter()
+                    .enumerate()
+                    .filter(|(idx, r)| r.when.is_match(parsed_request, *idx, rule_set_idx))
+                    .map(|(_, r)| (r, r.priority.unwrap_or(0)))
+                    .collect();
+
+                if matches.is_empty() {
+                    return None;
+                }
+
+                let max_priority = matches.iter().map(|(_, p)| *p).max().unwrap();
+                let top: Vec<&Rule> = matches
+                    .into_iter()
+                    .filter(|(_, p)| *p == max_priority)
+                    .map(|(r, _)| r)
+                    .collect();
+
+                match tiebreaker {
+                    crate::strategy::PriorityTiebreaker::FirstMatch => {
+                        top.into_iter().next().map(|r| r.respond.clone())
+                    }
+                    crate::strategy::PriorityTiebreaker::UniformRandom => {
+                        let mut rng = crate::strategy::make_rng(None);
+                        let idx = rng.next_index(top.len());
+                        Some(top[idx].respond.clone())
+                    }
                 }
             }
         }
-
-        None
     }
 
     /// validate

@@ -5,12 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# Changelog
+## [5.8.0] - 2026-05-16
 
-All notable changes to this project will be documented in this file.
+### Added (stage-2 GUI editing surface — RFCs 001–008)
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+- **RFC 001** — `RulePayload.url_path_op: Option<UrlPathOp>` lets the GUI author
+  rules with non-equal URL-path operators (`starts_with`, `contains`, `ends_with`,
+  `wild_card`, `not_equal`) without hand-editing TOML. `None` defaults to `Equal`
+  (backwards-compatible). (`apimock-config`)
+
+- **RFC 002** — `RulePayload.headers: Option<Vec<HeaderConditionPayload>>` and
+  `RulePayload.body: Option<Vec<BodyConditionPayload>>` expose header and body
+  conditions through the GUI editing API. `None` preserves existing conditions;
+  `Some([])` clears them; `Some([…])` replaces them wholesale. (`apimock-config`)
+
+- **RFC 003** — `RootSettingKey` gains seven new variants: `TlsEnabled`,
+  `TlsCertFile`, `TlsKeyFile`, `LogLevel`, `LogFile`, `LogFormat`. TLS and
+  listener-address changes return `ReloadHint::restart()`; log-level and strategy
+  changes return `ReloadHint::reload()`. New `ReloadHint::for_key(key)` helper.
+  (`apimock-config`)
+
+- **RFC 004** — `WhenView.has_header_conditions: bool` / `has_body_conditions: bool`
+  replaced with `headers: Vec<HeaderConditionView>` and `body: Vec<BodyConditionView>`.
+  The GUI can now render the full condition list in one snapshot pass without a second
+  query. **Breaking change**: callers that read the old boolean fields must migrate to
+  `headers.is_empty()` / `body.is_empty()`. (`apimock-routing`)
+
+- **RFC 005** — `FileTreeView` now applies a default filter: dotfiles/dot-directories
+  and known build-output directories (`target`, `node_modules`, `dist`, `build`,
+  `__pycache__`, etc.) are hidden. New `FileTreeFilter` struct and
+  `build_file_tree_with` / `list_directory_with` APIs allow custom filter overrides.
+  Constant `BUILTIN_EXCLUDES` lists the default excluded names. (`apimock-routing`)
+
+- **RFC 006** — `apimock-server::trace` module: `TraceEmitter` (bounded broadcast
+  channel), `MatchTraceEvent`, `RequestSummary`, `Outcome`. Emits one structured
+  event per request to in-process subscribers. The out-of-process transport layer
+  (UDS / TCP) is explicitly stubbed and deferred to a future release.
+  (`apimock-server`)
+
+- **RFC 007** — `Strategy` gains three new variants: `UniformRandom { seed }`,
+  `WeightedRandom { seed }`, `Priority { tiebreaker }`. `Rule` gains optional
+  `weight: Option<u32>` and `priority: Option<i32>` fields used by the respective
+  strategies. A seed-based xorshift64 PRNG provides reproducibility for tests.
+  (`apimock-routing`)
+
+- **RFC 008** — Body match language extended from 5 operators to 17. New operators:
+  `equal_string` (explicit alias for `equal`), `equal_typed` (JSON-type-aware),
+  `equal_number` / `greater_than` / `less_than` / `greater_or_equal` / `less_or_equal`
+  (numeric), `exists` / `absent` (path presence), `array_length_equal` /
+  `array_length_at_least` / `array_contains` (array predicates). The existing
+  `equal` operator retains its 5.7.0 string-coercion semantics for backwards
+  compatibility. (`apimock-routing`)
+
+### Internal
+
+- Introduced `BodyConditionStatement` type in the routing crate to carry
+  `BodyOperator` instead of the shared `ConditionStatement` + `RuleOp`, keeping
+  the header and body operator surfaces cleanly separated.
+- `apimock-config::workspace::edit::payload` now converts `UrlPathOp`,
+  `HeaderOp`, and `BodyOp` from the payload layer to the routing crate's internal
+  types at the apply boundary.
+- `body_op_name_pub` exported from `apimock-routing::view::build` so `toml_writer`
+  can serialise `BodyOperator` values to TOML without importing routing internals.
+
+
 
 ## [5.4.0] - 2026-04-27
 

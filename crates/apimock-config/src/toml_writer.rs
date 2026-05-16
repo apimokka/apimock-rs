@@ -30,7 +30,8 @@ use apimock_routing::{
             When,
             condition_statement::ConditionStatement,
             request::{
-                Request, body::body_kind::BodyKind, http_method::HttpMethod,
+                Request, body::{body_kind::BodyKind, BodyConditionStatement},
+                http_method::HttpMethod,
                 url_path::UrlPathConfig,
             },
         },
@@ -235,7 +236,7 @@ fn request_table(req: &Request) -> Table {
             keys.sort();
             for key in keys {
                 let stmt = &inner[key];
-                kind_table.insert(key.clone(), Value::Table(condition_statement_table(stmt)));
+                kind_table.insert(key.clone(), Value::Table(body_condition_statement_table(stmt)));
             }
             if !kind_table.is_empty() {
                 body_table.insert(kind_str.to_owned(), Value::Table(kind_table));
@@ -249,9 +250,8 @@ fn request_table(req: &Request) -> Table {
     t
 }
 
-/// Render a `ConditionStatement` (used by both Headers entries and
-/// Body inner entries) as a TOML table with `op` (optional) and
-/// `value` keys.
+/// Render a `ConditionStatement` (used by Headers entries) as a TOML
+/// table with `op` (optional) and `value` keys.
 fn condition_statement_table(stmt: &ConditionStatement) -> Table {
     let mut t = Table::new();
     if let Some(op) = stmt.op.as_ref() {
@@ -259,6 +259,18 @@ fn condition_statement_table(stmt: &ConditionStatement) -> Table {
             "op".to_owned(),
             Value::String(apimock_routing::view::build::op_name(op)),
         );
+    }
+    t.insert("value".to_owned(), Value::String(stmt.value.clone()));
+    t
+}
+
+/// Render a `BodyConditionStatement` (used by Body entries) as a TOML
+/// table with `op` (optional) and `value` keys.
+fn body_condition_statement_table(stmt: &BodyConditionStatement) -> Table {
+    use apimock_routing::view::build::body_op_name_pub;
+    let mut t = Table::new();
+    if let Some(op) = stmt.op.as_ref() {
+        t.insert("op".to_owned(), Value::String(body_op_name_pub(op)));
     }
     t.insert("value".to_owned(), Value::String(stmt.value.clone()));
     t

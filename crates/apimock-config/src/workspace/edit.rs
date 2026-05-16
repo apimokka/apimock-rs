@@ -31,8 +31,8 @@ use crate::view::{ApplyResult, EditCommand, EditValue, NodeId};
 use super::Workspace;
 use super::id_index::NodeAddress;
 use payload::{
-    build_rule_from_payload, build_respond_from_payload, internal_path_err, value_as_integer,
-    value_as_string,
+    build_rule_from_payload, build_respond_from_payload, internal_path_err, value_as_bool,
+    value_as_integer, value_as_string,
 };
 
 impl Workspace {
@@ -535,24 +535,99 @@ impl Workspace {
             }
             ServiceStrategy => {
                 let s = value_as_string(&value)?;
-                // The only recognised strategy value today is
-                // "first_match". Anything else is rejected — if future
-                // strategies are added, extend this match.
-                match s.as_str() {
-                    "first_match" => {
-                        self.config.service.strategy =
-                            Some(apimock_routing::Strategy::FirstMatch);
-                    }
+                use apimock_routing::Strategy;
+                let strategy = match s.as_str() {
+                    "first_match" => Strategy::FirstMatch,
+                    "uniform_random" => Strategy::UniformRandom { seed: None },
+                    "weighted_random" => Strategy::WeightedRandom { seed: None },
+                    "priority" => Strategy::Priority {
+                        tiebreaker: apimock_routing::strategy::PriorityTiebreaker::FirstMatch,
+                    },
                     other => {
                         return Err(ApplyError::InvalidPayload {
-                            reason: format!("unknown strategy: {}", other),
+                            reason: format!("unknown strategy: `{}`", other),
                         });
                     }
+                };
+                self.config.service.strategy = Some(strategy);
+            }
+
+            // ── TLS (RFC 003) ──────────────────────────────────────────
+            TlsEnabled => {
+                let enabled = value_as_bool(&value)?;
+                if !enabled {
+                    // Disabling TLS: clear the tls config block.
+                    if let Some(listener) = self.config.listener.as_mut() {
+                        listener.tls = None;
+                    }
                 }
+                // Enabling: the GUI must subsequently set TlsCertFile and
+                // TlsKeyFile before the server can start. We don't create
+                // a skeleton TlsConfig here because that would require
+                // placeholder file paths that would fail validation.
+            }
+            TlsCertFile => {
+                let s = value_as_string(&value)?;
+                let listener = self.config.listener.get_or_insert_with(Default::default);
+                let tls = listener.tls.get_or_insert_with(|| {
+                    crate::config::listener_config::tls_config::TlsConfig {
+                        cert: String::new(),
+                        key: String::new(),
+                        port: None,
+                    }
+                });
+                tls.cert = s;
+            }
+            TlsKeyFile => {
+                let s = value_as_string(&value)?;
+                let listener = self.config.listener.get_or_insert_with(Default::default);
+                let tls = listener.tls.get_or_insert_with(|| {
+                    crate::config::listener_config::tls_config::TlsConfig {
+                        cert: String::new(),
+                        key: String::new(),
+                        port: None,
+                    }
+                });
+                tls.key = s;
+            }
+
+            // ── Log (RFC 003) ──────────────────────────────────────────
+            LogLevel => {
+                let s = value_as_string(&value)?;
+                let valid_levels = ["trace", "debug", "info", "warn", "error"];
+                if !valid_levels.contains(&s.as_str()) {
+                    return Err(ApplyError::InvalidPayload {
+                        reason: format!(
+                            "invalid log level `{}` — valid: trace, debug, info, warn, error",
+                            s
+                        ),
+                    });
+                }
+                // Log level is currently stored in the verbose config as a
+                // boolean; a future RFC may add a string level field.
+                // For now we record the intent in a no-op that can be fleshed
+                // out when the LogConfig gains a `level` string field.
+                let _ = s; // acknowledged but not yet persisted
+            }
+            LogFile => {
+                let s = value_as_string(&value)?;
+                let _ = s; // future: set on a LogConfig.file field
+            }
+            LogFormat => {
+                let s = value_as_string(&value)?;
+                let valid_formats = ["text", "json"];
+                if !valid_formats.contains(&s.as_str()) {
+                    return Err(ApplyError::InvalidPayload {
+                        reason: format!(
+                            "invalid log format `{}` — valid: text, json",
+                            s
+                        ),
+                    });
+                }
+                let _ = s; // future: set on LogConfig.format field
             }
         }
 
-        // Root is a singleton; its NodeId is always the same.
         let id = self
             .ids
             .id_for(NodeAddress::Root)

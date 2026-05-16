@@ -3,7 +3,7 @@ use serde::Deserialize;
 use super::constant::{LISTENER_DEFAULT_IP_ADDRESS, LISTENER_DEFAULT_PORT};
 use tls_config::TlsConfig;
 
-mod tls_config;
+pub mod tls_config;
 
 /// verbose logs
 #[derive(Clone, Deserialize)]

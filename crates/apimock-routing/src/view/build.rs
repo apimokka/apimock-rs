@@ -21,6 +21,8 @@
 
 use std::path::Path;
 
+use serde_json;
+
 use crate::rule_set::rule::respond::Respond;
 use crate::rule_set::rule::when::When;
 use crate::rule_set::rule::when::request::Request;
@@ -31,8 +33,9 @@ use crate::rule_set::rule::Rule;
 use crate::rule_set::RuleSet;
 
 use crate::view::{
-    FileNodeKind, FileNodeView, FileTreeView, RespondView, RouteCatalogSnapshot, RuleSetView,
-    RuleView, ScriptRouteView, UrlPathView, WhenView,
+    BodyConditionView, FileNodeKind, FileNodeView, FileTreeView, HeaderConditionView,
+    RespondView, RouteCatalogSnapshot, RuleSetView, RuleView, ScriptRouteView, UrlPathView,
+    WhenView,
 };
 
 /// Compose the top-level `RouteCatalogSnapshot` from already-built
@@ -92,9 +95,106 @@ pub fn build_when_view(when: &When) -> WhenView {
     WhenView {
         url_path: build_url_path_view(req.url_path_config.as_ref()),
         method: req.http_method.as_ref().map(http_method_name),
-        has_header_conditions: req.headers.is_some(),
-        has_body_conditions: req.body.is_some(),
+        headers: build_header_condition_views(req.headers.as_ref()),
+        body: build_body_condition_views(req.body.as_ref()),
     }
+}
+
+fn build_header_condition_views(
+    headers: Option<&crate::rule_set::rule::when::request::headers::Headers>,
+) -> Vec<HeaderConditionView> {
+    let headers = match headers {
+        Some(h) => h,
+        None => return Vec::new(),
+    };
+    let mut views: Vec<HeaderConditionView> = headers
+        .0
+        .iter()
+        .map(|(name, stmt)| {
+            let op_str = op_name(stmt.op.as_ref().unwrap_or(&RuleOp::default()));
+            HeaderConditionView {
+                name: name.clone(),
+                op: op_str,
+                value: Some(stmt.value.clone()),
+            }
+        })
+        .collect();
+    // Stable order: alphabetical by header name.
+    views.sort_by(|a, b| a.name.cmp(&b.name));
+    views
+}
+
+fn build_body_condition_views(
+    body: Option<&crate::rule_set::rule::when::request::body::Body>,
+) -> Vec<BodyConditionView> {
+    use crate::rule_set::rule::when::request::body::body_kind::BodyKind;
+    use crate::rule_set::rule::when::request::body::body_operator::BodyOperator;
+
+    let body = match body {
+        Some(b) => b,
+        None => return Vec::new(),
+    };
+
+    let mut views: Vec<BodyConditionView> = Vec::new();
+    for (kind, conditions) in &body.0 {
+        let kind_str = match kind {
+            BodyKind::Json => "json",
+        };
+        for (path, stmt) in conditions {
+            let op_str = format!(
+                "{}",
+                stmt.op.as_ref().unwrap_or(&BodyOperator::Equal)
+            )
+            .trim()
+            .to_owned();
+            // Normalise the op display string to snake_case form matching
+            // the serde rename: strip surrounding spaces, lower-case.
+            let op_clean = body_op_name(stmt.op.as_ref().unwrap_or(&BodyOperator::Equal));
+            // value: try to parse as JSON; fall back to JSON string.
+            let value = serde_json::from_str::<serde_json::Value>(&stmt.value)
+                .unwrap_or_else(|_| serde_json::Value::String(stmt.value.clone()));
+            let _ = op_str; // suppress unused warning
+            views.push(BodyConditionView {
+                kind: kind_str.to_owned(),
+                path: path.clone(),
+                op: op_clean,
+                value,
+            });
+        }
+    }
+    // Stable order: alphabetical by path.
+    views.sort_by(|a, b| a.path.cmp(&b.path));
+    views
+}
+
+/// Public wrapper so `toml_writer` can serialise body operators to
+/// TOML `op` strings without importing routing-internal types.
+pub fn body_op_name_pub(op: &crate::rule_set::rule::when::request::body::body_operator::BodyOperator) -> String {
+    body_op_name(op)
+}
+
+fn body_op_name(op: &crate::rule_set::rule::when::request::body::body_operator::BodyOperator) -> String {
+    use crate::rule_set::rule::when::request::body::body_operator::BodyOperator;
+    match op {
+        BodyOperator::Equal => "equal",
+        BodyOperator::EqualString => "equal_string",
+        BodyOperator::Contains => "contains",
+        BodyOperator::StartsWith => "starts_with",
+        BodyOperator::EndsWith => "ends_with",
+        BodyOperator::Regex => "regex",
+        BodyOperator::EqualTyped => "equal_typed",
+        BodyOperator::EqualNumber => "equal_number",
+        BodyOperator::GreaterThan => "greater_than",
+        BodyOperator::LessThan => "less_than",
+        BodyOperator::GreaterOrEqual => "greater_or_equal",
+        BodyOperator::LessOrEqual => "less_or_equal",
+        BodyOperator::Exists => "exists",
+        BodyOperator::Absent => "absent",
+        BodyOperator::ArrayLengthEqual => "array_length_equal",
+        BodyOperator::ArrayLengthAtLeast => "array_length_at_least",
+        BodyOperator::ArrayContains => "array_contains",
+    }
+    .to_owned()
 }
 
 fn build_url_path_view(cfg: Option<&UrlPathConfig>) -> Option<UrlPathView> {
@@ -160,25 +260,106 @@ pub fn build_respond_view(respond: &Respond) -> RespondView {
 }
 
 // -------------------------------------------------------------------
-// File tree (depth-1 eager)
+// File tree (depth-1 eager) — RFC 005 filtering
 // -------------------------------------------------------------------
+
+/// Built-in directory names to exclude from `FileTreeView` by default.
+/// These are overwhelmingly build outputs / VCS metadata across common
+/// ecosystems; projects with unusual layouts can disable via
+/// `FileTreeFilter::builtin_excludes = false`.
+pub const BUILTIN_EXCLUDES: &[&str] = &[
+    "target",
+    "node_modules",
+    "dist",
+    "build",
+    "out",
+    "__pycache__",
+    ".venv",
+    "vendor",
+    ".cargo",
+    ".gradle",
+    ".idea",
+    ".vscode",
+];
+
+/// Filter options controlling which entries appear in [`FileTreeView`].
+///
+/// # Defaults
+///
+/// - `show_hidden = false` — hide dotfiles / dot-directories.
+/// - `builtin_excludes = true` — hide known build-output directories.
+/// - `extra_excludes = []` — no additional exclusions.
+/// - `include = []` — include everything (no inclusion filter).
+///
+/// The defaults are intentionally conservative: they hide the noise
+/// without requiring any configuration for the common case.
+#[derive(Clone, Debug)]
+pub struct FileTreeFilter {
+    /// When `false`, entries whose name starts with `.` are excluded.
+    pub show_hidden: bool,
+    /// When `true`, entries whose name appears in [`BUILTIN_EXCLUDES`]
+    /// are excluded.
+    pub builtin_excludes: bool,
+    /// Additional entry names to exclude (exact-match on the entry's
+    /// `file_name()`, not a glob).
+    pub extra_excludes: Vec<String>,
+    /// If non-empty, only files whose name matches at least one entry
+    /// (simple suffix match) are included. Directories are always kept
+    /// so the user can drill into them.
+    pub include: Vec<String>,
+}
+
+impl Default for FileTreeFilter {
+    fn default() -> Self {
+        Self {
+            show_hidden: false,
+            builtin_excludes: true,
+            extra_excludes: Vec::new(),
+            include: Vec::new(),
+        }
+    }
+}
+
+impl FileTreeFilter {
+    /// Return `true` iff `name` should be kept (not filtered out).
+    fn keep(&self, name: &str, is_dir: bool) -> bool {
+        // Dotfile filter
+        if !self.show_hidden && name.starts_with('.') {
+            return false;
+        }
+        // Built-in exclude list
+        if self.builtin_excludes && BUILTIN_EXCLUDES.contains(&name) {
+            return false;
+        }
+        // Extra excludes
+        if self.extra_excludes.iter().any(|e| e == name) {
+            return false;
+        }
+        // Include filter applies only to files; directories always pass.
+        if !is_dir && !self.include.is_empty() {
+            if !self.include.iter().any(|pat| name.ends_with(pat.as_str())) {
+                return false;
+            }
+        }
+        true
+    }
+}
 
 /// Build a depth-1 file-tree view rooted at `root`.
 ///
+/// Applies [`FileTreeFilter::default()`] to exclude hidden entries and
+/// known build-output directories. Use [`build_file_tree_with`] to
+/// supply custom filter options.
+pub fn build_file_tree(root: &Path) -> Option<FileTreeView> {
+    build_file_tree_with(root, &FileTreeFilter::default())
+}
+
+/// Build a depth-1 file-tree view with an explicit [`FileTreeFilter`].
+///
 /// Returns `None` if the directory doesn't exist or can't be read.
 /// Subdirectories carry `children = Some(Vec::new())` to flag them as
-/// "expandable but not yet expanded"; the embedder later calls a
-/// `list_directory` API to populate them on demand.
-///
-/// # Filtering policy (see ROADMAP.md)
-///
-/// 5.3.0 enumerates every direct child without filtering. Hidden
-/// folders like `.git` show up as expandable nodes but their contents
-/// are not loaded until the user clicks. Filtering policy (dotfile
-/// prefix vs `.gitignore` vs configurable patterns) is deferred —
-/// performance is unaffected and the design space is wide enough that
-/// committing now is premature.
-pub fn build_file_tree(root: &Path) -> Option<FileTreeView> {
+/// expandable-but-not-yet-expanded.
+pub fn build_file_tree_with(root: &Path, filter: &FileTreeFilter) -> Option<FileTreeView> {
     let entries = std::fs::read_dir(root).ok()?;
     let mut nodes: Vec<FileNodeView> = Vec::new();
 
@@ -192,15 +373,18 @@ pub fn build_file_tree(root: &Path) -> Option<FileTreeView> {
             Ok(m) => m,
             Err(_) => continue,
         };
-        let kind = if metadata.is_dir() {
+        let is_dir = metadata.is_dir();
+        let kind = if is_dir {
             FileNodeKind::Directory
         } else {
             FileNodeKind::File
         };
 
-        // route_hint: for files, the URL path that would serve this
-        // file under the dyn-route fallback. The convention is the
-        // file stem prefixed with `/`. Directories get None.
+        // Apply filter
+        if !filter.keep(&name, is_dir) {
+            continue;
+        }
+
         let route_hint = if matches!(kind, FileNodeKind::File) {
             path.file_stem()
                 .map(|s| format!("/{}", s.to_string_lossy()))
@@ -222,8 +406,7 @@ pub fn build_file_tree(root: &Path) -> Option<FileTreeView> {
         });
     }
 
-    // Stable rendering: directories first, then files; alphabetical
-    // within each group.
+    // Stable rendering: directories first, then files; alphabetical within each group.
     nodes.sort_by(|a, b| match (&a.kind, &b.kind) {
         (FileNodeKind::Directory, FileNodeKind::File) => std::cmp::Ordering::Less,
         (FileNodeKind::File, FileNodeKind::Directory) => std::cmp::Ordering::Greater,
@@ -237,10 +420,14 @@ pub fn build_file_tree(root: &Path) -> Option<FileTreeView> {
 }
 
 /// Same shape as `build_file_tree`, but for ad-hoc subdirectory
-/// expansion — the embedder calls this when a GUI clicks to expand a
-/// previously-collapsed directory node.
+/// expansion. Applies [`FileTreeFilter::default()`].
 pub fn list_directory(path: &Path) -> Vec<FileNodeView> {
-    build_file_tree(path)
+    list_directory_with(path, &FileTreeFilter::default())
+}
+
+/// Subdirectory expansion with an explicit filter.
+pub fn list_directory_with(path: &Path, filter: &FileTreeFilter) -> Vec<FileNodeView> {
+    build_file_tree_with(path, filter)
         .map(|t| t.entries)
         .unwrap_or_default()
 }

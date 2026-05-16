@@ -25,6 +25,7 @@
 //! information a GUI shows in a "routes" panel, not the live runtime.
 
 use serde::Serialize;
+use serde_json;
 
 pub mod build;
 
@@ -108,37 +109,35 @@ impl RuleView {
 
 /// Structured representation of a rule's `when` clause (spec §5.3).
 ///
+/// # RFC 004 — Structured WhenView
+///
+/// The boolean `has_header_conditions` / `has_body_conditions` flags
+/// from 5.3.0 are replaced with typed `Vec` fields. The GUI can now
+/// render the full list of conditions in a rule list without a second
+/// query. Use `headers.is_empty()` / `body.is_empty()` wherever the
+/// old boolean flags were checked.
+///
 /// # Why each field is `Option`
 ///
 /// A rule with `when.request.url_path = "/api"` and no other clauses
 /// matches every request whose URL is `/api`, regardless of method or
 /// headers. Carrying explicit `None`s for unset fields keeps the
-/// distinction between "not constrained" and "constrained to empty"
-/// — the GUI renders the former as a blank field and the latter as
-/// "method = (none)".
+/// distinction between "not constrained" and "constrained to empty".
 #[derive(Clone, Debug, Default, Serialize)]
 #[non_exhaustive]
 pub struct WhenView {
-    /// URL-path predicate as written in the rule. Carries the matching
-    /// operator (`equals` / `starts_with` / `contains` / `wild_card`
-    /// / `pattern`).
+    /// URL-path predicate. `None` when the rule has no URL-path constraint.
     pub url_path: Option<UrlPathView>,
-    /// HTTP method — uppercase string like `"GET"` to match the
-    /// underlying `HttpMethod::as_str()` representation.
+    /// HTTP method — uppercase string like `"GET"`.
     pub method: Option<String>,
-    /// `true` iff the rule restricts on request headers. We don't
-    /// surface the actual header conditions yet (the routing crate's
-    /// `Headers` type isn't publicly inspectable at this stage); the
-    /// boolean tells the GUI whether to render a "headers constraint
-    /// present" badge.
-    pub has_header_conditions: bool,
-    /// `true` iff the rule restricts on request body JSON.
-    pub has_body_conditions: bool,
+    /// Structured header conditions (RFC 004). Empty when none.
+    pub headers: Vec<HeaderConditionView>,
+    /// Structured body conditions (RFC 004). Empty when none.
+    pub body: Vec<BodyConditionView>,
 }
 
 impl WhenView {
-    /// Compact human-readable summary built from the populated fields
-    /// in priority order (method → path → constraint badges).
+    /// Compact human-readable summary.
     pub fn summary(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
         if let Some(method) = self.method.as_deref() {
@@ -147,11 +146,11 @@ impl WhenView {
         if let Some(url) = self.url_path.as_ref() {
             parts.push(url.summary());
         }
-        if self.has_header_conditions {
-            parts.push("+headers".to_owned());
+        if !self.headers.is_empty() {
+            parts.push(format!("+headers({})", self.headers.len()));
         }
-        if self.has_body_conditions {
-            parts.push("+body".to_owned());
+        if !self.body.is_empty() {
+            parts.push(format!("+body({})", self.body.len()));
         }
         if parts.is_empty() {
             "(matches everything)".to_owned()
@@ -159,6 +158,33 @@ impl WhenView {
             parts.join(" ")
         }
     }
+}
+
+/// One header condition in a `WhenView`.
+#[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
+pub struct HeaderConditionView {
+    /// Header name as written in the rule (display-case preserved;
+    /// matching is case-insensitive).
+    pub name: String,
+    /// Operator in `snake_case` TOML form, e.g. `"equal"`, `"contains"`.
+    pub op: String,
+    /// Configured value. `None` when `op` is `"exists"` or `"absent"`.
+    pub value: Option<String>,
+}
+
+/// One body condition in a `WhenView`.
+#[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
+pub struct BodyConditionView {
+    /// Body kind — currently always `"json"`.
+    pub kind: String,
+    /// Dotted path into the JSON body.
+    pub path: String,
+    /// Operator in `snake_case` form.
+    pub op: String,
+    /// Configured value as a JSON value.
+    pub value: serde_json::Value,
 }
 
 /// URL-path predicate detail.

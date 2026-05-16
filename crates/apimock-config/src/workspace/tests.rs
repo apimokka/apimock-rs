@@ -164,6 +164,7 @@ fn apply_add_rule_to_existing_rule_set() {
                     text: Some("hi".to_owned()),
                     ..Default::default()
                 },
+                ..Default::default()
             },
         })
         .expect("apply AddRule");
@@ -886,6 +887,7 @@ fn save_preserves_headers_through_disk_round_trip() {
                 text: Some("ok".to_owned()),
                 ..Default::default()
             },
+            ..Default::default()
         },
     })
     .expect("apply UpdateRule");
@@ -931,6 +933,7 @@ fn save_preserves_body_through_disk_round_trip() {
                 text: Some("ok".to_owned()),
                 ..Default::default()
             },
+            ..Default::default()
         },
     })
     .expect("apply UpdateRule");
@@ -979,6 +982,7 @@ fn update_rule_does_not_strip_unspecified_headers_or_body() {
                 text: Some("changed".to_owned()),
                 ..Default::default()
             },
+            ..Default::default()
         },
     })
     .expect("apply");

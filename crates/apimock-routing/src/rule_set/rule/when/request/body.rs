@@ -1,17 +1,17 @@
 use serde::Deserialize;
-use serde_json::Value;
 
 use std::collections::HashMap;
 
 pub mod body_kind;
+pub mod body_operator;
 
 use super::util::fmt_condition_connector;
 use crate::{
     parsed_request::ParsedRequest,
-    rule_set::rule::{ConditionKey, when::condition_statement::ConditionStatement},
     util::json::json_value_by_jsonpath,
 };
 use body_kind::BodyKind;
+use body_operator::BodyOperator;
 
 /// Body match conditions, keyed by [`BodyKind`] (currently only
 /// [`BodyKind::Json`]) and then by a path identifying the value
@@ -28,9 +28,34 @@ use body_kind::BodyKind;
 ///
 /// See [`crate::util::json::json_value_by_jsonpath`] for the full
 /// contract.
+///
+/// # Extended operator set (RFC 008)
+///
+/// The `op` field in each condition statement accepts all
+/// [`BodyOperator`] variants, including numeric comparisons
+/// (`greater_than`, `less_than`, etc.), type-aware equality
+/// (`equal_typed`), presence checks (`exists`, `absent`), and array
+/// predicates (`array_length_equal`, `array_contains`, etc.).
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
-pub struct Body(pub HashMap<BodyKind, HashMap<ConditionKey, ConditionStatement>>);
+pub struct Body(pub HashMap<BodyKind, HashMap<String, BodyConditionStatement>>);
+
+/// Per-condition statement for body matching.
+///
+/// Uses [`BodyOperator`] instead of the shared [`ConditionStatement`]
+/// type so the richer body operator set doesn't bleed into header
+/// matching (which uses [`ConditionStatement`] + [`super::rule_op::RuleOp`]).
+#[derive(Clone, Debug, Deserialize)]
+pub struct BodyConditionStatement {
+    pub op: Option<BodyOperator>,
+    pub value: String,
+}
+
+impl std::fmt::Display for BodyConditionStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}`{}`", self.op.clone().unwrap_or_default(), self.value)
+    }
+}
 
 impl Body {
     /// check if `body` in `when` matches
@@ -46,30 +71,34 @@ impl Body {
             _ => return false,
         };
 
-        let ret = matcher_body_json_condition.iter().all(
+        matcher_body_json_condition.iter().all(
             |(matcher_json_condition_key, matcher_json_condition_statement)| {
-                let request_body_json_value =
-                    match json_value_by_jsonpath(request_body_json, matcher_json_condition_key) {
-                        Some(x) => match x {
-                            Value::String(s) => s.to_owned(),
-                            _ => x.to_string(),
-                        },
-                        None => return false,
-                    };
-
-                let ret = matcher_json_condition_statement
+                let op = matcher_json_condition_statement
                     .op
                     .clone()
-                    .unwrap_or_default()
-                    .is_match(
-                        request_body_json_value.as_str(),
-                        &matcher_json_condition_statement.value,
-                    );
-                ret
-            },
-        );
+                    .unwrap_or_default();
 
-        ret
+                // Presence operators are handled before path resolution:
+                // Absent means "path must NOT resolve".
+                if op == BodyOperator::Absent {
+                    return json_value_by_jsonpath(
+                        request_body_json,
+                        matcher_json_condition_key,
+                    )
+                    .is_none();
+                }
+
+                let resolved = match json_value_by_jsonpath(
+                    request_body_json,
+                    matcher_json_condition_key,
+                ) {
+                    Some(v) => v,
+                    None => return false,
+                };
+
+                op.is_match(resolved, &matcher_json_condition_statement.value)
+            },
+        )
     }
 
     /// validate

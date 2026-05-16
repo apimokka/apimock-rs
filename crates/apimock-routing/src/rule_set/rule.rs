@@ -20,6 +20,14 @@ type ConditionKey = String;
 pub struct Rule {
     pub when: When,
     pub respond: Respond,
+    /// Optional weight for `WeightedRandom` strategy (default: 1).
+    /// Ignored under other strategies.
+    #[serde(default)]
+    pub weight: Option<u32>,
+    /// Optional priority for `Priority` strategy. Higher values win.
+    /// Ignored under other strategies.
+    #[serde(default)]
+    pub priority: Option<i32>,
 }
 
 impl Rule {

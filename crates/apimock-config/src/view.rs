@@ -251,11 +251,131 @@ pub enum EditCommand {
 }
 
 /// Payload for `AddRule` / `UpdateRule`.
+///
+/// # Preservation of unspecified fields (5.5.0 guarantee)
+///
+/// Fields set to `None` are preserved from the existing rule when this
+/// is an `UpdateRule` call. The `headers` and `body` fields use
+/// `Option<Vec<_>>` to distinguish three states:
+/// - `None` — preserve existing conditions.
+/// - `Some(vec![])` — clear all conditions.
+/// - `Some(vec![…])` — replace with the given set.
+///
+/// # URL path operator (RFC 001)
+///
+/// `url_path_op` controls which operator the routing crate uses to
+/// match the given `url_path` value. When `url_path_op` is `None` and
+/// `url_path` is `Some(_)`, the operator defaults to `Equal` (5.7.0
+/// behaviour). When `url_path` is `None`, both fields are ignored.
+///
+/// # Header and body conditions (RFC 002)
+///
+/// `headers` and `body` are optional lists of conditions. Each `None`
+/// preserves the existing rule's conditions; each `Some(_)` replaces
+/// them wholesale (an empty `Vec` clears them).
 #[derive(Clone, Debug, Default)]
 pub struct RulePayload {
     pub url_path: Option<String>,
+    /// URL path match operator (RFC 001). `None` defaults to `Equal`.
+    pub url_path_op: Option<UrlPathOp>,
     pub method: Option<String>,
+    /// Header conditions (RFC 002). `None` = preserve; `Some([])` = clear.
+    pub headers: Option<Vec<HeaderConditionPayload>>,
+    /// Body conditions (RFC 002). `None` = preserve; `Some([])` = clear.
+    pub body: Option<Vec<BodyConditionPayload>>,
     pub respond: RespondPayload,
+}
+
+// ── RFC 001 — URL path operator ───────────────────────────────────────
+
+/// Operator for the URL path match in [`RulePayload`].
+///
+/// Mirrors the routing crate's internal operator set but lives in
+/// `apimock-config` to decouple the GUI-facing payload type from
+/// routing-internal types.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UrlPathOp {
+    Equal,
+    StartsWith,
+    Contains,
+    EndsWith,
+    /// Glob wildcard match.
+    WildCard,
+    /// Regular expression match.
+    NotEqual,
+}
+
+// ── RFC 002 — Header and body condition payloads ──────────────────────
+
+/// One header condition in a [`RulePayload`].
+#[derive(Clone, Debug)]
+pub struct HeaderConditionPayload {
+    /// Header name (case-insensitive at match time).
+    pub name: String,
+    pub op: HeaderOp,
+    /// Required for all operators except `Exists` / `Absent`.
+    pub value: Option<String>,
+}
+
+/// Operator for a header condition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HeaderOp {
+    Equal,
+    Contains,
+    StartsWith,
+    EndsWith,
+    Regex,
+    /// Header must be present (any value).
+    Exists,
+    /// Header must be absent.
+    Absent,
+    NotEqual,
+    WildCard,
+}
+
+/// One body condition in a [`RulePayload`].
+#[derive(Clone, Debug)]
+pub struct BodyConditionPayload {
+    /// Currently only `Json`.
+    pub kind: BodyConditionKind,
+    /// Dotted path into the JSON body (not canonical JSONPath).
+    pub path: String,
+    pub op: BodyOp,
+    /// Configured comparison value.
+    pub value: serde_json::Value,
+}
+
+/// Body condition kind — currently only JSON.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BodyConditionKind {
+    Json,
+}
+
+/// Operator for a body condition (RFC 002 / RFC 008 combined set).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BodyOp {
+    // string-style
+    Equal,
+    EqualString,
+    Contains,
+    StartsWith,
+    EndsWith,
+    Regex,
+    // type-aware
+    EqualTyped,
+    // numeric
+    EqualNumber,
+    GreaterThan,
+    LessThan,
+    GreaterOrEqual,
+    LessOrEqual,
+    // presence
+    Exists,
+    Absent,
+    // array
+    ArrayLengthEqual,
+    ArrayLengthAtLeast,
+    ArrayContains,
 }
 
 /// Payload for `UpdateRespond`.
@@ -273,13 +393,30 @@ pub struct RespondPayload {
 
 /// Enumerated root-level setting. Typed enum rather than free-form
 /// path so the apply-layer can exhaustively match without parsing.
+///
+/// # RFC 003 — TLS and Log variants
+///
+/// Seven new variants cover TLS configuration and log settings.
+/// Changes to TLS and listener fields require a full process restart
+/// (`HardRestart`); log-level and strategy changes only need a soft
+/// config reload (`SoftReload`).
 #[derive(Clone, Copy, Debug)]
 #[non_exhaustive]
 pub enum RootSettingKey {
+    // ── listener ──────────────────────────────────────────────────────
     ListenerIpAddress,
     ListenerPort,
+    // ── service ───────────────────────────────────────────────────────
     ServiceFallbackRespondDir,
     ServiceStrategy,
+    // ── TLS (RFC 003) ─────────────────────────────────────────────────
+    TlsEnabled,
+    TlsCertFile,
+    TlsKeyFile,
+    // ── log (RFC 003) ─────────────────────────────────────────────────
+    LogLevel,
+    LogFile,
+    LogFormat,
 }
 
 /// Value provided with an edit command.
@@ -383,9 +520,25 @@ pub enum Severity {
 
 /// Advisory indicating what, if anything, the server needs to do in
 /// response to a config change.
+///
+/// # RFC 003 — Reload semantics
+///
+/// | Key group                     | Hint           |
+/// |-------------------------------|----------------|
+/// | `ListenerIpAddress/Port`      | `HardRestart`  |
+/// | `TlsEnabled`, `TlsCert*`      | `HardRestart`  |
+/// | `LogFile`                     | `HardRestart`  |
+/// | `ServiceFallbackRespondDir`   | `SoftReload`   |
+/// | `ServiceStrategy`             | `SoftReload`   |
+/// | `LogLevel`, `LogFormat`       | `SoftReload`   |
+///
+/// The hint is advisory — the server does not auto-restart. The GUI
+/// surfaces it to the user.
 #[derive(Clone, Copy, Debug, Default, Serialize)]
 pub struct ReloadHint {
+    /// Server can re-read config without rebinding the listener.
     pub requires_reload: bool,
+    /// Process must restart (rebind socket, reload TLS, reopen log file).
     pub requires_restart: bool,
 }
 
@@ -394,6 +547,7 @@ impl ReloadHint {
         Self::default()
     }
 
+    /// Config can be hot-reloaded without a process restart.
     pub fn reload() -> Self {
         Self {
             requires_reload: true,
@@ -401,10 +555,21 @@ impl ReloadHint {
         }
     }
 
+    /// Process must fully restart for this change to take effect.
     pub fn restart() -> Self {
         Self {
             requires_reload: false,
             requires_restart: true,
+        }
+    }
+
+    /// Return the hint appropriate for the given [`RootSettingKey`].
+    pub fn for_key(key: RootSettingKey) -> Self {
+        use RootSettingKey::*;
+        match key {
+            ListenerIpAddress | ListenerPort | TlsEnabled | TlsCertFile | TlsKeyFile
+            | LogFile => Self::restart(),
+            ServiceFallbackRespondDir | ServiceStrategy | LogLevel | LogFormat => Self::reload(),
         }
     }
 }
