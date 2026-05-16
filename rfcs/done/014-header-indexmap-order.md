@@ -1,6 +1,6 @@
 # RFC 014 — Header order preservation via IndexMap
 
-**Status.** Proposed
+**Status.** Implemented (v5.10.0) — programmatic insertion order preserved; TOML deserialization order depends on the toml crate and is not guaranteed
 **Tracks.** RFC 004 follow-up — replacing the `HashMap` backing of
 `Headers` with `IndexMap` so header conditions are stored and
 displayed in TOML-insertion order, making `WhenView.headers`

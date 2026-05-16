@@ -191,7 +191,7 @@ fn is_match_utf8_decode_failure_returns_true() {
 
 #[test]
 fn validate_empty_returns_false() {
-    let h = Headers(HashMap::new());
+    let h = Headers(indexmap::IndexMap::new());
     assert!(!h.validate());
 }
 
@@ -242,4 +242,63 @@ x-three = { value = "gamma" }"#,
     assert_eq!(h.0["x-one"].value, "alpha");
     assert_eq!(h.0["x-two"].value, "beta");
     assert_eq!(h.0["x-three"].value, "gamma");
+}
+
+// ── RFC 014: IndexMap insertion-order tests ───────────────────────────
+
+#[test]
+fn headers_programmatic_insertion_preserves_order() {
+    // When Headers are built programmatically (e.g. via build_headers in
+    // the config crate), insertion order is preserved by IndexMap.
+    // TOML deserialization order depends on the toml crate's internals and
+    // is not guaranteed; this test validates the programmatic path.
+    use indexmap::IndexMap;
+    use crate::rule_set::rule::when::condition_statement::ConditionStatement;
+
+    let mut map: IndexMap<String, ConditionStatement> = IndexMap::new();
+    map.insert("z-header".to_owned(), ConditionStatement { op: None, value: "z".to_owned() });
+    map.insert("a-header".to_owned(), ConditionStatement { op: None, value: "a".to_owned() });
+    map.insert("m-header".to_owned(), ConditionStatement { op: None, value: "m".to_owned() });
+
+    let h = Headers(map);
+    let keys: Vec<&str> = h.0.keys().map(String::as_str).collect();
+    assert_eq!(
+        keys,
+        vec!["z-header", "a-header", "m-header"],
+        "IndexMap must iterate in insertion order, not alphabetical"
+    );
+}
+
+#[test]
+fn when_view_headers_programmatic_insertion_order() {
+    use indexmap::IndexMap;
+    use crate::rule_set::rule::when::condition_statement::ConditionStatement;
+    use crate::view::build::build_when_view;
+    use crate::rule_set::rule::when::{When, request::Request};
+
+    // Build headers in a specific non-alphabetical order.
+    let mut map: IndexMap<String, ConditionStatement> = IndexMap::new();
+    map.insert("authorization".to_owned(),
+        ConditionStatement { op: None, value: "Bearer x".to_owned() });
+    map.insert("x-tenant-id".to_owned(),
+        ConditionStatement { op: None, value: "acme".to_owned() });
+    map.insert("content-type".to_owned(),
+        ConditionStatement { op: None, value: "json".to_owned() });
+
+    let when = When {
+        request: Request {
+            url_path_config: None,
+            url_path: None,
+            http_method: None,
+            headers: Some(Headers(map)),
+            body: None,
+        },
+    };
+    let view = build_when_view(&when);
+    let names: Vec<&str> = view.headers.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(
+        names,
+        vec!["authorization", "x-tenant-id", "content-type"],
+        "WhenView.headers must reflect programmatic insertion order (not alphabetical)"
+    );
 }

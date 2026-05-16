@@ -161,15 +161,23 @@ impl WhenView {
 }
 
 /// One header condition in a `WhenView`.
+///
+/// # RFC 016 — per-condition identity
+///
+/// A `NodeId` is **not** stored in this routing-crate type; the
+/// routing crate doesn't depend on `apimock-config` or its `NodeId`
+/// type. Instead, the config crate's snapshot layer wraps each view
+/// in a `ConditionWithId` that pairs the routing view with a `NodeId`.
+/// GUI code that needs to issue granular edit commands should use
+/// those wrapped types via the snapshot API.
 #[derive(Clone, Debug, Serialize)]
 #[non_exhaustive]
 pub struct HeaderConditionView {
-    /// Header name as written in the rule (display-case preserved;
-    /// matching is case-insensitive).
+    /// Header name as stored (lower-cased at parse time).
     pub name: String,
     /// Operator in `snake_case` TOML form, e.g. `"equal"`, `"contains"`.
     pub op: String,
-    /// Configured value. `None` when `op` is `"exists"` or `"absent"`.
+    /// Configured value. `None` when the operator implies no value.
     pub value: Option<String>,
 }
 

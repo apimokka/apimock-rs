@@ -22,6 +22,7 @@
 
 pub mod app;
 pub mod args;
+pub mod cmd;
 mod logger;
 
 // Re-export the three member crates under shorter names so downstream

@@ -13,6 +13,7 @@
 use crate::error::{ApplyError, ConfigError};
 use crate::view::{BodyOp, EditValue, HeaderOp, UrlPathOp};
 use std::collections::HashMap;
+use indexmap::IndexMap;
 
 /// Build a `Rule` from a GUI-shaped payload.
 ///
@@ -132,8 +133,9 @@ fn build_headers(
     input: &[crate::view::HeaderConditionPayload],
 ) -> Result<apimock_routing::rule_set::rule::when::request::headers::Headers, ApplyError> {
     use apimock_routing::rule_set::rule::when::condition_statement::ConditionStatement;
+    use indexmap::IndexMap;
 
-    let mut map: HashMap<String, ConditionStatement> = HashMap::new();
+    let mut map: IndexMap<String, ConditionStatement> = IndexMap::new();
     for cond in input {
         let op = header_op_to_routing(cond.op);
         let value = cond.value.clone().unwrap_or_default();
@@ -163,7 +165,7 @@ fn build_body(
         body_kind::BodyKind,
     };
 
-    let mut json_map: HashMap<String, BodyConditionStatement> = HashMap::new();
+    let mut json_map: IndexMap<String, BodyConditionStatement> = IndexMap::new();
     for cond in input {
         let op = body_op_to_routing(cond.op);
         let value = value_to_string(&cond.value);
@@ -265,4 +267,22 @@ pub(super) fn internal_path_err(err: ConfigError) -> ApplyError {
     ApplyError::InvalidPayload {
         reason: format!("internal path resolution failed: {}", err),
     }
+}
+
+// ── RFC 016: public-to-module helpers ────────────────────────────────
+
+pub(super) fn header_op_to_routing_pub(
+    op: HeaderOp,
+) -> apimock_routing::rule_set::rule::when::request::rule_op::RuleOp {
+    header_op_to_routing(op)
+}
+
+pub(super) fn body_op_to_routing_pub(
+    op: BodyOp,
+) -> apimock_routing::rule_set::rule::when::request::body::body_operator::BodyOperator {
+    body_op_to_routing(op)
+}
+
+pub(super) fn json_value_to_string_pub(v: &serde_json::Value) -> String {
+    value_to_string(v)
 }

@@ -5,7 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [5.9.0] - 2026-05-16
+## [5.10.0] - 2026-05-16
+
+### Added (RFC 014–016 — medium-priority pass)
+
+- **RFC 014** — `Headers` backing store changed from `HashMap` to `IndexMap`.
+  Header conditions inserted programmatically now iterate in insertion order,
+  so `WhenView.headers` from `build_when_view` reflects the order in which
+  conditions were added (e.g. via `AddHeaderCondition`). The sort workaround
+  in `build_header_condition_views` is removed. `Body`'s inner condition map
+  also migrated to `IndexMap` for consistency.
+  **Note:** header conditions loaded directly from TOML iterate in the order
+  the `toml` crate produces them (typically alphabetical); only programmatic
+  insertion is guaranteed ordered. (`apimock-routing`, `apimock-config`)
+
+- **RFC 015** — `apimock match-test` CLI subcommand. Evaluates a rule-set file
+  against a synthetic request without starting the server. Flags: `--rule-set`,
+  `--rule` (1-based), `--path`, `--method`, `--header` (repeatable),
+  `--body` (inline JSON), `--body-file`, `--quiet`. Prints per-condition
+  pass/fail with actual values; exit codes 0 (match), 1 (no match), 2 (error).
+  Per-condition breakdown covers url_path, method, headers, and body.json
+  conditions including the full RFC 008/010 operator set. (`apimock`)
+
+- **RFC 016** — Per-condition `NodeId` addressability. `NodeAddress` gains
+  `HeaderCondition { rule_set, rule, header_name }` and
+  `BodyCondition { rule_set, rule, path }` variants. Six new `EditCommand`
+  variants: `AddHeaderCondition`, `UpdateHeaderCondition`,
+  `RemoveHeaderCondition`, `AddBodyCondition`, `UpdateBodyCondition`,
+  `RemoveBodyCondition`. GUI code can now add, update, or remove individual
+  header/body conditions without replacing the full condition list via
+  `UpdateRule`. `ConditionWithId<V>` wrapper type available for snapshot-level
+  consumers that need to pair a condition view with its `NodeId`.
+  (`apimock-config`)
+
+### Internal
+
+- `indexmap` added as a workspace dependency (v2, serde feature).
+- `hyper` and `serde_json` promoted from dev-dependencies to regular
+  dependencies in the `apimock` crate (required by the `cmd::match_test`
+  library module).
+- `NodeAddress` is no longer `Copy` (gained `String` fields). All
+  `id_index.rs` and `id_shift.rs` sites updated to use `.clone()` or
+  `.cloned()` as appropriate.
+
+### Documentation
+
+- `README.md` — removed the `## Workspace layout (5.0.0+)` block
+  (full duplicate of `docs/src/technical-reference/workspace.md`).
+- `docs/src/technical-reference/workspace.md` — removed stale
+  `5.1.0`/`5.2.0` phasing notes; updated `RulePayload` example to use
+  `..Default::default()`; added `ws.save()` to the code sample.
+
+### Test count
+
+| Crate | v5.9.0 | v5.10.0 | Delta |
+|---|---|---|---|
+| apimock (façade) | 10 | 10+7* | +7* |
+| apimock-config | 45 | 49 | +4 |
+| apimock-routing | 76 | 78 | +2 |
+| apimock-server | 5 | 5 | — |
+| **Total** | **136** | **142+7*** | **+6+7*** |
+
+\* apimock crate tests include rhai (large compile time); counted separately.
+
+
 
 ### Added (RFC 009–013 — quality and completeness pass)
 

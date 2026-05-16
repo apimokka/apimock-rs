@@ -56,23 +56,23 @@ impl Workspace {
         // field is >= removed_idx (both Rule and Respond and RuleSet),
         // and rebuild them.
         let mut to_migrate: Vec<(NodeId, NodeAddress)> = Vec::new();
-        for (&addr, &id) in self.ids.address_to_id.iter() {
+        for (addr, &id) in self.ids.address_to_id.iter() {
             match addr {
-                NodeAddress::RuleSet { rule_set } if rule_set >= removed_idx => {
-                    to_migrate.push((id, addr));
+                NodeAddress::RuleSet { rule_set } if *rule_set >= removed_idx => {
+                    to_migrate.push((id, addr.clone()));
                 }
-                NodeAddress::Rule { rule_set, .. } if rule_set >= removed_idx => {
-                    to_migrate.push((id, addr));
+                NodeAddress::Rule { rule_set, .. } if *rule_set >= removed_idx => {
+                    to_migrate.push((id, addr.clone()));
                 }
-                NodeAddress::Respond { rule_set, .. } if rule_set >= removed_idx => {
-                    to_migrate.push((id, addr));
+                NodeAddress::Respond { rule_set, .. } if *rule_set >= removed_idx => {
+                    to_migrate.push((id, addr.clone()));
                 }
                 _ => {}
             }
         }
 
         for (id, addr) in &to_migrate {
-            self.ids.address_to_id.remove(addr);
+            self.ids.address_to_id.remove(addr);  // addr already cloned in to_migrate
             self.ids.id_to_address.remove(id);
         }
 
@@ -108,7 +108,7 @@ impl Workspace {
                 }
                 other => other,
             };
-            self.ids.id_to_address.insert(id, new_addr);
+            self.ids.id_to_address.insert(id, new_addr.clone());
             self.ids.address_to_id.insert(new_addr, id);
         }
     }
@@ -117,24 +117,24 @@ impl Workspace {
     /// `removed_rule_idx`, shift IDs for later rules in the same set.
     pub(super) fn shift_rules_down(&mut self, rule_set_idx: usize, removed_rule_idx: usize) {
         let mut to_migrate: Vec<(NodeId, NodeAddress)> = Vec::new();
-        for (&addr, &id) in self.ids.address_to_id.iter() {
+        for (addr, &id) in self.ids.address_to_id.iter() {
             match addr {
                 NodeAddress::Rule { rule_set, rule }
-                    if rule_set == rule_set_idx && rule >= removed_rule_idx =>
+                    if *rule_set == rule_set_idx && *rule >= removed_rule_idx =>
                 {
-                    to_migrate.push((id, addr));
+                    to_migrate.push((id, addr.clone()));
                 }
                 NodeAddress::Respond { rule_set, rule }
-                    if rule_set == rule_set_idx && rule >= removed_rule_idx =>
+                    if *rule_set == rule_set_idx && *rule >= removed_rule_idx =>
                 {
-                    to_migrate.push((id, addr));
+                    to_migrate.push((id, addr.clone()));
                 }
                 _ => {}
             }
         }
 
         for (id, addr) in &to_migrate {
-            self.ids.address_to_id.remove(addr);
+            self.ids.address_to_id.remove(addr);  // addr already cloned in to_migrate
             self.ids.id_to_address.remove(id);
         }
 
@@ -160,7 +160,7 @@ impl Workspace {
                 }
                 other => other,
             };
-            self.ids.id_to_address.insert(id, new_addr);
+            self.ids.id_to_address.insert(id, new_addr.clone());
             self.ids.address_to_id.insert(new_addr, id);
         }
     }
@@ -220,7 +220,7 @@ impl Workspace {
                 rule: r,
             };
             let id = id_opt.unwrap_or_else(NodeId::new);
-            self.ids.id_to_address.insert(id, addr);
+            self.ids.id_to_address.insert(id, addr.clone());
             self.ids.address_to_id.insert(addr, id);
         }
         for (r, id_opt) in resp_ids.into_iter().enumerate() {
@@ -229,7 +229,7 @@ impl Workspace {
                 rule: r,
             };
             let id = id_opt.unwrap_or_else(NodeId::new);
-            self.ids.id_to_address.insert(id, addr);
+            self.ids.id_to_address.insert(id, addr.clone());
             self.ids.address_to_id.insert(addr, id);
         }
     }

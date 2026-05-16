@@ -36,6 +36,8 @@ log = { workspace = true }
 console = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
+hyper = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 # Pin rand to ^0.9 because tests use `Rng::random_range`; rand 0.10

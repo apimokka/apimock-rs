@@ -21,21 +21,17 @@ use crate::view::NodeId;
 
 /// Internal index mapping NodeId to an editable node's logical
 /// address.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum NodeAddress {
-    /// The root config (there is exactly one).
     Root,
-    /// A whole rule set, identified by its index in `service.rule_sets`.
     RuleSet { rule_set: usize },
-    /// A single rule inside a rule set.
     Rule { rule_set: usize, rule: usize },
-    /// The `respond` block of a rule.
     Respond { rule_set: usize, rule: usize },
-    /// A middleware file reference, by its index in
-    /// `service.middlewares_file_paths`.
     Middleware { middleware: usize },
-    /// The fallback respond dir. Singleton — there is one per workspace.
     FallbackRespondDir,
+    // RFC 016 — per-condition addresses
+    HeaderCondition { rule_set: usize, rule: usize, header_name: String },
+    BodyCondition   { rule_set: usize, rule: usize, path: String },
 }
 
 #[derive(Default)]
@@ -51,14 +47,14 @@ impl IdIndex {
             return id;
         }
         let id = NodeId::new();
-        self.id_to_address.insert(id, address);
+        self.id_to_address.insert(id, address.clone());
         self.address_to_id.insert(address, id);
         id
     }
 
     /// Lookup a NodeAddress by id.
     pub(super) fn lookup(&self, id: NodeId) -> Option<NodeAddress> {
-        self.id_to_address.get(&id).copied()
+        self.id_to_address.get(&id).cloned()
     }
 
     pub(super) fn id_for(&self, address: NodeAddress) -> Option<NodeId> {

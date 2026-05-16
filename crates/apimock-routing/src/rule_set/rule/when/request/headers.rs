@@ -2,16 +2,22 @@ use console::style;
 use hyper::{header::HeaderValue, HeaderMap};
 use serde::Deserialize;
 
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use super::util::fmt_condition_connector;
 use crate::rule_set::rule::{
     when::condition_statement::ConditionStatement, ConditionKey,
 };
 
+/// Header match conditions keyed by header name (lower-cased).
+///
+/// Uses [`IndexMap`] instead of `HashMap` to preserve the order in which
+/// conditions were written in the TOML rule file. This means
+/// [`crate::view::WhenView::headers`] arrives in authoring order rather
+/// than arbitrary hash order (RFC 014).
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
-pub struct Headers(pub HashMap<ConditionKey, ConditionStatement>);
+pub struct Headers(pub IndexMap<ConditionKey, ConditionStatement>);
 
 impl Headers {
     /// check if `headers` in `when` matches

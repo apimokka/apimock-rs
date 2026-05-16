@@ -1,6 +1,6 @@
 # RFC 015 — `apimock match-test` CLI subcommand
 
-**Status.** Proposed
+**Status.** Implemented (v5.10.0)
 **Tracks.** RFC 008 future possibility — a CLI dry-run tool that
 evaluates a body condition (or full rule `when` clause) against a
 JSON file without starting the server.

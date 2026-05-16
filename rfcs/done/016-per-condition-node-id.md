@@ -1,6 +1,6 @@
 # RFC 016 — Per-condition NodeId addressability
 
-**Status.** Proposed
+**Status.** Implemented (v5.10.0)
 **Tracks.** RFC 004 follow-up — giving individual header and body
 conditions stable `NodeId`s so a GUI can issue granular edit commands
 (`AddHeaderCondition`, `UpdateHeaderCondition`, `RemoveBodyCondition`)

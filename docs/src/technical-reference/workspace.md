@@ -13,9 +13,9 @@ Starting with 5.0.0, apimock is organised as a Cargo workspace:
 
 End users installing via `cargo install apimock` or `npx apimock` see no difference from 4.8.0. Library consumers migrating from 4.x paths can find the mapping in [CHANGELOG.md](https://github.com/apimokka/apimock-rs/blob/main/CHANGELOG.md).
 
-## GUI-facing Workspace API (5.1.0+)
+## GUI-facing Workspace API
 
-5.1.0 adds `apimock_config::Workspace` for tooling that wants to edit a configuration through structured commands instead of TOML text. A GUI typically holds a single `Workspace` value for one editing session, calls `snapshot()` to produce a render-ready view, and `apply(EditCommand)` to mutate. Every editable node carries a stable `NodeId` (a v4 UUID) that survives reorderings, so a selection set anchored on NodeIds remains valid across edits.
+`apimock_config::Workspace` provides structured editing of an apimock configuration without writing TOML text by hand. A GUI holds one `Workspace` per editing session, calls `snapshot()` to get a render-ready view, and `apply(EditCommand)` to mutate. Every editable node carries a stable `NodeId` (a v4 UUID) that survives reorderings.
 
 ```rust
 use apimock_config::{
@@ -43,12 +43,15 @@ let result = ws.apply(EditCommand::AddRule {
             text: Some("hello".into()),
             ..Default::default()
         },
+        ..Default::default()
     },
 })?;
 
+// Per-node diagnostics (validation errors, warnings).
 if !result.diagnostics.is_empty() {
-    // surface each per-node diagnostic in the GUI
+    // surface each diagnostic in the GUI
 }
-```
 
-Saving back to disk (`Workspace::save`) is reserved for 5.2.0; 5.1.0 covers Steps 1–3 of the GUI extension plan (snapshot + apply + validate).
+// Persist changes back to disk.
+ws.save()?;
+```

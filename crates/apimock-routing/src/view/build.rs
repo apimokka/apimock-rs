@@ -107,7 +107,8 @@ fn build_header_condition_views(
         Some(h) => h,
         None => return Vec::new(),
     };
-    let mut views: Vec<HeaderConditionView> = headers
+    // IndexMap preserves insertion (TOML authoring) order — no sort needed.
+    headers
         .0
         .iter()
         .map(|(name, stmt)| {
@@ -118,10 +119,7 @@ fn build_header_condition_views(
                 value: Some(stmt.value.clone()),
             }
         })
-        .collect();
-    // Stable order: alphabetical by header name.
-    views.sort_by(|a, b| a.name.cmp(&b.name));
-    views
+        .collect()
 }
 
 fn build_body_condition_views(

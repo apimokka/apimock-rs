@@ -248,9 +248,54 @@ pub enum EditCommand {
         key: RootSettingKey,
         value: EditValue,
     },
+
+    // ── Per-condition commands (RFC 016) ──────────────────────────────
+
+    /// Add a single header condition to an existing rule.
+    ///
+    /// `rule_id` must be the `NodeId` of the target rule.
+    AddHeaderCondition {
+        rule_id:   NodeId,
+        condition: HeaderConditionPayload,
+    },
+    /// Replace a header condition in-place, identified by its `NodeId`.
+    ///
+    /// The header name (`condition.name`) may differ from the original —
+    /// this counts as a rename, which reassigns the condition's `NodeId`.
+    UpdateHeaderCondition {
+        id:        NodeId,
+        condition: HeaderConditionPayload,
+    },
+    /// Remove a single header condition by its `NodeId`.
+    RemoveHeaderCondition {
+        id: NodeId,
+    },
+    /// Add a single body condition to an existing rule.
+    AddBodyCondition {
+        rule_id:   NodeId,
+        condition: BodyConditionPayload,
+    },
+    /// Replace a body condition in-place, identified by its `NodeId`.
+    UpdateBodyCondition {
+        id:        NodeId,
+        condition: BodyConditionPayload,
+    },
+    /// Remove a single body condition by its `NodeId`.
+    RemoveBodyCondition {
+        id: NodeId,
+    },
 }
 
-/// Payload for `AddRule` / `UpdateRule`.
+/// Stable identity for one condition, assigned at snapshot time.
+///
+/// Returned by [`Workspace::snapshot`] alongside each condition view so
+/// GUI code can target granular edit commands without reading index
+/// positions.
+#[derive(Clone, Debug)]
+pub struct ConditionWithId<V> {
+    pub id: NodeId,
+    pub view: V,
+}
 ///
 /// # Preservation of unspecified fields (5.5.0 guarantee)
 ///

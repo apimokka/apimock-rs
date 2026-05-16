@@ -21,6 +21,7 @@
 //! for the full contract. These tests use the supported form.
 
 use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use hyper::Request;
 use serde_json::{Value, json};
@@ -84,7 +85,7 @@ fn is_match_no_json_kind_returns_false() {
 fn is_match_empty_json_kind_returns_false() {
     // Json key exists but its inner map is empty.
     let mut outer = HashMap::new();
-    outer.insert(BodyKind::Json, HashMap::new());
+    outer.insert(BodyKind::Json, IndexMap::new());
     let body = Body(outer);
     let req = make_parsed_request(Some(json!({"x": "y"})));
     assert!(!body.is_match(&req));
@@ -183,7 +184,7 @@ fn validate_empty_outer_returns_false() {
 #[test]
 fn validate_empty_inner_returns_false() {
     let mut outer = HashMap::new();
-    outer.insert(BodyKind::Json, HashMap::new());
+    outer.insert(BodyKind::Json, IndexMap::new());
     let body = Body(outer);
     assert!(!body.validate());
 }

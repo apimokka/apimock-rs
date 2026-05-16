@@ -225,7 +225,6 @@ impl TraceTransport {
                     let count = active.fetch_add(1, Ordering::Relaxed) + 1;
                     if count > MAX_SUBSCRIBERS {
                         active.fetch_sub(1, Ordering::Relaxed);
-                        let emitter_clone = emitter.clone();
                         let active_clone = active.clone();
                         tokio::spawn(async move {
                             let (_, mut writer) = tokio::io::split(stream);

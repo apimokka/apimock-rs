@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 use std::collections::HashMap;
+use indexmap::IndexMap;
 
 pub mod body_kind;
 pub mod body_operator;
@@ -38,7 +39,7 @@ use body_operator::BodyOperator;
 /// predicates (`array_length_equal`, `array_contains`, etc.).
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
-pub struct Body(pub HashMap<BodyKind, HashMap<String, BodyConditionStatement>>);
+pub struct Body(pub HashMap<BodyKind, IndexMap<String, BodyConditionStatement>>);
 
 /// Per-condition statement for body matching.
 ///
