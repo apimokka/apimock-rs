@@ -49,7 +49,12 @@ impl EnvArgs {
         let raw: Vec<String> = env::args().collect();
         if raw.get(1).map(String::as_str) == Some("match-test") {
             crate::cmd::match_test::run(&raw[2..])?;
-            return Ok(None); // run() calls process::exit; this is unreachable
+            return Ok(None);
+        }
+
+        // `apimock validate …` — validate config without starting the server.
+        if raw.get(1).map(String::as_str) == Some("validate") {
+            std::process::exit(crate::cmd::validate::run(&raw[2..]));
         }
 
         let init_config = args_option_value(INIT_CONFIG_OPTION_NAMES.as_ref()).is_some();

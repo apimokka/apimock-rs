@@ -83,6 +83,11 @@ pub fn render_rule_set_toml(rule_set: &RuleSet) -> String {
         }
     }
 
+    // RFC 025: per-rule-set strategy override.
+    if let Some(strategy) = rule_set.strategy.as_ref() {
+        root.insert("strategy".to_owned(), Value::String(strategy.to_string()));
+    }
+
     if !rule_set.rules.is_empty() {
         let rules: Vec<Value> = rule_set
             .rules

@@ -284,6 +284,18 @@ pub enum EditCommand {
     RemoveBodyCondition {
         id: NodeId,
     },
+
+    // ── Per-rule-set settings (RFC 025) ──────────────────────────────
+
+    /// Override the strategy for a specific rule set.
+    ///
+    /// `strategy` is the `snake_case` strategy name (e.g. `"round_robin"`,
+    /// `"first_match"`). Pass `None` to remove the override and inherit
+    /// the service-level strategy.
+    UpdateRuleSetStrategy {
+        id:       NodeId,
+        strategy: Option<String>,
+    },
 }
 
 /// Stable identity for one condition, assigned at snapshot time.

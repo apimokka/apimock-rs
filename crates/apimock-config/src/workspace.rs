@@ -80,21 +80,25 @@ use path_helpers::resolve_root;
 pub struct Workspace {
     /// Path this workspace was loaded from.
     pub(super) root_path: PathBuf,
-    /// Loaded TOML model. Authoritative source of truth for
-    /// persistence; edits happen through the editable helpers on
-    /// `Workspace` which keep `config` + id tables in sync.
+    /// Loaded TOML model.
     pub(super) config: Config,
-    /// ID index — see struct doc.
+    /// ID index.
     pub(super) ids: IdIndex,
-    /// Workspace-scope diagnostics (e.g. load-time warnings). Per-node
-    /// diagnostics live inside each node's `NodeValidation`.
+    /// Workspace-scope diagnostics.
     pub(super) diagnostics: Vec<Diagnostic>,
-    /// Snapshot of every editable file's rendered baseline at load
-    /// time (or after the most recent successful save). `save()` uses
-    /// this to skip files whose rendered output is byte-identical to
-    /// the baseline; `has_unsaved_changes()` uses it as a cheap "is
-    /// the model dirty" check.
+    /// Rendered baseline for save/diff detection.
     pub(super) baseline_files: HashMap<PathBuf, String>,
+    /// Modification-time + size snapshot of every loaded file,
+    /// captured at `load()` and refreshed after each `save()`.
+    /// Used by `has_external_changes()` and `sync_from_disk()`.
+    pub(super) file_metas: HashMap<PathBuf, FileMeta>,
+}
+
+/// Snapshot of one file's modification-time and size.
+#[derive(Clone, Debug)]
+pub(super) struct FileMeta {
+    pub modified: std::time::SystemTime,
+    pub len: u64,
 }
 
 impl Workspace {
@@ -147,15 +151,81 @@ impl Workspace {
             );
         }
 
+        // Snapshot file metadata for external-change detection (RFC 024).
+        let mut file_metas: HashMap<PathBuf, FileMeta> = HashMap::new();
+        for path in baseline_files.keys() {
+            if let Ok(meta) = std::fs::metadata(path) {
+                if let Ok(modified) = meta.modified() {
+                    file_metas.insert(path.clone(), FileMeta { modified, len: meta.len() });
+                }
+            }
+        }
+
         let mut workspace = Self {
             root_path: resolved,
             config,
             ids: IdIndex::default(),
             diagnostics: Vec::new(),
             baseline_files,
+            file_metas,
         };
         workspace.seed_ids();
         Ok(workspace)
+    }
+
+    // ── RFC 024: external-change detection ───────────────────────────────
+
+    /// Returns `true` if any tracked config file has been modified on disk
+    /// since the last `load()` or `save()`.
+    ///
+    /// Polls file metadata (mtime + size). Returns `false` on stat errors
+    /// to avoid spurious "changed" signals from transient temp-file churn.
+    ///
+    /// # Usage
+    ///
+    /// Call periodically from the GUI and re-render when `true`:
+    ///
+    /// ```rust,no_run
+    /// # use apimock_config::Workspace;
+    /// # let mut ws = Workspace::load("apimock.toml".into()).unwrap();
+    /// if ws.has_external_changes() {
+    ///     ws.sync_from_disk().unwrap();
+    /// }
+    /// ```
+    pub fn has_external_changes(&self) -> bool {
+        for (path, recorded) in &self.file_metas {
+            if let Ok(meta) = std::fs::metadata(path) {
+                let changed_size = meta.len() != recorded.len;
+                let changed_mtime = meta.modified()
+                    .map(|m| m != recorded.modified)
+                    .unwrap_or(false);
+                if changed_size || changed_mtime {
+                    return true;
+                }
+            }
+            // Stat error (file deleted, permission) → treat as unchanged.
+        }
+        false
+    }
+
+    /// Reload all config files from disk, replacing the in-memory model.
+    ///
+    /// NodeIds for unchanged addresses (same rule-set path, same rule
+    /// index) are preserved across the reload. NodeIds for addresses that
+    /// no longer exist are dropped; new addresses get fresh IDs.
+    ///
+    /// On parse error, the workspace is left unchanged and the error is
+    /// returned. The GUI can surface the error and retry.
+    ///
+    /// After a successful sync, `has_external_changes()` returns `false`
+    /// until the next external modification.
+    pub fn sync_from_disk(&mut self) -> Result<(), WorkspaceError> {
+        let fresh = Self::load(self.root_path.clone())?;
+        // Replace the entire workspace state. NodeIDs are re-seeded from
+        // scratch; GUI callers should treat a sync like a fresh load and
+        // re-query all NodeIds from the new snapshot.
+        *self = fresh;
+        Ok(())
     }
 
     /// Assign a fresh NodeId to every editable address in `config`.

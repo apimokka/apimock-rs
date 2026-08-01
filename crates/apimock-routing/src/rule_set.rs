@@ -41,6 +41,11 @@ pub struct RuleSet {
     pub default: Option<DefaultRespond>,
     pub guard: Option<Guard>,
     pub rules: Vec<Rule>,
+    /// Per-rule-set strategy override (RFC 025).
+    /// When `Some`, this strategy is used instead of the service-level one.
+    /// When `None`, the service-level strategy applies.
+    #[serde(default)]
+    pub strategy: Option<Strategy>,
     #[serde(skip)]
     pub file_path: String,
     /// Per-rule-set round-robin counter. Shared across clones via `Arc`.
@@ -151,7 +156,10 @@ impl RuleSet {
             _ => (),
         };
 
-        let strategy = strategy.unwrap_or(&Strategy::FirstMatch);
+        // RFC 025: per-rule-set strategy override.
+        // The rule set's own strategy takes precedence over the service-level one.
+        let effective_strategy = self.strategy.as_ref().or(strategy).unwrap_or(&Strategy::FirstMatch);
+        let strategy = effective_strategy;
 
         match strategy {
             Strategy::FirstMatch => {
@@ -366,6 +374,7 @@ mod tests {
             default: None,
             guard: None,
             rules,
+            strategy: None,
             file_path: String::new(),
             round_robin_counter: Arc::new(AtomicUsize::new(0)),
         }

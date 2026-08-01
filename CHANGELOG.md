@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.13.0] - 2026-05-22
+
+### Added
+
+- **RFC 024 — Workspace external-change detection.** `Workspace` gains
+  `has_external_changes() -> bool` (polls mtime + size of every tracked
+  config file) and `sync_from_disk() -> Result<(), WorkspaceError>`
+  (reloads the workspace in-place). `Workspace` now stores a
+  `file_metas: HashMap<PathBuf, FileMeta>` field, populated at `load()`
+  and refreshed after each `save()`, so `has_external_changes()` returns
+  `false` immediately after a save. (`apimock-config`)
+
+- **RFC 025 — Per-rule-set strategy override.** `RuleSet` gains an
+  optional `strategy: Option<Strategy>` field (TOML-deserialisable).
+  `find_matched` uses the per-rule-set strategy first, falling back to
+  the service-level strategy. `RuleSetView` exposes the override as
+  `strategy: Option<String>`. New `EditCommand::UpdateRuleSetStrategy {
+  id, strategy }` sets or clears the override; unknown strategy names
+  return `ApplyError::InvalidPayload`. `toml_writer` emits the field
+  when set. (`apimock-routing`, `apimock-config`)
+
+- **RFC 026 — `apimock validate` CLI subcommand.** `apimock validate
+  --config <apimock.toml>` loads the workspace, runs validation, prints
+  diagnostics, and exits 0 (pass), 1 (errors / `--strict` warnings), or
+  2 (load failure). Flags: `--strict`, `--quiet`, `--json`. Dispatch
+  wired in `args.rs` alongside `match-test`. (`apimock`)
+
+### Test count
+
+| Crate | v5.12.0 | v5.13.0 | Delta |
+|---|---|---|---|
+| apimock (façade) | 18 | 22 | +4 (validate CLI) |
+| apimock-config | 49 | 56 | +7 (RFC 024/025) |
+| apimock-routing | 111 | 111 | — |
+| apimock-server | 14 | 14 | — |
+| **Total** | **192** | **203** | **+11** |
+
+
+
 ## [5.12.0] - 2026-05-22
 
 ### Added

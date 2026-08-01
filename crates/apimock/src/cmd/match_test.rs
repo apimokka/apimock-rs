@@ -338,7 +338,7 @@ fn tick(ok: bool) -> &'static str {
 
 // ── CLI parsing helpers ───────────────────────────────────────────────
 
-fn flag_value(args: &[String], names: &[&str]) -> Option<String> {
+pub(super) fn flag_value(args: &[String], names: &[&str]) -> Option<String> {
     let idx = args.iter().position(|a| names.iter().any(|n| a == n))?;
     args.get(idx + 1).filter(|v| !v.starts_with('-')).cloned()
 }

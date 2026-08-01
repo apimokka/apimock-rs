@@ -73,6 +73,7 @@ pub fn build_rule_set_view(rule_set: &RuleSet, index: usize) -> RuleSetView {
         source_path: rule_set.file_path.clone(),
         url_path_prefix: url_prefix,
         respond_dir_prefix: dir_prefix,
+        strategy: rule_set.strategy.as_ref().map(|s| s.to_string()),
         rules: rule_set
             .rules
             .iter()

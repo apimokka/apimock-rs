@@ -100,6 +100,18 @@ impl Workspace {
         for (path, text) in to_write.into_iter() {
             self.baseline_files.insert(path, text);
         }
+        // Refresh mtime snapshots so has_external_changes() doesn't
+        // immediately fire for files we just wrote (RFC 024).
+        for path in self.baseline_files.keys() {
+            if let Ok(meta) = std::fs::metadata(path) {
+                if let Ok(modified) = meta.modified() {
+                    self.file_metas.insert(
+                        path.clone(),
+                        crate::workspace::FileMeta { modified, len: meta.len() },
+                    );
+                }
+            }
+        }
 
         // --- Reload hint --------------------------------------------
         // If the root file (which holds [listener]) was rewritten we

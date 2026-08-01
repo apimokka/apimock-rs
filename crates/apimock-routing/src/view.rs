@@ -70,16 +70,14 @@ impl RouteCatalogSnapshot {
 #[derive(Clone, Debug, Serialize)]
 #[non_exhaustive]
 pub struct RuleSetView {
-    /// Index within the parent [`RouteCatalogSnapshot::rule_sets`] list.
-    /// Identifies the rule set across edit commands.
     pub index: usize,
-    /// Source file this rule set was loaded from (relative to the project).
     pub source_path: String,
-    /// Optional URL path prefix shared across every rule in this set.
     pub url_path_prefix: Option<String>,
-    /// Optional respond-dir prefix shared across every rule in this set.
     pub respond_dir_prefix: Option<String>,
-    /// The rules, in evaluation order.
+    /// Per-rule-set strategy override (RFC 025). `None` means "inherit
+    /// from service level". The string is the `snake_case` name
+    /// (e.g. `"round_robin"`, `"first_match"`).
+    pub strategy: Option<String>,
     pub rules: Vec<RuleView>,
 }
 

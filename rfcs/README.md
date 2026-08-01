@@ -1,22 +1,20 @@
 # apimock-rs RFCs
 
-This directory holds the project's Request-For-Comments documents.
-Lifecycle and folder conventions are defined in
-[RFC 000](./done/000-rfc-lifecycle-policy.md).
+Lifecycle and folder conventions: [RFC 000](./done/000-rfc-lifecycle-policy.md).
 
 ## Layout
 
 ```
 rfcs/
-  README.md           ← this file
-  proposed/           ← open for review
-  done/               ← implemented; historical record
-  archive/            ← withdrawn or superseded
+  README.md       ← this file
+  proposed/       ← open for review
+  done/           ← implemented; historical record
+  archive/        ← withdrawn or superseded
 ```
 
 ## Proposed
 
-*(none — all v5.12.0 RFCs implemented)*
+*(none — all v5.13.0 RFCs implemented)*
 
 ## Done (Implemented)
 
@@ -45,6 +43,9 @@ rfcs/
 | 021 | [Negated value operators](./done/021-negated-value-operators.md) | v5.12.0 |
 | 022 | [MapHasKey / MapDoesNotHaveKey body operators](./done/022-map-has-key-body-operator.md) | v5.12.0 |
 | 023 | [Body capture in trace events](./done/023-trace-body-capture.md) | v5.12.0 |
+| 024 | [Workspace external-change detection](./done/024-workspace-external-change-detection.md) | v5.13.0 |
+| 025 | [Per-rule-set strategy override](./done/025-per-rule-set-strategy.md) | v5.13.0 |
+| 026 | [`apimock validate` CLI subcommand](./done/026-validate-cli-subcommand.md) | v5.13.0 |
 
 ## Archive
 
@@ -56,7 +57,7 @@ rfcs/
 
 ## Adding a new RFC
 
-1. Pick next free number (024+). Create `rfcs/proposed/NNN-slug.md`.
-2. On shipping, move to `done/`, update Status, update this index.
+1. Pick next free number (027+). Create `rfcs/proposed/NNN-slug.md`.
+2. On shipping, move to `done/`, update Status field, update this index.
 
 See [RFC 000](./done/000-rfc-lifecycle-policy.md) for the full policy.

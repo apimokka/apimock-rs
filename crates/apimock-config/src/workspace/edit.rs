@@ -115,6 +115,10 @@ impl Workspace {
                 let ids = self.cmd_remove_body_condition(id)?;
                 (ids, true)
             }
+            EditCommand::UpdateRuleSetStrategy { id, strategy } => {
+                let ids = self.cmd_update_rule_set_strategy(id, strategy)?;
+                (ids, true) // SoftReload — strategy change takes effect at next match
+            }
         };
 
         // After any mutation, refresh per-node validation so the
@@ -913,5 +917,50 @@ impl Workspace {
             Some(NodeAddress::Rule { rule_set, rule }) => Ok((rule_set, rule)),
             _ => Err(ApplyError::UnknownNode { id: rule_id }),
         }
+    }
+
+    // ── RFC 025: per-rule-set strategy ───────────────────────────────────
+
+    fn cmd_update_rule_set_strategy(
+        &mut self,
+        id: crate::view::NodeId,
+        strategy_name: Option<String>,
+    ) -> Result<Vec<crate::view::NodeId>, ApplyError> {
+        use apimock_routing::strategy::{PriorityTiebreaker, Strategy};
+
+        let rs_idx = match self.ids.lookup(id) {
+            Some(NodeAddress::RuleSet { rule_set }) => rule_set,
+            _ => return Err(ApplyError::UnknownNode { id }),
+        };
+
+        let strategy = match strategy_name.as_deref() {
+            None | Some("") => None,
+            Some(s) => {
+                let parsed = match s {
+                    "first_match"      => Strategy::FirstMatch,
+                    "uniform_random"   => Strategy::UniformRandom { seed: None },
+                    "weighted_random"  => Strategy::WeightedRandom { seed: None },
+                    "priority"         => Strategy::Priority { tiebreaker: PriorityTiebreaker::FirstMatch },
+                    "round_robin"      => Strategy::RoundRobin,
+                    _ => return Err(ApplyError::InvalidPayload {
+                        reason: format!(
+                            "unknown strategy {:?}; expected one of: \
+                             first_match, uniform_random, weighted_random, \
+                             priority, round_robin",
+                            s
+                        ),
+                    }),
+                };
+                Some(parsed)
+            }
+        };
+
+        self.config.service.rule_sets[rs_idx].strategy = strategy;
+
+        let rs_id = self
+            .ids
+            .id_for(NodeAddress::RuleSet { rule_set: rs_idx })
+            .unwrap_or(id);
+        Ok(vec![rs_id])
     }
 }
