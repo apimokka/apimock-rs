@@ -1,39 +1,37 @@
 [package]
-name = "apimock-config"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-rust-version.workspace = true
-
+name        = "apimock-config"
 description = "Configuration model for apimock: loading, validation, editing, saving."
+version.workspace       = true
+edition.workspace       = true
+rust-version.workspace  = true
+license.workspace       = true
+authors.workspace       = true
+categories.workspace    = true
+keywords.workspace      = true
+repository.workspace    = true
 
 [dependencies]
 # Rule-set parsing is delegated to the routing crate because the rule model
 # lives there — the config crate only orchestrates loading.
-apimock-routing = { path = "../apimock-routing", version = "5.10.1" }
-indexmap = { workspace = true }
+apimock-routing             = { workspace = true }
 
-log = { workspace = true }
-console = { workspace = true }
-serde = { workspace = true }
+indexmap                    = { workspace = true }
+
+log                         = { workspace = true }
+console                     = { workspace = true }
+serde                       = { workspace = true }
 # `serde_json` is used by `view::Serialize` derive paths on `EditValue`
 # variants carrying JSON-ish data, and by `Workspace::snapshot` when
 # rendering TOML values as `display_value` strings. Pulled from the
 # workspace pin so versions don't drift.
-serde_json = { workspace = true }
-toml = { workspace = true }
-thiserror = { workspace = true }
-# `uuid` powers the stage-2 `NodeId`. Every editable node in a
-# `Workspace` snapshot gets a v4 UUID so a GUI can track the node
-# across moves / renames without relying on positional indices.
-# `serde` feature so IDs serialise cleanly into `WorkspaceSnapshot`.
-uuid = { version = "1", features = ["v4", "serde"] }
+serde_json                  = { workspace = true }
+toml                        = { workspace = true }
+thiserror                   = { workspace = true }
+uuid                        = { workspace = true }
 # `tempfile` provides `NamedTempFile::persist` for atomic file
 # replacement during `Workspace::save`. Same crate the dev-deps already
 # use; promoted to a runtime dep here because save() is a runtime API.
-tempfile = "3"
+tempfile                    = { workspace = true }
 
 [dev-dependencies]
-tempfile = "3"
+tempfile                    = { workspace = true }

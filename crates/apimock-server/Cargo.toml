@@ -1,30 +1,31 @@
 [package]
-name = "apimock-server"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-rust-version.workspace = true
-
+name        = "apimock-server"
 description = "HTTP(S) server runtime for apimock: listener loop, request handling, response building."
+version.workspace       = true
+edition.workspace       = true
+rust-version.workspace  = true
+license.workspace       = true
+authors.workspace       = true
+categories.workspace    = true
+keywords.workspace      = true
+repository.workspace    = true
 
 [dependencies]
-apimock-config = { path = "../apimock-config", version = "5.10.1" }
-apimock-routing = { path = "../apimock-routing", version = "5.10.1" }
+apimock-config              = { workspace = true }
+apimock-routing             = { workspace = true }
 
-tokio = { workspace = true }
-hyper = { workspace = true }
-hyper-util = { workspace = true }
-http-body-util = { workspace = true }
-rustls = { workspace = true }
-tokio-rustls = { workspace = true }
+tokio                       = { workspace = true }
+hyper                       = { workspace = true }
+hyper-util                  = { workspace = true }
+http-body-util              = { workspace = true }
+rustls                      = { workspace = true }
+tokio-rustls                = { workspace = true }
 
-log = { workspace = true }
-console = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-json5 = { workspace = true }
-csv = { workspace = true }
-rhai = { workspace = true }
-thiserror = { workspace = true }
+log                         = { workspace = true }
+console                     = { workspace = true }
+serde                       = { workspace = true }
+serde_json                  = { workspace = true }
+json5                       = { workspace = true }
+csv                         = { workspace = true }
+rhai                        = { workspace = true }
+thiserror                   = { workspace = true }

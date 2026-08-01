@@ -1,23 +1,24 @@
 [package]
-name = "apimock-routing"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-rust-version.workspace = true
-
+name        = "apimock-routing"
 description = "Routing model for apimock: rule sets, request matching, and read-only views for GUI tooling."
+version.workspace       = true
+edition.workspace       = true
+rust-version.workspace  = true
+license.workspace       = true
+authors.workspace       = true
+categories.workspace    = true
+keywords.workspace      = true
+repository.workspace    = true
 
 [dependencies]
-hyper = { workspace = true }
-indexmap = { workspace = true }
-regex = { workspace = true }
-globset = { workspace = true }
-ignore = { workspace = true }
-log = { workspace = true }
-console = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-toml = { workspace = true }
-thiserror = { workspace = true }
+hyper                       = { workspace = true }
+indexmap                    = { workspace = true }
+regex                       = { workspace = true }
+globset                     = { workspace = true }
+ignore                      = { workspace = true }
+log                         = { workspace = true }
+console                     = { workspace = true }
+serde                       = { workspace = true }
+serde_json                  = { workspace = true }
+toml                        = { workspace = true }
+thiserror                   = { workspace = true }
