@@ -87,10 +87,10 @@ pub struct RuleSetView {
 pub struct RuleView {
     /// Zero-based index within the parent rule set.
     pub index: usize,
-    /// Structured match conditions. Spec §5.3 — URL / method /
-    /// headers / JSON conditions. Each field is `Option`-typed so a
-    /// rule that only matches on URL doesn't carry stub values in the
-    /// other slots.
+    /// Priority for the `Priority` strategy. `None` is treated as 0.
+    /// Higher values win when multiple rules match.
+    pub priority: Option<i32>,
+    /// Structured match conditions.
     pub when: WhenView,
     /// The declarative response shape.
     pub respond: RespondView,

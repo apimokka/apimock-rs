@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.14.0] - 2026-05-22
+
+### Added
+
+- **RFC 027 — Rule priority field in view, payload, and TOML writer.**
+  `Rule.priority: Option<i32>` already existed in the routing crate
+  and was used by the `Priority` strategy, but it was invisible to the
+  GUI: not in `RuleView`, `RulePayload`, or `toml_writer`. This RFC
+  surfaces it across the full stack — `RuleView.priority`, `RulePayload.priority`,
+  `build_rule_from_payload` wiring, and `rule_table()` emitting
+  `priority = <n>` when set. Save/load round-trip now preserves
+  per-rule priorities. (`apimock-routing`, `apimock-config`)
+
+- **RFC 028 — `StructuralContains` body operator.** Checks whether the
+  value at the configured path is an array containing at least one
+  element that is a structural *superset* of the configured JSON object
+  (i.e. every key in the needle is present in the element with an equal
+  value; the element may have additional keys). Recursive for nested
+  objects. For non-object needles falls back to strict equality, making
+  it a generalisation of `ArrayContains`. Added to `BodyOperator`,
+  `BodyOp`, `body_op_name`, and payload converter. (`apimock-routing`,
+  `apimock-config`)
+
+- **RFC 029 — Per-condition diff granularity.** `DiffKind` gains four
+  new variants: `HeaderConditionAdded`, `HeaderConditionRemoved`,
+  `BodyConditionAdded`, `BodyConditionRemoved`. `compute_diff_summary`
+  now calls `append_condition_diff` for each changed rule, emitting
+  fine-grained items alongside the existing `RuleUpdated` item.
+  Condition-level `DiffItem`s carry the condition's `NodeId` (from
+  RFC 016) so the GUI can highlight exactly which condition was added
+  or removed. (`apimock-config`)
+
+### Fixed
+
+- `body_op_name` in `view/build.rs` was missing `StructuralContains`
+  (caught immediately by the exhaustive match added in this release).
+
+### Test count
+
+| Crate | v5.13.0 | v5.14.0 | Delta |
+|---|---|---|---|
+| apimock (façade) | 22 | 22 | — |
+| apimock-config | 56 | 60 | +4 (RFC 027/029) |
+| apimock-routing | 111 | 116 | +5 (RFC 028) |
+| apimock-server | 14 | 14 | — |
+| **Total** | **203** | **212** | **+9** |
+
+
+
 ## [5.13.0] - 2026-05-22
 
 ### Added

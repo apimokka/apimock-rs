@@ -337,3 +337,50 @@ fn map_does_not_have_key_no_match_when_not_object() {
     let req = make_parsed_request(Some(json!({"config": [1, 2, 3]})));
     assert!(!body.is_match(&req));
 }
+
+// ── RFC 028: StructuralContains ───────────────────────────────────────
+
+#[test]
+fn structural_contains_matches_superset_element() {
+    let body = parse_body(r#"json."items" = { op = "structural_contains", value = "{\"type\":\"admin\"}" }"#);
+    let req = make_parsed_request(Some(json!({
+        "items": [{"type":"user","id":1},{"type":"admin","id":2,"extra":"data"}]
+    })));
+    assert!(body.is_match(&req), "array contains an element that is a superset of needle");
+}
+
+#[test]
+fn structural_contains_no_match_when_no_superset() {
+    let body = parse_body(r#"json."items" = { op = "structural_contains", value = "{\"type\":\"admin\"}" }"#);
+    let req = make_parsed_request(Some(json!({
+        "items": [{"type":"user","id":1},{"type":"viewer","id":2}]
+    })));
+    assert!(!body.is_match(&req), "no element is a superset of needle");
+}
+
+#[test]
+fn structural_contains_nested_object_match() {
+    let body = parse_body(r#"json."users" = { op = "structural_contains", value = "{\"role\":{\"level\":3}}" }"#);
+    let req = make_parsed_request(Some(json!({
+        "users": [
+            {"name":"alice","role":{"level":1}},
+            {"name":"bob","role":{"level":3,"dept":"eng"}}
+        ]
+    })));
+    assert!(body.is_match(&req), "nested object subset match");
+}
+
+#[test]
+fn structural_contains_scalar_needle_falls_back_to_equality() {
+    // Non-object needle behaves like ArrayContains.
+    let body = parse_body(r#"json."tags" = { op = "structural_contains", value = "\"admin\"" }"#);
+    assert!( body.is_match(&make_parsed_request(Some(json!({"tags":["user","admin"]})))));
+    assert!(!body.is_match(&make_parsed_request(Some(json!({"tags":["user","viewer"]})))));
+}
+
+#[test]
+fn structural_contains_no_match_when_not_array() {
+    let body = parse_body(r#"json."items" = { op = "structural_contains", value = "{}" }"#);
+    let req = make_parsed_request(Some(json!({"items":"not_an_array"})));
+    assert!(!body.is_match(&req));
+}

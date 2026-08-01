@@ -46,6 +46,9 @@ rfcs/
 | 024 | [Workspace external-change detection](./done/024-workspace-external-change-detection.md) | v5.13.0 |
 | 025 | [Per-rule-set strategy override](./done/025-per-rule-set-strategy.md) | v5.13.0 |
 | 026 | [`apimock validate` CLI subcommand](./done/026-validate-cli-subcommand.md) | v5.13.0 |
+| 027 | [Rule priority field](./done/027-rule-priority-field.md) | v5.14.0 |
+| 028 | [StructuralContains body operator](./done/028-structural-contains.md) | v5.14.0 |
+| 029 | [Per-condition diff granularity](./done/029-diff-granularity.md) | v5.14.0 |
 
 ## Archive
 
@@ -61,3 +64,6 @@ rfcs/
 2. On shipping, move to `done/`, update Status field, update this index.
 
 See [RFC 000](./done/000-rfc-lifecycle-policy.md) for the full policy.
+| 027 | [Rule priority field](./done/027-rule-priority-field.md) | v5.14.0 |
+| 028 | [StructuralContains body operator](./done/028-structural-contains.md) | v5.14.0 |
+| 029 | [Per-condition diff granularity](./done/029-diff-granularity.md) | v5.14.0 |

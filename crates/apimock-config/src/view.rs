@@ -336,6 +336,8 @@ pub struct RulePayload {
     /// URL path match operator (RFC 001). `None` defaults to `Equal`.
     pub url_path_op: Option<UrlPathOp>,
     pub method: Option<String>,
+    /// Priority for the `Priority` strategy (RFC 027). `None` = 0.
+    pub priority: Option<i32>,
     /// Header conditions (RFC 002). `None` = preserve; `Some([])` = clear.
     pub headers: Option<Vec<HeaderConditionPayload>>,
     /// Body conditions (RFC 002). `None` = preserve; `Some([])` = clear.
@@ -453,6 +455,8 @@ pub enum BodyOp {
     // map/object (RFC 022)
     MapHasKey,
     MapDoesNotHaveKey,
+    // structural (RFC 028)
+    StructuralContains,
 }
 
 /// Payload for `UpdateRespond`.
@@ -566,6 +570,14 @@ pub enum DiffKind {
     Added,
     Updated,
     Removed,
+    /// A header condition was added to an existing rule (RFC 029).
+    HeaderConditionAdded,
+    /// A header condition was removed from an existing rule (RFC 029).
+    HeaderConditionRemoved,
+    /// A body condition was added to an existing rule (RFC 029).
+    BodyConditionAdded,
+    /// A body condition was removed from an existing rule (RFC 029).
+    BodyConditionRemoved,
 }
 
 /// Workspace-wide validation result. Mirrors spec §4.6.

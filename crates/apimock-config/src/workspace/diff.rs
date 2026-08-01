@@ -159,22 +159,23 @@ impl Workspace {
             if cur_rendered == base_rendered {
                 continue;
             }
-            let target = self
+            let rule_id = self
                 .ids
-                .id_for(NodeAddress::Rule {
-                    rule_set: rs_idx,
-                    rule: rule_idx,
-                })
+                .id_for(NodeAddress::Rule { rule_set: rs_idx, rule: rule_idx })
                 .unwrap_or_else(NodeId::new);
             out.push(DiffItem {
                 kind: DiffKind::Updated,
-                target,
-                summary: format!(
-                    "rule #{} in rule set #{}",
-                    rule_idx + 1,
-                    rs_idx + 1
-                ),
+                target: rule_id,
+                summary: format!("rule #{} in rule set #{}", rule_idx + 1, rs_idx + 1),
             });
+
+            // RFC 029: per-condition items within the changed rule.
+            self.append_condition_diff(
+                rs_idx, rule_idx,
+                &rule_set.rules[rule_idx],
+                &baseline_rules[rule_idx],
+                out,
+            );
         }
 
         // Rules added in the current model that weren't in baseline.
@@ -210,6 +211,94 @@ impl Workspace {
                     rule_idx + 1,
                     rs_idx + 1
                 ),
+            });
+        }
+    }
+    /// Emit per-condition diff items for a single rule that is known to
+    /// have changed. Called from `append_per_rule_diff` for overlapping
+    /// rules only (added/removed rules don't need condition-level detail).
+    fn append_condition_diff(
+        &self,
+        rs_idx: usize,
+        rule_idx: usize,
+        cur_rule: &apimock_routing::Rule,
+        baseline_rule: &toml::Value,
+        out: &mut Vec<crate::view::DiffItem>,
+    ) {
+        use crate::view::{DiffItem, DiffKind};
+
+        // ── Header conditions ─────────────────────────────────────────
+
+        // Collect current header keys.
+        let cur_header_keys: std::collections::HashSet<&str> = cur_rule
+            .when.request.headers.as_ref()
+            .map(|h| h.0.keys().map(String::as_str).collect())
+            .unwrap_or_default();
+
+        // Collect baseline header keys from the TOML value.
+        let base_header_keys: std::collections::HashSet<&str> = baseline_rule
+            .get("when")
+            .and_then(|w| w.get("request"))
+            .and_then(|r| r.get("headers"))
+            .and_then(|h| h.as_table())
+            .map(|t| t.keys().map(String::as_str).collect())
+            .unwrap_or_default();
+
+        for key in cur_header_keys.difference(&base_header_keys) {
+            let id = self.ids
+                .id_for(NodeAddress::HeaderCondition {
+                    rule_set: rs_idx, rule: rule_idx, header_name: key.to_string(),
+                })
+                .unwrap_or_else(NodeId::new);
+            out.push(DiffItem {
+                kind: DiffKind::HeaderConditionAdded,
+                target: id,
+                summary: format!("header `{}` added in rule #{}", key, rule_idx + 1),
+            });
+        }
+        for key in base_header_keys.difference(&cur_header_keys) {
+            out.push(DiffItem {
+                kind: DiffKind::HeaderConditionRemoved,
+                target: NodeId::new(),
+                summary: format!("header `{}` removed from rule #{}", key, rule_idx + 1),
+            });
+        }
+
+        // ── Body (JSON) conditions ────────────────────────────────────
+
+        use apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind;
+        let cur_body_paths: std::collections::HashSet<&str> = cur_rule
+            .when.request.body.as_ref()
+            .and_then(|b| b.0.get(&BodyKind::Json))
+            .map(|m| m.keys().map(String::as_str).collect())
+            .unwrap_or_default();
+
+        let base_body_paths: std::collections::HashSet<&str> = baseline_rule
+            .get("when")
+            .and_then(|w| w.get("request"))
+            .and_then(|r| r.get("body"))
+            .and_then(|b| b.get("json"))
+            .and_then(|j| j.as_table())
+            .map(|t| t.keys().map(String::as_str).collect())
+            .unwrap_or_default();
+
+        for path in cur_body_paths.difference(&base_body_paths) {
+            let id = self.ids
+                .id_for(NodeAddress::BodyCondition {
+                    rule_set: rs_idx, rule: rule_idx, path: path.to_string(),
+                })
+                .unwrap_or_else(NodeId::new);
+            out.push(DiffItem {
+                kind: DiffKind::BodyConditionAdded,
+                target: id,
+                summary: format!("body path `{}` added in rule #{}", path, rule_idx + 1),
+            });
+        }
+        for path in base_body_paths.difference(&cur_body_paths) {
+            out.push(DiffItem {
+                kind: DiffKind::BodyConditionRemoved,
+                target: NodeId::new(),
+                summary: format!("body path `{}` removed from rule #{}", path, rule_idx + 1),
             });
         }
     }

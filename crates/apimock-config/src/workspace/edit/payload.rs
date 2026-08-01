@@ -107,7 +107,7 @@ pub(super) fn build_rule_from_payload(
         when: When { request },
         respond: build_respond_from_payload(payload.respond),
         weight: None,
-        priority: None,
+        priority: payload.priority,  // RFC 027: surface from payload
     };
 
     Ok(rule.compute_derived_fields(rule_set, rule_set.rules.len(), rs_idx))
@@ -217,6 +217,7 @@ fn body_op_to_routing(op: BodyOp) -> apimock_routing::rule_set::rule::when::requ
         BodyOp::EqualInteger      => BodyOperator::EqualInteger,
         BodyOp::MapHasKey         => BodyOperator::MapHasKey,
         BodyOp::MapDoesNotHaveKey => BodyOperator::MapDoesNotHaveKey,
+        BodyOp::StructuralContains=> BodyOperator::StructuralContains,
     }
 }
 

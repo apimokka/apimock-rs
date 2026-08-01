@@ -110,6 +110,16 @@ pub enum BodyOperator {
     /// Value at path is a JSON object that does NOT contain the key
     /// named in the configured value string.
     MapDoesNotHaveKey,
+
+    // ── structural operators (RFC 028) ────────────────────────────────
+    /// Value at path is an array containing at least one element that is
+    /// a *superset* of the configured JSON object. "Superset" means every
+    /// key in the configured object is present in the element with equal
+    /// value; the element may have additional keys.
+    ///
+    /// For non-object needle values, falls back to strict equality
+    /// (identical to `ArrayContains`).
+    StructuralContains,
 }
 
 impl Default for BodyOperator {
@@ -145,6 +155,7 @@ impl std::fmt::Display for BodyOperator {
             Self::EqualInteger      => write!(f, " == (integer) "),
             Self::MapHasKey         => write!(f, " map_has_key "),
             Self::MapDoesNotHaveKey => write!(f, " map_does_not_have_key "),
+            Self::StructuralContains=> write!(f, " structural_contains "),
         }
     }
 }
@@ -273,6 +284,16 @@ impl BodyOperator {
                 Value::Object(map) => !map.contains_key(configured_value),
                 _ => false,
             },
+
+            // ── structural operators (RFC 028) ────────────────────────────
+            Self::StructuralContains => {
+                let needle: Value = serde_json::from_str(configured_value)
+                    .unwrap_or_else(|_| Value::String(configured_value.to_owned()));
+                match resolved {
+                    Value::Array(arr) => arr.iter().any(|el| is_subset(&needle, el)),
+                    _ => false,
+                }
+            }
         }
     }
 }
@@ -309,6 +330,28 @@ fn regex_is_match(pattern: &str, text: &str) -> bool {
     regex::Regex::new(pattern)
         .map(|re| re.is_match(text))
         .unwrap_or(false)
+}
+
+/// Returns `true` when every (key, value) pair in `needle` is present
+/// in `haystack` with an equal value. Recursively applied to nested
+/// objects. Non-object needles fall back to strict equality.
+/// Used by `StructuralContains` (RFC 028).
+fn is_subset(needle: &serde_json::Value, haystack: &serde_json::Value) -> bool {
+    use serde_json::Value;
+    match needle {
+        Value::Object(needle_map) => {
+            match haystack {
+                Value::Object(haystack_map) => {
+                    needle_map.iter().all(|(k, v)| {
+                        haystack_map.get(k).map_or(false, |hv| is_subset(v, hv))
+                    })
+                }
+                _ => false,
+            }
+        }
+        // For non-object needles, strict equality.
+        other => other == haystack,
+    }
 }
 
 #[cfg(test)]

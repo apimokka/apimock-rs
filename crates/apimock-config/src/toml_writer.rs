@@ -201,6 +201,9 @@ fn service_table(s: &ServiceConfig) -> Table {
 
 pub(crate) fn rule_table(r: &Rule) -> Table {
     let mut t = Table::new();
+    if let Some(p) = r.priority {
+        t.insert("priority".to_owned(), Value::Integer(i64::from(p)));
+    }
     t.insert("when".to_owned(), Value::Table(when_table(&r.when)));
     t.insert("respond".to_owned(), Value::Table(respond_table(&r.respond)));
     t

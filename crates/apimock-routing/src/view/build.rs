@@ -86,6 +86,7 @@ pub fn build_rule_set_view(rule_set: &RuleSet, index: usize) -> RuleSetView {
 pub fn build_rule_view(rule: &Rule, index: usize) -> RuleView {
     RuleView {
         index,
+        priority: rule.priority,
         when: build_when_view(&rule.when),
         respond: build_respond_view(&rule.respond),
     }
@@ -207,6 +208,7 @@ fn body_op_name(op: &crate::rule_set::rule::when::request::body::body_operator::
         BodyOperator::EqualInteger      => "equal_integer",
         BodyOperator::MapHasKey         => "map_has_key",
         BodyOperator::MapDoesNotHaveKey => "map_does_not_have_key",
+        BodyOperator::StructuralContains=> "structural_contains",
     }
     .to_owned()
 }
