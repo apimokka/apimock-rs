@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use hyper::{
-    http::header::{HeaderName, HeaderValue},
     HeaderMap, StatusCode,
+    http::header::{HeaderName, HeaderValue},
 };
 
 use crate::{

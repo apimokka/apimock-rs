@@ -197,19 +197,12 @@ pub enum EditCommand {
     ///
     /// `path` is relative to the root config's directory — the same
     /// convention as the value stored in `service.rule_sets`.
-    AddRuleSet {
-        path: String,
-    },
+    AddRuleSet { path: String },
     /// Remove a rule set by its NodeId. The underlying TOML file is
     /// NOT deleted from disk — the workspace only removes the reference.
-    RemoveRuleSet {
-        id: NodeId,
-    },
+    RemoveRuleSet { id: NodeId },
     /// Add a rule to an existing rule set.
-    AddRule {
-        parent: NodeId,
-        rule: RulePayload,
-    },
+    AddRule { parent: NodeId, rule: RulePayload },
     /// Update a rule's `when` / `respond` block.
     ///
     /// # Preservation of unspecified fields
@@ -225,24 +218,13 @@ pub enum EditCommand {
     /// Without this preservation, every `UpdateRule` would silently
     /// strip the unsurfaced clauses, which is a save-time bug when a
     /// GUI re-saves a rule it loaded from a hand-edited TOML file.
-    UpdateRule {
-        id: NodeId,
-        rule: RulePayload,
-    },
+    UpdateRule { id: NodeId, rule: RulePayload },
     /// Remove a rule by NodeId.
-    DeleteRule {
-        id: NodeId,
-    },
+    DeleteRule { id: NodeId },
     /// Reorder a rule within its parent rule set.
-    MoveRule {
-        id: NodeId,
-        new_index: usize,
-    },
+    MoveRule { id: NodeId, new_index: usize },
     /// Update the `respond` block of a rule.
-    UpdateRespond {
-        id: NodeId,
-        respond: RespondPayload,
-    },
+    UpdateRespond { id: NodeId, respond: RespondPayload },
     /// Update a root-level setting (listener, log, service-level flags).
     UpdateRootSetting {
         key: RootSettingKey,
@@ -250,12 +232,11 @@ pub enum EditCommand {
     },
 
     // ── Per-condition commands (RFC 016) ──────────────────────────────
-
     /// Add a single header condition to an existing rule.
     ///
     /// `rule_id` must be the `NodeId` of the target rule.
     AddHeaderCondition {
-        rule_id:   NodeId,
+        rule_id: NodeId,
         condition: HeaderConditionPayload,
     },
     /// Replace a header condition in-place, identified by its `NodeId`.
@@ -263,37 +244,32 @@ pub enum EditCommand {
     /// The header name (`condition.name`) may differ from the original —
     /// this counts as a rename, which reassigns the condition's `NodeId`.
     UpdateHeaderCondition {
-        id:        NodeId,
+        id: NodeId,
         condition: HeaderConditionPayload,
     },
     /// Remove a single header condition by its `NodeId`.
-    RemoveHeaderCondition {
-        id: NodeId,
-    },
+    RemoveHeaderCondition { id: NodeId },
     /// Add a single body condition to an existing rule.
     AddBodyCondition {
-        rule_id:   NodeId,
+        rule_id: NodeId,
         condition: BodyConditionPayload,
     },
     /// Replace a body condition in-place, identified by its `NodeId`.
     UpdateBodyCondition {
-        id:        NodeId,
+        id: NodeId,
         condition: BodyConditionPayload,
     },
     /// Remove a single body condition by its `NodeId`.
-    RemoveBodyCondition {
-        id: NodeId,
-    },
+    RemoveBodyCondition { id: NodeId },
 
     // ── Per-rule-set settings (RFC 025) ──────────────────────────────
-
     /// Override the strategy for a specific rule set.
     ///
     /// `strategy` is the `snake_case` strategy name (e.g. `"round_robin"`,
     /// `"first_match"`). Pass `None` to remove the override and inherit
     /// the service-level strategy.
     UpdateRuleSetStrategy {
-        id:       NodeId,
+        id: NodeId,
         strategy: Option<String>,
     },
 }
@@ -674,10 +650,17 @@ impl ReloadHint {
             ListenerIpAddress | ListenerPort | TlsEnabled | LogFile => Self::restart(),
             // RFC 020: cert/key rotation uses the reloadable resolver — no rebind.
             TlsCertFile | TlsKeyFile => Self::reload(),
-            ServiceFallbackRespondDir | ServiceStrategy | LogLevel | LogFormat
-            | FileTreeShowHidden | FileTreeBuiltinExcludes | FileTreeExtraExcludes
-            | FileTreeInclude | FileTreeRespectGitignore
-            | TraceCaptureBody | TraceMaxBodyBytes => Self::reload(),
+            ServiceFallbackRespondDir
+            | ServiceStrategy
+            | LogLevel
+            | LogFormat
+            | FileTreeShowHidden
+            | FileTreeBuiltinExcludes
+            | FileTreeExtraExcludes
+            | FileTreeInclude
+            | FileTreeRespectGitignore
+            | TraceCaptureBody
+            | TraceMaxBodyBytes => Self::reload(),
         }
     }
 }

@@ -1,16 +1,13 @@
 use serde::Deserialize;
 
-use std::collections::HashMap;
 use indexmap::IndexMap;
+use std::collections::HashMap;
 
 pub mod body_kind;
 pub mod body_operator;
 
 use super::util::fmt_condition_connector;
-use crate::{
-    parsed_request::ParsedRequest,
-    util::json::json_value_by_jsonpath,
-};
+use crate::{parsed_request::ParsedRequest, util::json::json_value_by_jsonpath};
 use body_kind::BodyKind;
 use body_operator::BodyOperator;
 
@@ -82,20 +79,15 @@ impl Body {
                 // Presence operators are handled before path resolution:
                 // Absent means "path must NOT resolve".
                 if op == BodyOperator::Absent {
-                    return json_value_by_jsonpath(
-                        request_body_json,
-                        matcher_json_condition_key,
-                    )
-                    .is_none();
+                    return json_value_by_jsonpath(request_body_json, matcher_json_condition_key)
+                        .is_none();
                 }
 
-                let resolved = match json_value_by_jsonpath(
-                    request_body_json,
-                    matcher_json_condition_key,
-                ) {
-                    Some(v) => v,
-                    None => return false,
-                };
+                let resolved =
+                    match json_value_by_jsonpath(request_body_json, matcher_json_condition_key) {
+                        Some(v) => v,
+                        None => return false,
+                    };
 
                 op.is_match(resolved, &matcher_json_condition_statement.value)
             },

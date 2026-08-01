@@ -18,10 +18,10 @@ pub struct ValidateArgs {
     pub json: bool,
 }
 
-const CONFIG_NAMES: &[&str]  = &["--config", "-c"];
-const STRICT_FLAG: &str      = "--strict";
-const QUIET_FLAG: &str       = "--quiet";
-const JSON_FLAG: &str        = "--json";
+const CONFIG_NAMES: &[&str] = &["--config", "-c"];
+const STRICT_FLAG: &str = "--strict";
+const QUIET_FLAG: &str = "--quiet";
+const JSON_FLAG: &str = "--json";
 
 impl ValidateArgs {
     pub fn parse(args: &[String]) -> Result<Self, String> {
@@ -30,8 +30,8 @@ impl ValidateArgs {
         Ok(Self {
             config_path,
             strict: args.iter().any(|a| a == STRICT_FLAG),
-            quiet:  args.iter().any(|a| a == QUIET_FLAG),
-            json:   args.iter().any(|a| a == JSON_FLAG),
+            quiet: args.iter().any(|a| a == QUIET_FLAG),
+            json: args.iter().any(|a| a == JSON_FLAG),
         })
     }
 }
@@ -42,7 +42,9 @@ pub fn run(args: &[String]) -> i32 {
         Ok(a) => a,
         Err(e) => {
             eprintln!("apimock validate: {}", e);
-            eprintln!("Usage: apimock validate --config <apimock.toml> [--strict] [--quiet] [--json]");
+            eprintln!(
+                "Usage: apimock validate --config <apimock.toml> [--strict] [--quiet] [--json]"
+            );
             return 2;
         }
     };
@@ -66,49 +68,80 @@ pub fn run(args: &[String]) -> i32 {
 
     if parsed.json {
         // Emit diagnostics as a JSON array.
-        let items: Vec<serde_json::Value> = report.diagnostics.iter().map(|d| {
-            serde_json::json!({
-                "severity": format!("{:?}", d.severity).to_lowercase(),
-                "message": d.message,
-                "node_id": d.node_id.map(|n| n.0.to_string()),
-                "file": d.file.as_ref().map(|p| p.to_string_lossy().into_owned()),
+        let items: Vec<serde_json::Value> = report
+            .diagnostics
+            .iter()
+            .map(|d| {
+                serde_json::json!({
+                    "severity": format!("{:?}", d.severity).to_lowercase(),
+                    "message": d.message,
+                    "node_id": d.node_id.map(|n| n.0.to_string()),
+                    "file": d.file.as_ref().map(|p| p.to_string_lossy().into_owned()),
+                })
             })
-        }).collect();
-        println!("{}", serde_json::to_string_pretty(&items).unwrap_or_default());
+            .collect();
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&items).unwrap_or_default()
+        );
     } else if !parsed.quiet {
         for d in &report.diagnostics {
             let tag = match d.severity {
-                Severity::Error   => "[ERROR]",
+                Severity::Error => "[ERROR]",
                 Severity::Warning => "[WARNING]",
-                Severity::Info    => "[INFO]",
+                Severity::Info => "[INFO]",
             };
-            let location = d.file.as_ref()
+            let location = d
+                .file
+                .as_ref()
                 .map(|p| p.to_string_lossy().into_owned())
                 .unwrap_or_else(|| parsed.config_path.clone());
             println!("{}: {} {}", location, tag, d.message);
         }
     }
 
-    let has_errors   = report.diagnostics.iter().any(|d| matches!(d.severity, Severity::Error));
-    let has_warnings = report.diagnostics.iter().any(|d| matches!(d.severity, Severity::Warning));
+    let has_errors = report
+        .diagnostics
+        .iter()
+        .any(|d| matches!(d.severity, Severity::Error));
+    let has_warnings = report
+        .diagnostics
+        .iter()
+        .any(|d| matches!(d.severity, Severity::Warning));
 
     if has_errors || (parsed.strict && has_warnings) {
         if !parsed.quiet {
-            let e = report.diagnostics.iter().filter(|d| matches!(d.severity, Severity::Error)).count();
-            let w = report.diagnostics.iter().filter(|d| matches!(d.severity, Severity::Warning)).count();
+            let e = report
+                .diagnostics
+                .iter()
+                .filter(|d| matches!(d.severity, Severity::Error))
+                .count();
+            let w = report
+                .diagnostics
+                .iter()
+                .filter(|d| matches!(d.severity, Severity::Warning))
+                .count();
             eprintln!("Validation failed: {} error(s), {} warning(s).", e, w);
         }
         return 1;
     }
 
     if !parsed.quiet {
-        let w = report.diagnostics.iter().filter(|d| matches!(d.severity, Severity::Warning)).count();
+        let w = report
+            .diagnostics
+            .iter()
+            .filter(|d| matches!(d.severity, Severity::Warning))
+            .count();
         if w > 0 {
-            println!("Validation passed with {} warning(s) ({} rules across {} rule set(s)).",
-                w, rule_count, rule_set_count);
+            println!(
+                "Validation passed with {} warning(s) ({} rules across {} rule set(s)).",
+                w, rule_count, rule_set_count
+            );
         } else {
-            println!("Validation passed ({} rules across {} rule set(s)).",
-                rule_count, rule_set_count);
+            println!(
+                "Validation passed ({} rules across {} rule set(s)).",
+                rule_count, rule_set_count
+            );
         }
     }
 
@@ -138,8 +171,11 @@ mod tests {
     #[test]
     fn parse_args_all_flags() {
         let args: Vec<String> = vec![
-            "-c".to_owned(), "config.toml".to_owned(),
-            "--strict".to_owned(), "--quiet".to_owned(), "--json".to_owned(),
+            "-c".to_owned(),
+            "config.toml".to_owned(),
+            "--strict".to_owned(),
+            "--quiet".to_owned(),
+            "--json".to_owned(),
         ];
         let a = ValidateArgs::parse(&args).unwrap();
         assert_eq!(a.config_path, "config.toml");
@@ -151,7 +187,8 @@ mod tests {
     #[test]
     fn run_missing_config_file_returns_2() {
         let args: Vec<String> = vec![
-            "--config".to_owned(), "/nonexistent/apimock.toml".to_owned(),
+            "--config".to_owned(),
+            "/nonexistent/apimock.toml".to_owned(),
             "--quiet".to_owned(),
         ];
         assert_eq!(run(&args), 2);

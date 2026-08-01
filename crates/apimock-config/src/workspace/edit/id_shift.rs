@@ -72,7 +72,7 @@ impl Workspace {
         }
 
         for (id, addr) in &to_migrate {
-            self.ids.address_to_id.remove(addr);  // addr already cloned in to_migrate
+            self.ids.address_to_id.remove(addr); // addr already cloned in to_migrate
             self.ids.id_to_address.remove(id);
         }
 
@@ -134,7 +134,7 @@ impl Workspace {
         }
 
         for (id, addr) in &to_migrate {
-            self.ids.address_to_id.remove(addr);  // addr already cloned in to_migrate
+            self.ids.address_to_id.remove(addr); // addr already cloned in to_migrate
             self.ids.id_to_address.remove(id);
         }
 

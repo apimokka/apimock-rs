@@ -19,9 +19,7 @@ use std::path::{Path, PathBuf};
 
 use apimock_routing::RuleSet;
 
-use crate::view::{
-    Diagnostic, NodeValidation, Severity, ValidationIssue, ValidationReport,
-};
+use crate::view::{Diagnostic, NodeValidation, Severity, ValidationIssue, ValidationReport};
 
 use super::Workspace;
 use super::id_index::NodeAddress;

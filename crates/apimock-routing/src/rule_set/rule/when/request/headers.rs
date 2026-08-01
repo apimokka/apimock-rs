@@ -1,5 +1,5 @@
 use console::style;
-use hyper::{header::HeaderValue, HeaderMap};
+use hyper::{HeaderMap, header::HeaderValue};
 use serde::Deserialize;
 
 use indexmap::IndexMap;

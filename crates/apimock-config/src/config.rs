@@ -231,12 +231,10 @@ impl Config {
             return Ok(String::from("."));
         };
 
-        let relative_dir_path =
-            current_dir_to_file_parent_dir_relative_path(file_path.as_str()).map_err(|e| {
-                ConfigError::PathResolve {
-                    path: Path::new(file_path).to_path_buf(),
-                    source: e,
-                }
+        let relative_dir_path = current_dir_to_file_parent_dir_relative_path(file_path.as_str())
+            .map_err(|e| ConfigError::PathResolve {
+                path: Path::new(file_path).to_path_buf(),
+                source: e,
             })?;
 
         let as_str = relative_dir_path

@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use rcgen::{date_time_ymd, CertificateParams, DistinguishedName, KeyPair, SanType};
+use rcgen::{CertificateParams, DistinguishedName, KeyPair, SanType, date_time_ymd};
 
 use super::file::file_path_from_cargo_manifest_dir;
 

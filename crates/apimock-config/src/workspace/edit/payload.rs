@@ -12,8 +12,8 @@
 
 use crate::error::{ApplyError, ConfigError};
 use crate::view::{BodyOp, EditValue, HeaderOp, UrlPathOp};
-use std::collections::HashMap;
 use indexmap::IndexMap;
+use std::collections::HashMap;
 
 /// Build a `Rule` from a GUI-shaped payload.
 ///
@@ -107,7 +107,7 @@ pub(super) fn build_rule_from_payload(
         when: When { request },
         respond: build_respond_from_payload(payload.respond),
         weight: None,
-        priority: payload.priority,  // RFC 027: surface from payload
+        priority: payload.priority, // RFC 027: surface from payload
     };
 
     Ok(rule.compute_derived_fields(rule_set, rule_set.rules.len(), rs_idx))
@@ -115,20 +115,22 @@ pub(super) fn build_rule_from_payload(
 
 // ── RFC 001 / RFC 017 helper ──────────────────────────────────────────
 
-fn url_path_op_to_routing(op: UrlPathOp) -> apimock_routing::rule_set::rule::when::request::rule_op::RuleOp {
+fn url_path_op_to_routing(
+    op: UrlPathOp,
+) -> apimock_routing::rule_set::rule::when::request::rule_op::RuleOp {
     use apimock_routing::rule_set::rule::when::request::rule_op::RuleOp;
     match op {
-        UrlPathOp::Equal         => RuleOp::Equal,
-        UrlPathOp::StartsWith    => RuleOp::StartsWith,
+        UrlPathOp::Equal => RuleOp::Equal,
+        UrlPathOp::StartsWith => RuleOp::StartsWith,
         UrlPathOp::NotStartsWith => RuleOp::NotStartsWith,
-        UrlPathOp::Contains      => RuleOp::Contains,
-        UrlPathOp::NotContains   => RuleOp::NotContains,
-        UrlPathOp::EndsWith      => RuleOp::EndsWith,
-        UrlPathOp::NotEndsWith   => RuleOp::NotEndsWith,
-        UrlPathOp::WildCard      => RuleOp::WildCard,
-        UrlPathOp::NotEqual      => RuleOp::NotEqual,
-        UrlPathOp::Regex         => RuleOp::Regex,
-        UrlPathOp::NotRegex      => RuleOp::NotRegex,
+        UrlPathOp::Contains => RuleOp::Contains,
+        UrlPathOp::NotContains => RuleOp::NotContains,
+        UrlPathOp::EndsWith => RuleOp::EndsWith,
+        UrlPathOp::NotEndsWith => RuleOp::NotEndsWith,
+        UrlPathOp::WildCard => RuleOp::WildCard,
+        UrlPathOp::NotEqual => RuleOp::NotEqual,
+        UrlPathOp::Regex => RuleOp::Regex,
+        UrlPathOp::NotRegex => RuleOp::NotRegex,
     }
 }
 
@@ -144,29 +146,35 @@ fn build_headers(
     for cond in input {
         let op = header_op_to_routing(cond.op);
         let value = cond.value.clone().unwrap_or_default();
-        map.insert(cond.name.to_lowercase(), HeaderConditionStatement { op: Some(op), value });
+        map.insert(
+            cond.name.to_lowercase(),
+            HeaderConditionStatement {
+                op: Some(op),
+                value,
+            },
+        );
     }
     Ok(apimock_routing::rule_set::rule::when::request::headers::Headers(map))
 }
 
-fn header_op_to_routing(op: HeaderOp)
-    -> apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator
-{
+fn header_op_to_routing(
+    op: HeaderOp,
+) -> apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator {
     use apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator;
     match op {
-        HeaderOp::Equal         => HeaderOperator::Equal,
-        HeaderOp::NotEqual      => HeaderOperator::NotEqual,
-        HeaderOp::StartsWith    => HeaderOperator::StartsWith,
+        HeaderOp::Equal => HeaderOperator::Equal,
+        HeaderOp::NotEqual => HeaderOperator::NotEqual,
+        HeaderOp::StartsWith => HeaderOperator::StartsWith,
         HeaderOp::NotStartsWith => HeaderOperator::NotStartsWith,
-        HeaderOp::EndsWith      => HeaderOperator::EndsWith,
-        HeaderOp::NotEndsWith   => HeaderOperator::NotEndsWith,
-        HeaderOp::Contains      => HeaderOperator::Contains,
-        HeaderOp::NotContains   => HeaderOperator::NotContains,
-        HeaderOp::WildCard      => HeaderOperator::WildCard,
-        HeaderOp::Regex         => HeaderOperator::Regex,
-        HeaderOp::NotRegex      => HeaderOperator::NotRegex,
-        HeaderOp::Exists        => HeaderOperator::Exists,
-        HeaderOp::Absent        => HeaderOperator::Absent,
+        HeaderOp::EndsWith => HeaderOperator::EndsWith,
+        HeaderOp::NotEndsWith => HeaderOperator::NotEndsWith,
+        HeaderOp::Contains => HeaderOperator::Contains,
+        HeaderOp::NotContains => HeaderOperator::NotContains,
+        HeaderOp::WildCard => HeaderOperator::WildCard,
+        HeaderOp::Regex => HeaderOperator::Regex,
+        HeaderOp::NotRegex => HeaderOperator::NotRegex,
+        HeaderOp::Exists => HeaderOperator::Exists,
+        HeaderOp::Absent => HeaderOperator::Absent,
     }
 }
 
@@ -174,15 +182,20 @@ fn build_body(
     input: &[crate::view::BodyConditionPayload],
 ) -> Result<apimock_routing::rule_set::rule::when::request::body::Body, ApplyError> {
     use apimock_routing::rule_set::rule::when::request::body::{
-        Body, BodyConditionStatement,
-        body_kind::BodyKind,
+        Body, BodyConditionStatement, body_kind::BodyKind,
     };
 
     let mut json_map: IndexMap<String, BodyConditionStatement> = IndexMap::new();
     for cond in input {
         let op = body_op_to_routing(cond.op);
         let value = value_to_string(&cond.value);
-        json_map.insert(cond.path.clone(), BodyConditionStatement { op: Some(op), value });
+        json_map.insert(
+            cond.path.clone(),
+            BodyConditionStatement {
+                op: Some(op),
+                value,
+            },
+        );
     }
 
     let mut outer = HashMap::new();
@@ -190,34 +203,36 @@ fn build_body(
     Ok(Body(outer))
 }
 
-fn body_op_to_routing(op: BodyOp) -> apimock_routing::rule_set::rule::when::request::body::body_operator::BodyOperator {
+fn body_op_to_routing(
+    op: BodyOp,
+) -> apimock_routing::rule_set::rule::when::request::body::body_operator::BodyOperator {
     use apimock_routing::rule_set::rule::when::request::body::body_operator::BodyOperator;
     match op {
-        BodyOp::Equal             => BodyOperator::Equal,
-        BodyOp::EqualString       => BodyOperator::EqualString,
-        BodyOp::Contains          => BodyOperator::Contains,
-        BodyOp::NotContains       => BodyOperator::NotContains,
-        BodyOp::StartsWith        => BodyOperator::StartsWith,
-        BodyOp::NotStartsWith     => BodyOperator::NotStartsWith,
-        BodyOp::EndsWith          => BodyOperator::EndsWith,
-        BodyOp::NotEndsWith       => BodyOperator::NotEndsWith,
-        BodyOp::Regex             => BodyOperator::Regex,
-        BodyOp::NotRegex          => BodyOperator::NotRegex,
-        BodyOp::EqualTyped        => BodyOperator::EqualTyped,
-        BodyOp::EqualNumber       => BodyOperator::EqualNumber,
-        BodyOp::GreaterThan       => BodyOperator::GreaterThan,
-        BodyOp::LessThan          => BodyOperator::LessThan,
-        BodyOp::GreaterOrEqual    => BodyOperator::GreaterOrEqual,
-        BodyOp::LessOrEqual       => BodyOperator::LessOrEqual,
-        BodyOp::Exists            => BodyOperator::Exists,
-        BodyOp::Absent            => BodyOperator::Absent,
-        BodyOp::ArrayLengthEqual  => BodyOperator::ArrayLengthEqual,
-        BodyOp::ArrayLengthAtLeast=> BodyOperator::ArrayLengthAtLeast,
-        BodyOp::ArrayContains     => BodyOperator::ArrayContains,
-        BodyOp::EqualInteger      => BodyOperator::EqualInteger,
-        BodyOp::MapHasKey         => BodyOperator::MapHasKey,
+        BodyOp::Equal => BodyOperator::Equal,
+        BodyOp::EqualString => BodyOperator::EqualString,
+        BodyOp::Contains => BodyOperator::Contains,
+        BodyOp::NotContains => BodyOperator::NotContains,
+        BodyOp::StartsWith => BodyOperator::StartsWith,
+        BodyOp::NotStartsWith => BodyOperator::NotStartsWith,
+        BodyOp::EndsWith => BodyOperator::EndsWith,
+        BodyOp::NotEndsWith => BodyOperator::NotEndsWith,
+        BodyOp::Regex => BodyOperator::Regex,
+        BodyOp::NotRegex => BodyOperator::NotRegex,
+        BodyOp::EqualTyped => BodyOperator::EqualTyped,
+        BodyOp::EqualNumber => BodyOperator::EqualNumber,
+        BodyOp::GreaterThan => BodyOperator::GreaterThan,
+        BodyOp::LessThan => BodyOperator::LessThan,
+        BodyOp::GreaterOrEqual => BodyOperator::GreaterOrEqual,
+        BodyOp::LessOrEqual => BodyOperator::LessOrEqual,
+        BodyOp::Exists => BodyOperator::Exists,
+        BodyOp::Absent => BodyOperator::Absent,
+        BodyOp::ArrayLengthEqual => BodyOperator::ArrayLengthEqual,
+        BodyOp::ArrayLengthAtLeast => BodyOperator::ArrayLengthAtLeast,
+        BodyOp::ArrayContains => BodyOperator::ArrayContains,
+        BodyOp::EqualInteger => BodyOperator::EqualInteger,
+        BodyOp::MapHasKey => BodyOperator::MapHasKey,
         BodyOp::MapDoesNotHaveKey => BodyOperator::MapDoesNotHaveKey,
-        BodyOp::StructuralContains=> BodyOperator::StructuralContains,
+        BodyOp::StructuralContains => BodyOperator::StructuralContains,
     }
 }
 
@@ -230,7 +245,9 @@ fn value_to_string(v: &serde_json::Value) -> String {
     }
 }
 
-pub(super) fn build_respond_from_payload(payload: crate::view::RespondPayload) -> apimock_routing::Respond {
+pub(super) fn build_respond_from_payload(
+    payload: crate::view::RespondPayload,
+) -> apimock_routing::Respond {
     apimock_routing::Respond {
         file_path: payload.file_path,
         csv_records_key: None,

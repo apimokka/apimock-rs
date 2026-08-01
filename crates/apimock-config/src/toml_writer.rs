@@ -30,7 +30,7 @@ use apimock_routing::{
             When,
             request::{
                 Request,
-                body::{body_kind::BodyKind, BodyConditionStatement},
+                body::{BodyConditionStatement, body_kind::BodyKind},
                 headers::HeaderConditionStatement,
                 http_method::HttpMethod,
                 url_path::UrlPathConfig,
@@ -47,14 +47,20 @@ pub fn render_apimock_toml(config: &Config) -> String {
     let mut root = Table::new();
 
     if let Some(listener) = config.listener.as_ref() {
-        root.insert("listener".to_owned(), Value::Table(listener_table(listener)));
+        root.insert(
+            "listener".to_owned(),
+            Value::Table(listener_table(listener)),
+        );
     }
     if let Some(log) = config.log.as_ref() {
         if let Some(t) = log_table(log) {
             root.insert("log".to_owned(), Value::Table(t));
         }
     }
-    root.insert("service".to_owned(), Value::Table(service_table(&config.service)));
+    root.insert(
+        "service".to_owned(),
+        Value::Table(service_table(&config.service)),
+    );
 
     if let Some(ftv) = config.file_tree_view.as_ref() {
         if let Some(t) = file_tree_view_table(ftv) {
@@ -110,10 +116,7 @@ pub fn render_rule_set_toml(rule_set: &RuleSet) -> String {
 fn listener_table(l: &ListenerConfig) -> Table {
     let mut t = Table::new();
     t.insert("ip_address".to_owned(), Value::String(l.ip_address.clone()));
-    t.insert(
-        "port".to_owned(),
-        Value::Integer(i64::from(l.port)),
-    );
+    t.insert("port".to_owned(), Value::Integer(i64::from(l.port)));
     if let Some(tls) = l.tls.as_ref() {
         let mut tt = Table::new();
         tt.insert("cert".to_owned(), Value::String(tls.cert.clone()));
@@ -138,9 +141,7 @@ fn log_table(l: &LogConfig) -> Option<Table> {
 
 /// Render `[file_tree_view]` section. Returns `None` when the config is
 /// entirely default (omitting the section keeps the file clean).
-fn file_tree_view_table(
-    c: &crate::config::file_tree_config::FileTreeViewConfig,
-) -> Option<Table> {
+fn file_tree_view_table(c: &crate::config::file_tree_config::FileTreeViewConfig) -> Option<Table> {
     // Only emit the section when at least one field differs from the default.
     let is_default = !c.show_hidden
         && c.builtin_excludes
@@ -165,9 +166,7 @@ fn file_tree_view_table(
         t.insert("extra_excludes".to_owned(), Value::Array(arr));
     }
     if !c.include.is_empty() {
-        let arr = toml::value::Array::from_iter(
-            c.include.iter().map(|s| Value::String(s.clone())),
-        );
+        let arr = toml::value::Array::from_iter(c.include.iter().map(|s| Value::String(s.clone())));
         t.insert("include".to_owned(), Value::Array(arr));
     }
     if c.respect_gitignore {
@@ -205,13 +204,19 @@ pub(crate) fn rule_table(r: &Rule) -> Table {
         t.insert("priority".to_owned(), Value::Integer(i64::from(p)));
     }
     t.insert("when".to_owned(), Value::Table(when_table(&r.when)));
-    t.insert("respond".to_owned(), Value::Table(respond_table(&r.respond)));
+    t.insert(
+        "respond".to_owned(),
+        Value::Table(respond_table(&r.respond)),
+    );
     t
 }
 
 fn when_table(w: &When) -> Table {
     let mut t = Table::new();
-    t.insert("request".to_owned(), Value::Table(request_table(&w.request)));
+    t.insert(
+        "request".to_owned(),
+        Value::Table(request_table(&w.request)),
+    );
     t
 }
 
@@ -261,7 +266,10 @@ fn request_table(req: &Request) -> Table {
         keys.sort();
         for key in keys {
             let stmt = &headers.0[key];
-            headers_table.insert(key.clone(), Value::Table(header_condition_statement_table(stmt)));
+            headers_table.insert(
+                key.clone(),
+                Value::Table(header_condition_statement_table(stmt)),
+            );
         }
         if !headers_table.is_empty() {
             t.insert("headers".to_owned(), Value::Table(headers_table));
@@ -291,7 +299,10 @@ fn request_table(req: &Request) -> Table {
             keys.sort();
             for key in keys {
                 let stmt = &inner[key];
-                kind_table.insert(key.clone(), Value::Table(body_condition_statement_table(stmt)));
+                kind_table.insert(
+                    key.clone(),
+                    Value::Table(body_condition_statement_table(stmt)),
+                );
             }
             if !kind_table.is_empty() {
                 body_table.insert(kind_str.to_owned(), Value::Table(kind_table));
@@ -484,7 +495,8 @@ mod tests {
             .as_ref()
             .expect("body preserved across round trip");
         // Body has BodyKind::Json keyed map containing the dotted path.
-        let json_kind = apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind::Json;
+        let json_kind =
+            apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind::Json;
         let inner = b.0.get(&json_kind).expect("json body kind present");
         assert!(inner.contains_key("user.name"));
         assert_eq!(inner["user.name"].value, "alice");

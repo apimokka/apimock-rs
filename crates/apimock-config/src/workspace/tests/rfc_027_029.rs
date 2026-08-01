@@ -1,7 +1,7 @@
 //! Tests for RFC 027 (rule priority), RFC 029 (per-condition diff).
 
 use crate::Workspace;
-use crate::view::{EditCommand, NodeKind, RulePayload, RespondPayload, UrlPathOp};
+use crate::view::{EditCommand, NodeKind, RespondPayload, RulePayload, UrlPathOp};
 
 use super::common::make_workspace;
 
@@ -13,10 +13,13 @@ fn priority_in_rule_payload_applied_and_visible_in_view() {
     let mut ws = Workspace::load(root).unwrap();
 
     let snap = ws.snapshot();
-    let rs_id = snap.files.iter()
+    let rs_id = snap
+        .files
+        .iter()
         .flat_map(|f| f.nodes.iter())
         .find(|n| matches!(n.kind, NodeKind::RuleSet))
-        .map(|n| n.id).unwrap();
+        .map(|n| n.id)
+        .unwrap();
 
     // Add a rule with priority = 5.
     ws.apply(EditCommand::AddRule {
@@ -28,9 +31,13 @@ fn priority_in_rule_payload_applied_and_visible_in_view() {
             priority: Some(5),
             headers: None,
             body: None,
-            respond: RespondPayload { text: Some("priority".into()), ..Default::default() },
+            respond: RespondPayload {
+                text: Some("priority".into()),
+                ..Default::default()
+            },
         },
-    }).unwrap();
+    })
+    .unwrap();
 
     let snap = ws.snapshot();
     let rules = &snap.routes.rule_sets[0].rules;
@@ -44,10 +51,13 @@ fn priority_round_trips_through_save_load() {
     let mut ws = Workspace::load(root.clone()).unwrap();
 
     let snap = ws.snapshot();
-    let rs_id = snap.files.iter()
+    let rs_id = snap
+        .files
+        .iter()
         .flat_map(|f| f.nodes.iter())
         .find(|n| matches!(n.kind, NodeKind::RuleSet))
-        .map(|n| n.id).unwrap();
+        .map(|n| n.id)
+        .unwrap();
 
     ws.apply(EditCommand::AddRule {
         parent: rs_id,
@@ -58,16 +68,23 @@ fn priority_round_trips_through_save_load() {
             priority: Some(10),
             headers: None,
             body: None,
-            respond: RespondPayload { text: Some("ok".into()), ..Default::default() },
+            respond: RespondPayload {
+                text: Some("ok".into()),
+                ..Default::default()
+            },
         },
-    }).unwrap();
+    })
+    .unwrap();
     ws.save().unwrap();
 
     let ws2 = Workspace::load(root).unwrap();
     let snap2 = ws2.snapshot();
     let rules = &snap2.routes.rule_sets[0].rules;
     let saved = rules.iter().find(|r| r.priority == Some(10));
-    assert!(saved.is_some(), "priority should survive save/load round-trip");
+    assert!(
+        saved.is_some(),
+        "priority should survive save/load round-trip"
+    );
 
     // Clean up tempdir
     drop(dir);
@@ -84,10 +101,13 @@ fn diff_includes_header_condition_added() {
 
     // Get the first rule's NodeId.
     let snap = ws.snapshot();
-    let rule_id = snap.files.iter()
+    let rule_id = snap
+        .files
+        .iter()
         .flat_map(|f| f.nodes.iter())
         .find(|n| matches!(n.kind, NodeKind::Rule))
-        .map(|n| n.id).unwrap();
+        .map(|n| n.id)
+        .unwrap();
 
     ws.apply(EditCommand::AddHeaderCondition {
         rule_id,
@@ -96,13 +116,18 @@ fn diff_includes_header_condition_added() {
             op: crate::view::HeaderOp::Equal,
             value: Some("acme".into()),
         },
-    }).unwrap();
+    })
+    .unwrap();
 
     let result = ws.save().unwrap();
-    let has_header_diff = result.diff_summary.iter().any(|d| matches!(
-        d.kind, crate::view::DiffKind::HeaderConditionAdded
-    ));
-    assert!(has_header_diff, "save diff should include HeaderConditionAdded item");
+    let has_header_diff = result
+        .diff_summary
+        .iter()
+        .any(|d| matches!(d.kind, crate::view::DiffKind::HeaderConditionAdded));
+    assert!(
+        has_header_diff,
+        "save diff should include HeaderConditionAdded item"
+    );
 }
 
 #[test]
@@ -113,10 +138,13 @@ fn diff_includes_body_condition_added() {
     let mut ws = Workspace::load(root).unwrap();
 
     let snap = ws.snapshot();
-    let rule_id = snap.files.iter()
+    let rule_id = snap
+        .files
+        .iter()
         .flat_map(|f| f.nodes.iter())
         .find(|n| matches!(n.kind, NodeKind::Rule))
-        .map(|n| n.id).unwrap();
+        .map(|n| n.id)
+        .unwrap();
 
     ws.apply(EditCommand::AddBodyCondition {
         rule_id,
@@ -126,11 +154,16 @@ fn diff_includes_body_condition_added() {
             op: crate::view::BodyOp::Equal,
             value: serde_json::json!("create"),
         },
-    }).unwrap();
+    })
+    .unwrap();
 
     let result = ws.save().unwrap();
-    let has_body_diff = result.diff_summary.iter().any(|d| matches!(
-        d.kind, crate::view::DiffKind::BodyConditionAdded
-    ));
-    assert!(has_body_diff, "save diff should include BodyConditionAdded item");
+    let has_body_diff = result
+        .diff_summary
+        .iter()
+        .any(|d| matches!(d.kind, crate::view::DiffKind::BodyConditionAdded));
+    assert!(
+        has_body_diff,
+        "save diff should include BodyConditionAdded item"
+    );
 }

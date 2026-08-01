@@ -167,14 +167,8 @@ async fn prepare_fixtures() -> (u16, PathBuf, PathBuf) {
              [service]\n\
              rule_sets = [\"{}\"]\n\
              fallback_respond_dir = \"{}\"\n",
-            rule_set_path
-                .file_name()
-                .unwrap()
-                .to_string_lossy(),
-            fallback_dir
-                .file_name()
-                .unwrap()
-                .to_string_lossy(),
+            rule_set_path.file_name().unwrap().to_string_lossy(),
+            fallback_dir.file_name().unwrap().to_string_lossy(),
         ),
     )
     .expect("write apimock.toml");
@@ -182,9 +176,7 @@ async fn prepare_fixtures() -> (u16, PathBuf, PathBuf) {
     // Patch the rule set to include a prefix pointing at the absolute
     // fallback dir so `file_path = "hello.json"` resolves correctly
     // regardless of where cargo-bench sets the CWD.
-    let fallback_abs = fallback_dir
-        .canonicalize()
-        .expect("canonicalize fallback");
+    let fallback_abs = fallback_dir.canonicalize().expect("canonicalize fallback");
     let rule_set_body = std::fs::read_to_string(&rule_set_path).unwrap();
     let rule_set_with_prefix = format!(
         "[prefix]\nrespond_dir = \"{}\"\n\n{}",
@@ -202,10 +194,7 @@ async fn prepare_fixtures() -> (u16, PathBuf, PathBuf) {
 /// can race under parallel cargo jobs).
 fn pick_port() -> u16 {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind ephemeral");
-    let port = listener
-        .local_addr()
-        .expect("local_addr")
-        .port();
+    let port = listener.local_addr().expect("local_addr").port();
     drop(listener);
     port
 }

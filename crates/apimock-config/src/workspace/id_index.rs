@@ -24,14 +24,32 @@ use crate::view::NodeId;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum NodeAddress {
     Root,
-    RuleSet { rule_set: usize },
-    Rule { rule_set: usize, rule: usize },
-    Respond { rule_set: usize, rule: usize },
-    Middleware { middleware: usize },
+    RuleSet {
+        rule_set: usize,
+    },
+    Rule {
+        rule_set: usize,
+        rule: usize,
+    },
+    Respond {
+        rule_set: usize,
+        rule: usize,
+    },
+    Middleware {
+        middleware: usize,
+    },
     FallbackRespondDir,
     // RFC 016 — per-condition addresses
-    HeaderCondition { rule_set: usize, rule: usize, header_name: String },
-    BodyCondition   { rule_set: usize, rule: usize, path: String },
+    HeaderCondition {
+        rule_set: usize,
+        rule: usize,
+        header_name: String,
+    },
+    BodyCondition {
+        rule_set: usize,
+        rule: usize,
+        path: String,
+    },
 }
 
 #[derive(Default)]

@@ -81,7 +81,11 @@ impl Server {
             .map_err(ServerError::Config)?;
 
         let middlewares = LoadedMiddlewares::compile(
-            config.service.middlewares_file_paths.as_deref().unwrap_or(&[]),
+            config
+                .service
+                .middlewares_file_paths
+                .as_deref()
+                .unwrap_or(&[]),
             relative_dir_path.as_str(),
         )?;
         if !middlewares.is_empty() {
@@ -306,7 +310,10 @@ pub async fn service(
         .as_millis() as u64;
     let start = std::time::Instant::now();
 
-    capture_in_log(&parsed_request, config.log.clone().unwrap_or_default().verbose);
+    capture_in_log(
+        &parsed_request,
+        config.log.clone().unwrap_or_default().verbose,
+    );
 
     if let Some(response) = middleware_response(&middlewares, &parsed_request).await {
         return response;
@@ -318,7 +325,9 @@ pub async fn service(
             let mut summary = RequestSummary {
                 method: parsed_request.component_parts.method.to_string(),
                 url_path: parsed_request.url_path.clone(),
-                headers: parsed_request.component_parts.headers
+                headers: parsed_request
+                    .component_parts
+                    .headers
                     .iter()
                     .filter_map(|(k, v)| v.to_str().ok().map(|v| (k.to_string(), v.to_owned())))
                     .collect(),
@@ -371,9 +380,11 @@ async fn rule_set_response(
     parsed_request: &ParsedRequest,
 ) -> Option<Result<hyper::Response<BoxBody>, hyper::http::Error>> {
     for (rule_set_idx, rule_set) in config.service.rule_sets.iter().enumerate() {
-        if let Some(respond) =
-            rule_set.find_matched(parsed_request, config.service.strategy.as_ref(), rule_set_idx)
-        {
+        if let Some(respond) = rule_set.find_matched(
+            parsed_request,
+            config.service.strategy.as_ref(),
+            rule_set_idx,
+        ) {
             let dir_prefix = rule_set.dir_prefix();
             return Some(respond_response(&respond, dir_prefix.as_str(), parsed_request).await);
         }

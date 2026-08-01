@@ -65,29 +65,33 @@ impl ServiceConfig {
     /// state is assembled by config loading. Routing has per-rule
     /// validators, which this method calls.
     pub fn validate(&self) -> bool {
-        let rule_sets_validate = self.rule_sets
-            .iter()
-            .enumerate()
-            .all(|(rule_set_idx, rule_set)| {
-                let prefix_validate = rule_set.prefix.is_none()
-                    || rule_set.prefix.as_ref().unwrap().validate(rule_set_idx);
+        let rule_sets_validate =
+            self.rule_sets
+                .iter()
+                .enumerate()
+                .all(|(rule_set_idx, rule_set)| {
+                    let prefix_validate = rule_set.prefix.is_none()
+                        || rule_set.prefix.as_ref().unwrap().validate(rule_set_idx);
 
-                let default_validate =
-                    rule_set.default.is_none() || rule_set.default.as_ref().unwrap().validate();
+                    let default_validate =
+                        rule_set.default.is_none() || rule_set.default.as_ref().unwrap().validate();
 
-                let guard_validate =
-                    rule_set.guard.is_none() || rule_set.guard.as_ref().unwrap().validate();
+                    let guard_validate =
+                        rule_set.guard.is_none() || rule_set.guard.as_ref().unwrap().validate();
 
-                let dir_prefix = rule_set.dir_prefix();
-                let rules_validate = rule_set.rules.iter().enumerate().all(|(rule_idx, rule)| {
-                    rule.when.validate(rule_idx, rule_set_idx)
-                        && rule
-                            .respond
-                            .validate(dir_prefix.as_str(), rule_idx, rule_set_idx)
+                    let dir_prefix = rule_set.dir_prefix();
+                    let rules_validate =
+                        rule_set.rules.iter().enumerate().all(|(rule_idx, rule)| {
+                            rule.when.validate(rule_idx, rule_set_idx)
+                                && rule.respond.validate(
+                                    dir_prefix.as_str(),
+                                    rule_idx,
+                                    rule_set_idx,
+                                )
+                        });
+
+                    prefix_validate && default_validate && guard_validate && rules_validate
                 });
-
-                prefix_validate && default_validate && guard_validate && rules_validate
-            });
         if !rule_sets_validate {
             log::error!("something wrong in rule sets");
         }

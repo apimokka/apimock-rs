@@ -38,16 +38,16 @@ impl LoadedMiddlewares {
         let mut handlers = Vec::with_capacity(middleware_file_paths.len());
         for (idx, relative_path) in middleware_file_paths.iter().enumerate() {
             let joined = Path::new(relative_dir_path).join(relative_path);
-            let path_str = joined.to_str().ok_or_else(|| ServerError::Io(
-                std::io::Error::new(
+            let path_str = joined.to_str().ok_or_else(|| {
+                ServerError::Io(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
                     format!(
                         "middleware #{} path contains non-UTF-8 bytes: {}",
                         idx + 1,
                         joined.to_string_lossy(),
                     ),
-                ),
-            ))?;
+                ))
+            })?;
             handlers.push(MiddlewareHandler::new(path_str)?);
         }
         Ok(Self { handlers })

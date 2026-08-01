@@ -325,12 +325,16 @@ async fn main() {
 async fn run_load(cli: &CliArgs, base_url: &str, client: &reqwest::Client) {
     // Header. Lines starting with '#' or the column header can be fed
     // straight into pandas/awk/etc.
-    println!("# apimock bench_load: rps={} duration={}s endpoint={} concurrency={} sample_every_ms={}",
-        cli.rps, cli.duration_secs, cli.endpoint, cli.concurrency, cli.sample_every_ms);
+    println!(
+        "# apimock bench_load: rps={} duration={}s endpoint={} concurrency={} sample_every_ms={}",
+        cli.rps, cli.duration_secs, cli.endpoint, cli.concurrency, cli.sample_every_ms
+    );
     if read_rss_kb().is_none() {
         println!("# note: /proc/self/status not available on this platform; rss_kb will be 0");
     }
-    println!("t_ms,rss_kb,cpu_user_ticks,cpu_sys_ticks,inflight_requests,completed,errors,avg_latency_us");
+    println!(
+        "t_ms,rss_kb,cpu_user_ticks,cpu_sys_ticks,inflight_requests,completed,errors,avg_latency_us"
+    );
 
     let started = Instant::now();
     let end_at = started + Duration::from_secs(cli.duration_secs);
@@ -472,6 +476,14 @@ async fn run_load(cli: &CliArgs, base_url: &str, client: &reqwest::Client) {
 
     println!(
         "# summary duration_s={:.3} target_rps={} achieved_rps={:.1} completed={} errors={} avg_latency_us={} peak_rss_kb={} cpu_user_ticks_total={} cpu_sys_ticks_total={}",
-        elapsed_s, cli.rps, achieved_rps, total_done, total_err, avg_latency_us, peak_rss_kb, final_cpu_user, final_cpu_sys,
+        elapsed_s,
+        cli.rps,
+        achieved_rps,
+        total_done,
+        total_err,
+        avg_latency_us,
+        peak_rss_kb,
+        final_cpu_user,
+        final_cpu_sys,
     );
 }

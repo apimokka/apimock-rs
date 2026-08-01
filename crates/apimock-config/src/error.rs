@@ -125,4 +125,3 @@ pub enum SaveError {
     #[error("internal inconsistency: {reason}")]
     Inconsistent { reason: String },
 }
-

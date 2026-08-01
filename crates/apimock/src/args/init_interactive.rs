@@ -361,8 +361,7 @@ mod tests {
     fn prompt_string_uses_default_on_empty() {
         let input = b"\n";
         let mut out = Vec::new();
-        let got =
-            prompt_string(&mut &input[..], &mut out, "Label", "the-default").unwrap();
+        let got = prompt_string(&mut &input[..], &mut out, "Label", "the-default").unwrap();
         assert_eq!(got, "the-default");
     }
 

@@ -51,12 +51,7 @@ impl log::Log for AppLogger {
                 // non-empty ASCII words ("INFO", "WARN", ...), so the
                 // first char always exists; the fallback to '?' is just
                 // defensive in case a future log crate does something odd.
-                let level_initial = record
-                    .level()
-                    .to_string()
-                    .chars()
-                    .next()
-                    .unwrap_or('?');
+                let level_initial = record.level().to_string().chars().next().unwrap_or('?');
                 let msg_with_log_level = format!("[{}] {}", level_initial, msg);
 
                 let tx = tx.clone();

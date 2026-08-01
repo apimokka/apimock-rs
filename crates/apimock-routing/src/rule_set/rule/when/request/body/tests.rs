@@ -20,8 +20,8 @@
 //! supported. See `apimock_routing::util::json::json_value_by_jsonpath`
 //! for the full contract. These tests use the supported form.
 
-use std::collections::HashMap;
 use indexmap::IndexMap;
+use std::collections::HashMap;
 
 use hyper::Request;
 use serde_json::{Value, json};
@@ -253,14 +253,20 @@ fn absent_does_not_match_null_value() {
 fn absent_matches_truly_missing_field() {
     let body = parse_body(r#"json."missing" = { op = "absent", value = "" }"#);
     let req = make_parsed_request(Some(json!({"present": 1})));
-    assert!(body.is_match(&req), "Absent should match when field is truly absent");
+    assert!(
+        body.is_match(&req),
+        "Absent should match when field is truly absent"
+    );
 }
 
 #[test]
 fn exists_does_not_match_missing_field() {
     let body = parse_body(r#"json."missing" = { op = "exists", value = "" }"#);
     let req = make_parsed_request(Some(json!({"other": 1})));
-    assert!(!body.is_match(&req), "Exists should not match a missing field");
+    assert!(
+        !body.is_match(&req),
+        "Exists should not match a missing field"
+    );
 }
 
 // ── RFC 021: negated body string operators ────────────────────────────
@@ -268,21 +274,21 @@ fn exists_does_not_match_missing_field() {
 #[test]
 fn not_contains_matches_when_absent() {
     let body = parse_body(r#"json."status" = { op = "not_contains", value = "error" }"#);
-    assert!( body.is_match(&make_parsed_request(Some(json!({"status": "success"})))));
+    assert!(body.is_match(&make_parsed_request(Some(json!({"status": "success"})))));
     assert!(!body.is_match(&make_parsed_request(Some(json!({"status": "error_code"})))));
 }
 
 #[test]
 fn not_starts_with_matches() {
     let body = parse_body(r#"json."role" = { op = "not_starts_with", value = "admin" }"#);
-    assert!( body.is_match(&make_parsed_request(Some(json!({"role": "viewer"})))));
+    assert!(body.is_match(&make_parsed_request(Some(json!({"role": "viewer"})))));
     assert!(!body.is_match(&make_parsed_request(Some(json!({"role": "admin_user"})))));
 }
 
 #[test]
 fn not_ends_with_matches() {
     let body = parse_body(r#"json."id" = { op = "not_ends_with", value = "_tmp" }"#);
-    assert!( body.is_match(&make_parsed_request(Some(json!({"id": "abc123"})))));
+    assert!(body.is_match(&make_parsed_request(Some(json!({"id": "abc123"})))));
     assert!(!body.is_match(&make_parsed_request(Some(json!({"id": "abc_tmp"})))));
 }
 
@@ -290,7 +296,7 @@ fn not_ends_with_matches() {
 fn not_regex_matches() {
     // Use a simple anchored pattern without backslash escaping.
     let body = parse_body(r#"json."role" = { op = "not_regex", value = "^admin" }"#);
-    assert!( body.is_match(&make_parsed_request(Some(json!({"role": "viewer"})))));
+    assert!(body.is_match(&make_parsed_request(Some(json!({"role": "viewer"})))));
     assert!(!body.is_match(&make_parsed_request(Some(json!({"role": "admin_user"})))));
 }
 
@@ -319,14 +325,16 @@ fn map_has_key_no_match_when_value_not_object() {
 
 #[test]
 fn map_does_not_have_key_matches_when_key_absent() {
-    let body = parse_body(r#"json."config" = { op = "map_does_not_have_key", value = "override" }"#);
+    let body =
+        parse_body(r#"json."config" = { op = "map_does_not_have_key", value = "override" }"#);
     let req = make_parsed_request(Some(json!({"config": {"debug": true}})));
     assert!(body.is_match(&req));
 }
 
 #[test]
 fn map_does_not_have_key_no_match_when_key_present() {
-    let body = parse_body(r#"json."config" = { op = "map_does_not_have_key", value = "override" }"#);
+    let body =
+        parse_body(r#"json."config" = { op = "map_does_not_have_key", value = "override" }"#);
     let req = make_parsed_request(Some(json!({"config": {"override": true, "debug": true}})));
     assert!(!body.is_match(&req));
 }
@@ -342,16 +350,23 @@ fn map_does_not_have_key_no_match_when_not_object() {
 
 #[test]
 fn structural_contains_matches_superset_element() {
-    let body = parse_body(r#"json."items" = { op = "structural_contains", value = "{\"type\":\"admin\"}" }"#);
+    let body = parse_body(
+        r#"json."items" = { op = "structural_contains", value = "{\"type\":\"admin\"}" }"#,
+    );
     let req = make_parsed_request(Some(json!({
         "items": [{"type":"user","id":1},{"type":"admin","id":2,"extra":"data"}]
     })));
-    assert!(body.is_match(&req), "array contains an element that is a superset of needle");
+    assert!(
+        body.is_match(&req),
+        "array contains an element that is a superset of needle"
+    );
 }
 
 #[test]
 fn structural_contains_no_match_when_no_superset() {
-    let body = parse_body(r#"json."items" = { op = "structural_contains", value = "{\"type\":\"admin\"}" }"#);
+    let body = parse_body(
+        r#"json."items" = { op = "structural_contains", value = "{\"type\":\"admin\"}" }"#,
+    );
     let req = make_parsed_request(Some(json!({
         "items": [{"type":"user","id":1},{"type":"viewer","id":2}]
     })));
@@ -360,7 +375,9 @@ fn structural_contains_no_match_when_no_superset() {
 
 #[test]
 fn structural_contains_nested_object_match() {
-    let body = parse_body(r#"json."users" = { op = "structural_contains", value = "{\"role\":{\"level\":3}}" }"#);
+    let body = parse_body(
+        r#"json."users" = { op = "structural_contains", value = "{\"role\":{\"level\":3}}" }"#,
+    );
     let req = make_parsed_request(Some(json!({
         "users": [
             {"name":"alice","role":{"level":1}},
@@ -374,8 +391,10 @@ fn structural_contains_nested_object_match() {
 fn structural_contains_scalar_needle_falls_back_to_equality() {
     // Non-object needle behaves like ArrayContains.
     let body = parse_body(r#"json."tags" = { op = "structural_contains", value = "\"admin\"" }"#);
-    assert!( body.is_match(&make_parsed_request(Some(json!({"tags":["user","admin"]})))));
-    assert!(!body.is_match(&make_parsed_request(Some(json!({"tags":["user","viewer"]})))));
+    assert!(body.is_match(&make_parsed_request(Some(json!({"tags":["user","admin"]})))));
+    assert!(!body.is_match(&make_parsed_request(Some(
+        json!({"tags":["user","viewer"]})
+    ))));
 }
 
 #[test]

@@ -1,6 +1,6 @@
 use hyper::{
-    header::{HeaderMap, HeaderValue, CONTENT_TYPE},
     Method,
+    header::{CONTENT_TYPE, HeaderMap, HeaderValue},
 };
 use reqwest::{Client, Response};
 

@@ -244,7 +244,6 @@ fn wild_card() {
     }
 }
 
-
 // RFC 017: EndsWith and Regex tests
 #[test]
 fn ends_with() {
@@ -256,8 +255,13 @@ fn ends_with() {
         ("", "x", false),
     ];
     for (text, checker, expect) in cases {
-        assert_eq!(RuleOp::EndsWith.is_match(text, checker), expect,
-            "EndsWith({:?}, {:?})", text, checker);
+        assert_eq!(
+            RuleOp::EndsWith.is_match(text, checker),
+            expect,
+            "EndsWith({:?}, {:?})",
+            text,
+            checker
+        );
     }
 }
 
@@ -277,25 +281,25 @@ fn regex_invalid_pattern_returns_false() {
 // RFC 021: negated operator tests
 #[test]
 fn not_contains() {
-    assert!( RuleOp::NotContains.is_match("foobar", "baz"));
+    assert!(RuleOp::NotContains.is_match("foobar", "baz"));
     assert!(!RuleOp::NotContains.is_match("foobar", "foo"));
 }
 
 #[test]
 fn not_starts_with() {
-    assert!( RuleOp::NotStartsWith.is_match("foobar", "bar"));
+    assert!(RuleOp::NotStartsWith.is_match("foobar", "bar"));
     assert!(!RuleOp::NotStartsWith.is_match("foobar", "foo"));
 }
 
 #[test]
 fn not_ends_with() {
-    assert!( RuleOp::NotEndsWith.is_match("foobar", "foo"));
+    assert!(RuleOp::NotEndsWith.is_match("foobar", "foo"));
     assert!(!RuleOp::NotEndsWith.is_match("foobar", "bar"));
 }
 
 #[test]
 fn not_regex_match() {
-    assert!( RuleOp::NotRegex.is_match("text/plain",       r"^application/"));
+    assert!(RuleOp::NotRegex.is_match("text/plain", r"^application/"));
     assert!(!RuleOp::NotRegex.is_match("application/json", r"^application/"));
 }
 

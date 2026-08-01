@@ -10,8 +10,8 @@ use super::RuleSet;
 use respond::Respond;
 use util::url_path_with_prefix;
 use when::{
-    request::url_path::{UrlPath, UrlPathConfig},
     When,
+    request::url_path::{UrlPath, UrlPathConfig},
 };
 
 type ConditionKey = String;

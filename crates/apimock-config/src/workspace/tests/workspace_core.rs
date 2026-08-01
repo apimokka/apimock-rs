@@ -30,7 +30,12 @@ fn snapshot_shapes_match_spec() {
         .iter()
         .find(|f| matches!(f.kind, ConfigFileKind::Root))
         .expect("root file present");
-    assert!(root_view.nodes.iter().any(|n| n.display_name == "apimock.toml"));
+    assert!(
+        root_view
+            .nodes
+            .iter()
+            .any(|n| n.display_name == "apimock.toml")
+    );
 
     let rs_view = snap
         .files
@@ -39,9 +44,24 @@ fn snapshot_shapes_match_spec() {
         .expect("rule set present");
     // rule-set + 2 rules + 2 responds
     assert!(rs_view.nodes.len() >= 5);
-    assert!(rs_view.nodes.iter().any(|n| matches!(n.kind, NodeKind::RuleSet)));
-    assert!(rs_view.nodes.iter().any(|n| matches!(n.kind, NodeKind::Rule)));
-    assert!(rs_view.nodes.iter().any(|n| matches!(n.kind, NodeKind::Respond)));
+    assert!(
+        rs_view
+            .nodes
+            .iter()
+            .any(|n| matches!(n.kind, NodeKind::RuleSet))
+    );
+    assert!(
+        rs_view
+            .nodes
+            .iter()
+            .any(|n| matches!(n.kind, NodeKind::Rule))
+    );
+    assert!(
+        rs_view
+            .nodes
+            .iter()
+            .any(|n| matches!(n.kind, NodeKind::Respond))
+    );
 }
 
 #[test]
@@ -413,4 +433,3 @@ fn validate_surfaces_per_node_diagnostics() {
     let report = ws.validate();
     assert!(!report.is_valid);
 }
-

@@ -56,9 +56,11 @@ fn save_persists_rule_set_edit_and_round_trips() {
     assert!(ws.has_unsaved_changes());
 
     let save = ws.save().expect("save");
-    assert!(save.changed_files.iter().any(|p| p.file_name()
-        .map(|n| n.to_string_lossy().contains("apimock-rule-set"))
-        .unwrap_or(false)));
+    assert!(save.changed_files.iter().any(|p| {
+        p.file_name()
+            .map(|n| n.to_string_lossy().contains("apimock-rule-set"))
+            .unwrap_or(false)
+    }));
     assert!(!save.diff_summary.is_empty());
     // After save, has_unsaved_changes is now false (baseline updated).
     assert!(!ws.has_unsaved_changes());
@@ -99,10 +101,11 @@ fn save_persists_root_edit_and_flags_reload() {
     );
 
     // Diff summary should mention the root node.
-    assert!(save.diff_summary.iter().any(|d| matches!(
-        d.kind,
-        crate::view::DiffKind::Updated
-    )));
+    assert!(
+        save.diff_summary
+            .iter()
+            .any(|d| matches!(d.kind, crate::view::DiffKind::Updated))
+    );
 
     // Round-trip: re-load and verify the port stuck.
     let ws2 = Workspace::load(root).expect("reload");
@@ -264,7 +267,11 @@ fn snapshot_file_tree_depth1_eager() {
     );
 
     // File node carries a route_hint.
-    let file_entry = tree.entries.iter().find(|e| e.name == "users.json").unwrap();
+    let file_entry = tree
+        .entries
+        .iter()
+        .find(|e| e.name == "users.json")
+        .unwrap();
     assert_eq!(file_entry.route_hint.as_deref(), Some("/users"));
     assert!(file_entry.children.is_none());
 
@@ -317,8 +324,7 @@ fn save_per_rule_diff_after_rule_edit() {
 
     // Specifically rule #1 should be Updated (we edited rules[0]).
     let updated_rule_1 = rule_diffs.iter().find(|d| {
-        d.summary.contains("rule #1")
-            && matches!(d.kind, crate::view::DiffKind::Updated)
+        d.summary.contains("rule #1") && matches!(d.kind, crate::view::DiffKind::Updated)
     });
     assert!(
         updated_rule_1.is_some(),
@@ -361,4 +367,3 @@ fn snapshot_script_routes_present_when_middlewares_configured() {
     assert_eq!(snap.routes.script_routes[0].source_file, "noop.rhai");
     assert_eq!(snap.routes.script_routes[0].display_name, "noop.rhai");
 }
-

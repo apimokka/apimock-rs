@@ -18,10 +18,10 @@ use std::fmt;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
+use rustls::ServerConfig;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject};
 use rustls::server::{ClientHello, ResolvesServerCert};
 use rustls::sign::CertifiedKey;
-use rustls::ServerConfig;
 
 use crate::error::{ServerError, ServerResult, TlsKind};
 
@@ -89,11 +89,10 @@ fn make_certified_key(
     certs: Vec<CertificateDer<'static>>,
     key: PrivateKeyDer<'static>,
 ) -> Result<CertifiedKey, TlsReloadError> {
-    let signing_key = rustls::crypto::ring::sign::any_supported_type(&key).map_err(|e| {
-        TlsReloadError {
+    let signing_key =
+        rustls::crypto::ring::sign::any_supported_type(&key).map_err(|e| TlsReloadError {
             reason: format!("unsupported private key type: {}", e),
-        }
-    })?;
+        })?;
     Ok(CertifiedKey::new(certs, signing_key))
 }
 
@@ -133,11 +132,7 @@ impl ReloadableCertResolver {
     ///
     /// If loading or parsing fails, the old certificate remains active and
     /// this method returns an error describing the failure.
-    pub fn reload_from_paths(
-        &self,
-        cert_path: &str,
-        key_path: &str,
-    ) -> Result<(), TlsReloadError> {
+    pub fn reload_from_paths(&self, cert_path: &str, key_path: &str) -> Result<(), TlsReloadError> {
         let certs = load_certs(cert_path).map_err(|e| TlsReloadError {
             reason: e.to_string(),
         })?;
@@ -157,10 +152,7 @@ impl ReloadableCertResolver {
 
 impl ResolvesServerCert for ReloadableCertResolver {
     fn resolve(&self, _client_hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        self.inner
-            .read()
-            .ok()
-            .map(|g| Arc::clone(&*g))
+        self.inner.read().ok().map(|g| Arc::clone(&*g))
     }
 }
 
@@ -244,14 +236,13 @@ AwEHoUQDQgAEE6OeOJt2JPuJDZXBV0fES+a7Rlaq2aIc72pze6FIiGF86aH8GDQS\n\
     #[test]
     fn reloadable_resolver_init_and_reload_bad_path_keeps_old_cert() {
         let cert_path = "/tmp/apimock_test_cert.pem";
-        let key_path  = "/tmp/apimock_test_key.pem";
+        let key_path = "/tmp/apimock_test_key.pem";
         write_pem_file(cert_path, TEST_CERT_PEM);
-        write_pem_file(key_path,  TEST_KEY_PEM);
+        write_pem_file(key_path, TEST_KEY_PEM);
 
         let certs = load_certs(cert_path).expect("load test cert");
-        let key   = load_private_key(key_path).expect("load test key");
-        let resolver = ReloadableCertResolver::new(certs, key)
-            .expect("build resolver");
+        let key = load_private_key(key_path).expect("load test key");
+        let resolver = ReloadableCertResolver::new(certs, key).expect("build resolver");
 
         // Reload from bad paths → error, resolver must not crash.
         let result = resolver.reload_from_paths("/no/cert.pem", "/no/key.pem");
@@ -265,31 +256,38 @@ AwEHoUQDQgAEE6OeOJt2JPuJDZXBV0fES+a7Rlaq2aIc72pze6FIiGF86aH8GDQS\n\
     #[test]
     fn reloadable_resolver_reload_from_same_files_succeeds() {
         let cert_path = "/tmp/apimock_test_cert2.pem";
-        let key_path  = "/tmp/apimock_test_key2.pem";
+        let key_path = "/tmp/apimock_test_key2.pem";
         write_pem_file(cert_path, TEST_CERT_PEM);
-        write_pem_file(key_path,  TEST_KEY_PEM);
+        write_pem_file(key_path, TEST_KEY_PEM);
 
         let certs = load_certs(cert_path).expect("load test cert");
-        let key   = load_private_key(key_path).expect("load test key");
-        let resolver = ReloadableCertResolver::new(certs, key)
-            .expect("build resolver");
+        let key = load_private_key(key_path).expect("load test key");
+        let resolver = ReloadableCertResolver::new(certs, key).expect("build resolver");
 
         // Re-loading from the same valid files should succeed.
         let result = resolver.reload_from_paths(cert_path, key_path);
-        assert!(result.is_ok(), "reload from same valid files must succeed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "reload from same valid files must succeed: {:?}",
+            result
+        );
     }
 
     #[test]
     fn build_server_config_reloadable_returns_resolver() {
         let cert_path = "/tmp/apimock_test_cert3.pem";
-        let key_path  = "/tmp/apimock_test_key3.pem";
+        let key_path = "/tmp/apimock_test_key3.pem";
         write_pem_file(cert_path, TEST_CERT_PEM);
-        write_pem_file(key_path,  TEST_KEY_PEM);
+        write_pem_file(key_path, TEST_KEY_PEM);
 
         let certs = load_certs(cert_path).unwrap();
-        let key   = load_private_key(key_path).unwrap();
+        let key = load_private_key(key_path).unwrap();
         let result = build_server_config_reloadable(certs, key);
-        assert!(result.is_ok(), "build_server_config_reloadable failed: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "build_server_config_reloadable failed: {:?}",
+            result
+        );
         let (_config, resolver) = result.unwrap();
         // Resolver should be usable after config is built.
         let reload = resolver.reload_from_paths(cert_path, key_path);

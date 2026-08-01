@@ -28,8 +28,10 @@ use rule::{Rule, respond::Respond};
 /// across multiple files that can be enabled/disabled independently.
 /// Match order across sets is determined by the order in
 /// `service.rule_sets`, so the most specific set can be listed first.
-
-use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+};
 
 fn default_counter() -> Arc<AtomicUsize> {
     Arc::new(AtomicUsize::new(0))
@@ -69,18 +71,18 @@ impl RuleSet {
         rule_set_idx: usize,
     ) -> RoutingResult<Self> {
         let path = Path::new(rule_set_file_path);
-        let toml_string = fs::read_to_string(rule_set_file_path).map_err(|e| {
-            RoutingError::RuleSetRead {
+        let toml_string =
+            fs::read_to_string(rule_set_file_path).map_err(|e| RoutingError::RuleSetRead {
                 path: path.to_path_buf(),
                 source: e,
-            }
-        })?;
+            })?;
 
-        let mut ret: Self = toml::from_str(&toml_string).map_err(|e| RoutingError::RuleSetParse {
-            path: path.to_path_buf(),
-            canonical: path.canonicalize().ok(),
-            source: e,
-        })?;
+        let mut ret: Self =
+            toml::from_str(&toml_string).map_err(|e| RoutingError::RuleSetParse {
+                path: path.to_path_buf(),
+                canonical: path.canonicalize().ok(),
+                source: e,
+            })?;
 
         // - prefix: fill in defaults and normalize
         let mut prefix = ret.prefix.clone().unwrap_or_default();
@@ -158,7 +160,11 @@ impl RuleSet {
 
         // RFC 025: per-rule-set strategy override.
         // The rule set's own strategy takes precedence over the service-level one.
-        let effective_strategy = self.strategy.as_ref().or(strategy).unwrap_or(&Strategy::FirstMatch);
+        let effective_strategy = self
+            .strategy
+            .as_ref()
+            .or(strategy)
+            .unwrap_or(&Strategy::FirstMatch);
         let strategy = effective_strategy;
 
         match strategy {
@@ -267,10 +273,7 @@ impl RuleSet {
                 // Relaxed ordering: atomicity without sequential consistency
                 // is sufficient for a mock server (slight counter reorder
                 // on concurrent requests is acceptable).
-                let idx = self
-                    .round_robin_counter
-                    .fetch_add(1, Ordering::Relaxed)
-                    % matches.len();
+                let idx = self.round_robin_counter.fetch_add(1, Ordering::Relaxed) % matches.len();
 
                 Some(matches[idx].respond.clone())
             }
@@ -313,9 +316,13 @@ impl std::fmt::Display for RuleSet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::strategy::Strategy;
     use crate::parsed_request::ParsedRequest;
-    use crate::rule_set::rule::{Rule, respond::Respond, when::{When, request::Request}};
+    use crate::rule_set::rule::{
+        Rule,
+        respond::Respond,
+        when::{When, request::Request},
+    };
+    use crate::strategy::Strategy;
 
     /// Build a minimal `ParsedRequest` matching `url_path`.
     fn get_req(url_path: &str) -> ParsedRequest {
@@ -336,8 +343,8 @@ mod tests {
     /// responding with `"response_0"`, `"response_1"`, …
     fn make_round_robin_set(n: usize, url_path: &str) -> RuleSet {
         use crate::rule_set::rule::when::request::{
-            url_path::{UrlPath, UrlPathConfig},
             http_method::HttpMethod,
+            url_path::{UrlPath, UrlPathConfig},
         };
 
         let rules = (0..n)
@@ -414,8 +421,12 @@ mod tests {
         assert_eq!(
             texts,
             vec![
-                "response_0", "response_1", "response_2",
-                "response_0", "response_1", "response_2",
+                "response_0",
+                "response_1",
+                "response_2",
+                "response_0",
+                "response_1",
+                "response_2",
             ]
         );
     }
@@ -430,7 +441,8 @@ mod tests {
         assert!(miss.is_none(), "non-matching path should miss");
 
         // Counter at 0 still — first hit returns response_0.
-        let hit = rs.find_matched(&get_req("/api"), Some(&strategy), 0)
+        let hit = rs
+            .find_matched(&get_req("/api"), Some(&strategy), 0)
             .expect("should match");
         assert_eq!(hit.text.as_deref(), Some("response_0"));
     }

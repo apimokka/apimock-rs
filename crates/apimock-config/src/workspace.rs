@@ -145,10 +145,7 @@ impl Workspace {
         );
         for rule_set in config.service.rule_sets.iter() {
             let path = PathBuf::from(rule_set.file_path.as_str());
-            baseline_files.insert(
-                path,
-                crate::toml_writer::render_rule_set_toml(rule_set),
-            );
+            baseline_files.insert(path, crate::toml_writer::render_rule_set_toml(rule_set));
         }
 
         // Snapshot file metadata for external-change detection (RFC 024).
@@ -156,7 +153,13 @@ impl Workspace {
         for path in baseline_files.keys() {
             if let Ok(meta) = std::fs::metadata(path) {
                 if let Ok(modified) = meta.modified() {
-                    file_metas.insert(path.clone(), FileMeta { modified, len: meta.len() });
+                    file_metas.insert(
+                        path.clone(),
+                        FileMeta {
+                            modified,
+                            len: meta.len(),
+                        },
+                    );
                 }
             }
         }
@@ -196,7 +199,8 @@ impl Workspace {
         for (path, recorded) in &self.file_metas {
             if let Ok(meta) = std::fs::metadata(path) {
                 let changed_size = meta.len() != recorded.len;
-                let changed_mtime = meta.modified()
+                let changed_mtime = meta
+                    .modified()
                     .map(|m| m != recorded.modified)
                     .unwrap_or(false);
                 if changed_size || changed_mtime {

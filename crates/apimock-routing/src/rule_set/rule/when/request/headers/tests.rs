@@ -11,7 +11,9 @@ use super::Headers;
 fn parse_headers(toml_text: &str) -> Headers {
     let wrapped = format!("[headers]\n{}", toml_text);
     #[derive(serde::Deserialize)]
-    struct Wrapper { headers: Headers }
+    struct Wrapper {
+        headers: Headers,
+    }
     let w: Wrapper = toml::from_str(&wrapped).expect("parse headers TOML");
     w.headers
 }
@@ -64,13 +66,21 @@ fn is_match_op_not_equal_when_equal_returns_false() {
 #[test]
 fn is_match_op_starts_with_match() {
     let h = parse_headers(r#"authorization = { op = "starts_with", value = "Bearer " }"#);
-    assert!(h.is_match(&make_request_headers([("authorization", "Bearer token123")]), 0, 0));
+    assert!(h.is_match(
+        &make_request_headers([("authorization", "Bearer token123")]),
+        0,
+        0
+    ));
 }
 
 #[test]
 fn is_match_op_starts_with_no_match() {
     let h = parse_headers(r#"authorization = { op = "starts_with", value = "Bearer " }"#);
-    assert!(!h.is_match(&make_request_headers([("authorization", "Basic abc")]), 0, 0));
+    assert!(!h.is_match(
+        &make_request_headers([("authorization", "Basic abc")]),
+        0,
+        0
+    ));
 }
 
 #[test]
@@ -83,7 +93,11 @@ fn is_match_op_ends_with_match() {
 #[test]
 fn is_match_op_ends_with_no_match() {
     let h = parse_headers(r#"x-trace = { op = "ends_with", value = "-done" }"#);
-    assert!(!h.is_match(&make_request_headers([("x-trace", "req-1234-pending")]), 0, 0));
+    assert!(!h.is_match(
+        &make_request_headers([("x-trace", "req-1234-pending")]),
+        0,
+        0
+    ));
 }
 
 #[test]
@@ -116,9 +130,21 @@ fn is_match_op_wild_card_match() {
 fn is_match_op_regex_match() {
     // RFC 017: Regex now works correctly (was previously falling back to Equal).
     let h = parse_headers(r#"content-type = { op = "regex", value = "^application/(json|xml)$" }"#);
-    assert!(h.is_match(&make_request_headers([("content-type", "application/json")]), 0, 0));
-    assert!(h.is_match(&make_request_headers([("content-type", "application/xml")]), 0, 0));
-    assert!(!h.is_match(&make_request_headers([("content-type", "text/plain")]), 0, 0));
+    assert!(h.is_match(
+        &make_request_headers([("content-type", "application/json")]),
+        0,
+        0
+    ));
+    assert!(h.is_match(
+        &make_request_headers([("content-type", "application/xml")]),
+        0,
+        0
+    ));
+    assert!(!h.is_match(
+        &make_request_headers([("content-type", "text/plain")]),
+        0,
+        0
+    ));
 }
 
 // ── Presence operators (RFC 017) ──────────────────────────────────────
@@ -233,7 +259,7 @@ f = { op = "wild_card",  value = "x" }
 g = { op = "regex",      value = "x" }"#,
     );
     assert_eq!(h.0.len(), 7);
-    for key in ["a","b","c","d","e","f","g"] {
+    for key in ["a", "b", "c", "d", "e", "f", "g"] {
         assert!(h.0[key].op.is_some(), "op missing for `{}`", key);
     }
 }
@@ -258,8 +284,8 @@ x-two   = { value = "beta"  }
 x-three = { value = "gamma" }"#,
     );
     assert_eq!(h.0.len(), 3);
-    assert_eq!(h.0["x-one"].value,   "alpha");
-    assert_eq!(h.0["x-two"].value,   "beta");
+    assert_eq!(h.0["x-one"].value, "alpha");
+    assert_eq!(h.0["x-two"].value, "beta");
     assert_eq!(h.0["x-three"].value, "gamma");
 }
 
@@ -267,13 +293,31 @@ x-three = { value = "gamma" }"#,
 
 #[test]
 fn headers_programmatic_insertion_preserves_order() {
-    use indexmap::IndexMap;
     use super::HeaderConditionStatement;
+    use indexmap::IndexMap;
 
     let mut map: IndexMap<String, HeaderConditionStatement> = IndexMap::new();
-    map.insert("z-header".to_owned(), HeaderConditionStatement { op: None, value: "z".to_owned() });
-    map.insert("a-header".to_owned(), HeaderConditionStatement { op: None, value: "a".to_owned() });
-    map.insert("m-header".to_owned(), HeaderConditionStatement { op: None, value: "m".to_owned() });
+    map.insert(
+        "z-header".to_owned(),
+        HeaderConditionStatement {
+            op: None,
+            value: "z".to_owned(),
+        },
+    );
+    map.insert(
+        "a-header".to_owned(),
+        HeaderConditionStatement {
+            op: None,
+            value: "a".to_owned(),
+        },
+    );
+    map.insert(
+        "m-header".to_owned(),
+        HeaderConditionStatement {
+            op: None,
+            value: "m".to_owned(),
+        },
+    );
 
     let h = Headers(map);
     let keys: Vec<&str> = h.0.keys().map(String::as_str).collect();
@@ -282,16 +326,34 @@ fn headers_programmatic_insertion_preserves_order() {
 
 #[test]
 fn when_view_headers_programmatic_insertion_order() {
-    use indexmap::IndexMap;
     use super::HeaderConditionStatement;
-    use crate::view::build::build_when_view;
     use crate::rule_set::rule::when::When;
     use crate::rule_set::rule::when::request::Request;
+    use crate::view::build::build_when_view;
+    use indexmap::IndexMap;
 
     let mut map: IndexMap<String, HeaderConditionStatement> = IndexMap::new();
-    map.insert("z".to_owned(), HeaderConditionStatement { op: None, value: "".to_owned() });
-    map.insert("a".to_owned(), HeaderConditionStatement { op: None, value: "".to_owned() });
-    map.insert("m".to_owned(), HeaderConditionStatement { op: None, value: "".to_owned() });
+    map.insert(
+        "z".to_owned(),
+        HeaderConditionStatement {
+            op: None,
+            value: "".to_owned(),
+        },
+    );
+    map.insert(
+        "a".to_owned(),
+        HeaderConditionStatement {
+            op: None,
+            value: "".to_owned(),
+        },
+    );
+    map.insert(
+        "m".to_owned(),
+        HeaderConditionStatement {
+            op: None,
+            value: "".to_owned(),
+        },
+    );
 
     let when = When {
         request: Request {
@@ -312,29 +374,50 @@ fn when_view_headers_programmatic_insertion_order() {
 #[test]
 fn is_match_op_not_contains_match() {
     let h = parse_headers(r#"x-foo = { op = "not_contains", value = "bar" }"#);
-    assert!( h.is_match(&make_request_headers([("x-foo", "baz")]), 0, 0));
+    assert!(h.is_match(&make_request_headers([("x-foo", "baz")]), 0, 0));
     assert!(!h.is_match(&make_request_headers([("x-foo", "foobar")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_not_starts_with_match() {
     let h = parse_headers(r#"authorization = { op = "not_starts_with", value = "Bearer " }"#);
-    assert!( h.is_match(&make_request_headers([("authorization", "Basic abc")]), 0, 0));
-    assert!(!h.is_match(&make_request_headers([("authorization", "Bearer token")]), 0, 0));
+    assert!(h.is_match(
+        &make_request_headers([("authorization", "Basic abc")]),
+        0,
+        0
+    ));
+    assert!(!h.is_match(
+        &make_request_headers([("authorization", "Bearer token")]),
+        0,
+        0
+    ));
 }
 
 #[test]
 fn is_match_op_not_ends_with_match() {
     let h = parse_headers(r#"x-trace = { op = "not_ends_with", value = "-done" }"#);
-    assert!( h.is_match(&make_request_headers([("x-trace", "req-1234-pending")]), 0, 0));
+    assert!(h.is_match(
+        &make_request_headers([("x-trace", "req-1234-pending")]),
+        0,
+        0
+    ));
     assert!(!h.is_match(&make_request_headers([("x-trace", "req-1234-done")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_not_regex_match() {
-    let h = parse_headers(r#"content-type = { op = "not_regex", value = "^application/(json|xml)$" }"#);
-    assert!( h.is_match(&make_request_headers([("content-type", "text/plain")]), 0, 0));
-    assert!(!h.is_match(&make_request_headers([("content-type", "application/json")]), 0, 0));
+    let h =
+        parse_headers(r#"content-type = { op = "not_regex", value = "^application/(json|xml)$" }"#);
+    assert!(h.is_match(
+        &make_request_headers([("content-type", "text/plain")]),
+        0,
+        0
+    ));
+    assert!(!h.is_match(
+        &make_request_headers([("content-type", "application/json")]),
+        0,
+        0
+    ));
 }
 
 #[test]

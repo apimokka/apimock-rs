@@ -52,19 +52,19 @@ impl Default for HeaderOperator {
 impl std::fmt::Display for HeaderOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Equal         => write!(f, " == "),
-            Self::NotEqual      => write!(f, " != "),
-            Self::StartsWith    => write!(f, " starts with "),
+            Self::Equal => write!(f, " == "),
+            Self::NotEqual => write!(f, " != "),
+            Self::StartsWith => write!(f, " starts with "),
             Self::NotStartsWith => write!(f, " does not start with "),
-            Self::EndsWith      => write!(f, " ends with "),
-            Self::NotEndsWith   => write!(f, " does not end with "),
-            Self::Contains      => write!(f, " contains "),
-            Self::NotContains   => write!(f, " does not contain "),
-            Self::WildCard      => write!(f, " wild card matches "),
-            Self::Regex         => write!(f, " matches regex "),
-            Self::NotRegex      => write!(f, " does not match regex "),
-            Self::Exists        => write!(f, " exists"),
-            Self::Absent        => write!(f, " absent"),
+            Self::EndsWith => write!(f, " ends with "),
+            Self::NotEndsWith => write!(f, " does not end with "),
+            Self::Contains => write!(f, " contains "),
+            Self::NotContains => write!(f, " does not contain "),
+            Self::WildCard => write!(f, " wild card matches "),
+            Self::Regex => write!(f, " matches regex "),
+            Self::NotRegex => write!(f, " does not match regex "),
+            Self::Exists => write!(f, " exists"),
+            Self::Absent => write!(f, " absent"),
         }
     }
 }
@@ -73,19 +73,19 @@ impl HeaderOperator {
     /// Return the `snake_case` name used in TOML and view strings.
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Equal         => "equal",
-            Self::NotEqual      => "not_equal",
-            Self::StartsWith    => "starts_with",
+            Self::Equal => "equal",
+            Self::NotEqual => "not_equal",
+            Self::StartsWith => "starts_with",
             Self::NotStartsWith => "not_starts_with",
-            Self::EndsWith      => "ends_with",
-            Self::NotEndsWith   => "not_ends_with",
-            Self::Contains      => "contains",
-            Self::NotContains   => "not_contains",
-            Self::WildCard      => "wild_card",
-            Self::Regex         => "regex",
-            Self::NotRegex      => "not_regex",
-            Self::Exists        => "exists",
-            Self::Absent        => "absent",
+            Self::EndsWith => "ends_with",
+            Self::NotEndsWith => "not_ends_with",
+            Self::Contains => "contains",
+            Self::NotContains => "not_contains",
+            Self::WildCard => "wild_card",
+            Self::Regex => "regex",
+            Self::NotRegex => "not_regex",
+            Self::Exists => "exists",
+            Self::Absent => "absent",
         }
     }
 
@@ -96,19 +96,22 @@ impl HeaderOperator {
     /// Panics if called on a presence operator (`Exists` / `Absent`).
     pub fn to_rule_op(&self) -> RuleOp {
         match self {
-            Self::Equal         => RuleOp::Equal,
-            Self::NotEqual      => RuleOp::NotEqual,
-            Self::StartsWith    => RuleOp::StartsWith,
+            Self::Equal => RuleOp::Equal,
+            Self::NotEqual => RuleOp::NotEqual,
+            Self::StartsWith => RuleOp::StartsWith,
             Self::NotStartsWith => RuleOp::NotStartsWith,
-            Self::EndsWith      => RuleOp::EndsWith,
-            Self::NotEndsWith   => RuleOp::NotEndsWith,
-            Self::Contains      => RuleOp::Contains,
-            Self::NotContains   => RuleOp::NotContains,
-            Self::WildCard      => RuleOp::WildCard,
-            Self::Regex         => RuleOp::Regex,
-            Self::NotRegex      => RuleOp::NotRegex,
+            Self::EndsWith => RuleOp::EndsWith,
+            Self::NotEndsWith => RuleOp::NotEndsWith,
+            Self::Contains => RuleOp::Contains,
+            Self::NotContains => RuleOp::NotContains,
+            Self::WildCard => RuleOp::WildCard,
+            Self::Regex => RuleOp::Regex,
+            Self::NotRegex => RuleOp::NotRegex,
             Self::Exists | Self::Absent => {
-                panic!("HeaderOperator::to_rule_op called on presence operator {:?}", self)
+                panic!(
+                    "HeaderOperator::to_rule_op called on presence operator {:?}",
+                    self
+                )
             }
         }
     }

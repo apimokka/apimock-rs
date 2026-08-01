@@ -45,7 +45,8 @@ fn url_path_op_without_path_is_invalid_payload() {
     let err_msg = format!("{:?}", result.unwrap_err());
     assert!(
         err_msg.contains("url_path_op requires url_path"),
-        "error message should mention url_path_op: {}", err_msg
+        "error message should mention url_path_op: {}",
+        err_msg
     );
 }
 
@@ -79,7 +80,10 @@ fn url_path_op_without_path_errors_on_update_rule_too() {
         },
     });
 
-    assert!(result.is_err(), "UpdateRule with op but no path should error");
+    assert!(
+        result.is_err(),
+        "UpdateRule with op but no path should error"
+    );
 }
 
 #[test]
@@ -116,7 +120,10 @@ fn url_path_and_op_both_none_is_valid() {
         },
     });
 
-    assert!(result.is_ok(), "url_path: None, url_path_op: None should be accepted");
+    assert!(
+        result.is_ok(),
+        "url_path: None, url_path_op: None should be accepted"
+    );
 }
 
 #[test]
@@ -149,5 +156,8 @@ fn url_path_some_with_op_is_valid() {
         },
     });
 
-    assert!(result.is_ok(), "url_path: Some + url_path_op: Some should succeed");
+    assert!(
+        result.is_ok(),
+        "url_path: Some + url_path_op: Some should succeed"
+    );
 }

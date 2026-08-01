@@ -139,9 +139,7 @@ impl Workspace {
             Ok(v) => v,
             Err(_) => return, // baseline malformed; skip per-rule detail
         };
-        let baseline_rules: &[Value] = match baseline_value
-            .get("rules")
-            .and_then(|v| v.as_array())
+        let baseline_rules: &[Value] = match baseline_value.get("rules").and_then(|v| v.as_array())
         {
             Some(arr) => arr.as_slice(),
             None => &[],
@@ -154,14 +152,17 @@ impl Workspace {
         // Compare overlapping rules.
         for rule_idx in 0..common {
             let cur_rendered = rule_to_string(&rule_set.rules[rule_idx]);
-            let base_rendered = toml::to_string_pretty(&baseline_rules[rule_idx])
-                .unwrap_or_default();
+            let base_rendered =
+                toml::to_string_pretty(&baseline_rules[rule_idx]).unwrap_or_default();
             if cur_rendered == base_rendered {
                 continue;
             }
             let rule_id = self
                 .ids
-                .id_for(NodeAddress::Rule { rule_set: rs_idx, rule: rule_idx })
+                .id_for(NodeAddress::Rule {
+                    rule_set: rs_idx,
+                    rule: rule_idx,
+                })
                 .unwrap_or_else(NodeId::new);
             out.push(DiffItem {
                 kind: DiffKind::Updated,
@@ -171,7 +172,8 @@ impl Workspace {
 
             // RFC 029: per-condition items within the changed rule.
             self.append_condition_diff(
-                rs_idx, rule_idx,
+                rs_idx,
+                rule_idx,
                 &rule_set.rules[rule_idx],
                 &baseline_rules[rule_idx],
                 out,
@@ -190,11 +192,7 @@ impl Workspace {
             out.push(DiffItem {
                 kind: DiffKind::Added,
                 target,
-                summary: format!(
-                    "added rule #{} in rule set #{}",
-                    rule_idx + 1,
-                    rs_idx + 1
-                ),
+                summary: format!("added rule #{} in rule set #{}", rule_idx + 1, rs_idx + 1),
             });
         }
 
@@ -231,7 +229,10 @@ impl Workspace {
 
         // Collect current header keys.
         let cur_header_keys: std::collections::HashSet<&str> = cur_rule
-            .when.request.headers.as_ref()
+            .when
+            .request
+            .headers
+            .as_ref()
             .map(|h| h.0.keys().map(String::as_str).collect())
             .unwrap_or_default();
 
@@ -245,9 +246,12 @@ impl Workspace {
             .unwrap_or_default();
 
         for key in cur_header_keys.difference(&base_header_keys) {
-            let id = self.ids
+            let id = self
+                .ids
                 .id_for(NodeAddress::HeaderCondition {
-                    rule_set: rs_idx, rule: rule_idx, header_name: key.to_string(),
+                    rule_set: rs_idx,
+                    rule: rule_idx,
+                    header_name: key.to_string(),
                 })
                 .unwrap_or_else(NodeId::new);
             out.push(DiffItem {
@@ -268,7 +272,10 @@ impl Workspace {
 
         use apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind;
         let cur_body_paths: std::collections::HashSet<&str> = cur_rule
-            .when.request.body.as_ref()
+            .when
+            .request
+            .body
+            .as_ref()
             .and_then(|b| b.0.get(&BodyKind::Json))
             .map(|m| m.keys().map(String::as_str).collect())
             .unwrap_or_default();
@@ -283,9 +290,12 @@ impl Workspace {
             .unwrap_or_default();
 
         for path in cur_body_paths.difference(&base_body_paths) {
-            let id = self.ids
+            let id = self
+                .ids
                 .id_for(NodeAddress::BodyCondition {
-                    rule_set: rs_idx, rule: rule_idx, path: path.to_string(),
+                    rule_set: rs_idx,
+                    rule: rule_idx,
+                    path: path.to_string(),
                 })
                 .unwrap_or_else(NodeId::new);
             out.push(DiffItem {

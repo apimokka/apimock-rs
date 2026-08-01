@@ -32,14 +32,14 @@ use apimock_routing::rule_set::RuleSet;
 
 // ── CLI flag names ────────────────────────────────────────────────────
 
-const RULE_SET_NAMES:  &[&str] = &["--rule-set", "-r"];
-const RULE_NAMES:      &[&str] = &["--rule"];
-const PATH_NAMES:      &[&str] = &["--path", "-p"];
-const METHOD_NAMES:    &[&str] = &["--method", "-m"];
-const HEADER_NAMES:    &[&str] = &["--header", "-H"];
-const BODY_NAMES:      &[&str] = &["--body", "-b"];
+const RULE_SET_NAMES: &[&str] = &["--rule-set", "-r"];
+const RULE_NAMES: &[&str] = &["--rule"];
+const PATH_NAMES: &[&str] = &["--path", "-p"];
+const METHOD_NAMES: &[&str] = &["--method", "-m"];
+const HEADER_NAMES: &[&str] = &["--header", "-H"];
+const BODY_NAMES: &[&str] = &["--body", "-b"];
 const BODY_FILE_NAMES: &[&str] = &["--body-file"];
-const QUIET_NAMES:     &[&str] = &["--quiet", "-q"];
+const QUIET_NAMES: &[&str] = &["--quiet", "-q"];
 
 // ── Entry point ───────────────────────────────────────────────────────
 
@@ -64,15 +64,15 @@ pub fn run(raw_args: &[String]) -> AppResult<()> {
 // ── Argument model ────────────────────────────────────────────────────
 
 struct MatchTestArgs {
-    rule_set:   String,
+    rule_set: String,
     /// 0-based rule index (converted from CLI 1-based).
     rule_index: Option<usize>,
-    path:       String,
-    method:     String,
-    headers:    Vec<(String, String)>,
-    body:       Option<String>,
-    body_file:  Option<String>,
-    quiet:      bool,
+    path: String,
+    method: String,
+    headers: Vec<(String, String)>,
+    body: Option<String>,
+    body_file: Option<String>,
+    quiet: bool,
 }
 
 impl MatchTestArgs {
@@ -92,7 +92,7 @@ impl MatchTestArgs {
             None
         };
 
-        let path   = flag_value(args, PATH_NAMES).unwrap_or_else(|| "/".to_owned());
+        let path = flag_value(args, PATH_NAMES).unwrap_or_else(|| "/".to_owned());
         let method = flag_value(args, METHOD_NAMES)
             .unwrap_or_else(|| "GET".to_owned())
             .to_uppercase();
@@ -101,17 +101,26 @@ impl MatchTestArgs {
             .into_iter()
             .filter_map(|h| {
                 let idx = h.find(':')?;
-                let name  = h[..idx].trim().to_lowercase();
+                let name = h[..idx].trim().to_lowercase();
                 let value = h[idx + 1..].trim().to_owned();
                 Some((name, value))
             })
             .collect();
 
-        let body      = flag_value(args, BODY_NAMES);
+        let body = flag_value(args, BODY_NAMES);
         let body_file = flag_value(args, BODY_FILE_NAMES);
-        let quiet     = flag_present(args, QUIET_NAMES);
+        let quiet = flag_present(args, QUIET_NAMES);
 
-        Ok(Self { rule_set, rule_index, path, method, headers, body, body_file, quiet })
+        Ok(Self {
+            rule_set,
+            rule_index,
+            path,
+            method,
+            headers,
+            body,
+            body_file,
+            quiet,
+        })
     }
 
     fn body_json(&self) -> AppResult<Option<serde_json::Value>> {
@@ -134,7 +143,7 @@ impl MatchTestArgs {
 // ── Request builder ───────────────────────────────────────────────────
 
 fn build_parsed_request(
-    args:      &MatchTestArgs,
+    args: &MatchTestArgs,
     body_json: Option<serde_json::Value>,
 ) -> AppResult<ParsedRequest> {
     let mut builder = HyperRequest::builder()
@@ -150,31 +159,34 @@ fn build_parsed_request(
         .with_context(|| format!("invalid URI or headers for path {}", args.path))?
         .into_parts();
 
-    Ok(ParsedRequest { url_path: args.path.clone(), component_parts: parts, body_json })
+    Ok(ParsedRequest {
+        url_path: args.path.clone(),
+        component_parts: parts,
+        body_json,
+    })
 }
 
 // ── Match runner ──────────────────────────────────────────────────────
 
 /// Returns the process exit code: 0 = match, 1 = no match, 2 = error.
 fn run_match(
-    rule_set:   &RuleSet,
-    parsed:     &ParsedRequest,
+    rule_set: &RuleSet,
+    parsed: &ParsedRequest,
     rule_index: Option<usize>,
-    quiet:      bool,
+    quiet: bool,
 ) -> i32 {
-    let rules_to_check: Vec<(usize, &apimock_routing::rule_set::rule::Rule)> =
-        match rule_index {
-            Some(idx) if idx >= rule_set.rules.len() => {
-                eprintln!(
-                    "error: rule #{} does not exist (rule set has {} rules)",
-                    idx + 1,
-                    rule_set.rules.len()
-                );
-                return 2;
-            }
-            Some(idx) => vec![(idx, &rule_set.rules[idx])],
-            None      => rule_set.rules.iter().enumerate().collect(),
-        };
+    let rules_to_check: Vec<(usize, &apimock_routing::rule_set::rule::Rule)> = match rule_index {
+        Some(idx) if idx >= rule_set.rules.len() => {
+            eprintln!(
+                "error: rule #{} does not exist (rule set has {} rules)",
+                idx + 1,
+                rule_set.rules.len()
+            );
+            return 2;
+        }
+        Some(idx) => vec![(idx, &rule_set.rules[idx])],
+        None => rule_set.rules.iter().enumerate().collect(),
+    };
 
     let mut first_match: Option<usize> = None;
 
@@ -192,7 +204,7 @@ fn run_match(
         println!();
         match first_match {
             Some(w) => println!("Result: MATCH (rule #{})", w + 1),
-            None    => println!("Result: NO MATCH"),
+            None => println!("Result: NO MATCH"),
         }
     }
 
@@ -202,22 +214,22 @@ fn run_match(
 // ── Per-rule output ───────────────────────────────────────────────────
 
 fn print_rule_result(
-    idx:       usize,
-    rule:      &apimock_routing::rule_set::rule::Rule,
-    parsed:    &ParsedRequest,
-    matched:   bool,
+    idx: usize,
+    rule: &apimock_routing::rule_set::rule::Rule,
+    parsed: &ParsedRequest,
+    matched: bool,
     is_winner: bool,
 ) {
     use apimock_routing::rule_set::rule::when::request::url_path::UrlPathConfig;
 
     let winner = if is_winner { " ★" } else { "" };
-    let tag    = if matched { "MATCH" } else { "NO MATCH" };
-    let req    = &rule.when.request;
+    let tag = if matched { "MATCH" } else { "NO MATCH" };
+    let req = &rule.when.request;
 
     let label = match req.url_path_config.as_ref() {
-        Some(UrlPathConfig::Simple(p))   => p.clone(),
+        Some(UrlPathConfig::Simple(p)) => p.clone(),
         Some(UrlPathConfig::Detailed(u)) => u.value.clone(),
-        None                             => "(any path)".to_owned(),
+        None => "(any path)".to_owned(),
     };
     println!("\nRule #{}: {}  {}{}", idx + 1, label, tag, winner);
 
@@ -228,7 +240,7 @@ fn print_rule_result(
 }
 
 fn check_url_path(
-    req:    &apimock_routing::rule_set::rule::when::request::Request,
+    req: &apimock_routing::rule_set::rule::when::request::Request,
     parsed: &ParsedRequest,
 ) {
     use apimock_routing::rule_set::rule::when::request::url_path::UrlPathConfig;
@@ -247,15 +259,15 @@ fn check_url_path(
 }
 
 fn check_method(
-    req:    &apimock_routing::rule_set::rule::when::request::Request,
+    req: &apimock_routing::rule_set::rule::when::request::Request,
     parsed: &ParsedRequest,
 ) {
     use apimock_routing::rule_set::rule::when::request::http_method::HttpMethod;
     let expected = match req.http_method.as_ref() {
-        None                  => return,
-        Some(HttpMethod::Get)    => "GET",
-        Some(HttpMethod::Post)   => "POST",
-        Some(HttpMethod::Put)    => "PUT",
+        None => return,
+        Some(HttpMethod::Get) => "GET",
+        Some(HttpMethod::Post) => "POST",
+        Some(HttpMethod::Put) => "PUT",
         Some(HttpMethod::Delete) => "DELETE",
     };
     let actual = parsed.component_parts.method.as_str();
@@ -264,11 +276,11 @@ fn check_method(
 }
 
 fn check_headers(
-    req:    &apimock_routing::rule_set::rule::when::request::Request,
+    req: &apimock_routing::rule_set::rule::when::request::Request,
     parsed: &ParsedRequest,
 ) {
     let headers = match req.headers.as_ref() {
-        None    => return,
+        None => return,
         Some(h) => h,
     };
     for (name, stmt) in &headers.0 {
@@ -278,7 +290,7 @@ fn check_headers(
             HeaderOperator::Exists => parsed.component_parts.headers.contains_key(name.as_str()),
             HeaderOperator::Absent => !parsed.component_parts.headers.contains_key(name.as_str()),
             _ => match parsed.component_parts.headers.get(name.as_str()) {
-                None     => false,
+                None => false,
                 Some(hv) => {
                     let v = hv.to_str().unwrap_or("");
                     op.to_rule_op().is_match(v, &stmt.value)
@@ -287,13 +299,16 @@ fn check_headers(
         };
         println!(
             "  {}  header {:?} {} {:?}",
-            tick(ok), name, stmt.op.clone().unwrap_or_default(), stmt.value
+            tick(ok),
+            name,
+            stmt.op.clone().unwrap_or_default(),
+            stmt.value
         );
     }
 }
 
 fn check_body(
-    req:    &apimock_routing::rule_set::rule::when::request::Request,
+    req: &apimock_routing::rule_set::rule::when::request::Request,
     parsed: &ParsedRequest,
 ) {
     use apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind;
@@ -301,7 +316,7 @@ fn check_body(
     use apimock_routing::util::json::json_value_by_jsonpath;
 
     let body = match req.body.as_ref() {
-        None    => return,
+        None => return,
         Some(b) => b,
     };
     let body_json = match parsed.body_json.as_ref() {
@@ -312,14 +327,14 @@ fn check_body(
         Some(j) => j,
     };
     let conditions = match body.0.get(&BodyKind::Json) {
-        None    => return,
+        None => return,
         Some(c) => c,
     };
     for (path, stmt) in conditions {
-        let op       = stmt.op.clone().unwrap_or_default();
+        let op = stmt.op.clone().unwrap_or_default();
         let resolved = json_value_by_jsonpath(body_json, path);
         let ok = match resolved {
-            None    => matches!(op, BodyOperator::Absent),
+            None => matches!(op, BodyOperator::Absent),
             Some(v) => op.is_match(v, &stmt.value),
         };
         let actual = resolved
@@ -327,7 +342,11 @@ fn check_body(
             .unwrap_or_else(|| "(absent)".to_owned());
         println!(
             "  {}  body.json {:?} {} {:?}  (actual: {})",
-            tick(ok), path, op, stmt.value, actual
+            tick(ok),
+            path,
+            op,
+            stmt.value,
+            actual
         );
     }
 }
@@ -383,22 +402,24 @@ mod tests {
             .body(())
             .unwrap()
             .into_parts();
-        ParsedRequest { url_path: path.to_owned(), component_parts: parts, body_json: body }
+        ParsedRequest {
+            url_path: path.to_owned(),
+            component_parts: parts,
+            body_json: body,
+        }
     }
 
     #[test]
     fn match_simple_path() {
-        let rs = make_rule_set(
-            "[[rules]]\nwhen.request.url_path = \"/api\"\nrespond.text = \"ok\"\n",
-        );
+        let rs =
+            make_rule_set("[[rules]]\nwhen.request.url_path = \"/api\"\nrespond.text = \"ok\"\n");
         assert_eq!(run_match(&rs, &req("/api", "GET", None), None, true), 0);
     }
 
     #[test]
     fn no_match_wrong_path() {
-        let rs = make_rule_set(
-            "[[rules]]\nwhen.request.url_path = \"/api\"\nrespond.text = \"ok\"\n",
-        );
+        let rs =
+            make_rule_set("[[rules]]\nwhen.request.url_path = \"/api\"\nrespond.text = \"ok\"\n");
         assert_eq!(run_match(&rs, &req("/other", "GET", None), None, true), 1);
     }
 
@@ -415,17 +436,20 @@ mod tests {
 
     #[test]
     fn out_of_range_rule_index_returns_2() {
-        let rs = make_rule_set(
-            "[[rules]]\nwhen.request.url_path = \"/a\"\nrespond.text = \"a\"\n",
-        );
+        let rs = make_rule_set("[[rules]]\nwhen.request.url_path = \"/a\"\nrespond.text = \"a\"\n");
         assert_eq!(run_match(&rs, &req("/a", "GET", None), Some(99), true), 2);
     }
 
     #[test]
     fn flag_value_parses_correctly() {
         let args: Vec<String> = ["--rule-set", "foo.toml", "--path", "/api"]
-            .iter().map(|s| s.to_string()).collect();
-        assert_eq!(flag_value(&args, RULE_SET_NAMES).as_deref(), Some("foo.toml"));
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(
+            flag_value(&args, RULE_SET_NAMES).as_deref(),
+            Some("foo.toml")
+        );
         assert_eq!(flag_value(&args, PATH_NAMES).as_deref(), Some("/api"));
         assert_eq!(flag_value(&args, METHOD_NAMES), None);
     }
@@ -433,9 +457,14 @@ mod tests {
     #[test]
     fn flag_values_all_collects_multiple() {
         let args: Vec<String> = [
-            "--header", "Content-Type: application/json",
-            "--header", "X-Api-Key: secret",
-        ].iter().map(|s| s.to_string()).collect();
+            "--header",
+            "Content-Type: application/json",
+            "--header",
+            "X-Api-Key: secret",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
         let vals = flag_values_all(&args, HEADER_NAMES);
         assert_eq!(vals.len(), 2);
         assert!(vals[0].contains("Content-Type"));
@@ -456,8 +485,14 @@ mod tests {
             "respond.text = \"ok\"\n",
         ));
         let body = serde_json::json!({"action": "create"});
-        assert_eq!(run_match(&rs, &req("/api", "POST", Some(body)), None, true), 0);
+        assert_eq!(
+            run_match(&rs, &req("/api", "POST", Some(body)), None, true),
+            0
+        );
         let bad = serde_json::json!({"action": "delete"});
-        assert_eq!(run_match(&rs, &req("/api", "POST", Some(bad)), None, true), 1);
+        assert_eq!(
+            run_match(&rs, &req("/api", "POST", Some(bad)), None, true),
+            1
+        );
     }
 }

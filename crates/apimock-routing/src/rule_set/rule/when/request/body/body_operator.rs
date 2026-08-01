@@ -131,31 +131,31 @@ impl Default for BodyOperator {
 impl std::fmt::Display for BodyOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Equal             => write!(f, " == "),
-            Self::EqualString       => write!(f, " == (string) "),
-            Self::Contains          => write!(f, " contains "),
-            Self::NotContains       => write!(f, " does not contain "),
-            Self::StartsWith        => write!(f, " starts_with "),
-            Self::NotStartsWith     => write!(f, " does not start_with "),
-            Self::EndsWith          => write!(f, " ends_with "),
-            Self::NotEndsWith       => write!(f, " does not end_with "),
-            Self::Regex             => write!(f, " matches regex "),
-            Self::NotRegex          => write!(f, " does not match regex "),
-            Self::EqualTyped        => write!(f, " == (typed) "),
-            Self::EqualNumber       => write!(f, " == (number) "),
-            Self::GreaterThan       => write!(f, " > "),
-            Self::LessThan          => write!(f, " < "),
-            Self::GreaterOrEqual    => write!(f, " >= "),
-            Self::LessOrEqual       => write!(f, " <= "),
-            Self::Exists            => write!(f, " exists"),
-            Self::Absent            => write!(f, " absent"),
-            Self::ArrayLengthEqual  => write!(f, " array_length == "),
-            Self::ArrayLengthAtLeast=> write!(f, " array_length >= "),
-            Self::ArrayContains     => write!(f, " array_contains "),
-            Self::EqualInteger      => write!(f, " == (integer) "),
-            Self::MapHasKey         => write!(f, " map_has_key "),
+            Self::Equal => write!(f, " == "),
+            Self::EqualString => write!(f, " == (string) "),
+            Self::Contains => write!(f, " contains "),
+            Self::NotContains => write!(f, " does not contain "),
+            Self::StartsWith => write!(f, " starts_with "),
+            Self::NotStartsWith => write!(f, " does not start_with "),
+            Self::EndsWith => write!(f, " ends_with "),
+            Self::NotEndsWith => write!(f, " does not end_with "),
+            Self::Regex => write!(f, " matches regex "),
+            Self::NotRegex => write!(f, " does not match regex "),
+            Self::EqualTyped => write!(f, " == (typed) "),
+            Self::EqualNumber => write!(f, " == (number) "),
+            Self::GreaterThan => write!(f, " > "),
+            Self::LessThan => write!(f, " < "),
+            Self::GreaterOrEqual => write!(f, " >= "),
+            Self::LessOrEqual => write!(f, " <= "),
+            Self::Exists => write!(f, " exists"),
+            Self::Absent => write!(f, " absent"),
+            Self::ArrayLengthEqual => write!(f, " array_length == "),
+            Self::ArrayLengthAtLeast => write!(f, " array_length >= "),
+            Self::ArrayContains => write!(f, " array_contains "),
+            Self::EqualInteger => write!(f, " == (integer) "),
+            Self::MapHasKey => write!(f, " map_has_key "),
             Self::MapDoesNotHaveKey => write!(f, " map_does_not_have_key "),
-            Self::StructuralContains=> write!(f, " structural_contains "),
+            Self::StructuralContains => write!(f, " structural_contains "),
         }
     }
 }
@@ -165,11 +165,7 @@ impl BodyOperator {
     /// body and the configured `value` string from the rule.
     ///
     /// Returns `true` iff the condition matches.
-    pub fn is_match(
-        &self,
-        resolved: &serde_json::Value,
-        configured_value: &str,
-    ) -> bool {
+    pub fn is_match(&self, resolved: &serde_json::Value, configured_value: &str) -> bool {
         use serde_json::Value;
 
         match self {
@@ -178,11 +174,11 @@ impl BodyOperator {
                 let lhs = value_as_string(resolved);
                 lhs == configured_value
             }
-            Self::Contains    => value_as_string(resolved).contains(configured_value),
+            Self::Contains => value_as_string(resolved).contains(configured_value),
             Self::NotContains => !value_as_string(resolved).contains(configured_value),
-            Self::StartsWith    => value_as_string(resolved).starts_with(configured_value),
+            Self::StartsWith => value_as_string(resolved).starts_with(configured_value),
             Self::NotStartsWith => !value_as_string(resolved).starts_with(configured_value),
-            Self::EndsWith    => value_as_string(resolved).ends_with(configured_value),
+            Self::EndsWith => value_as_string(resolved).ends_with(configured_value),
             Self::NotEndsWith => !value_as_string(resolved).ends_with(configured_value),
             Self::Regex => {
                 let text = value_as_string(resolved);
@@ -339,16 +335,12 @@ fn regex_is_match(pattern: &str, text: &str) -> bool {
 fn is_subset(needle: &serde_json::Value, haystack: &serde_json::Value) -> bool {
     use serde_json::Value;
     match needle {
-        Value::Object(needle_map) => {
-            match haystack {
-                Value::Object(haystack_map) => {
-                    needle_map.iter().all(|(k, v)| {
-                        haystack_map.get(k).map_or(false, |hv| is_subset(v, hv))
-                    })
-                }
-                _ => false,
-            }
-        }
+        Value::Object(needle_map) => match haystack {
+            Value::Object(haystack_map) => needle_map
+                .iter()
+                .all(|(k, v)| haystack_map.get(k).map_or(false, |hv| is_subset(v, hv))),
+            _ => false,
+        },
         // For non-object needles, strict equality.
         other => other == haystack,
     }
@@ -440,7 +432,7 @@ mod tests {
         assert!(!BodyOperator::ArrayContains.is_match(&json!("not_array"), "1"));
     }
 
-// ── RFC 010: equal_integer ────────────────────────────────────────
+    // ── RFC 010: equal_integer ────────────────────────────────────────
 
     #[test]
     fn equal_integer_normal() {

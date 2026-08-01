@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use hyper::{
-    header::{HeaderName, HeaderValue},
     HeaderMap, StatusCode,
+    header::{HeaderName, HeaderValue},
 };
 use serde_json::json;
 

@@ -216,7 +216,10 @@ impl UrlPathView {
 pub enum RespondView {
     /// Serve a file. The path is resolved against the rule set's
     /// `respond_dir_prefix` at request time.
-    File { path: String, csv_records_key: Option<String> },
+    File {
+        path: String,
+        csv_records_key: Option<String>,
+    },
     /// Return a literal text body. `status` is the response code to use
     /// (defaults to 200 when absent).
     Text { text: String, status: Option<u16> },

@@ -1,12 +1,12 @@
 use http_body_util::{BodyExt, Empty, Full};
 use hyper::{
+    HeaderMap, StatusCode,
     body::{Body, Bytes},
     header::{
-        HeaderName, HeaderValue, ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_ORIGIN,
-        CONTENT_LENGTH, ORIGIN, VARY,
+        ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_ORIGIN, CONTENT_LENGTH, HeaderName,
+        HeaderValue, ORIGIN, VARY,
     },
     http::response::Builder,
-    HeaderMap, StatusCode,
 };
 
 use std::{collections::HashMap, str::FromStr};
@@ -60,7 +60,7 @@ impl ResponseHandler {
                 return internal_server_error_response(
                     &format!("failed to create response: {}", err),
                     request_headers,
-                )
+                );
             }
         };
 

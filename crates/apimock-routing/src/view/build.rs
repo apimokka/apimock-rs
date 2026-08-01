@@ -23,19 +23,18 @@ use std::path::Path;
 
 use serde_json;
 
+use crate::rule_set::RuleSet;
+use crate::rule_set::rule::Rule;
 use crate::rule_set::rule::respond::Respond;
 use crate::rule_set::rule::when::When;
 use crate::rule_set::rule::when::request::Request;
 use crate::rule_set::rule::when::request::http_method::HttpMethod;
 use crate::rule_set::rule::when::request::rule_op::RuleOp;
 use crate::rule_set::rule::when::request::url_path::UrlPathConfig;
-use crate::rule_set::rule::Rule;
-use crate::rule_set::RuleSet;
 
 use crate::view::{
-    BodyConditionView, FileNodeKind, FileNodeView, FileTreeView, HeaderConditionView,
-    RespondView, RouteCatalogSnapshot, RuleSetView, RuleView, ScriptRouteView, UrlPathView,
-    WhenView,
+    BodyConditionView, FileNodeKind, FileNodeView, FileTreeView, HeaderConditionView, RespondView,
+    RouteCatalogSnapshot, RuleSetView, RuleView, ScriptRouteView, UrlPathView, WhenView,
 };
 
 /// Compose the top-level `RouteCatalogSnapshot` from already-built
@@ -149,12 +148,9 @@ fn build_body_condition_views(
             BodyKind::Json => "json",
         };
         for (path, stmt) in conditions {
-            let op_str = format!(
-                "{}",
-                stmt.op.as_ref().unwrap_or(&BodyOperator::Equal)
-            )
-            .trim()
-            .to_owned();
+            let op_str = format!("{}", stmt.op.as_ref().unwrap_or(&BodyOperator::Equal))
+                .trim()
+                .to_owned();
             // Normalise the op display string to snake_case form matching
             // the serde rename: strip surrounding spaces, lower-case.
             let op_clean = body_op_name(stmt.op.as_ref().unwrap_or(&BodyOperator::Equal));
@@ -177,38 +173,42 @@ fn build_body_condition_views(
 
 /// Public wrapper so `toml_writer` can serialise body operators to
 /// TOML `op` strings without importing routing-internal types.
-pub fn body_op_name_pub(op: &crate::rule_set::rule::when::request::body::body_operator::BodyOperator) -> String {
+pub fn body_op_name_pub(
+    op: &crate::rule_set::rule::when::request::body::body_operator::BodyOperator,
+) -> String {
     body_op_name(op)
 }
 
-fn body_op_name(op: &crate::rule_set::rule::when::request::body::body_operator::BodyOperator) -> String {
+fn body_op_name(
+    op: &crate::rule_set::rule::when::request::body::body_operator::BodyOperator,
+) -> String {
     use crate::rule_set::rule::when::request::body::body_operator::BodyOperator;
     match op {
-        BodyOperator::Equal             => "equal",
-        BodyOperator::EqualString       => "equal_string",
-        BodyOperator::Contains          => "contains",
-        BodyOperator::NotContains       => "not_contains",
-        BodyOperator::StartsWith        => "starts_with",
-        BodyOperator::NotStartsWith     => "not_starts_with",
-        BodyOperator::EndsWith          => "ends_with",
-        BodyOperator::NotEndsWith       => "not_ends_with",
-        BodyOperator::Regex             => "regex",
-        BodyOperator::NotRegex          => "not_regex",
-        BodyOperator::EqualTyped        => "equal_typed",
-        BodyOperator::EqualNumber       => "equal_number",
-        BodyOperator::GreaterThan       => "greater_than",
-        BodyOperator::LessThan          => "less_than",
-        BodyOperator::GreaterOrEqual    => "greater_or_equal",
-        BodyOperator::LessOrEqual       => "less_or_equal",
-        BodyOperator::Exists            => "exists",
-        BodyOperator::Absent            => "absent",
-        BodyOperator::ArrayLengthEqual  => "array_length_equal",
-        BodyOperator::ArrayLengthAtLeast=> "array_length_at_least",
-        BodyOperator::ArrayContains     => "array_contains",
-        BodyOperator::EqualInteger      => "equal_integer",
-        BodyOperator::MapHasKey         => "map_has_key",
+        BodyOperator::Equal => "equal",
+        BodyOperator::EqualString => "equal_string",
+        BodyOperator::Contains => "contains",
+        BodyOperator::NotContains => "not_contains",
+        BodyOperator::StartsWith => "starts_with",
+        BodyOperator::NotStartsWith => "not_starts_with",
+        BodyOperator::EndsWith => "ends_with",
+        BodyOperator::NotEndsWith => "not_ends_with",
+        BodyOperator::Regex => "regex",
+        BodyOperator::NotRegex => "not_regex",
+        BodyOperator::EqualTyped => "equal_typed",
+        BodyOperator::EqualNumber => "equal_number",
+        BodyOperator::GreaterThan => "greater_than",
+        BodyOperator::LessThan => "less_than",
+        BodyOperator::GreaterOrEqual => "greater_or_equal",
+        BodyOperator::LessOrEqual => "less_or_equal",
+        BodyOperator::Exists => "exists",
+        BodyOperator::Absent => "absent",
+        BodyOperator::ArrayLengthEqual => "array_length_equal",
+        BodyOperator::ArrayLengthAtLeast => "array_length_at_least",
+        BodyOperator::ArrayContains => "array_contains",
+        BodyOperator::EqualInteger => "equal_integer",
+        BodyOperator::MapHasKey => "map_has_key",
         BodyOperator::MapDoesNotHaveKey => "map_does_not_have_key",
-        BodyOperator::StructuralContains=> "structural_contains",
+        BodyOperator::StructuralContains => "structural_contains",
     }
     .to_owned()
 }
@@ -237,17 +237,17 @@ fn build_url_path_view(cfg: Option<&UrlPathConfig>) -> Option<UrlPathView> {
 /// view round-trips back to the original TOML keyword.
 pub fn op_name(op: &RuleOp) -> String {
     match op {
-        RuleOp::Equal         => "equal",
-        RuleOp::NotEqual      => "not_equal",
-        RuleOp::StartsWith    => "starts_with",
+        RuleOp::Equal => "equal",
+        RuleOp::NotEqual => "not_equal",
+        RuleOp::StartsWith => "starts_with",
         RuleOp::NotStartsWith => "not_starts_with",
-        RuleOp::EndsWith      => "ends_with",
-        RuleOp::NotEndsWith   => "not_ends_with",
-        RuleOp::Contains      => "contains",
-        RuleOp::NotContains   => "not_contains",
-        RuleOp::WildCard      => "wild_card",
-        RuleOp::Regex         => "regex",
-        RuleOp::NotRegex      => "not_regex",
+        RuleOp::EndsWith => "ends_with",
+        RuleOp::NotEndsWith => "not_ends_with",
+        RuleOp::Contains => "contains",
+        RuleOp::NotContains => "not_contains",
+        RuleOp::WildCard => "wild_card",
+        RuleOp::Regex => "regex",
+        RuleOp::NotRegex => "not_regex",
     }
     .to_owned()
 }
@@ -359,7 +359,13 @@ impl FileTreeFilter {
     /// Return `true` iff `name` should be kept (not filtered out).
     ///
     /// `path` is the full path to the entry (used for gitignore matching).
-    fn keep(&self, name: &str, is_dir: bool, path: &Path, gitignore: Option<&ignore::gitignore::Gitignore>) -> bool {
+    fn keep(
+        &self,
+        name: &str,
+        is_dir: bool,
+        path: &Path,
+        gitignore: Option<&ignore::gitignore::Gitignore>,
+    ) -> bool {
         // Dotfile filter
         if !self.show_hidden && name.starts_with('.') {
             return false;

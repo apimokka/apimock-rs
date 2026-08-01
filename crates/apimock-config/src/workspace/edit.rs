@@ -31,7 +31,7 @@ use crate::view::{ApplyResult, EditCommand, EditValue, NodeId};
 use super::Workspace;
 use super::id_index::NodeAddress;
 use payload::{
-    build_rule_from_payload, build_respond_from_payload, internal_path_err, value_as_bool,
+    build_respond_from_payload, build_rule_from_payload, internal_path_err, value_as_bool,
     value_as_integer, value_as_string, value_as_string_list,
 };
 
@@ -149,9 +149,11 @@ impl Workspace {
         })?;
 
         let next_idx = self.config.service.rule_sets.len();
-        let new_rule_set = RuleSet::new(path_str, relative_dir.as_str(), next_idx)
-            .map_err(|e| ApplyError::InvalidPayload {
-                reason: format!("failed to load rule set `{}`: {}", path, e),
+        let new_rule_set =
+            RuleSet::new(path_str, relative_dir.as_str(), next_idx).map_err(|e| {
+                ApplyError::InvalidPayload {
+                    reason: format!("failed to load rule set `{}`: {}", path, e),
+                }
             })?;
 
         // Record the path in service.rule_sets_file_paths too so
@@ -167,9 +169,7 @@ impl Workspace {
         self.config.service.rule_sets.push(new_rule_set);
 
         // Mint IDs for the new rule set + its rules + responds.
-        let rs_addr = NodeAddress::RuleSet {
-            rule_set: next_idx,
-        };
+        let rs_addr = NodeAddress::RuleSet { rule_set: next_idx };
         let rs_id = self.ids.insert(rs_addr);
         let mut changed = vec![rs_id];
         let new_rs = &self.config.service.rule_sets[next_idx];
@@ -248,12 +248,9 @@ impl Workspace {
         // has changed; surface those IDs too so the GUI refreshes
         // their position indicators.
         for shifted_idx in idx..self.config.service.rule_sets.len() {
-            if let Some(shifted_id) = self
-                .ids
-                .id_for(NodeAddress::RuleSet {
-                    rule_set: shifted_idx,
-                })
-            {
+            if let Some(shifted_id) = self.ids.id_for(NodeAddress::RuleSet {
+                rule_set: shifted_idx,
+            }) {
                 if !changed.contains(&shifted_id) {
                     changed.push(shifted_id);
                 }
@@ -334,12 +331,7 @@ impl Workspace {
         // `UpdateRule` would silently strip those clauses from the
         // existing rule. See `build_rule_from_payload`'s rustdoc.
         let existing = rule_set.rules.get(rule_idx).cloned();
-        let new_rule = build_rule_from_payload(
-            rule_payload,
-            rule_set,
-            rs_idx,
-            existing.as_ref(),
-        )?;
+        let new_rule = build_rule_from_payload(rule_payload, rule_set, rs_idx, existing.as_ref())?;
         *rule_set
             .rules
             .get_mut(rule_idx)
@@ -514,10 +506,7 @@ impl Workspace {
             .get_mut(rs_idx)
             .and_then(|rs| rs.rules.get_mut(rule_idx))
             .ok_or_else(|| ApplyError::InvalidPayload {
-                reason: format!(
-                    "rule at rule_set={}, rule={} not found",
-                    rs_idx, rule_idx
-                ),
+                reason: format!("rule at rule_set={}, rule={} not found", rs_idx, rule_idx),
             })?;
 
         rule.respond = build_respond_from_payload(respond);
@@ -644,10 +633,7 @@ impl Workspace {
                 let valid_formats = ["text", "json"];
                 if !valid_formats.contains(&s.as_str()) {
                     return Err(ApplyError::InvalidPayload {
-                        reason: format!(
-                            "invalid log format `{}` — valid: text, json",
-                            s
-                        ),
+                        reason: format!("invalid log format `{}` — valid: text, json", s),
                     });
                 }
                 let _ = s; // future: set on LogConfig.format field
@@ -718,7 +704,10 @@ impl Workspace {
         let (rs_idx, rule_idx) = self.find_rule_indices(rule_id)?;
         let op = payload::header_op_to_routing_pub(payload.op);
         let value = payload.value.unwrap_or_default();
-        let stmt = HeaderConditionStatement { op: Some(op), value };
+        let stmt = HeaderConditionStatement {
+            op: Some(op),
+            value,
+        };
         let name = payload.name.to_lowercase();
 
         // Ensure headers map exists.
@@ -731,11 +720,16 @@ impl Workspace {
         headers.0.insert(name.clone(), stmt);
 
         let cond_id = self.ids.insert(NodeAddress::HeaderCondition {
-            rule_set: rs_idx, rule: rule_idx, header_name: name,
+            rule_set: rs_idx,
+            rule: rule_idx,
+            header_name: name,
         });
         let rule_id_out = self
             .ids
-            .id_for(NodeAddress::Rule { rule_set: rs_idx, rule: rule_idx })
+            .id_for(NodeAddress::Rule {
+                rule_set: rs_idx,
+                rule: rule_idx,
+            })
             .unwrap_or(rule_id);
         Ok(vec![rule_id_out, cond_id])
     }
@@ -749,18 +743,25 @@ impl Workspace {
 
         let addr = self.ids.lookup(id).ok_or(ApplyError::UnknownNode { id })?;
         let (rs_idx, rule_idx, old_name) = match addr {
-            NodeAddress::HeaderCondition { rule_set, rule, header_name } => {
-                (rule_set, rule, header_name)
+            NodeAddress::HeaderCondition {
+                rule_set,
+                rule,
+                header_name,
+            } => (rule_set, rule, header_name),
+            _ => {
+                return Err(ApplyError::InvalidPayload {
+                    reason: "id does not refer to a header condition".to_owned(),
+                });
             }
-            _ => return Err(ApplyError::InvalidPayload {
-                reason: "id does not refer to a header condition".to_owned(),
-            }),
         };
 
         let op = payload::header_op_to_routing_pub(payload.op);
         let value = payload.value.unwrap_or_default();
         let new_name = payload.name.to_lowercase();
-        let stmt = HeaderConditionStatement { op: Some(op), value };
+        let stmt = HeaderConditionStatement {
+            op: Some(op),
+            value,
+        };
 
         let rule = &mut self.config.service.rule_sets[rs_idx].rules[rule_idx];
         let headers = rule.when.request.headers.get_or_insert_with(|| {
@@ -775,7 +776,9 @@ impl Workspace {
 
         // Re-register the condition under the new name.
         let new_id = self.ids.insert(NodeAddress::HeaderCondition {
-            rule_set: rs_idx, rule: rule_idx, header_name: new_name,
+            rule_set: rs_idx,
+            rule: rule_idx,
+            header_name: new_name,
         });
         Ok(vec![new_id])
     }
@@ -786,12 +789,16 @@ impl Workspace {
     ) -> Result<Vec<crate::view::NodeId>, ApplyError> {
         let addr = self.ids.lookup(id).ok_or(ApplyError::UnknownNode { id })?;
         let (rs_idx, rule_idx, name) = match addr {
-            NodeAddress::HeaderCondition { rule_set, rule, header_name } => {
-                (rule_set, rule, header_name)
+            NodeAddress::HeaderCondition {
+                rule_set,
+                rule,
+                header_name,
+            } => (rule_set, rule, header_name),
+            _ => {
+                return Err(ApplyError::InvalidPayload {
+                    reason: "id does not refer to a header condition".to_owned(),
+                });
             }
-            _ => return Err(ApplyError::InvalidPayload {
-                reason: "id does not refer to a header condition".to_owned(),
-            }),
         };
 
         let rule = &mut self.config.service.rule_sets[rs_idx].rules[rule_idx];
@@ -804,7 +811,10 @@ impl Workspace {
 
         let rule_id = self
             .ids
-            .id_for(NodeAddress::Rule { rule_set: rs_idx, rule: rule_idx })
+            .id_for(NodeAddress::Rule {
+                rule_set: rs_idx,
+                rule: rule_idx,
+            })
             .unwrap_or(id);
         Ok(vec![rule_id])
     }
@@ -821,7 +831,10 @@ impl Workspace {
         let (rs_idx, rule_idx) = self.find_rule_indices(rule_id)?;
         let op = payload::body_op_to_routing_pub(payload.op);
         let value = payload::json_value_to_string_pub(&payload.value);
-        let stmt = BodyConditionStatement { op: Some(op), value };
+        let stmt = BodyConditionStatement {
+            op: Some(op),
+            value,
+        };
         let path = payload.path.clone();
 
         let rule = &mut self.config.service.rule_sets[rs_idx].rules[rule_idx];
@@ -836,11 +849,16 @@ impl Workspace {
             .insert(path.clone(), stmt);
 
         let cond_id = self.ids.insert(NodeAddress::BodyCondition {
-            rule_set: rs_idx, rule: rule_idx, path,
+            rule_set: rs_idx,
+            rule: rule_idx,
+            path,
         });
         let rule_id_out = self
             .ids
-            .id_for(NodeAddress::Rule { rule_set: rs_idx, rule: rule_idx })
+            .id_for(NodeAddress::Rule {
+                rule_set: rs_idx,
+                rule: rule_idx,
+            })
             .unwrap_or(rule_id);
         Ok(vec![rule_id_out, cond_id])
     }
@@ -854,16 +872,25 @@ impl Workspace {
 
         let addr = self.ids.lookup(id).ok_or(ApplyError::UnknownNode { id })?;
         let (rs_idx, rule_idx, old_path) = match addr {
-            NodeAddress::BodyCondition { rule_set, rule, path } => (rule_set, rule, path),
-            _ => return Err(ApplyError::InvalidPayload {
-                reason: "id does not refer to a body condition".to_owned(),
-            }),
+            NodeAddress::BodyCondition {
+                rule_set,
+                rule,
+                path,
+            } => (rule_set, rule, path),
+            _ => {
+                return Err(ApplyError::InvalidPayload {
+                    reason: "id does not refer to a body condition".to_owned(),
+                });
+            }
         };
 
-        let op    = payload::body_op_to_routing_pub(payload.op);
+        let op = payload::body_op_to_routing_pub(payload.op);
         let value = payload::json_value_to_string_pub(&payload.value);
         let new_path = payload.path.clone();
-        let stmt = BodyConditionStatement { op: Some(op), value };
+        let stmt = BodyConditionStatement {
+            op: Some(op),
+            value,
+        };
 
         use apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind;
         let rule = &mut self.config.service.rule_sets[rs_idx].rules[rule_idx];
@@ -875,7 +902,9 @@ impl Workspace {
         }
 
         let new_id = self.ids.insert(NodeAddress::BodyCondition {
-            rule_set: rs_idx, rule: rule_idx, path: new_path,
+            rule_set: rs_idx,
+            rule: rule_idx,
+            path: new_path,
         });
         Ok(vec![new_id])
     }
@@ -888,10 +917,16 @@ impl Workspace {
 
         let addr = self.ids.lookup(id).ok_or(ApplyError::UnknownNode { id })?;
         let (rs_idx, rule_idx, path) = match addr {
-            NodeAddress::BodyCondition { rule_set, rule, path } => (rule_set, rule, path),
-            _ => return Err(ApplyError::InvalidPayload {
-                reason: "id does not refer to a body condition".to_owned(),
-            }),
+            NodeAddress::BodyCondition {
+                rule_set,
+                rule,
+                path,
+            } => (rule_set, rule, path),
+            _ => {
+                return Err(ApplyError::InvalidPayload {
+                    reason: "id does not refer to a body condition".to_owned(),
+                });
+            }
         };
 
         let rule = &mut self.config.service.rule_sets[rs_idx].rules[rule_idx];
@@ -903,7 +938,10 @@ impl Workspace {
 
         let rule_id = self
             .ids
-            .id_for(NodeAddress::Rule { rule_set: rs_idx, rule: rule_idx })
+            .id_for(NodeAddress::Rule {
+                rule_set: rs_idx,
+                rule: rule_idx,
+            })
             .unwrap_or(id);
         Ok(vec![rule_id])
     }
@@ -937,19 +975,23 @@ impl Workspace {
             None | Some("") => None,
             Some(s) => {
                 let parsed = match s {
-                    "first_match"      => Strategy::FirstMatch,
-                    "uniform_random"   => Strategy::UniformRandom { seed: None },
-                    "weighted_random"  => Strategy::WeightedRandom { seed: None },
-                    "priority"         => Strategy::Priority { tiebreaker: PriorityTiebreaker::FirstMatch },
-                    "round_robin"      => Strategy::RoundRobin,
-                    _ => return Err(ApplyError::InvalidPayload {
-                        reason: format!(
-                            "unknown strategy {:?}; expected one of: \
+                    "first_match" => Strategy::FirstMatch,
+                    "uniform_random" => Strategy::UniformRandom { seed: None },
+                    "weighted_random" => Strategy::WeightedRandom { seed: None },
+                    "priority" => Strategy::Priority {
+                        tiebreaker: PriorityTiebreaker::FirstMatch,
+                    },
+                    "round_robin" => Strategy::RoundRobin,
+                    _ => {
+                        return Err(ApplyError::InvalidPayload {
+                            reason: format!(
+                                "unknown strategy {:?}; expected one of: \
                              first_match, uniform_random, weighted_random, \
                              priority, round_robin",
-                            s
-                        ),
-                    }),
+                                s
+                            ),
+                        });
+                    }
                 };
                 Some(parsed)
             }

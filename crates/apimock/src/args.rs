@@ -109,9 +109,11 @@ impl EnvArgs {
     /// Build an `EnvArgs` by reading `env::args()`.
     fn from_args() -> AppResult<Self> {
         let port = match args_option_value(CONFIG_LISTENER_PORT_OPTION_NAMES.as_ref()) {
-            Some(port_str) => Some(port_str.parse::<u16>().with_context(|| {
-                format!("--port value is not a valid u16: {}", port_str)
-            })?),
+            Some(port_str) => Some(
+                port_str
+                    .parse::<u16>()
+                    .with_context(|| format!("--port value is not a valid u16: {}", port_str))?,
+            ),
             None => None,
         };
 
@@ -157,8 +159,7 @@ impl EnvArgs {
         // Middleware file — honours both the CLI flag and the interactive answer.
         if answers.include_middleware {
             if !Path::new(DEFAULT_MIDDLEWARE_FILE_PATH).exists() {
-                let content =
-                    include_str!("../examples/config/default/apimock-middleware.rhai");
+                let content = include_str!("../examples/config/default/apimock-middleware.rhai");
                 fs::write(DEFAULT_MIDDLEWARE_FILE_PATH, content)?;
                 println!(
                     "middleware scripting file is created: {}.",
@@ -182,8 +183,7 @@ impl EnvArgs {
         // rule shapes interactively would be a much larger prompt tree
         // for diminishing value. Users are expected to edit this file.
         if answers.include_rule_set && !Path::new(DEFAULT_RULE_SET_FILE_PATH).exists() {
-            let rule_set_content =
-                include_str!("../examples/config/default/apimock-rule-set.toml");
+            let rule_set_content = include_str!("../examples/config/default/apimock-rule-set.toml");
             fs::write(DEFAULT_RULE_SET_FILE_PATH, rule_set_content)?;
             println!(
                 "rule set config file is created: {}.",

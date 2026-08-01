@@ -89,8 +89,7 @@ impl Workspace {
             .as_ref()
             .map(|c| c.to_filter())
             .unwrap_or_default();
-        let file_tree =
-            apimock_routing::view::build::build_file_tree_with(&fallback_abs, &filter);
+        let file_tree = apimock_routing::view::build::build_file_tree_with(&fallback_abs, &filter);
 
         let script_routes: Vec<apimock_routing::view::ScriptRouteView> = self
             .config
@@ -158,10 +157,7 @@ impl Workspace {
         let mut nodes: Vec<ConfigNodeView> = Vec::new();
 
         // Rule-set itself.
-        if let Some(rs_id) = self
-            .ids
-            .id_for(NodeAddress::RuleSet { rule_set: rs_idx })
-        {
+        if let Some(rs_id) = self.ids.id_for(NodeAddress::RuleSet { rule_set: rs_idx }) {
             nodes.push(ConfigNodeView {
                 id: rs_id,
                 source_file: file_path.clone(),

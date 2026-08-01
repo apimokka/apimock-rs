@@ -14,13 +14,13 @@ use std::path::Path;
 
 use crate::{
     http_util::delay_response,
+    respond_util::full_file_path,
     response::{
         error_response::internal_server_error_response,
         file_response::FileResponse,
         status_code_response::{status_code_response, status_code_response_with_message},
         text_response::text_response,
     },
-    respond_util::full_file_path,
     types::BoxBody,
 };
 
@@ -57,10 +57,7 @@ pub async fn respond_response(
                 file_path,
                 dir_prefix,
             );
-            return internal_server_error_response(
-                "failed to get response file",
-                request_headers,
-            );
+            return internal_server_error_response("failed to get response file", request_headers);
         };
 
         // dir_prefix is used only for the file-not-found message above;
@@ -82,7 +79,12 @@ pub async fn respond_response(
             Some(status_code) => {
                 status_code_response_with_message(status_code, text.as_str(), request_headers)
             }
-            None => text_response(text.as_str(), None, respond.headers.as_ref(), request_headers),
+            None => text_response(
+                text.as_str(),
+                None,
+                respond.headers.as_ref(),
+                request_headers,
+            ),
         };
     }
 

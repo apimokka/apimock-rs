@@ -100,13 +100,13 @@ impl FileResponse {
                         return internal_server_error_response(
                             &format!("{}: failed to read file - {}", self.file_path, err),
                             &self.request_headers,
-                        )
+                        );
                     }
                     Err(err) => {
                         return internal_server_error_response(
                             &format!("{}: async task failed - {}", self.file_path, err),
                             &self.request_headers,
-                        )
+                        );
                     }
                 }
             }
@@ -114,7 +114,7 @@ impl FileResponse {
                 return internal_server_error_response(
                     &format!("{}: async task failed - {}", self.file_path, err),
                     &self.request_headers,
-                )
+                );
             }
         };
 

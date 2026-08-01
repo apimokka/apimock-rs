@@ -49,12 +49,13 @@ impl MiddlewareHandler {
 
         let engine = Engine::new();
         // todo: watch source file change - `notify` crate ?
-        let ast = engine
-            .compile_file(file_path.into())
-            .map_err(|e| ServerError::MiddlewareCompile {
-                path: path.to_path_buf(),
-                reason: e.to_string(),
-            })?;
+        let ast =
+            engine
+                .compile_file(file_path.into())
+                .map_err(|e| ServerError::MiddlewareCompile {
+                    path: path.to_path_buf(),
+                    reason: e.to_string(),
+                })?;
 
         Ok(MiddlewareHandler {
             engine: Arc::new(engine),

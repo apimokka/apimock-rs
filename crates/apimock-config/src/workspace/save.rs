@@ -107,7 +107,10 @@ impl Workspace {
                 if let Ok(modified) = meta.modified() {
                     self.file_metas.insert(
                         path.clone(),
-                        crate::workspace::FileMeta { modified, len: meta.len() },
+                        crate::workspace::FileMeta {
+                            modified,
+                            len: meta.len(),
+                        },
                     );
                 }
             }
@@ -135,23 +138,14 @@ impl Workspace {
     /// to a full save (no file I/O, just renders + string compares).
     pub fn has_unsaved_changes(&self) -> bool {
         let root_text = crate::toml_writer::render_apimock_toml(&self.config);
-        if self
-            .baseline_files
-            .get(&self.root_path)
-            .map(|s| s.as_str())
-            != Some(root_text.as_str())
+        if self.baseline_files.get(&self.root_path).map(|s| s.as_str()) != Some(root_text.as_str())
         {
             return true;
         }
         for rule_set in self.config.service.rule_sets.iter() {
             let path = PathBuf::from(rule_set.file_path.as_str());
             let text = crate::toml_writer::render_rule_set_toml(rule_set);
-            if self
-                .baseline_files
-                .get(&path)
-                .map(|s| s.as_str())
-                != Some(text.as_str())
-            {
+            if self.baseline_files.get(&path).map(|s| s.as_str()) != Some(text.as_str()) {
                 return true;
             }
         }
@@ -189,11 +183,10 @@ fn atomic_write(path: &Path, text: &str) -> Result<(), SaveError> {
         .map(Path::to_path_buf)
         .unwrap_or_else(|| PathBuf::from("."));
 
-    let mut tmp =
-        tempfile::NamedTempFile::new_in(&parent).map_err(|e| SaveError::Write {
-            path: path.to_path_buf(),
-            source: e,
-        })?;
+    let mut tmp = tempfile::NamedTempFile::new_in(&parent).map_err(|e| SaveError::Write {
+        path: path.to_path_buf(),
+        source: e,
+    })?;
 
     use std::io::Write;
     tmp.write_all(text.as_bytes())

@@ -39,7 +39,7 @@ impl MiddlewareResponse {
                             self.file_path.as_str(),
                         ),
                         &self.request_headers,
-                    ))
+                    ));
                 }
             };
 

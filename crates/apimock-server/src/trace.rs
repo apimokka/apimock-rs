@@ -94,7 +94,13 @@ pub struct RequestSummary {
 impl RequestSummary {
     /// Construct with no body capture (the common case before RFC 023).
     pub fn without_body(method: String, url_path: String, headers: Vec<(String, String)>) -> Self {
-        Self { method, url_path, headers, body_json: None, body_truncated: false }
+        Self {
+            method,
+            url_path,
+            headers,
+            body_json: None,
+            body_truncated: false,
+        }
     }
 }
 
@@ -110,7 +116,10 @@ pub struct TraceConfig {
 
 impl Default for TraceConfig {
     fn default() -> Self {
-        Self { capture_body: false, max_body_bytes: 8_192 }
+        Self {
+            capture_body: false,
+            max_body_bytes: 8_192,
+        }
     }
 }
 
@@ -118,10 +127,21 @@ impl Default for TraceConfig {
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Outcome {
-    Matched { rule_set_index: usize, rule_index: usize },
-    Fallback { file_path: String, status: u16 },
-    Miss    { status: u16 },
-    Error   { kind: String, message: String },
+    Matched {
+        rule_set_index: usize,
+        rule_index: usize,
+    },
+    Fallback {
+        file_path: String,
+        status: u16,
+    },
+    Miss {
+        status: u16,
+    },
+    Error {
+        kind: String,
+        message: String,
+    },
 }
 
 // ── Emitter ───────────────────────────────────────────────────────────
@@ -131,11 +151,11 @@ pub enum Outcome {
 /// Clone freely — each clone refers to the same underlying channel.
 #[derive(Clone)]
 pub struct TraceEmitter {
-    sender:          broadcast::Sender<MatchTraceEvent>,
-    event_counter:   Arc<AtomicU32>,
+    sender: broadcast::Sender<MatchTraceEvent>,
+    event_counter: Arc<AtomicU32>,
     dropped_counter: Arc<AtomicU32>,
     /// Behaviour settings (body capture, etc.).
-    pub config:      Arc<TraceConfig>,
+    pub config: Arc<TraceConfig>,
 }
 
 impl TraceEmitter {
@@ -147,9 +167,9 @@ impl TraceEmitter {
         let (sender, _) = broadcast::channel(TRACE_CHANNEL_CAPACITY);
         Self {
             sender,
-            event_counter:   Arc::new(AtomicU32::new(0)),
+            event_counter: Arc::new(AtomicU32::new(0)),
             dropped_counter: Arc::new(AtomicU32::new(0)),
-            config:          Arc::new(config),
+            config: Arc::new(config),
         }
     }
 
@@ -194,7 +214,7 @@ impl TraceEmitter {
         request: RequestSummary,
         outcome: Outcome,
     ) {
-        let event_id    = self.event_counter.fetch_add(1, Ordering::Relaxed) as u64;
+        let event_id = self.event_counter.fetch_add(1, Ordering::Relaxed) as u64;
         let dropped_count = self.dropped_counter.swap(0, Ordering::Relaxed);
 
         let event = MatchTraceEvent {
@@ -218,7 +238,11 @@ impl TraceEmitter {
     }
 }
 
-impl Default for TraceEmitter { fn default() -> Self { Self::new() } }
+impl Default for TraceEmitter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 // ── Transport configuration ───────────────────────────────────────────
 
@@ -254,12 +278,8 @@ impl TraceTransport {
     pub async fn accept_loop(config: TraceTransportConfig, emitter: TraceEmitter) {
         match config {
             #[cfg(unix)]
-            TraceTransportConfig::Uds { path } => {
-                Self::uds_accept_loop(path, emitter).await
-            }
-            TraceTransportConfig::Tcp { addr } => {
-                Self::tcp_accept_loop(addr, emitter).await
-            }
+            TraceTransportConfig::Uds { path } => Self::uds_accept_loop(path, emitter).await,
+            TraceTransportConfig::Tcp { addr } => Self::tcp_accept_loop(addr, emitter).await,
             TraceTransportConfig::Disabled => {
                 // No-op — transport disabled; in-process channel still works.
             }
@@ -271,7 +291,9 @@ impl TraceTransport {
     async fn tcp_accept_loop(addr: String, emitter: TraceEmitter) {
         let listener = match tokio::net::TcpListener::bind(&addr).await {
             Ok(l) => {
-                let bound = l.local_addr().map(|a| a.to_string())
+                let bound = l
+                    .local_addr()
+                    .map(|a| a.to_string())
                     .unwrap_or_else(|_| addr.clone());
                 log::info!("trace transport: TCP listening on {}", bound);
                 l
@@ -427,8 +449,15 @@ mod tests {
         let mut rx = emitter.subscribe();
 
         emitter.emit(
-            1_000_000, 5,
-            RequestSummary { method: "GET".into(), url_path: "/api/test".into(), headers: vec![], body_json: None, body_truncated: false },
+            1_000_000,
+            5,
+            RequestSummary {
+                method: "GET".into(),
+                url_path: "/api/test".into(),
+                headers: vec![],
+                body_json: None,
+                body_truncated: false,
+            },
             Outcome::Miss { status: 404 },
         );
 
@@ -444,17 +473,36 @@ mod tests {
     #[tokio::test]
     async fn emit_no_subscriber_increments_dropped() {
         let emitter = TraceEmitter::new();
-        emitter.emit(0, 0,
-            RequestSummary { method: "GET".into(), url_path: "/".into(), headers: vec![], body_json: None, body_truncated: false },
+        emitter.emit(
+            0,
+            0,
+            RequestSummary {
+                method: "GET".into(),
+                url_path: "/".into(),
+                headers: vec![],
+                body_json: None,
+                body_truncated: false,
+            },
             Outcome::Miss { status: 404 },
         );
         let mut rx = emitter.subscribe();
-        emitter.emit(0, 0,
-            RequestSummary { method: "GET".into(), url_path: "/".into(), headers: vec![], body_json: None, body_truncated: false },
+        emitter.emit(
+            0,
+            0,
+            RequestSummary {
+                method: "GET".into(),
+                url_path: "/".into(),
+                headers: vec![],
+                body_json: None,
+                body_truncated: false,
+            },
             Outcome::Miss { status: 200 },
         );
         let event = rx.try_recv().expect("second event visible");
-        assert_eq!(event.dropped_count, 1, "first event should be counted dropped");
+        assert_eq!(
+            event.dropped_count, 1,
+            "first event should be counted dropped"
+        );
     }
 
     #[test]
@@ -468,9 +516,21 @@ mod tests {
     #[tokio::test]
     async fn outcome_serialises_correctly() {
         let event = MatchTraceEvent {
-            event_id: 7, schema_version: 1, received_at_ms: 0, duration_ms: 0,
-            request: RequestSummary { method: "POST".into(), url_path: "/x".into(), headers: vec![], body_json: None, body_truncated: false },
-            outcome: Outcome::Matched { rule_set_index: 0, rule_index: 2 },
+            event_id: 7,
+            schema_version: 1,
+            received_at_ms: 0,
+            duration_ms: 0,
+            request: RequestSummary {
+                method: "POST".into(),
+                url_path: "/x".into(),
+                headers: vec![],
+                body_json: None,
+                body_truncated: false,
+            },
+            outcome: Outcome::Matched {
+                rule_set_index: 0,
+                rule_index: 2,
+            },
             dropped_count: 0,
         };
         let json = serde_json::to_string(&event).unwrap();
@@ -485,7 +545,9 @@ mod tests {
         let emitter_clone = emitter.clone();
 
         // Bind on an ephemeral port.
-        let config = TraceTransportConfig::Tcp { addr: "127.0.0.1:0".to_owned() };
+        let config = TraceTransportConfig::Tcp {
+            addr: "127.0.0.1:0".to_owned(),
+        };
 
         // We need to know the actual bound port before connecting.
         // Bind the listener ourselves to capture the address, then hand
@@ -508,8 +570,15 @@ mod tests {
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
         emitter.emit(
-            42, 3,
-            RequestSummary { method: "GET".into(), url_path: "/ping".into(), headers: vec![], body_json: None, body_truncated: false },
+            42,
+            3,
+            RequestSummary {
+                method: "GET".into(),
+                url_path: "/ping".into(),
+                headers: vec![],
+                body_json: None,
+                body_truncated: false,
+            },
             Outcome::Miss { status: 404 },
         );
 
@@ -537,50 +606,83 @@ mod tests {
     fn enrich_with_body_disabled_by_default() {
         let emitter = TraceEmitter::new(); // capture_body = false by default
         let mut summary = RequestSummary {
-            method: "POST".into(), url_path: "/".into(), headers: vec![],
-            body_json: None, body_truncated: false,
+            method: "POST".into(),
+            url_path: "/".into(),
+            headers: vec![],
+            body_json: None,
+            body_truncated: false,
         };
         let body = serde_json::json!({"action": "create"});
         emitter.enrich_with_body(&mut summary, Some(&body));
-        assert!(summary.body_json.is_none(), "body should not be captured when disabled");
+        assert!(
+            summary.body_json.is_none(),
+            "body should not be captured when disabled"
+        );
         assert!(!summary.body_truncated);
     }
 
     #[test]
     fn enrich_with_body_enabled_captures_small_body() {
-        let emitter = TraceEmitter::with_config(TraceConfig { capture_body: true, max_body_bytes: 8_192 });
+        let emitter = TraceEmitter::with_config(TraceConfig {
+            capture_body: true,
+            max_body_bytes: 8_192,
+        });
         let mut summary = RequestSummary {
-            method: "POST".into(), url_path: "/".into(), headers: vec![],
-            body_json: None, body_truncated: false,
+            method: "POST".into(),
+            url_path: "/".into(),
+            headers: vec![],
+            body_json: None,
+            body_truncated: false,
         };
         let body = serde_json::json!({"action": "create", "user_id": 42});
         emitter.enrich_with_body(&mut summary, Some(&body));
-        assert!(summary.body_json.is_some(), "body should be captured when enabled");
+        assert!(
+            summary.body_json.is_some(),
+            "body should be captured when enabled"
+        );
         assert_eq!(summary.body_json.unwrap()["action"], "create");
         assert!(!summary.body_truncated);
     }
 
     #[test]
     fn enrich_with_body_truncates_oversized_body() {
-        let emitter = TraceEmitter::with_config(TraceConfig { capture_body: true, max_body_bytes: 10 });
+        let emitter = TraceEmitter::with_config(TraceConfig {
+            capture_body: true,
+            max_body_bytes: 10,
+        });
         let mut summary = RequestSummary {
-            method: "POST".into(), url_path: "/".into(), headers: vec![],
-            body_json: None, body_truncated: false,
+            method: "POST".into(),
+            url_path: "/".into(),
+            headers: vec![],
+            body_json: None,
+            body_truncated: false,
         };
         let body = serde_json::json!({"data": "this is longer than 10 bytes"});
         emitter.enrich_with_body(&mut summary, Some(&body));
-        assert!(summary.body_json.is_none(), "oversized body should be omitted");
+        assert!(
+            summary.body_json.is_none(),
+            "oversized body should be omitted"
+        );
         assert!(summary.body_truncated, "body_truncated flag should be set");
     }
 
     #[test]
     fn request_summary_body_json_not_in_serialised_output_when_none() {
         let summary = RequestSummary {
-            method: "GET".into(), url_path: "/api".into(), headers: vec![],
-            body_json: None, body_truncated: false,
+            method: "GET".into(),
+            url_path: "/api".into(),
+            headers: vec![],
+            body_json: None,
+            body_truncated: false,
         };
         let json = serde_json::to_string(&summary).unwrap();
-        assert!(!json.contains("body_json"), "absent body_json must be skipped");
-        assert!(!json.contains("body_truncated"), "false body_truncated must be skipped");
+        assert!(
+            !json.contains("body_json"),
+            "absent body_json must be skipped"
+        );
+        assert!(
+            !json.contains("body_truncated"),
+            "false body_truncated must be skipped"
+        );
     }
 }
