@@ -53,11 +53,11 @@ apimock-config              = { version = "5", path = "crates/apimock-config" }
 apimock-routing             = { version = "5", path = "crates/apimock-routing" }
 apimock-server              = { version = "5", path = "crates/apimock-server" }
 
-tokio                       = { version = "^1.44", features = ["full"] }
+tokio                       = { version = "1.44", features = ["full"] }
 hyper                       = { version = "1", features = ["server", "http1", "http2"] }
 hyper-util                  = { version = "0", features = ["server", "http1", "http2", "tokio"] }
 http-body-util              = "0"
-rustls                      = { version = "0.23.38", default-features = false, features = ["log", "ring"] }
+rustls                      = { version = "0.23.43", default-features = false, features = ["log", "ring"] }
 tokio-rustls                = { version = "0.26.4", default-features = false, features = ["logging", "ring", "tls12"] }
 rhai                        = { version = "1", features = ["sync", "serde"] }
 toml                        = "1"
