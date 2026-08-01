@@ -12,7 +12,7 @@ description = "Configuration model for apimock: loading, validation, editing, sa
 [dependencies]
 # Rule-set parsing is delegated to the routing crate because the rule model
 # lives there — the config crate only orchestrates loading.
-apimock-routing = { path = "../apimock-routing", version = "5.6.0" }
+apimock-routing = { path = "../apimock-routing", version = "5.10.1" }
 indexmap = { workspace = true }
 
 log = { workspace = true }

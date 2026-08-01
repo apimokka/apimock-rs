@@ -40,9 +40,10 @@ pub use config::{
 };
 pub use error::{ApplyError, ConfigError, ConfigResult, SaveError, WorkspaceError};
 pub use view::{
-    ApplyResult, ConfigFileKind, ConfigFileView, ConfigNodeView, DiffItem, DiffKind, Diagnostic,
-    EditCommand, EditValue, NodeId, NodeKind, NodeValidation, ReloadHint, RespondPayload,
-    RootSettingKey, RulePayload, SaveResult, Severity, ValidationIssue, ValidationReport,
-    WorkspaceSnapshot,
+    ApplyResult, BodyConditionKind, BodyConditionPayload, BodyOp, ConditionWithId,
+    ConfigFileKind, ConfigFileView, ConfigNodeView, DiffItem, DiffKind, Diagnostic,
+    EditCommand, EditValue, HeaderConditionPayload, HeaderOp, NodeId, NodeKind,
+    NodeValidation, ReloadHint, RespondPayload, RootSettingKey, RulePayload,
+    SaveResult, Severity, UrlPathOp, ValidationIssue, ValidationReport, WorkspaceSnapshot,
 };
 pub use workspace::Workspace;

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.10.1] - 2026-05-17
+
+### Fixed
+
+- **Re-export oversight** — The `pub use view::{}` statement in `apimock_config::lib.rs` was missing the 7 types added via RFC 001/002/016. GUI library users were unable to import types like `apimock_config::HeaderConditionPayload` directly. Fixed.
+
+  Types added: `BodyConditionKind`, `BodyConditionPayload`, `BodyOp`, `ConditionWithId`, `HeaderConditionPayload`, `HeaderOp`, `UrlPathOp`.
+
+- **Internal crate version specification outdated** — `Cargo.toml` files for `apimock-config`, `apimock-server`, and `apimock` still specified `version = "5.6.0"` for internal dependencies. Updated to `5.10.1`.
+
+
+
 ## [5.10.0] - 2026-05-16
 
 ### Added (RFC 014–016 — medium-priority pass)
@@ -70,6 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [5.9.0] - 2026-05-16
+
 ### Added (RFC 009–013 — quality and completeness pass)
 
 - **RFC 009** — Trace socket transport. `TraceTransport::accept_loop` is now fully
@@ -115,6 +129,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | **Total** | **111** | **136** | **+25** |
 
 
+
+## [5.8.0] - 2026-05-16
 
 ### Added (stage-2 GUI editing surface — RFCs 001–008)
 
