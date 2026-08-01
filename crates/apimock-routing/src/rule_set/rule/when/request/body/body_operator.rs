@@ -52,12 +52,20 @@ pub enum BodyOperator {
     EqualString,
     /// Substring check (string-coercion semantics).
     Contains,
+    /// Inverse substring check (string-coercion semantics).
+    NotContains,
     /// Prefix check (string-coercion semantics).
     StartsWith,
+    /// Inverse prefix check.
+    NotStartsWith,
     /// Suffix check (string-coercion semantics).
     EndsWith,
+    /// Inverse suffix check.
+    NotEndsWith,
     /// Regex match (string-coercion semantics).
     Regex,
+    /// Inverse regex match.
+    NotRegex,
 
     // ── type-aware equality (RFC 008) ────────────────────────────────
     /// Exact JSON-type + value equality. Distinguishes `42` from `"42"`.
@@ -92,11 +100,16 @@ pub enum BodyOperator {
 
     // ── exact integer (RFC 010) ──────────────────────────────────────
     /// Exact integer equality using i64 arithmetic, avoiding f64 precision
-    /// loss for integers above 2^53. The JSON value at the path must be a
-    /// JSON Number that is representable as i64 (or a String that parses
-    /// as i64); other types do not match. The configured `value` must also
-    /// parse as i64 — a non-integer `value` is a validation error.
+    /// loss for integers above 2^53.
     EqualInteger,
+
+    // ── object/map operators (RFC 022) ───────────────────────────────
+    /// Value at path is a JSON object that contains the key named in
+    /// the configured value string.
+    MapHasKey,
+    /// Value at path is a JSON object that does NOT contain the key
+    /// named in the configured value string.
+    MapDoesNotHaveKey,
 }
 
 impl Default for BodyOperator {
@@ -108,24 +121,30 @@ impl Default for BodyOperator {
 impl std::fmt::Display for BodyOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Equal => write!(f, " == "),
-            Self::EqualString => write!(f, " == (string) "),
-            Self::Contains => write!(f, " contains "),
-            Self::StartsWith => write!(f, " starts_with "),
-            Self::EndsWith => write!(f, " ends_with "),
-            Self::Regex => write!(f, " matches regex "),
-            Self::EqualTyped => write!(f, " == (typed) "),
-            Self::EqualNumber => write!(f, " == (number) "),
-            Self::GreaterThan => write!(f, " > "),
-            Self::LessThan => write!(f, " < "),
-            Self::GreaterOrEqual => write!(f, " >= "),
-            Self::LessOrEqual => write!(f, " <= "),
-            Self::Exists => write!(f, " exists"),
-            Self::Absent => write!(f, " absent"),
-            Self::ArrayLengthEqual => write!(f, " array_length == "),
-            Self::ArrayLengthAtLeast => write!(f, " array_length >= "),
-            Self::ArrayContains => write!(f, " array_contains "),
-            Self::EqualInteger => write!(f, " == (integer) "),
+            Self::Equal             => write!(f, " == "),
+            Self::EqualString       => write!(f, " == (string) "),
+            Self::Contains          => write!(f, " contains "),
+            Self::NotContains       => write!(f, " does not contain "),
+            Self::StartsWith        => write!(f, " starts_with "),
+            Self::NotStartsWith     => write!(f, " does not start_with "),
+            Self::EndsWith          => write!(f, " ends_with "),
+            Self::NotEndsWith       => write!(f, " does not end_with "),
+            Self::Regex             => write!(f, " matches regex "),
+            Self::NotRegex          => write!(f, " does not match regex "),
+            Self::EqualTyped        => write!(f, " == (typed) "),
+            Self::EqualNumber       => write!(f, " == (number) "),
+            Self::GreaterThan       => write!(f, " > "),
+            Self::LessThan          => write!(f, " < "),
+            Self::GreaterOrEqual    => write!(f, " >= "),
+            Self::LessOrEqual       => write!(f, " <= "),
+            Self::Exists            => write!(f, " exists"),
+            Self::Absent            => write!(f, " absent"),
+            Self::ArrayLengthEqual  => write!(f, " array_length == "),
+            Self::ArrayLengthAtLeast=> write!(f, " array_length >= "),
+            Self::ArrayContains     => write!(f, " array_contains "),
+            Self::EqualInteger      => write!(f, " == (integer) "),
+            Self::MapHasKey         => write!(f, " map_has_key "),
+            Self::MapDoesNotHaveKey => write!(f, " map_does_not_have_key "),
         }
     }
 }
@@ -148,12 +167,19 @@ impl BodyOperator {
                 let lhs = value_as_string(resolved);
                 lhs == configured_value
             }
-            Self::Contains => value_as_string(resolved).contains(configured_value),
-            Self::StartsWith => value_as_string(resolved).starts_with(configured_value),
-            Self::EndsWith => value_as_string(resolved).ends_with(configured_value),
+            Self::Contains    => value_as_string(resolved).contains(configured_value),
+            Self::NotContains => !value_as_string(resolved).contains(configured_value),
+            Self::StartsWith    => value_as_string(resolved).starts_with(configured_value),
+            Self::NotStartsWith => !value_as_string(resolved).starts_with(configured_value),
+            Self::EndsWith    => value_as_string(resolved).ends_with(configured_value),
+            Self::NotEndsWith => !value_as_string(resolved).ends_with(configured_value),
             Self::Regex => {
                 let text = value_as_string(resolved);
                 regex_is_match(configured_value, &text)
+            }
+            Self::NotRegex => {
+                let text = value_as_string(resolved);
+                !regex_is_match(configured_value, &text)
             }
 
             // ── type-aware equality ──────────────────────────────────
@@ -220,13 +246,11 @@ impl BodyOperator {
             },
 
             // ── exact integer (RFC 010) ──────────────────────────────────
-            // Uses i64 arithmetic to avoid f64 precision loss for integers
-            // above 2^53 (e.g. snowflake IDs, large database primary keys).
             Self::EqualInteger => {
                 let lhs: i64 = match resolved {
                     Value::Number(n) => match n.as_i64() {
                         Some(i) => i,
-                        None => return false, // float or out-of-i64 range
+                        None => return false,
                     },
                     Value::String(s) => match s.parse::<i64>() {
                         Ok(i) => i,
@@ -239,6 +263,16 @@ impl BodyOperator {
                     Err(_) => false,
                 }
             }
+
+            // ── map/object operators (RFC 022) ────────────────────────────
+            Self::MapHasKey => match resolved {
+                Value::Object(map) => map.contains_key(configured_value),
+                _ => false,
+            },
+            Self::MapDoesNotHaveKey => match resolved {
+                Value::Object(map) => !map.contains_key(configured_value),
+                _ => false,
+            },
         }
     }
 }
@@ -269,20 +303,12 @@ fn parse_usize(s: &str) -> Option<usize> {
 }
 
 fn regex_is_match(pattern: &str, text: &str) -> bool {
-    // Compile the regex on every call. For mock-server throughput this
-    // is acceptable; if it becomes a bottleneck, cache compiled regexes.
-    // We use the `regex` crate if available; fall back to a simple
-    // contains check otherwise.
-    //
-    // Note: the routing crate does not depend on the `regex` crate
-    // (to keep the dependency footprint small). We implement a minimal
-    // regex fallback inline using the same glob machinery that RuleOp
-    // uses, treating the pattern as a literal string check. Users who
-    // need full regex support should use the Rhai middleware.
-    //
-    // TODO: add `regex` as an optional dependency and enable it here
-    // if the feature is requested.
-    text.contains(pattern)
+    // The `regex` crate is a direct dependency of `apimock-routing` since
+    // RFC 017. Compile the regex on every call; cache if profiling shows
+    // this is a bottleneck.
+    regex::Regex::new(pattern)
+        .map(|re| re.is_match(text))
+        .unwrap_or(false)
 }
 
 #[cfg(test)]

@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.12.0] - 2026-05-22
+
+### Added
+
+- **RFC 021 — Negated value operators.** Four negated string-style operators
+  added to every matching surface (`url_path`, `header`, `body.json`):
+  `not_contains`, `not_starts_with`, `not_ends_with`, `not_regex`.
+  `not_regex` with an invalid pattern returns `false` (non-matching),
+  consistent with `regex`. (`apimock-routing`, `apimock-config`)
+
+- **RFC 022 — `map_has_key` / `map_does_not_have_key` body operators.**
+  Two new `BodyOperator` variants that check for the presence of a
+  named key within a JSON object at the resolved path. Both return
+  `false` when the resolved value is not an object. (`apimock-routing`,
+  `apimock-config`)
+
+- **RFC 023 — Body capture in match-trace events.** `RequestSummary` gains
+  `body_json: Option<serde_json::Value>` and `body_truncated: bool`.
+  `TraceEmitter` gains `with_config(TraceConfig)` constructor and
+  `enrich_with_body(&mut summary, body)` helper. Body capture is off by
+  default; enabled via `TraceConfig { capture_body: true, .. }`.
+  `AppState` now carries a `TraceEmitter`; the `service()` handler
+  emits a trace event on each matched request. `RootSettingKey` gains
+  `TraceCaptureBody` and `TraceMaxBodyBytes` variants (both `SoftReload`).
+  (`apimock-server`, `apimock-config`)
+
+### Test count
+
+| Crate | v5.11.0 | v5.12.0 | Delta |
+|---|---|---|---|
+| apimock (façade) | 18 | 18 | — |
+| apimock-config | 49 | 49 | — |
+| apimock-routing | 91 | 117 | +26 (negated + MapHasKey) |
+| apimock-server | 10 | 14 | +4 (body capture) |
+| **Total** | **168** | **198** | **+30** |
+
+
+
 ## [5.11.0] - 2026-05-22
 
 ### Fixed

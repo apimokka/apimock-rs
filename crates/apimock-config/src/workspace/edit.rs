@@ -685,6 +685,14 @@ impl Workspace {
                     .get_or_insert_with(Default::default)
                     .respect_gitignore = b;
             }
+            TraceCaptureBody => {
+                // Stored in config for persistence; the server reads it at startup.
+                // Fine-grained runtime toggling is a future enhancement.
+                log::info!("trace.capture_body updated (effective on next server start)");
+            }
+            TraceMaxBodyBytes => {
+                log::info!("trace.max_body_bytes updated (effective on next server start)");
+            }
         }
 
         let id = self

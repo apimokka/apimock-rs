@@ -118,13 +118,17 @@ pub(super) fn build_rule_from_payload(
 fn url_path_op_to_routing(op: UrlPathOp) -> apimock_routing::rule_set::rule::when::request::rule_op::RuleOp {
     use apimock_routing::rule_set::rule::when::request::rule_op::RuleOp;
     match op {
-        UrlPathOp::Equal      => RuleOp::Equal,
-        UrlPathOp::StartsWith => RuleOp::StartsWith,
-        UrlPathOp::Contains   => RuleOp::Contains,
-        UrlPathOp::EndsWith   => RuleOp::EndsWith,  // RFC 017: no longer falls back to Contains
-        UrlPathOp::WildCard   => RuleOp::WildCard,
-        UrlPathOp::NotEqual   => RuleOp::NotEqual,
-        UrlPathOp::Regex      => RuleOp::Regex,     // RFC 017: new variant
+        UrlPathOp::Equal         => RuleOp::Equal,
+        UrlPathOp::StartsWith    => RuleOp::StartsWith,
+        UrlPathOp::NotStartsWith => RuleOp::NotStartsWith,
+        UrlPathOp::Contains      => RuleOp::Contains,
+        UrlPathOp::NotContains   => RuleOp::NotContains,
+        UrlPathOp::EndsWith      => RuleOp::EndsWith,
+        UrlPathOp::NotEndsWith   => RuleOp::NotEndsWith,
+        UrlPathOp::WildCard      => RuleOp::WildCard,
+        UrlPathOp::NotEqual      => RuleOp::NotEqual,
+        UrlPathOp::Regex         => RuleOp::Regex,
+        UrlPathOp::NotRegex      => RuleOp::NotRegex,
     }
 }
 
@@ -150,15 +154,19 @@ fn header_op_to_routing(op: HeaderOp)
 {
     use apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator;
     match op {
-        HeaderOp::Equal      => HeaderOperator::Equal,
-        HeaderOp::NotEqual   => HeaderOperator::NotEqual,
-        HeaderOp::StartsWith => HeaderOperator::StartsWith,
-        HeaderOp::EndsWith   => HeaderOperator::EndsWith,  // RFC 017: direct mapping
-        HeaderOp::Contains   => HeaderOperator::Contains,
-        HeaderOp::WildCard   => HeaderOperator::WildCard,
-        HeaderOp::Regex      => HeaderOperator::Regex,     // RFC 017: direct mapping
-        HeaderOp::Exists     => HeaderOperator::Exists,    // RFC 017: direct mapping
-        HeaderOp::Absent     => HeaderOperator::Absent,    // RFC 017: direct mapping
+        HeaderOp::Equal         => HeaderOperator::Equal,
+        HeaderOp::NotEqual      => HeaderOperator::NotEqual,
+        HeaderOp::StartsWith    => HeaderOperator::StartsWith,
+        HeaderOp::NotStartsWith => HeaderOperator::NotStartsWith,
+        HeaderOp::EndsWith      => HeaderOperator::EndsWith,
+        HeaderOp::NotEndsWith   => HeaderOperator::NotEndsWith,
+        HeaderOp::Contains      => HeaderOperator::Contains,
+        HeaderOp::NotContains   => HeaderOperator::NotContains,
+        HeaderOp::WildCard      => HeaderOperator::WildCard,
+        HeaderOp::Regex         => HeaderOperator::Regex,
+        HeaderOp::NotRegex      => HeaderOperator::NotRegex,
+        HeaderOp::Exists        => HeaderOperator::Exists,
+        HeaderOp::Absent        => HeaderOperator::Absent,
     }
 }
 
@@ -185,24 +193,30 @@ fn build_body(
 fn body_op_to_routing(op: BodyOp) -> apimock_routing::rule_set::rule::when::request::body::body_operator::BodyOperator {
     use apimock_routing::rule_set::rule::when::request::body::body_operator::BodyOperator;
     match op {
-        BodyOp::Equal => BodyOperator::Equal,
-        BodyOp::EqualString => BodyOperator::EqualString,
-        BodyOp::Contains => BodyOperator::Contains,
-        BodyOp::StartsWith => BodyOperator::StartsWith,
-        BodyOp::EndsWith => BodyOperator::EndsWith,
-        BodyOp::Regex => BodyOperator::Regex,
-        BodyOp::EqualTyped => BodyOperator::EqualTyped,
-        BodyOp::EqualNumber => BodyOperator::EqualNumber,
-        BodyOp::GreaterThan => BodyOperator::GreaterThan,
-        BodyOp::LessThan => BodyOperator::LessThan,
-        BodyOp::GreaterOrEqual => BodyOperator::GreaterOrEqual,
-        BodyOp::LessOrEqual => BodyOperator::LessOrEqual,
-        BodyOp::Exists => BodyOperator::Exists,
-        BodyOp::Absent => BodyOperator::Absent,
-        BodyOp::ArrayLengthEqual => BodyOperator::ArrayLengthEqual,
-        BodyOp::ArrayLengthAtLeast => BodyOperator::ArrayLengthAtLeast,
-        BodyOp::ArrayContains => BodyOperator::ArrayContains,
-        BodyOp::EqualInteger => BodyOperator::EqualInteger,
+        BodyOp::Equal             => BodyOperator::Equal,
+        BodyOp::EqualString       => BodyOperator::EqualString,
+        BodyOp::Contains          => BodyOperator::Contains,
+        BodyOp::NotContains       => BodyOperator::NotContains,
+        BodyOp::StartsWith        => BodyOperator::StartsWith,
+        BodyOp::NotStartsWith     => BodyOperator::NotStartsWith,
+        BodyOp::EndsWith          => BodyOperator::EndsWith,
+        BodyOp::NotEndsWith       => BodyOperator::NotEndsWith,
+        BodyOp::Regex             => BodyOperator::Regex,
+        BodyOp::NotRegex          => BodyOperator::NotRegex,
+        BodyOp::EqualTyped        => BodyOperator::EqualTyped,
+        BodyOp::EqualNumber       => BodyOperator::EqualNumber,
+        BodyOp::GreaterThan       => BodyOperator::GreaterThan,
+        BodyOp::LessThan          => BodyOperator::LessThan,
+        BodyOp::GreaterOrEqual    => BodyOperator::GreaterOrEqual,
+        BodyOp::LessOrEqual       => BodyOperator::LessOrEqual,
+        BodyOp::Exists            => BodyOperator::Exists,
+        BodyOp::Absent            => BodyOperator::Absent,
+        BodyOp::ArrayLengthEqual  => BodyOperator::ArrayLengthEqual,
+        BodyOp::ArrayLengthAtLeast=> BodyOperator::ArrayLengthAtLeast,
+        BodyOp::ArrayContains     => BodyOperator::ArrayContains,
+        BodyOp::EqualInteger      => BodyOperator::EqualInteger,
+        BodyOp::MapHasKey         => BodyOperator::MapHasKey,
+        BodyOp::MapDoesNotHaveKey => BodyOperator::MapDoesNotHaveKey,
     }
 }
 

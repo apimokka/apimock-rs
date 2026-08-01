@@ -262,3 +262,78 @@ fn exists_does_not_match_missing_field() {
     let req = make_parsed_request(Some(json!({"other": 1})));
     assert!(!body.is_match(&req), "Exists should not match a missing field");
 }
+
+// ── RFC 021: negated body string operators ────────────────────────────
+
+#[test]
+fn not_contains_matches_when_absent() {
+    let body = parse_body(r#"json."status" = { op = "not_contains", value = "error" }"#);
+    assert!( body.is_match(&make_parsed_request(Some(json!({"status": "success"})))));
+    assert!(!body.is_match(&make_parsed_request(Some(json!({"status": "error_code"})))));
+}
+
+#[test]
+fn not_starts_with_matches() {
+    let body = parse_body(r#"json."role" = { op = "not_starts_with", value = "admin" }"#);
+    assert!( body.is_match(&make_parsed_request(Some(json!({"role": "viewer"})))));
+    assert!(!body.is_match(&make_parsed_request(Some(json!({"role": "admin_user"})))));
+}
+
+#[test]
+fn not_ends_with_matches() {
+    let body = parse_body(r#"json."id" = { op = "not_ends_with", value = "_tmp" }"#);
+    assert!( body.is_match(&make_parsed_request(Some(json!({"id": "abc123"})))));
+    assert!(!body.is_match(&make_parsed_request(Some(json!({"id": "abc_tmp"})))));
+}
+
+#[test]
+fn not_regex_matches() {
+    // Use a simple anchored pattern without backslash escaping.
+    let body = parse_body(r#"json."role" = { op = "not_regex", value = "^admin" }"#);
+    assert!( body.is_match(&make_parsed_request(Some(json!({"role": "viewer"})))));
+    assert!(!body.is_match(&make_parsed_request(Some(json!({"role": "admin_user"})))));
+}
+
+// ── RFC 022: MapHasKey / MapDoesNotHaveKey ────────────────────────────
+
+#[test]
+fn map_has_key_matches_when_key_present() {
+    let body = parse_body(r#"json."meta" = { op = "map_has_key", value = "created_at" }"#);
+    let req = make_parsed_request(Some(json!({"meta": {"created_at": 1234, "other": "x"}})));
+    assert!(body.is_match(&req));
+}
+
+#[test]
+fn map_has_key_no_match_when_key_absent() {
+    let body = parse_body(r#"json."meta" = { op = "map_has_key", value = "admin_flag" }"#);
+    let req = make_parsed_request(Some(json!({"meta": {"created_at": 1234}})));
+    assert!(!body.is_match(&req));
+}
+
+#[test]
+fn map_has_key_no_match_when_value_not_object() {
+    let body = parse_body(r#"json."meta" = { op = "map_has_key", value = "key" }"#);
+    let req = make_parsed_request(Some(json!({"meta": "not_an_object"})));
+    assert!(!body.is_match(&req));
+}
+
+#[test]
+fn map_does_not_have_key_matches_when_key_absent() {
+    let body = parse_body(r#"json."config" = { op = "map_does_not_have_key", value = "override" }"#);
+    let req = make_parsed_request(Some(json!({"config": {"debug": true}})));
+    assert!(body.is_match(&req));
+}
+
+#[test]
+fn map_does_not_have_key_no_match_when_key_present() {
+    let body = parse_body(r#"json."config" = { op = "map_does_not_have_key", value = "override" }"#);
+    let req = make_parsed_request(Some(json!({"config": {"override": true, "debug": true}})));
+    assert!(!body.is_match(&req));
+}
+
+#[test]
+fn map_does_not_have_key_no_match_when_not_object() {
+    let body = parse_body(r#"json."config" = { op = "map_does_not_have_key", value = "key" }"#);
+    let req = make_parsed_request(Some(json!({"config": [1, 2, 3]})));
+    assert!(!body.is_match(&req));
+}

@@ -306,3 +306,40 @@ fn when_view_headers_programmatic_insertion_order() {
     let names: Vec<&str> = view.headers.iter().map(|c| c.name.as_str()).collect();
     assert_eq!(names, vec!["z", "a", "m"]);
 }
+
+// ── RFC 021: negated header operator tests ────────────────────────────
+
+#[test]
+fn is_match_op_not_contains_match() {
+    let h = parse_headers(r#"x-foo = { op = "not_contains", value = "bar" }"#);
+    assert!( h.is_match(&make_request_headers([("x-foo", "baz")]), 0, 0));
+    assert!(!h.is_match(&make_request_headers([("x-foo", "foobar")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_not_starts_with_match() {
+    let h = parse_headers(r#"authorization = { op = "not_starts_with", value = "Bearer " }"#);
+    assert!( h.is_match(&make_request_headers([("authorization", "Basic abc")]), 0, 0));
+    assert!(!h.is_match(&make_request_headers([("authorization", "Bearer token")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_not_ends_with_match() {
+    let h = parse_headers(r#"x-trace = { op = "not_ends_with", value = "-done" }"#);
+    assert!( h.is_match(&make_request_headers([("x-trace", "req-1234-pending")]), 0, 0));
+    assert!(!h.is_match(&make_request_headers([("x-trace", "req-1234-done")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_not_regex_match() {
+    let h = parse_headers(r#"content-type = { op = "not_regex", value = "^application/(json|xml)$" }"#);
+    assert!( h.is_match(&make_request_headers([("content-type", "text/plain")]), 0, 0));
+    assert!(!h.is_match(&make_request_headers([("content-type", "application/json")]), 0, 0));
+}
+
+#[test]
+fn is_match_negated_op_missing_key_returns_false() {
+    // Negated value operators still require the key to be present.
+    let h = parse_headers(r#"x-required = { op = "not_contains", value = "admin" }"#);
+    assert!(!h.is_match(&make_request_headers([("other-header", "value")]), 0, 0));
+}

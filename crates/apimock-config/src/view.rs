@@ -342,14 +342,19 @@ pub struct RulePayload {
 pub enum UrlPathOp {
     Equal,
     StartsWith,
-    Contains,
+    NotStartsWith,
     EndsWith,
+    NotEndsWith,
+    Contains,
+    NotContains,
     /// Glob wildcard match.
     WildCard,
     /// Negated equality match.
     NotEqual,
     /// Regular expression match (RFC 017).
     Regex,
+    /// Inverse regular expression match (RFC 021).
+    NotRegex,
 }
 
 // ── RFC 002 — Header and body condition payloads ──────────────────────
@@ -369,9 +374,13 @@ pub struct HeaderConditionPayload {
 pub enum HeaderOp {
     Equal,
     Contains,
+    NotContains,
     StartsWith,
+    NotStartsWith,
     EndsWith,
+    NotEndsWith,
     Regex,
+    NotRegex,
     /// Header must be present (any value).
     Exists,
     /// Header must be absent.
@@ -398,16 +407,20 @@ pub enum BodyConditionKind {
     Json,
 }
 
-/// Operator for a body condition (RFC 002 / RFC 008 combined set).
+/// Operator for a body condition (RFC 002 / RFC 008 / RFC 021 / RFC 022).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BodyOp {
     // string-style
     Equal,
     EqualString,
     Contains,
+    NotContains,
     StartsWith,
+    NotStartsWith,
     EndsWith,
+    NotEndsWith,
     Regex,
+    NotRegex,
     // type-aware
     EqualTyped,
     // numeric
@@ -425,6 +438,9 @@ pub enum BodyOp {
     ArrayContains,
     // exact integer (RFC 010)
     EqualInteger,
+    // map/object (RFC 022)
+    MapHasKey,
+    MapDoesNotHaveKey,
 }
 
 /// Payload for `UpdateRespond`.
@@ -475,6 +491,11 @@ pub enum RootSettingKey {
     FileTreeInclude,
     /// Value: `EditValue::Boolean` (RFC 019)
     FileTreeRespectGitignore,
+    // ── trace (RFC 023) ─────────────────────────────────────────────
+    /// Capture JSON request body in trace events. Value: `EditValue::Boolean`.
+    TraceCaptureBody,
+    /// Max body size in bytes for trace capture. Value: `EditValue::Integer`.
+    TraceMaxBodyBytes,
 }
 
 /// Value provided with an edit command.
@@ -631,7 +652,8 @@ impl ReloadHint {
             TlsCertFile | TlsKeyFile => Self::reload(),
             ServiceFallbackRespondDir | ServiceStrategy | LogLevel | LogFormat
             | FileTreeShowHidden | FileTreeBuiltinExcludes | FileTreeExtraExcludes
-            | FileTreeInclude | FileTreeRespectGitignore => Self::reload(),
+            | FileTreeInclude | FileTreeRespectGitignore
+            | TraceCaptureBody | TraceMaxBodyBytes => Self::reload(),
         }
     }
 }

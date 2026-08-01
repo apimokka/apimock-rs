@@ -46,12 +46,15 @@ use crate::{
 };
 
 pub use crate::control::{ReloadHint, ServerControl, ServerHandle, ServerState};
+use crate::trace::{Outcome, RequestSummary, TraceEmitter};
 
 /// Shared state cloned into each per-request task.
 #[derive(Clone)]
 pub struct AppState {
     pub config: Config,
     pub middlewares: LoadedMiddlewares,
+    /// Live match-trace channel. Shared across all request handler tasks.
+    pub tracer: TraceEmitter,
 }
 
 /// HTTP(S) server.
@@ -91,6 +94,7 @@ impl Server {
             app_state: AppState {
                 config,
                 middlewares,
+                tracer: TraceEmitter::new(),
             },
         })
     }
@@ -294,6 +298,13 @@ pub async fn service(
 
     let config = shared_app_state.config;
     let middlewares = shared_app_state.middlewares;
+    let tracer = shared_app_state.tracer;
+
+    let received_at_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    let start = std::time::Instant::now();
 
     capture_in_log(&parsed_request, config.log.clone().unwrap_or_default().verbose);
 
@@ -302,6 +313,26 @@ pub async fn service(
     }
 
     if let Some(response) = rule_set_response(&config, &parsed_request).await {
+        // Emit trace event on match.
+        if tracer.has_subscribers() {
+            let mut summary = RequestSummary {
+                method: parsed_request.component_parts.method.to_string(),
+                url_path: parsed_request.url_path.clone(),
+                headers: parsed_request.component_parts.headers
+                    .iter()
+                    .filter_map(|(k, v)| v.to_str().ok().map(|v| (k.to_string(), v.to_owned())))
+                    .collect(),
+                body_json: None,
+                body_truncated: false,
+            };
+            tracer.enrich_with_body(&mut summary, parsed_request.body_json.as_ref());
+            tracer.emit(
+                received_at_ms,
+                start.elapsed().as_millis() as u32,
+                summary,
+                Outcome::Miss { status: 0 }, // coarse-grained; fine-grained tracing is a future pass
+            );
+        }
         return response;
     }
 

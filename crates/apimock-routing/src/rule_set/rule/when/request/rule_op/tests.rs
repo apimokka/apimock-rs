@@ -273,3 +273,35 @@ fn regex_invalid_pattern_returns_false() {
     // Invalid pattern must not panic — return false gracefully.
     assert!(!RuleOp::Regex.is_match("anything", r"[invalid"));
 }
+
+// RFC 021: negated operator tests
+#[test]
+fn not_contains() {
+    assert!( RuleOp::NotContains.is_match("foobar", "baz"));
+    assert!(!RuleOp::NotContains.is_match("foobar", "foo"));
+}
+
+#[test]
+fn not_starts_with() {
+    assert!( RuleOp::NotStartsWith.is_match("foobar", "bar"));
+    assert!(!RuleOp::NotStartsWith.is_match("foobar", "foo"));
+}
+
+#[test]
+fn not_ends_with() {
+    assert!( RuleOp::NotEndsWith.is_match("foobar", "foo"));
+    assert!(!RuleOp::NotEndsWith.is_match("foobar", "bar"));
+}
+
+#[test]
+fn not_regex_match() {
+    assert!( RuleOp::NotRegex.is_match("text/plain",       r"^application/"));
+    assert!(!RuleOp::NotRegex.is_match("application/json", r"^application/"));
+}
+
+#[test]
+fn not_regex_invalid_pattern_returns_false() {
+    // Invalid pattern → Regex::new returns Err → unwrap_or(false) → !false = true.
+    // "Does not match an invalid pattern" is trivially true.
+    assert!(RuleOp::NotRegex.is_match("anything", r"[invalid"));
+}

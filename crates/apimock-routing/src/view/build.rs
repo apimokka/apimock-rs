@@ -182,24 +182,30 @@ pub fn body_op_name_pub(op: &crate::rule_set::rule::when::request::body::body_op
 fn body_op_name(op: &crate::rule_set::rule::when::request::body::body_operator::BodyOperator) -> String {
     use crate::rule_set::rule::when::request::body::body_operator::BodyOperator;
     match op {
-        BodyOperator::Equal => "equal",
-        BodyOperator::EqualString => "equal_string",
-        BodyOperator::Contains => "contains",
-        BodyOperator::StartsWith => "starts_with",
-        BodyOperator::EndsWith => "ends_with",
-        BodyOperator::Regex => "regex",
-        BodyOperator::EqualTyped => "equal_typed",
-        BodyOperator::EqualNumber => "equal_number",
-        BodyOperator::GreaterThan => "greater_than",
-        BodyOperator::LessThan => "less_than",
-        BodyOperator::GreaterOrEqual => "greater_or_equal",
-        BodyOperator::LessOrEqual => "less_or_equal",
-        BodyOperator::Exists => "exists",
-        BodyOperator::Absent => "absent",
-        BodyOperator::ArrayLengthEqual => "array_length_equal",
-        BodyOperator::ArrayLengthAtLeast => "array_length_at_least",
-        BodyOperator::ArrayContains => "array_contains",
-        BodyOperator::EqualInteger => "equal_integer",
+        BodyOperator::Equal             => "equal",
+        BodyOperator::EqualString       => "equal_string",
+        BodyOperator::Contains          => "contains",
+        BodyOperator::NotContains       => "not_contains",
+        BodyOperator::StartsWith        => "starts_with",
+        BodyOperator::NotStartsWith     => "not_starts_with",
+        BodyOperator::EndsWith          => "ends_with",
+        BodyOperator::NotEndsWith       => "not_ends_with",
+        BodyOperator::Regex             => "regex",
+        BodyOperator::NotRegex          => "not_regex",
+        BodyOperator::EqualTyped        => "equal_typed",
+        BodyOperator::EqualNumber       => "equal_number",
+        BodyOperator::GreaterThan       => "greater_than",
+        BodyOperator::LessThan          => "less_than",
+        BodyOperator::GreaterOrEqual    => "greater_or_equal",
+        BodyOperator::LessOrEqual       => "less_or_equal",
+        BodyOperator::Exists            => "exists",
+        BodyOperator::Absent            => "absent",
+        BodyOperator::ArrayLengthEqual  => "array_length_equal",
+        BodyOperator::ArrayLengthAtLeast=> "array_length_at_least",
+        BodyOperator::ArrayContains     => "array_contains",
+        BodyOperator::EqualInteger      => "equal_integer",
+        BodyOperator::MapHasKey         => "map_has_key",
+        BodyOperator::MapDoesNotHaveKey => "map_does_not_have_key",
     }
     .to_owned()
 }
@@ -228,13 +234,17 @@ fn build_url_path_view(cfg: Option<&UrlPathConfig>) -> Option<UrlPathView> {
 /// view round-trips back to the original TOML keyword.
 pub fn op_name(op: &RuleOp) -> String {
     match op {
-        RuleOp::Equal      => "equal",
-        RuleOp::NotEqual   => "not_equal",
-        RuleOp::StartsWith => "starts_with",
-        RuleOp::EndsWith   => "ends_with",
-        RuleOp::Contains   => "contains",
-        RuleOp::WildCard   => "wild_card",
-        RuleOp::Regex      => "regex",
+        RuleOp::Equal         => "equal",
+        RuleOp::NotEqual      => "not_equal",
+        RuleOp::StartsWith    => "starts_with",
+        RuleOp::NotStartsWith => "not_starts_with",
+        RuleOp::EndsWith      => "ends_with",
+        RuleOp::NotEndsWith   => "not_ends_with",
+        RuleOp::Contains      => "contains",
+        RuleOp::NotContains   => "not_contains",
+        RuleOp::WildCard      => "wild_card",
+        RuleOp::Regex         => "regex",
+        RuleOp::NotRegex      => "not_regex",
     }
     .to_owned()
 }
