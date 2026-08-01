@@ -113,47 +113,52 @@ pub(super) fn build_rule_from_payload(
     Ok(rule.compute_derived_fields(rule_set, rule_set.rules.len(), rs_idx))
 }
 
-// ── RFC 001 helper ────────────────────────────────────────────────────
+// ── RFC 001 / RFC 017 helper ──────────────────────────────────────────
 
 fn url_path_op_to_routing(op: UrlPathOp) -> apimock_routing::rule_set::rule::when::request::rule_op::RuleOp {
     use apimock_routing::rule_set::rule::when::request::rule_op::RuleOp;
     match op {
-        UrlPathOp::Equal => RuleOp::Equal,
+        UrlPathOp::Equal      => RuleOp::Equal,
         UrlPathOp::StartsWith => RuleOp::StartsWith,
-        UrlPathOp::Contains => RuleOp::Contains,
-        UrlPathOp::EndsWith => RuleOp::Contains, // EndsWith not in RuleOp; use Contains as best-effort
-        UrlPathOp::WildCard => RuleOp::WildCard,
-        UrlPathOp::NotEqual => RuleOp::NotEqual,
+        UrlPathOp::Contains   => RuleOp::Contains,
+        UrlPathOp::EndsWith   => RuleOp::EndsWith,  // RFC 017: no longer falls back to Contains
+        UrlPathOp::WildCard   => RuleOp::WildCard,
+        UrlPathOp::NotEqual   => RuleOp::NotEqual,
+        UrlPathOp::Regex      => RuleOp::Regex,     // RFC 017: new variant
     }
 }
 
-// ── RFC 002 helpers ───────────────────────────────────────────────────
+// ── RFC 002 / RFC 017 helpers ─────────────────────────────────────────
 
 fn build_headers(
     input: &[crate::view::HeaderConditionPayload],
 ) -> Result<apimock_routing::rule_set::rule::when::request::headers::Headers, ApplyError> {
-    use apimock_routing::rule_set::rule::when::condition_statement::ConditionStatement;
+    use apimock_routing::rule_set::rule::when::request::headers::HeaderConditionStatement;
     use indexmap::IndexMap;
 
-    let mut map: IndexMap<String, ConditionStatement> = IndexMap::new();
+    let mut map: IndexMap<String, HeaderConditionStatement> = IndexMap::new();
     for cond in input {
         let op = header_op_to_routing(cond.op);
         let value = cond.value.clone().unwrap_or_default();
-        map.insert(cond.name.to_lowercase(), ConditionStatement { op: Some(op), value });
+        map.insert(cond.name.to_lowercase(), HeaderConditionStatement { op: Some(op), value });
     }
     Ok(apimock_routing::rule_set::rule::when::request::headers::Headers(map))
 }
 
-fn header_op_to_routing(op: HeaderOp) -> apimock_routing::rule_set::rule::when::request::rule_op::RuleOp {
-    use apimock_routing::rule_set::rule::when::request::rule_op::RuleOp;
+fn header_op_to_routing(op: HeaderOp)
+    -> apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator
+{
+    use apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator;
     match op {
-        HeaderOp::Equal => RuleOp::Equal,
-        HeaderOp::Contains => RuleOp::Contains,
-        HeaderOp::StartsWith => RuleOp::StartsWith,
-        HeaderOp::EndsWith => RuleOp::Contains, // fallback
-        HeaderOp::Regex | HeaderOp::Exists | HeaderOp::Absent => RuleOp::Equal,
-        HeaderOp::NotEqual => RuleOp::NotEqual,
-        HeaderOp::WildCard => RuleOp::WildCard,
+        HeaderOp::Equal      => HeaderOperator::Equal,
+        HeaderOp::NotEqual   => HeaderOperator::NotEqual,
+        HeaderOp::StartsWith => HeaderOperator::StartsWith,
+        HeaderOp::EndsWith   => HeaderOperator::EndsWith,  // RFC 017: direct mapping
+        HeaderOp::Contains   => HeaderOperator::Contains,
+        HeaderOp::WildCard   => HeaderOperator::WildCard,
+        HeaderOp::Regex      => HeaderOperator::Regex,     // RFC 017: direct mapping
+        HeaderOp::Exists     => HeaderOperator::Exists,    // RFC 017: direct mapping
+        HeaderOp::Absent     => HeaderOperator::Absent,    // RFC 017: direct mapping
     }
 }
 
@@ -273,7 +278,7 @@ pub(super) fn internal_path_err(err: ConfigError) -> ApplyError {
 
 pub(super) fn header_op_to_routing_pub(
     op: HeaderOp,
-) -> apimock_routing::rule_set::rule::when::request::rule_op::RuleOp {
+) -> apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator {
     header_op_to_routing(op)
 }
 

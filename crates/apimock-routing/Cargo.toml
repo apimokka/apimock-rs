@@ -12,6 +12,9 @@ description = "Routing model for apimock: rule sets, request matching, and read-
 [dependencies]
 hyper = { workspace = true }
 indexmap = { workspace = true }
+regex = { workspace = true }
+globset = { workspace = true }
+ignore = { workspace = true }
 log = { workspace = true }
 console = { workspace = true }
 serde = { workspace = true }

@@ -346,8 +346,10 @@ pub enum UrlPathOp {
     EndsWith,
     /// Glob wildcard match.
     WildCard,
-    /// Regular expression match.
+    /// Negated equality match.
     NotEqual,
+    /// Regular expression match (RFC 017).
+    Regex,
 }
 
 // ── RFC 002 — Header and body condition payloads ──────────────────────
@@ -464,13 +466,15 @@ pub enum RootSettingKey {
     LogLevel,
     LogFile,
     LogFormat,
-    // ── file tree view (RFC 012) ──────────────────────────────────────
+    // ── file tree view (RFC 012 / RFC 019) ───────────────────────────────
     FileTreeShowHidden,
     FileTreeBuiltinExcludes,
     /// Value: `EditValue::StringList`
     FileTreeExtraExcludes,
     /// Value: `EditValue::StringList`
     FileTreeInclude,
+    /// Value: `EditValue::Boolean` (RFC 019)
+    FileTreeRespectGitignore,
 }
 
 /// Value provided with an edit command.
@@ -621,11 +625,13 @@ impl ReloadHint {
     pub fn for_key(key: RootSettingKey) -> Self {
         use RootSettingKey::*;
         match key {
-            ListenerIpAddress | ListenerPort | TlsEnabled | TlsCertFile | TlsKeyFile
-            | LogFile => Self::restart(),
+            // Listener rebind required — new socket, new TLS stack setup.
+            ListenerIpAddress | ListenerPort | TlsEnabled | LogFile => Self::restart(),
+            // RFC 020: cert/key rotation uses the reloadable resolver — no rebind.
+            TlsCertFile | TlsKeyFile => Self::reload(),
             ServiceFallbackRespondDir | ServiceStrategy | LogLevel | LogFormat
             | FileTreeShowHidden | FileTreeBuiltinExcludes | FileTreeExtraExcludes
-            | FileTreeInclude => Self::reload(),
+            | FileTreeInclude | FileTreeRespectGitignore => Self::reload(),
         }
     }
 }

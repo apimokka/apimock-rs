@@ -678,6 +678,13 @@ impl Workspace {
                     .get_or_insert_with(Default::default)
                     .include = list;
             }
+            FileTreeRespectGitignore => {
+                let b = value_as_bool(&value)?;
+                self.config
+                    .file_tree_view
+                    .get_or_insert_with(Default::default)
+                    .respect_gitignore = b;
+            }
         }
 
         let id = self
@@ -694,12 +701,12 @@ impl Workspace {
         rule_id: crate::view::NodeId,
         payload: crate::view::HeaderConditionPayload,
     ) -> Result<Vec<crate::view::NodeId>, ApplyError> {
-        use apimock_routing::rule_set::rule::when::condition_statement::ConditionStatement;
+        use apimock_routing::rule_set::rule::when::request::headers::HeaderConditionStatement;
 
         let (rs_idx, rule_idx) = self.find_rule_indices(rule_id)?;
         let op = payload::header_op_to_routing_pub(payload.op);
         let value = payload.value.unwrap_or_default();
-        let stmt = ConditionStatement { op: Some(op), value };
+        let stmt = HeaderConditionStatement { op: Some(op), value };
         let name = payload.name.to_lowercase();
 
         // Ensure headers map exists.
@@ -726,7 +733,7 @@ impl Workspace {
         id: crate::view::NodeId,
         payload: crate::view::HeaderConditionPayload,
     ) -> Result<Vec<crate::view::NodeId>, ApplyError> {
-        use apimock_routing::rule_set::rule::when::condition_statement::ConditionStatement;
+        use apimock_routing::rule_set::rule::when::request::headers::HeaderConditionStatement;
 
         let addr = self.ids.lookup(id).ok_or(ApplyError::UnknownNode { id })?;
         let (rs_idx, rule_idx, old_name) = match addr {
@@ -741,7 +748,7 @@ impl Workspace {
         let op = payload::header_op_to_routing_pub(payload.op);
         let value = payload.value.unwrap_or_default();
         let new_name = payload.name.to_lowercase();
-        let stmt = ConditionStatement { op: Some(op), value };
+        let stmt = HeaderConditionStatement { op: Some(op), value };
 
         let rule = &mut self.config.service.rule_sets[rs_idx].rules[rule_idx];
         let headers = rule.when.request.headers.get_or_insert_with(|| {

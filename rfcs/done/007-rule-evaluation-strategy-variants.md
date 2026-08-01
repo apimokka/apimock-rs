@@ -261,3 +261,40 @@ become a thing.
 - Strategy traits + plugin loading (a path to alternative D).
 - Strategy-aware diff: when changing strategies via the GUI, the
   diff describes the behavioural shift, not just the field change.
+
+---
+
+## v5.11 addendum — ConditionalFallback withdrawn (RFC 018)
+
+This RFC's original guide-level section included a fifth strategy variant,
+`ConditionalFallback { primary_rule_set, secondary_rule_set }`.
+That variant was **never implemented** in v5.8.0 and was formally
+**withdrawn** by RFC 018 (v5.11.0).
+
+The v5.11 audit found that the behaviour `ConditionalFallback` was
+meant to provide — "try primary rule-set; fall through to secondary on
+no match" — is already the default behaviour for multi-rule-set
+configurations. `apimock-server::rule_set_response` iterates
+`config.service.rule_sets` in declaration order; each set that
+produces no match causes the loop to continue to the next:
+
+```rust
+for rule_set in &config.service.rule_sets {
+    if let Some(respond) = rule_set.find_matched(...) {
+        return Some(respond);  // first matching set wins
+    }
+}
+None  // no set matched → fallback dir
+```
+
+To implement "primary then secondary" semantics, declare two rule-sets
+in order in `apimock.toml`:
+
+```toml
+[service]
+rule_sets = ["primary.toml", "secondary.toml"]
+```
+
+No special strategy variant is needed. The `ConditionalFallback`
+proposal is preserved in `rfcs/archive/` via RFC 018, which contains
+the full audit rationale.

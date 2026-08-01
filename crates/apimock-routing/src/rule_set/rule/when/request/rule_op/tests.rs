@@ -243,3 +243,33 @@ fn wild_card() {
         );
     }
 }
+
+
+// RFC 017: EndsWith and Regex tests
+#[test]
+fn ends_with() {
+    let cases = vec![
+        ("foobar", "bar", true),
+        ("foobar", "foo", false),
+        ("foobar", "foobar", true),
+        ("foobar", "", true),
+        ("", "x", false),
+    ];
+    for (text, checker, expect) in cases {
+        assert_eq!(RuleOp::EndsWith.is_match(text, checker), expect,
+            "EndsWith({:?}, {:?})", text, checker);
+    }
+}
+
+#[test]
+fn regex_match() {
+    assert!(RuleOp::Regex.is_match("application/json", r"^application/(json|xml)$"));
+    assert!(RuleOp::Regex.is_match("application/xml", r"^application/(json|xml)$"));
+    assert!(!RuleOp::Regex.is_match("text/plain", r"^application/(json|xml)$"));
+}
+
+#[test]
+fn regex_invalid_pattern_returns_false() {
+    // Invalid pattern must not panic — return false gracefully.
+    assert!(!RuleOp::Regex.is_match("anything", r"[invalid"));
+}

@@ -5,6 +5,99 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.11.0] - 2026-05-22
+
+### Fixed
+
+- **RFC 017 — Payload operator routing parity.** Five payload-layer operators
+  silently mapped to the wrong routing operators since v5.8.0:
+  - `UrlPathOp::EndsWith` → was `Contains`; now correctly `ends_with`.
+  - `HeaderOp::EndsWith` → was `Contains`; now correctly `ends_with`.
+  - `HeaderOp::Regex` → was `Equal`; regex is now applied.
+  - `HeaderOp::Exists` → was `Equal ""`; now correctly checks key presence.
+  - `HeaderOp::Absent` → was `Equal ""`; now correctly checks key absence.
+  - `UrlPathOp::NotEqual` doc-comment corrected (previously said "Regular expression match").
+
+  **Breaking:** rules that relied on the old (incorrect) behaviour will now
+  behave as their operator names suggest. `ends_with` rules no longer
+  over-match; `exists`/`absent` rules now work. (`apimock-routing`,
+  `apimock-config`)
+
+### Added
+
+- **RFC 017 — `HeaderOperator` enum.** New flat 9-variant enum in
+  `apimock-routing` (mirrors `BodyOperator` pattern). `Headers` now uses
+  `HeaderConditionStatement { op: Option<HeaderOperator>, value: String }`
+  in place of the shared `ConditionStatement`. `ConditionStatement` is now
+  unused and may be removed in a future release.
+  (`apimock-routing`)
+
+- **RFC 017 — `UrlPathOp::Regex`.** Regex matching is now available for
+  URL-path conditions through the GUI payload, closing the asymmetry with
+  `HeaderOp::Regex`. Resolves RFC 001 Unresolved §1. (`apimock-config`)
+
+- **RFC 017 — `RuleOp::EndsWith` and `RuleOp::Regex`.** Two new variants in
+  the routing crate's core operator enum. (`apimock-routing`)
+
+- **RFC 019 — `.gitignore` honouring in `FileTreeFilter`.** New
+  `respect_gitignore: bool` field (default `false`). When enabled, the file
+  tree builder parses `.gitignore` files in the workspace tree and its
+  ancestors, hiding entries that Git would ignore. (`apimock-routing`,
+  `apimock-config`)
+
+- **RFC 019 — Glob-pattern `extra_excludes`.** `FileTreeFilter::extra_excludes`
+  entries are now evaluated as `globset` glob patterns instead of exact
+  name matches. Literal names continue to work. `include` patterns also
+  upgraded to glob. New `RootSettingKey::FileTreeRespectGitignore` variant.
+  (`apimock-routing`, `apimock-config`)
+
+  **Breaking:** Entries in `extra_excludes` containing glob metacharacters
+  (`*`, `?`, `[`, `]`) will now be interpreted as glob patterns. Bare names
+  without metacharacters are unaffected.
+
+- **RFC 020 — TLS certificate hot-reload (Outcome C).** New
+  `ReloadableCertResolver` in `apimock-server::tls` uses
+  `rustls::ResolvesServerCert` to swap the active certificate atomically
+  without restarting the HTTPS listener. `ServerHandle` gains a
+  `cert_reloader: Option<Arc<ReloadableCertResolver>>` field and a
+  `reload_tls_certs(cert_path, key_path)` method.
+  `ReloadHint::for_key` updated: `TlsCertFile` / `TlsKeyFile` now return
+  `SoftReload` instead of `HardRestart`. `TlsEnabled` toggle still requires
+  `HardRestart`. (`apimock-server`, `apimock-config`)
+
+### Documentation / RFC lifecycle
+
+- **RFC 018 — ConditionalFallback withdrawn.** Audit found the existing
+  multi-rule-set fall-through dispatch already provides the intended
+  behaviour. RFC 018 moved to `rfcs/archive/`. An addendum is appended to
+  `rfcs/done/007-rule-evaluation-strategy-variants.md` explaining the
+  withdrawal and documenting the correct multi-rule-set pattern.
+  (`rfcs/`)
+
+- **RFC housekeeping.** Stale `rfcs/proposed/001-008-*.md` duplicates
+  removed (were identical to `rfcs/done/` versions except for the Status
+  field). `rfcs/README.md` updated with the full Done table
+  (RFCs 000–020) and the Archive table.
+
+### Internal
+
+- `regex = "1"`, `globset = "0.4"`, `ignore = "0.4"` added as workspace
+  and `apimock-routing` dependencies.
+- Internal `cargo` dependency versions updated in `apimock` crate
+  Cargo.toml.
+
+### Test count
+
+| Crate | v5.10.1 | v5.11.0 | Delta |
+|---|---|---|---|
+| apimock (façade) | 17 | 20 | +3 (TLS tests) |
+| apimock-config | 49 | 49 | — |
+| apimock-routing | 78 | 113 | +35 (header op + rule_op) |
+| apimock-server | 5 | 9 | +4 (TLS reload tests) |
+| **Total** | **149** | **191** | **+42** |
+
+
+
 ## [5.10.1] - 2026-05-17
 
 ### Fixed

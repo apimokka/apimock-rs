@@ -36,6 +36,33 @@ pub struct ServerHandle {
     pub http_addr: Option<std::net::SocketAddr>,
     /// Address the HTTPS listener is bound to, if any.
     pub https_addr: Option<std::net::SocketAddr>,
+    /// Hot-reload handle for TLS certificates (RFC 020).
+    ///
+    /// `Some` when an HTTPS listener is active with a reloadable cert.
+    /// `None` for HTTP-only servers.
+    pub cert_reloader: Option<std::sync::Arc<crate::tls::ReloadableCertResolver>>,
+}
+
+impl ServerHandle {
+    /// Reload the TLS certificate and private key from the given PEM files.
+    ///
+    /// Returns `Ok(())` if the swap succeeded; the new cert is used for all
+    /// TLS handshakes started after this call. On error, the old cert remains
+    /// active.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if:
+    /// - No HTTPS listener is active (`cert_reloader` is `None`).
+    /// - The new cert or key fails to parse.
+    pub fn reload_tls_certs(&self, cert_path: &str, key_path: &str) -> Result<(), String> {
+        match &self.cert_reloader {
+            Some(reloader) => reloader
+                .reload_from_paths(cert_path, key_path)
+                .map_err(|e| e.to_string()),
+            None => Err("no HTTPS listener active; cert reload not available".to_owned()),
+        }
+    }
 }
 
 /// Small control surface for the embedder.

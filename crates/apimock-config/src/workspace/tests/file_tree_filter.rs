@@ -82,7 +82,7 @@ fn snapshot_include_filter_shows_only_matching_files() {
 
     let rs_toml = "[[rules]]\nwhen.request.url_path = \"/api\"\nrespond = { text = \"ok\" }\n";
     std::fs::write(dir.path().join("apimock-rule-set.toml"), rs_toml).unwrap();
-    let extra_toml = "[file_tree_view]\ninclude = [\".json\"]\n";
+    let extra_toml = "[file_tree_view]\ninclude = [\"*.json\"]\n";
     let cfg_path = write_apimock_toml(dir.path(), "fallback", extra_toml);
 
     let ws = Workspace::load(cfg_path).unwrap();

@@ -5,7 +5,7 @@ use serde::Deserialize;
 ///
 /// When the section is absent, [`FileTreeViewConfig::default()`] is used,
 /// which mirrors [`apimock_routing::view::build::FileTreeFilter::default()`]:
-/// dotfiles hidden, built-in excludes on, no extra filters.
+/// dotfiles hidden, built-in excludes on, no extra filters, gitignore off.
 ///
 /// [`FileTreeView`]: apimock_routing::view::FileTreeView
 #[derive(Clone, Debug, Deserialize)]
@@ -19,15 +19,25 @@ pub struct FileTreeViewConfig {
     #[serde(default = "default_true")]
     pub builtin_excludes: bool,
 
-    /// Additional entry names to exclude (exact match on `file_name()`).
+    /// Glob patterns for additional exclusions (RFC 019).
+    ///
+    /// Each entry is matched against the entry's `file_name()` only.
+    /// Supports standard glob syntax (`*`, `?`, `[…]`). A trailing `/`
+    /// restricts the pattern to directories. Pre-5.11 exact-name entries
+    /// continue to work because a bare name is a valid glob.
     #[serde(default)]
     pub extra_excludes: Vec<String>,
 
-    /// If non-empty, only files whose name ends with one of these suffixes
-    /// are shown. Directories always pass the include filter so the user
-    /// can drill into them. (default: `[]` — show everything)
+    /// If non-empty, only files whose name matches at least one of these
+    /// glob patterns are shown. Directories always pass the include filter
+    /// so the user can drill into them. (default: `[]` — show everything)
     #[serde(default)]
     pub include: Vec<String>,
+
+    /// Parse `.gitignore` files in the tree root and its ancestors,
+    /// applying Git-compatible ignore rules (RFC 019). (default: `false`)
+    #[serde(default)]
+    pub respect_gitignore: bool,
 }
 
 fn default_true() -> bool {
@@ -41,6 +51,7 @@ impl Default for FileTreeViewConfig {
             builtin_excludes: true,
             extra_excludes: Vec::new(),
             include: Vec::new(),
+            respect_gitignore: false,
         }
     }
 }
@@ -55,6 +66,7 @@ impl FileTreeViewConfig {
             builtin_excludes: self.builtin_excludes,
             extra_excludes: self.extra_excludes.clone(),
             include: self.include.clone(),
+            respect_gitignore: self.respect_gitignore,
         }
     }
 }

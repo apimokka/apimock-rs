@@ -4,10 +4,35 @@ use serde::Deserialize;
 
 use indexmap::IndexMap;
 
+pub mod header_operator;
+
+use header_operator::HeaderOperator;
+
 use super::util::fmt_condition_connector;
-use crate::rule_set::rule::{
-    when::condition_statement::ConditionStatement, ConditionKey,
-};
+use crate::rule_set::rule::ConditionKey;
+
+/// One header condition (operator + expected value) stored inside [`Headers`].
+///
+/// Replaces the former `ConditionStatement` (which carried a [`super::rule_op::RuleOp`])
+/// with a type that can represent presence operators as well as value operators.
+/// Mirrors the shape of `BodyConditionStatement` in the body module (RFC 017).
+#[derive(Clone, Debug, Deserialize)]
+pub struct HeaderConditionStatement {
+    #[serde(default)]
+    pub op: Option<HeaderOperator>,
+    #[serde(default)]
+    pub value: String,
+}
+
+impl std::fmt::Display for HeaderConditionStatement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op = self.op.clone().unwrap_or_default();
+        match op {
+            HeaderOperator::Exists | HeaderOperator::Absent => write!(f, "{}", op),
+            _ => write!(f, "{}`{}`", op, self.value),
+        }
+    }
+}
 
 /// Header match conditions keyed by header name (lower-cased).
 ///
@@ -17,10 +42,14 @@ use crate::rule_set::rule::{
 /// than arbitrary hash order (RFC 014).
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
-pub struct Headers(pub IndexMap<ConditionKey, ConditionStatement>);
+pub struct Headers(pub IndexMap<ConditionKey, HeaderConditionStatement>);
 
 impl Headers {
-    /// check if `headers` in `when` matches
+    /// Returns `true` iff the request's headers satisfy all conditions.
+    ///
+    /// Conditions are ANDed: every key-condition pair in `self.0` must match.
+    /// Presence operators (`Exists`, `Absent`) only check key presence;
+    /// value operators compare the request header's value string.
     pub fn is_match(
         &self,
         parsed_request_headers: &HeaderMap<HeaderValue>,
@@ -29,33 +58,42 @@ impl Headers {
     ) -> bool {
         self.0
             .iter()
-            .all(|(matcher_header_key, matcher_header_value)| {
-                let parsed_request_header_value = match parsed_request_headers.get(matcher_header_key) {
-                    Some(x) => x,
+            .all(|(matcher_key, stmt)| {
+                let op = stmt.op.clone().unwrap_or_default();
+
+                // ── presence operators ────────────────────────────────
+                match op {
+                    HeaderOperator::Exists => {
+                        return parsed_request_headers.contains_key(matcher_key.as_str())
+                    }
+                    HeaderOperator::Absent => {
+                        return !parsed_request_headers.contains_key(matcher_key.as_str())
+                    }
+                    _ => {}
+                }
+
+                // ── value operators ────────────────────────────────────
+                let header_value = match parsed_request_headers.get(matcher_key.as_str()) {
+                    Some(v) => v,
                     None => return false,
                 };
 
-                let parsed_request_header_value = match parsed_request_header_value.to_str() {
-                    Ok(x) => x,
+                let header_str = match header_value.to_str() {
+                    Ok(s) => s,
                     Err(err) => {
                         log::error!(
                             "{} to get request header value by key (rule #{} in rule set #{}):\n`{}`\n({})",
                             style("failed").red(),
                             rule_idx + 1,
                             rule_set_idx + 1,
-                            matcher_header_key,
+                            matcher_key,
                             err,
                         );
                         return true;
                     }
                 };
 
-                let ret = matcher_header_value
-                    .op
-                    .clone()
-                    .unwrap_or_default()
-                    .is_match(parsed_request_header_value, &matcher_header_value.value);
-                ret
+                op.to_rule_op().is_match(header_str, &stmt.value)
             })
     }
 
@@ -70,7 +108,7 @@ impl std::fmt::Display for Headers {
         let s = self
             .0
             .iter()
-            .map(|(header_key, header_statement)| format!("{}{}", header_key, header_statement))
+            .map(|(key, stmt)| format!("{}{}", key, stmt))
             .collect::<Vec<String>>()
             .join(fmt_condition_connector().as_str());
 

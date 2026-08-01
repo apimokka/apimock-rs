@@ -272,12 +272,18 @@ fn check_headers(
         Some(h) => h,
     };
     for (name, stmt) in &headers.0 {
-        let ok = match parsed.component_parts.headers.get(name.as_str()) {
-            None     => false,
-            Some(hv) => {
-                let v = hv.to_str().unwrap_or("");
-                stmt.op.clone().unwrap_or_default().is_match(v, &stmt.value)
-            }
+        use apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator;
+        let op = stmt.op.clone().unwrap_or_default();
+        let ok = match &op {
+            HeaderOperator::Exists => parsed.component_parts.headers.contains_key(name.as_str()),
+            HeaderOperator::Absent => !parsed.component_parts.headers.contains_key(name.as_str()),
+            _ => match parsed.component_parts.headers.get(name.as_str()) {
+                None     => false,
+                Some(hv) => {
+                    let v = hv.to_str().unwrap_or("");
+                    op.to_rule_op().is_match(v, &stmt.value)
+                }
+            },
         };
         println!(
             "  {}  header {:?} {} {:?}",
@@ -446,8 +452,7 @@ mod tests {
         let rs = make_rule_set(concat!(
             "[[rules]]\n",
             "when.request.url_path = \"/api\"\n",
-            "[rules.when.request.body.json]\n",
-            "\"action\" = { op = \"equal\", value = \"create\" }\n",
+            "when.request.body.json.\"action\" = { op = \"equal\", value = \"create\" }\n",
             "respond.text = \"ok\"\n",
         ));
         let body = serde_json::json!({"action": "create"});

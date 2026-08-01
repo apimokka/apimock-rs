@@ -1,51 +1,21 @@
 //! Tests for `Headers::is_match`, `Headers::validate`, and the
-//! TOML deserialise surface that feeds them.
-//!
-//! # What this module covers
-//!
-//! 5.6.0 added these tests to fill a long-standing gap in the routing
-//! crate's coverage. Until 5.5.0, `Headers::is_match` was exercised
-//! only indirectly (through full integration runs in `apimock`'s test
-//! binaries, and through `apimock-config`'s round-trip tests in
-//! 5.5.0). The matcher's variant-by-variant behaviour, the missing-
-//! key path, and the multi-condition AND evaluation have no other
-//! direct coverage.
-//!
-//! # Why we test through TOML deserialise rather than struct literals
-//!
-//! Building a `Headers` value by hand requires importing
-//! `ConditionStatement`, `RuleOp`, and the `ConditionKey` alias —
-//! verbose and prone to drifting out of sync with the on-disk shape.
-//! TOML fixtures double as deserialise-surface tests: every successful
-//! parse confirms the serde wiring still works.
-
-use std::collections::HashMap;
+//! TOML deserialise surface that feeds them (RFC 017 extended).
 
 use hyper::HeaderMap;
 use hyper::header::{HeaderName, HeaderValue};
 
 use super::Headers;
 
-// ---------------------------------------------------------------------
-// Fixture helpers
-// ---------------------------------------------------------------------
+// ── Fixture helpers ───────────────────────────────────────────────────
 
-/// Parse a TOML fragment of the shape that appears under
-/// `[when.request.headers]` into a `Headers` value. Strips one level
-/// of TOML indirection so test bodies can read like the on-disk form.
 fn parse_headers(toml_text: &str) -> Headers {
-    // Wrap the fragment in a top-level `headers` key so the
-    // serde transparent shape can deserialise.
     let wrapped = format!("[headers]\n{}", toml_text);
     #[derive(serde::Deserialize)]
-    struct Wrapper {
-        headers: Headers,
-    }
+    struct Wrapper { headers: Headers }
     let w: Wrapper = toml::from_str(&wrapped).expect("parse headers TOML");
     w.headers
 }
 
-/// Build a `HeaderMap` from `(key, value)` pairs.
 fn make_request_headers<I: IntoIterator<Item = (&'static str, &'static str)>>(
     pairs: I,
 ) -> HeaderMap<HeaderValue> {
@@ -59,231 +29,269 @@ fn make_request_headers<I: IntoIterator<Item = (&'static str, &'static str)>>(
     map
 }
 
-// ---------------------------------------------------------------------
-// is_match — operator coverage
-// ---------------------------------------------------------------------
+// ── Value operators ───────────────────────────────────────────────────
 
 #[test]
 fn is_match_op_default_equal_when_op_omitted() {
-    // No `op` field — defaults to Equal.
-    let headers = parse_headers(r#"x-api-key = { value = "secret" }"#);
-    let req = make_request_headers([("x-api-key", "secret")]);
-    assert!(headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"x-foo = { value = "bar" }"#);
+    assert!(h.is_match(&make_request_headers([("x-foo", "bar")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_default_equal_no_match() {
-    let headers = parse_headers(r#"x-api-key = { value = "secret" }"#);
-    let req = make_request_headers([("x-api-key", "wrong")]);
-    assert!(!headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"x-foo = { value = "bar" }"#);
+    assert!(!h.is_match(&make_request_headers([("x-foo", "baz")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_equal_match() {
-    let headers = parse_headers(r#"x-api-key = { op = "equal", value = "secret" }"#);
-    let req = make_request_headers([("x-api-key", "secret")]);
-    assert!(headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"x-foo = { op = "equal", value = "bar" }"#);
+    assert!(h.is_match(&make_request_headers([("x-foo", "bar")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_not_equal_match() {
-    let headers = parse_headers(r#"x-api-key = { op = "not_equal", value = "secret" }"#);
-    let req = make_request_headers([("x-api-key", "different")]);
-    assert!(headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"x-foo = { op = "not_equal", value = "bar" }"#);
+    assert!(h.is_match(&make_request_headers([("x-foo", "baz")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_not_equal_when_equal_returns_false() {
-    let headers = parse_headers(r#"x-api-key = { op = "not_equal", value = "secret" }"#);
-    let req = make_request_headers([("x-api-key", "secret")]);
-    assert!(!headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"x-foo = { op = "not_equal", value = "bar" }"#);
+    assert!(!h.is_match(&make_request_headers([("x-foo", "bar")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_starts_with_match() {
-    let headers = parse_headers(r#"user-agent = { op = "starts_with", value = "Mozilla" }"#);
-    let req = make_request_headers([("user-agent", "Mozilla/5.0 (X11)")]);
-    assert!(headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"authorization = { op = "starts_with", value = "Bearer " }"#);
+    assert!(h.is_match(&make_request_headers([("authorization", "Bearer token123")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_starts_with_no_match() {
-    let headers = parse_headers(r#"user-agent = { op = "starts_with", value = "Mozilla" }"#);
-    let req = make_request_headers([("user-agent", "curl/8.4")]);
-    assert!(!headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"authorization = { op = "starts_with", value = "Bearer " }"#);
+    assert!(!h.is_match(&make_request_headers([("authorization", "Basic abc")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_ends_with_match() {
+    // RFC 017: EndsWith now works correctly (was previously falling back to Contains).
+    let h = parse_headers(r#"x-trace = { op = "ends_with", value = "-done" }"#);
+    assert!(h.is_match(&make_request_headers([("x-trace", "req-1234-done")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_ends_with_no_match() {
+    let h = parse_headers(r#"x-trace = { op = "ends_with", value = "-done" }"#);
+    assert!(!h.is_match(&make_request_headers([("x-trace", "req-1234-pending")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_ends_with_distinguishes_from_contains() {
+    // "-done" appears in the middle; ends_with must not match.
+    let h = parse_headers(r#"x-trace = { op = "ends_with", value = "-done" }"#);
+    assert!(!h.is_match(&make_request_headers([("x-trace", "req-done-final")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_contains_match() {
-    let headers = parse_headers(r#"user-agent = { op = "contains", value = "Firefox" }"#);
-    let req = make_request_headers([("user-agent", "Mozilla/5.0 Firefox/120")]);
-    assert!(headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"x-foo = { op = "contains", value = "ar" }"#);
+    assert!(h.is_match(&make_request_headers([("x-foo", "bar")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_contains_no_match() {
-    let headers = parse_headers(r#"user-agent = { op = "contains", value = "Firefox" }"#);
-    let req = make_request_headers([("user-agent", "Mozilla/5.0 Chrome/120")]);
-    assert!(!headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"x-foo = { op = "contains", value = "zz" }"#);
+    assert!(!h.is_match(&make_request_headers([("x-foo", "bar")]), 0, 0));
 }
 
 #[test]
 fn is_match_op_wild_card_match() {
-    let headers = parse_headers(r#"user-agent = { op = "wild_card", value = "Mozilla*" }"#);
-    let req = make_request_headers([("user-agent", "Mozilla/5.0 anything-here")]);
-    assert!(headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"x-foo = { op = "wild_card", value = "b*r" }"#);
+    assert!(h.is_match(&make_request_headers([("x-foo", "bar")]), 0, 0));
+    assert!(h.is_match(&make_request_headers([("x-foo", "beer")]), 0, 0));
 }
 
-// ---------------------------------------------------------------------
-// is_match — request-shape coverage
-// ---------------------------------------------------------------------
+#[test]
+fn is_match_op_regex_match() {
+    // RFC 017: Regex now works correctly (was previously falling back to Equal).
+    let h = parse_headers(r#"content-type = { op = "regex", value = "^application/(json|xml)$" }"#);
+    assert!(h.is_match(&make_request_headers([("content-type", "application/json")]), 0, 0));
+    assert!(h.is_match(&make_request_headers([("content-type", "application/xml")]), 0, 0));
+    assert!(!h.is_match(&make_request_headers([("content-type", "text/plain")]), 0, 0));
+}
+
+// ── Presence operators (RFC 017) ──────────────────────────────────────
+
+#[test]
+fn is_match_op_exists_header_present() {
+    // RFC 017: Exists now works (was silently Equal "").
+    let h = parse_headers(r#"x-api-key = { op = "exists" }"#);
+    assert!(h.is_match(&make_request_headers([("x-api-key", "any-value")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_exists_header_present_empty_value() {
+    let h = parse_headers(r#"x-api-key = { op = "exists" }"#);
+    // Key present with empty string → Exists should still match.
+    assert!(h.is_match(&make_request_headers([("x-api-key", "")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_exists_header_absent() {
+    let h = parse_headers(r#"x-api-key = { op = "exists" }"#);
+    assert!(!h.is_match(&make_request_headers([("other-header", "value")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_absent_header_absent() {
+    // RFC 017: Absent now works (was silently Equal "").
+    let h = parse_headers(r#"x-internal = { op = "absent" }"#);
+    assert!(h.is_match(&make_request_headers([("other-header", "value")]), 0, 0));
+}
+
+#[test]
+fn is_match_op_absent_header_present() {
+    let h = parse_headers(r#"x-internal = { op = "absent" }"#);
+    assert!(!h.is_match(&make_request_headers([("x-internal", "secret")]), 0, 0));
+}
+
+// ── Key-missing / AND-logic ───────────────────────────────────────────
 
 #[test]
 fn is_match_key_missing_returns_false() {
-    let headers = parse_headers(r#"x-api-key = { value = "secret" }"#);
-    // Request has no x-api-key header at all.
-    let req = make_request_headers([("user-agent", "x")]);
-    assert!(!headers.is_match(&req, 0, 0));
+    let h = parse_headers(r#"x-foo = { value = "bar" }"#);
+    assert!(!h.is_match(&make_request_headers([("other", "bar")]), 0, 0));
 }
 
 #[test]
 fn is_match_multiple_conditions_all_match() {
-    let headers = parse_headers(
-        r#"x-api-key = { value = "secret" }
-x-tenant = { op = "equal", value = "acme" }"#,
+    let h = parse_headers(
+        r#"x-tenant = { value = "acme" }
+x-role = { op = "starts_with", value = "admin" }"#,
     );
-    let req = make_request_headers([("x-api-key", "secret"), ("x-tenant", "acme")]);
-    assert!(headers.is_match(&req, 0, 0));
+    let req = make_request_headers([("x-tenant", "acme"), ("x-role", "admin-user")]);
+    assert!(h.is_match(&req, 0, 0));
 }
 
 #[test]
 fn is_match_multiple_conditions_one_fails() {
-    let headers = parse_headers(
-        r#"x-api-key = { value = "secret" }
-x-tenant = { op = "equal", value = "acme" }"#,
+    let h = parse_headers(
+        r#"x-tenant = { value = "acme" }
+x-role = { op = "starts_with", value = "admin" }"#,
     );
-    let req = make_request_headers([("x-api-key", "secret"), ("x-tenant", "wrong")]);
-    assert!(!headers.is_match(&req, 0, 0));
+    let req = make_request_headers([("x-tenant", "acme"), ("x-role", "viewer")]);
+    assert!(!h.is_match(&req, 0, 0));
 }
 
 #[test]
 fn is_match_utf8_decode_failure_returns_true() {
-    // HeaderValue accepts arbitrary bytes; non-ASCII bytes fail
-    // `to_str()`. Headers::is_match's documented behaviour in that
-    // case is to log and return `true` (treat as match) so the rule
-    // still has a chance to run.
-    //
-    // This pins that behaviour. If the project later decides UTF-8
-    // failures should be `false`, this test is the place to flip
-    // expectations.
-    let headers = parse_headers(r#"x-thing = { value = "anything" }"#);
-    let mut req = HeaderMap::new();
-    req.insert(
-        HeaderName::from_static("x-thing"),
-        HeaderValue::from_bytes(&[0xff, 0xfe, 0x80]).unwrap(),
+    // Non-UTF-8 header values are treated as "pass" — log error, don't block.
+    use hyper::header::HeaderName;
+    let h = parse_headers(r#"x-bin = { value = "anything" }"#);
+    let mut map = HeaderMap::new();
+    map.insert(
+        HeaderName::from_static("x-bin"),
+        HeaderValue::from_bytes(b"\xff\xfe").unwrap(),
     );
-    assert!(headers.is_match(&req, 0, 0));
+    assert!(h.is_match(&map, 0, 0));
 }
 
-// ---------------------------------------------------------------------
-// validate
-// ---------------------------------------------------------------------
+// ── Validate ─────────────────────────────────────────────────────────
 
 #[test]
 fn validate_empty_returns_false() {
-    let h = Headers(indexmap::IndexMap::new());
+    use indexmap::IndexMap;
+    let h = Headers(IndexMap::new());
     assert!(!h.validate());
 }
 
 #[test]
 fn validate_non_empty_returns_true() {
-    let h = parse_headers(r#"x-api-key = { value = "v" }"#);
+    let h = parse_headers(r#"x-foo = { value = "bar" }"#);
     assert!(h.validate());
 }
 
-// ---------------------------------------------------------------------
-// TOML deserialise — surface confirmation
-// ---------------------------------------------------------------------
+// ── Deserialise surface ───────────────────────────────────────────────
 
 #[test]
 fn deserialize_value_only() {
-    let h = parse_headers(r#"x-api-key = { value = "secret" }"#);
-    assert!(h.0.contains_key("x-api-key"));
-    assert!(h.0["x-api-key"].op.is_none());
-    assert_eq!(h.0["x-api-key"].value, "secret");
+    let h = parse_headers(r#"x-foo = { value = "bar" }"#);
+    assert_eq!(h.0["x-foo"].value, "bar");
+    assert!(h.0["x-foo"].op.is_none());
 }
 
 #[test]
-fn deserialize_with_each_op_variant() {
-    // One TOML doc carrying every op the routing crate accepts —
-    // confirms the serde rename_all = "snake_case" wiring across all
-    // five variants in one shot.
+fn deserialize_all_value_op_variants() {
     let h = parse_headers(
-        r#"a = { op = "equal", value = "x" }
-b = { op = "not_equal", value = "x" }
-c = { op = "starts_with", value = "x" }
-d = { op = "contains", value = "x" }
-e = { op = "wild_card", value = "x" }"#,
+        r#"a = { op = "equal",      value = "x" }
+b = { op = "not_equal",  value = "x" }
+c = { op = "starts_with",value = "x" }
+d = { op = "ends_with",  value = "x" }
+e = { op = "contains",   value = "x" }
+f = { op = "wild_card",  value = "x" }
+g = { op = "regex",      value = "x" }"#,
     );
-    assert_eq!(h.0.len(), 5);
-    for key in ["a", "b", "c", "d", "e"] {
+    assert_eq!(h.0.len(), 7);
+    for key in ["a","b","c","d","e","f","g"] {
         assert!(h.0[key].op.is_some(), "op missing for `{}`", key);
     }
 }
 
 #[test]
+fn deserialize_presence_op_variants() {
+    // Presence operators have no `value` key in TOML.
+    let h = parse_headers(
+        r#"x-present = { op = "exists" }
+x-absent  = { op = "absent" }"#,
+    );
+    assert_eq!(h.0.len(), 2);
+    assert!(h.0["x-present"].op.is_some());
+    assert!(h.0["x-absent"].op.is_some());
+}
+
+#[test]
 fn deserialize_multiple_keys_preserve_each_value() {
     let h = parse_headers(
-        r#"x-one = { value = "alpha" }
-x-two = { value = "beta" }
+        r#"x-one   = { value = "alpha" }
+x-two   = { value = "beta"  }
 x-three = { value = "gamma" }"#,
     );
     assert_eq!(h.0.len(), 3);
-    assert_eq!(h.0["x-one"].value, "alpha");
-    assert_eq!(h.0["x-two"].value, "beta");
+    assert_eq!(h.0["x-one"].value,   "alpha");
+    assert_eq!(h.0["x-two"].value,   "beta");
     assert_eq!(h.0["x-three"].value, "gamma");
 }
 
-// ── RFC 014: IndexMap insertion-order tests ───────────────────────────
+// ── RFC 014: IndexMap insertion-order ────────────────────────────────
 
 #[test]
 fn headers_programmatic_insertion_preserves_order() {
-    // When Headers are built programmatically (e.g. via build_headers in
-    // the config crate), insertion order is preserved by IndexMap.
-    // TOML deserialization order depends on the toml crate's internals and
-    // is not guaranteed; this test validates the programmatic path.
     use indexmap::IndexMap;
-    use crate::rule_set::rule::when::condition_statement::ConditionStatement;
+    use super::HeaderConditionStatement;
 
-    let mut map: IndexMap<String, ConditionStatement> = IndexMap::new();
-    map.insert("z-header".to_owned(), ConditionStatement { op: None, value: "z".to_owned() });
-    map.insert("a-header".to_owned(), ConditionStatement { op: None, value: "a".to_owned() });
-    map.insert("m-header".to_owned(), ConditionStatement { op: None, value: "m".to_owned() });
+    let mut map: IndexMap<String, HeaderConditionStatement> = IndexMap::new();
+    map.insert("z-header".to_owned(), HeaderConditionStatement { op: None, value: "z".to_owned() });
+    map.insert("a-header".to_owned(), HeaderConditionStatement { op: None, value: "a".to_owned() });
+    map.insert("m-header".to_owned(), HeaderConditionStatement { op: None, value: "m".to_owned() });
 
     let h = Headers(map);
     let keys: Vec<&str> = h.0.keys().map(String::as_str).collect();
-    assert_eq!(
-        keys,
-        vec!["z-header", "a-header", "m-header"],
-        "IndexMap must iterate in insertion order, not alphabetical"
-    );
+    assert_eq!(keys, vec!["z-header", "a-header", "m-header"]);
 }
 
 #[test]
 fn when_view_headers_programmatic_insertion_order() {
     use indexmap::IndexMap;
-    use crate::rule_set::rule::when::condition_statement::ConditionStatement;
+    use super::HeaderConditionStatement;
     use crate::view::build::build_when_view;
-    use crate::rule_set::rule::when::{When, request::Request};
+    use crate::rule_set::rule::when::When;
+    use crate::rule_set::rule::when::request::Request;
 
-    // Build headers in a specific non-alphabetical order.
-    let mut map: IndexMap<String, ConditionStatement> = IndexMap::new();
-    map.insert("authorization".to_owned(),
-        ConditionStatement { op: None, value: "Bearer x".to_owned() });
-    map.insert("x-tenant-id".to_owned(),
-        ConditionStatement { op: None, value: "acme".to_owned() });
-    map.insert("content-type".to_owned(),
-        ConditionStatement { op: None, value: "json".to_owned() });
+    let mut map: IndexMap<String, HeaderConditionStatement> = IndexMap::new();
+    map.insert("z".to_owned(), HeaderConditionStatement { op: None, value: "".to_owned() });
+    map.insert("a".to_owned(), HeaderConditionStatement { op: None, value: "".to_owned() });
+    map.insert("m".to_owned(), HeaderConditionStatement { op: None, value: "".to_owned() });
 
     let when = When {
         request: Request {
@@ -296,9 +304,5 @@ fn when_view_headers_programmatic_insertion_order() {
     };
     let view = build_when_view(&when);
     let names: Vec<&str> = view.headers.iter().map(|c| c.name.as_str()).collect();
-    assert_eq!(
-        names,
-        vec!["authorization", "x-tenant-id", "content-type"],
-        "WhenView.headers must reflect programmatic insertion order (not alphabetical)"
-    );
+    assert_eq!(names, vec!["z", "a", "m"]);
 }

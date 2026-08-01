@@ -28,9 +28,10 @@ use apimock_routing::{
         Rule,
         when::{
             When,
-            condition_statement::ConditionStatement,
             request::{
-                Request, body::{body_kind::BodyKind, BodyConditionStatement},
+                Request,
+                body::{body_kind::BodyKind, BodyConditionStatement},
+                headers::HeaderConditionStatement,
                 http_method::HttpMethod,
                 url_path::UrlPathConfig,
             },
@@ -139,7 +140,8 @@ fn file_tree_view_table(
     let is_default = !c.show_hidden
         && c.builtin_excludes
         && c.extra_excludes.is_empty()
-        && c.include.is_empty();
+        && c.include.is_empty()
+        && !c.respect_gitignore;
     if is_default {
         return None;
     }
@@ -162,6 +164,9 @@ fn file_tree_view_table(
             c.include.iter().map(|s| Value::String(s.clone())),
         );
         t.insert("include".to_owned(), Value::Array(arr));
+    }
+    if c.respect_gitignore {
+        t.insert("respect_gitignore".to_owned(), Value::Boolean(true));
     }
     Some(t)
 }
@@ -248,7 +253,7 @@ fn request_table(req: &Request) -> Table {
         keys.sort();
         for key in keys {
             let stmt = &headers.0[key];
-            headers_table.insert(key.clone(), Value::Table(condition_statement_table(stmt)));
+            headers_table.insert(key.clone(), Value::Table(header_condition_statement_table(stmt)));
         }
         if !headers_table.is_empty() {
             t.insert("headers".to_owned(), Value::Table(headers_table));
@@ -292,17 +297,27 @@ fn request_table(req: &Request) -> Table {
     t
 }
 
-/// Render a `ConditionStatement` (used by Headers entries) as a TOML
+/// Render a `HeaderConditionStatement` (used by Headers entries) as a TOML
 /// table with `op` (optional) and `value` keys.
-fn condition_statement_table(stmt: &ConditionStatement) -> Table {
+///
+/// Presence operators (`exists`, `absent`) omit the `value` key — it is
+/// meaningless for them. Value operators always emit `value`.
+fn header_condition_statement_table(stmt: &HeaderConditionStatement) -> Table {
+    use apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator;
     let mut t = Table::new();
     if let Some(op) = stmt.op.as_ref() {
-        t.insert(
-            "op".to_owned(),
-            Value::String(apimock_routing::view::build::op_name(op)),
-        );
+        t.insert("op".to_owned(), Value::String(op.as_str().to_owned()));
+        match op {
+            HeaderOperator::Exists | HeaderOperator::Absent => {
+                // No value key for presence operators.
+            }
+            _ => {
+                t.insert("value".to_owned(), Value::String(stmt.value.clone()));
+            }
+        }
+    } else {
+        t.insert("value".to_owned(), Value::String(stmt.value.clone()));
     }
-    t.insert("value".to_owned(), Value::String(stmt.value.clone()));
     t
 }
 
@@ -420,7 +435,7 @@ mod tests {
         let stmt = &h.0["user-agent"];
         assert!(matches!(
             stmt.op,
-            Some(apimock_routing::rule_set::rule::when::request::rule_op::RuleOp::StartsWith)
+            Some(apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator::StartsWith)
         ));
         assert_eq!(stmt.value, "Mozilla");
     }

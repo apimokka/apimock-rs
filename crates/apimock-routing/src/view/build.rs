@@ -103,6 +103,8 @@ pub fn build_when_view(when: &When) -> WhenView {
 fn build_header_condition_views(
     headers: Option<&crate::rule_set::rule::when::request::headers::Headers>,
 ) -> Vec<HeaderConditionView> {
+    use crate::rule_set::rule::when::request::headers::header_operator::HeaderOperator;
+
     let headers = match headers {
         Some(h) => h,
         None => return Vec::new(),
@@ -112,11 +114,17 @@ fn build_header_condition_views(
         .0
         .iter()
         .map(|(name, stmt)| {
-            let op_str = op_name(stmt.op.as_ref().unwrap_or(&RuleOp::default()));
+            let op = stmt.op.clone().unwrap_or_default();
+            let op_str = op.as_str().to_owned();
+            // Presence operators have no meaningful value to display.
+            let value = match op {
+                HeaderOperator::Exists | HeaderOperator::Absent => None,
+                _ => Some(stmt.value.clone()),
+            };
             HeaderConditionView {
                 name: name.clone(),
                 op: op_str,
-                value: Some(stmt.value.clone()),
+                value,
             }
         })
         .collect()
@@ -220,11 +228,13 @@ fn build_url_path_view(cfg: Option<&UrlPathConfig>) -> Option<UrlPathView> {
 /// view round-trips back to the original TOML keyword.
 pub fn op_name(op: &RuleOp) -> String {
     match op {
-        RuleOp::Equal => "equal",
-        RuleOp::NotEqual => "not_equal",
+        RuleOp::Equal      => "equal",
+        RuleOp::NotEqual   => "not_equal",
         RuleOp::StartsWith => "starts_with",
-        RuleOp::Contains => "contains",
-        RuleOp::WildCard => "wild_card",
+        RuleOp::EndsWith   => "ends_with",
+        RuleOp::Contains   => "contains",
+        RuleOp::WildCard   => "wild_card",
+        RuleOp::Regex      => "regex",
     }
     .to_owned()
 }
@@ -289,6 +299,7 @@ pub const BUILTIN_EXCLUDES: &[&str] = &[
 /// - `builtin_excludes = true` — hide known build-output directories.
 /// - `extra_excludes = []` — no additional exclusions.
 /// - `include = []` — include everything (no inclusion filter).
+/// - `respect_gitignore = false` — do not parse `.gitignore` files.
 ///
 /// The defaults are intentionally conservative: they hide the noise
 /// without requiring any configuration for the common case.
@@ -299,13 +310,24 @@ pub struct FileTreeFilter {
     /// When `true`, entries whose name appears in [`BUILTIN_EXCLUDES`]
     /// are excluded.
     pub builtin_excludes: bool,
-    /// Additional entry names to exclude (exact-match on the entry's
-    /// `file_name()`, not a glob).
+    /// Glob patterns for additional exclusions (RFC 019).
+    ///
+    /// Each entry is a `globset` glob pattern matched against the entry's
+    /// `file_name()` component only (not the full path). A trailing `/`
+    /// restricts the pattern to directories.
+    ///
+    /// **Breaking change from pre-5.11:** Previously these were exact-name
+    /// matches. Now they are glob patterns. Literal names continue to work
+    /// because a bare name with no metacharacters is a valid glob.
     pub extra_excludes: Vec<String>,
-    /// If non-empty, only files whose name matches at least one entry
-    /// (simple suffix match) are included. Directories are always kept
-    /// so the user can drill into them.
+    /// If non-empty, only files whose name matches at least one pattern
+    /// (glob) are included. Directories are always kept so the user can
+    /// drill into them.
     pub include: Vec<String>,
+    /// When `true`, parse `.gitignore` files at the directory being listed
+    /// and in its ancestors (up to the nearest `.git` directory), applying
+    /// the same ignore rules Git would (RFC 019). Off by default.
+    pub respect_gitignore: bool,
 }
 
 impl Default for FileTreeFilter {
@@ -315,13 +337,16 @@ impl Default for FileTreeFilter {
             builtin_excludes: true,
             extra_excludes: Vec::new(),
             include: Vec::new(),
+            respect_gitignore: false,
         }
     }
 }
 
 impl FileTreeFilter {
     /// Return `true` iff `name` should be kept (not filtered out).
-    fn keep(&self, name: &str, is_dir: bool) -> bool {
+    ///
+    /// `path` is the full path to the entry (used for gitignore matching).
+    fn keep(&self, name: &str, is_dir: bool, path: &Path, gitignore: Option<&ignore::gitignore::Gitignore>) -> bool {
         // Dotfile filter
         if !self.show_hidden && name.starts_with('.') {
             return false;
@@ -330,18 +355,71 @@ impl FileTreeFilter {
         if self.builtin_excludes && BUILTIN_EXCLUDES.contains(&name) {
             return false;
         }
-        // Extra excludes
-        if self.extra_excludes.iter().any(|e| e == name) {
-            return false;
+        // Extra excludes (glob patterns, RFC 019)
+        if !self.extra_excludes.is_empty() {
+            let mut builder = globset::GlobSetBuilder::new();
+            for pat in &self.extra_excludes {
+                let full_pat = if is_dir && !pat.ends_with('/') {
+                    // A directory-only trailing-slash convention is handled
+                    // by matching dir names with or without the slash.
+                    pat.clone()
+                } else {
+                    pat.trim_end_matches('/').to_owned()
+                };
+                if let Ok(g) = globset::Glob::new(&full_pat) {
+                    builder.add(g);
+                }
+            }
+            if let Ok(set) = builder.build() {
+                if set.is_match(name) {
+                    return false;
+                }
+            }
+        }
+        // .gitignore filter (RFC 019)
+        if let Some(gi) = gitignore {
+            let match_result = gi.matched(path, is_dir);
+            if match_result.is_ignore() {
+                return false;
+            }
         }
         // Include filter applies only to files; directories always pass.
         if !is_dir && !self.include.is_empty() {
-            if !self.include.iter().any(|pat| name.ends_with(pat.as_str())) {
-                return false;
+            let mut builder = globset::GlobSetBuilder::new();
+            for pat in &self.include {
+                if let Ok(g) = globset::Glob::new(pat) {
+                    builder.add(g);
+                }
+            }
+            if let Ok(set) = builder.build() {
+                if !set.is_match(name) {
+                    return false;
+                }
             }
         }
         true
     }
+}
+
+/// Build a `.gitignore`-aware ignore matcher for `dir` and its ancestors.
+///
+/// Walks up from `dir` to the filesystem root (stopping at a `.git`
+/// directory if one is found) and adds any `.gitignore` files encountered.
+/// Returns `None` if no `.gitignore` files were found or if parsing fails.
+fn build_gitignore_for(dir: &Path) -> Option<ignore::gitignore::Gitignore> {
+    let mut builder = ignore::gitignore::GitignoreBuilder::new(dir);
+    let mut added = false;
+    for ancestor in dir.ancestors() {
+        let candidate = ancestor.join(".gitignore");
+        if candidate.is_file() {
+            builder.add(&candidate);
+            added = true;
+        }
+        if ancestor.join(".git").is_dir() {
+            break;
+        }
+    }
+    if added { builder.build().ok() } else { None }
 }
 
 /// Build a depth-1 file-tree view rooted at `root`.
@@ -362,6 +440,13 @@ pub fn build_file_tree_with(root: &Path, filter: &FileTreeFilter) -> Option<File
     let entries = std::fs::read_dir(root).ok()?;
     let mut nodes: Vec<FileNodeView> = Vec::new();
 
+    // Build gitignore matcher once for the root directory (RFC 019).
+    let gitignore = if filter.respect_gitignore {
+        build_gitignore_for(root)
+    } else {
+        None
+    };
+
     for entry in entries.flatten() {
         let path = entry.path();
         let name = path
@@ -379,8 +464,8 @@ pub fn build_file_tree_with(root: &Path, filter: &FileTreeFilter) -> Option<File
             FileNodeKind::File
         };
 
-        // Apply filter
-        if !filter.keep(&name, is_dir) {
+        // Apply filter — root itself is never filtered, only its contents.
+        if !filter.keep(&name, is_dir, &path, gitignore.as_ref()) {
             continue;
         }
 

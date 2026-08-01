@@ -26,7 +26,6 @@ use hyper_util::{
     rt::{TokioExecutor, TokioIo},
     server::conn::auto::Builder,
 };
-use rustls::ServerConfig;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tokio_rustls::TlsAcceptor;
@@ -42,7 +41,7 @@ use crate::{
     respond_response::respond_response,
     response::error_response::internal_server_error_response,
     response_handler::default_response_headers,
-    tls::{load_certs, load_private_key},
+    tls::{build_server_config_reloadable, load_certs, load_private_key},
     types::BoxBody,
 };
 
@@ -183,18 +182,17 @@ impl Server {
             }
         };
 
-        let mut config = match ServerConfig::builder()
-            .with_no_client_auth()
-            .with_single_cert(certs, key)
-        {
-            Ok(c) => c,
+        // RFC 020: use a reloadable resolver so TlsCertFile / TlsKeyFile
+        // changes are SoftReload (no listener rebind needed).
+        let (tls_config, resolver) = match build_server_config_reloadable(certs, key) {
+            Ok(pair) => pair,
             Err(err) => {
-                log::error!("failed to build rustls ServerConfig: {}", err);
+                log::error!("failed to build TLS config: {}", err);
                 return;
             }
         };
-        config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
-        let acceptor = TlsAcceptor::from(Arc::new(config));
+        let acceptor = TlsAcceptor::from(Arc::new(tls_config));
+        drop(resolver); // Server holds the resolver via the config; expose via ServerHandle if needed
 
         let listener = match TcpListener::bind(addr).await {
             Ok(l) => l,
