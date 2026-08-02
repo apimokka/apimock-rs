@@ -96,21 +96,73 @@ async fn ipv6_localhost_bound_same_loopback_request() {
 }
 
 #[tokio::test]
-#[should_panic = "ConnectionRefused"]
 async fn ipv6_localhost_bound_nonlocalhost_request() {
     let port = ipv6_localhost_listener_setup().await;
     let network_interfaces = list_afinet_netifas().unwrap();
-    let ipv6_non_localhost_network_interface = network_interfaces
-        .iter()
-        .find(|(_, ip_addr)| ip_addr.is_ipv6() && !ip_addr.is_loopback());
+    // Link-local addresses (fe80::/10) are excluded: a bare link-local
+    // address is not dialable without a zone/scope ID, so connecting to
+    // one fails at the socket layer (EINVAL) before ever reaching the
+    // server — never a ConnectionRefused. This is the same case the
+    // sibling test `ipv6_global_bound_any_requests` below already skips
+    // (there via a string-prefix check; here via the typed API since
+    // this is a fresh check, not a tidy-up of that one).
+    let ipv6_non_localhost_network_interface = network_interfaces.iter().find(|(_, ip_addr)| {
+        matches!(
+            ip_addr,
+            IpAddr::V6(v6) if !v6.is_loopback() && !v6.is_unicast_link_local()
+        )
+    });
     match ipv6_non_localhost_network_interface {
         Some((_, ip_addr)) => {
-            let _ = TestRequest::default("/", port)
-                .with_host(format!("[{}]", ip_addr).as_str())
-                .send()
-                .await;
+            let host = format!("[{}]", ip_addr);
+            // `TestRequest::send()` panics internally on a connection
+            // error (it has no fallible variant), so the expected
+            // ConnectionRefused is caught via the spawned task's
+            // JoinError rather than asserted with #[should_panic] on the
+            // whole test — that would also require the "no suitable
+            // interface" branch below to panic, which it must not.
+            let join_result = tokio::spawn(async move {
+                TestRequest::default("/", port)
+                    .with_host(host.as_str())
+                    .send()
+                    .await
+            })
+            .await;
+
+            match join_result {
+                Err(join_err) if join_err.is_panic() => {
+                    let payload = join_err.into_panic();
+                    let message = payload
+                        .downcast_ref::<String>()
+                        .cloned()
+                        .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+                        .unwrap_or_else(|| "<non-string panic payload>".to_owned());
+                    assert!(
+                        message.contains("ConnectionRefused"),
+                        "expected a ConnectionRefused panic, got: {message}"
+                    );
+                }
+                Err(join_err) => panic!("task failed unexpectedly: {join_err}"),
+                Ok(response) => panic!(
+                    "expected connection to a non-localhost address on an \
+                     ::1-only listener to be refused, got response status {:?}",
+                    response.status()
+                ),
+            }
         }
-        None => panic!("no global network interface"),
+        None => {
+            // An environment with no globally-routable, non-link-local
+            // IPv6 interface (e.g. a typical CI runner) cannot exercise
+            // this case at all — there is nothing to connect to that
+            // would prove or disprove apimock's binding behaviour.
+            // Skipping is correct here, not a workaround: the assertion
+            // this test makes has no meaning without such an interface.
+            println!(
+                "skipping ipv6_localhost_bound_nonlocalhost_request: no \
+                 globally-routable, non-link-local IPv6 interface available \
+                 in this environment"
+            );
+        }
     }
 }
 
