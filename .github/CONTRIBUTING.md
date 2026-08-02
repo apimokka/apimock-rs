@@ -14,8 +14,8 @@ Thanks for understanding the scope and spirit of the project.
 
 ## Before you open a PR
 
-CI (`.github/workflows/ci.yaml`) runs four checks on every push to `main`
-and every pull request, and all four are required to merge. Reproduce
+CI (`.github/workflows/ci.yaml`) runs six checks on every push to `main`
+and every pull request, and all six are required to merge. Reproduce
 them locally before pushing:
 
 ```sh
@@ -23,11 +23,19 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace
 cargo check --workspace   # on the toolchain pinned as rust-version in Cargo.toml
+cargo audit               # requires: cargo install cargo-audit --locked
+cargo update --workspace --locked
 ```
 
 `cargo test --workspace --lib` is a fine fast-feedback command while
 you're iterating, but it is **not** the gate — it runs a subset of the
 suite. `cargo test --workspace` (no `--lib`) is what CI actually checks.
+
+`cargo audit` also runs on a weekly schedule, independent of any push or
+pull request. **A scheduled run turning red with no new commit is
+correct behaviour, not a broken gate** — it means a vulnerability
+advisory was published against a dependency this project already uses,
+which is new information about existing code, not about your change.
 
 ## Version bumps
 

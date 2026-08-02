@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # RFC 033: advisories are published against code that hasn't changed,
+  # so a check that only runs on push/PR will never see them. Only the
+  # `audit` job runs on this trigger — every other job is gated with
+  # `if: github.event_name != 'schedule'` so a scheduled run doesn't
+  # needlessly re-run fmt/clippy/test/msrv/lockfile on an unchanged tree.
+  schedule:
+    - cron: "0 3 * * 1" # every Monday 03:00 UTC
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -19,6 +26,7 @@ defaults:
 
 jobs:
   fmt:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -45,6 +53,7 @@ jobs:
         run: cargo fmt --all --check
 
   clippy:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -71,6 +80,7 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
   test:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -94,6 +104,7 @@ jobs:
         run: cargo test --workspace
 
   msrv:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -141,3 +152,78 @@ jobs:
       # toolchain than the library itself needs to build and check clean.
       - name: cargo check --workspace (MSRV)
         run: cargo check --workspace
+
+  # RFC 033: known-vulnerability audit against the RustSec advisory
+  # database, over the committed Cargo.lock. Runs on push/PR/dispatch
+  # *and* the weekly schedule above — advisories are published against
+  # unchanged code, so this is the one job that must not be excluded
+  # from the schedule trigger.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Cached separately from the project's own dependency cache above:
+      # cargo-audit's binary doesn't depend on this repo's Cargo.lock, so
+      # keying it on that would invalidate it every time the lockfile
+      # changes for reasons that have nothing to do with cargo-audit
+      # itself.
+      - name: Cache cargo-audit binary
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: ${{ runner.os }}-cargo-audit-bin
+
+      - name: Install cargo-audit
+        run: command -v cargo-audit || cargo install cargo-audit --locked
+
+      - name: cargo audit
+        run: cargo audit
+
+  # RFC 033: fails if Cargo.lock doesn't reflect what the manifests
+  # currently require -- e.g. a Cargo.toml edit that forgot to
+  # regenerate the lockfile. Verified locally that this is NOT the same
+  # as "a newer compatible version was published": `cargo update
+  # --locked` exits 0 even when dependencies sit behind their latest
+  # available version, so this check's result cannot change without a
+  # commit to this repo. Unlike `audit`, a weekly re-run would be a
+  # guaranteed no-op -- excluded from the schedule trigger for that
+  # reason, not merely for symmetry with fmt/clippy/test/msrv.
+  lockfile:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: cargo update --workspace --locked
+        run: cargo update --workspace --locked
