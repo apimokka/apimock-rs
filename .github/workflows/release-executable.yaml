@@ -18,7 +18,111 @@ env:
   JOB_WORKDIR: tmp-${{ github.run_id }}  # unique number
 
 jobs:
+  # RFC 032: fail the release before any asset is built or published if
+  # the release tag, the workspace manifest, and the npm package files
+  # disagree on version. Without this, a stale npm version was only
+  # discovered at the very last job (npm-core-publish), after the Rust
+  # release assets had already been uploaded to the GitHub release.
+  version-consistency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify tag, workspace manifest, and npm versions agree
+        run: |
+          WORKSPACE_VERSION=$(awk '
+            /^\[workspace\.package\]/ { in_section=1; next }
+            /^\[/ { in_section=0 }
+            in_section && /^[[:space:]]*version[[:space:]]*=/ {
+              line=$0
+              sub(/^[[:space:]]*version[[:space:]]*=[[:space:]]*"/, "", line)
+              sub(/".*$/, "", line)
+              print line
+              exit
+            }
+          ' Cargo.toml)
+
+          if [ -z "$WORKSPACE_VERSION" ]; then
+            echo "::error::Could not read [workspace.package].version from Cargo.toml"
+            exit 1
+          fi
+
+          echo "Release tag:        ${{ env.TAG }}"
+          echo "Workspace version:  $WORKSPACE_VERSION"
+
+          FAIL=0
+
+          if [ "${{ env.TAG }}" != "$WORKSPACE_VERSION" ]; then
+            echo "::error::Release tag (${{ env.TAG }}) does not match [workspace.package].version ($WORKSPACE_VERSION)"
+            FAIL=1
+          fi
+
+          for f in npm/package.json npm/darwin-arm64/package.json npm/linux-x64-gnu/package.json npm/win32-x64-msvc/package.json; do
+            V=$(jq -r '.version' "$f")
+            if [ "$V" != "$WORKSPACE_VERSION" ]; then
+              echo "::error::$f version ($V) does not match workspace version ($WORKSPACE_VERSION)"
+              FAIL=1
+            fi
+          done
+
+          PINS=$(jq -r '.optionalDependencies // {} | to_entries[] | "\(.key)=\(.value)"' npm/package.json)
+          for pin in $PINS; do
+            name=${pin%%=*}
+            v=${pin#*=}
+            if [ "$v" != "$WORKSPACE_VERSION" ]; then
+              echo "::error::npm/package.json optionalDependencies[$name] ($v) does not match workspace version ($WORKSPACE_VERSION)"
+              FAIL=1
+            fi
+          done
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "All versions agree: $WORKSPACE_VERSION"
+
+  # RFC 031: re-run the same format/lint/test gates ci.yaml runs on every
+  # push and pull request, at release time too. `workflow_run` triggers
+  # fire after the fact and can't block a release already in progress,
+  # and a release is triggered by `release: created` on a tag — not
+  # something branch protection on pull requests covers. So the gate is
+  # duplicated here, deliberately, rather than relied on having already
+  # passed at some earlier point. This guarantees the artifact was built
+  # from a tree that was actually green at release time.
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Install clippy and rustfmt
+        run: rustup component add clippy rustfmt
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: cargo fmt --check
+        run: cargo fmt --all --check
+
+      - name: cargo clippy -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: cargo test --workspace
+        run: cargo test --workspace
+
   build:
+    needs: [version-consistency-check, quality-gate]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

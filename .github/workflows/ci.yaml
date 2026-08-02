@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: cargo fmt --check
+        run: cargo fmt --all --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Install clippy
+        run: rustup component add clippy
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: cargo clippy -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: cargo test --workspace
+        run: cargo test --workspace
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # Read the pin rather than hardcode it, so a deliberate edit to
+      # [workspace.package].rust-version in Cargo.toml is what this job
+      # follows — not a second copy of the version that can drift from it.
+      - name: Read pinned rust-version
+        id: msrv
+        run: |
+          MSRV=$(awk '
+            /^\[workspace\.package\]/ { in_section=1; next }
+            /^\[/                     { in_section=0 }
+            in_section && /^[[:space:]]*rust-version[[:space:]]*=/ {
+              line=$0
+              sub(/^[[:space:]]*rust-version[[:space:]]*=[[:space:]]*"/, "", line)
+              sub(/".*$/, "", line)
+              print line
+              exit
+            }
+          ' Cargo.toml)
+          if [ -z "$MSRV" ]; then
+            echo "::error::Could not read [workspace.package].rust-version from Cargo.toml"
+            exit 1
+          fi
+          echo "Pinned MSRV: $MSRV"
+          echo "version=$MSRV" >> "$GITHUB_OUTPUT"
+
+      - name: Install pinned MSRV toolchain
+        run: bash .github/workflows/scripts/install-rust.sh ${{ steps.msrv.outputs.version }}
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-msrv-${{ steps.msrv.outputs.version }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-msrv-${{ steps.msrv.outputs.version }}-
+
+      # No tests here: dev-dependencies may legitimately require a newer
+      # toolchain than the library itself needs to build and check clean.
+      - name: cargo check --workspace (MSRV)
+        run: cargo check --workspace

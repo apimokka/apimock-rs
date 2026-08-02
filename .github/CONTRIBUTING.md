@@ -11,3 +11,27 @@ This project is maintained as a labor of love. We welcome community participatio
 - If you have a different direction in mind, please fork freely, provided proper licensing is respected.
 
 Thanks for understanding the scope and spirit of the project.
+
+## Before you open a PR
+
+CI (`.github/workflows/ci.yaml`) runs four checks on every push to `main`
+and every pull request, and all four are required to merge. Reproduce
+them locally before pushing:
+
+```sh
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace
+cargo check --workspace   # on the toolchain pinned as rust-version in Cargo.toml
+```
+
+`cargo test --workspace --lib` is a fine fast-feedback command while
+you're iterating, but it is **not** the gate — it runs a subset of the
+suite. `cargo test --workspace` (no `--lib`) is what CI actually checks.
+
+## Version bumps
+
+Use `./version.sh --update <version>` to bump the version — it updates
+the workspace manifest and every npm package (including the
+`optionalDependencies` platform-binary pins) together and verifies the
+result. Do not hand-edit version fields individually.
