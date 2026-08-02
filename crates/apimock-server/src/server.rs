@@ -256,6 +256,10 @@ impl Server {
 }
 
 /// Resolve an `ip:port` string into a single `SocketAddr`.
+// clippy: ServerError is a public error type (RFC 030 §6 escalation
+// trigger); boxing its large variant would change that type's shape.
+// See ESCALATION-002 in the RFC 030 review-request package.
+#[allow(clippy::result_large_err)]
 fn resolve_listener(addr_str: Option<&str>) -> ServerResult<Option<SocketAddr>> {
     let Some(addr_str) = addr_str else {
         return Ok(None);

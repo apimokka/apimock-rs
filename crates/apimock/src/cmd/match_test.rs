@@ -365,12 +365,11 @@ pub(super) fn flag_value(args: &[String], names: &[&str]) -> Option<String> {
 fn flag_values_all(args: &[String], names: &[&str]) -> Vec<String> {
     let mut out = Vec::new();
     for (i, a) in args.iter().enumerate() {
-        if names.iter().any(|n| a == n) {
-            if let Some(v) = args.get(i + 1) {
-                if !v.starts_with('-') {
-                    out.push(v.clone());
-                }
-            }
+        if names.iter().any(|n| a == n)
+            && let Some(v) = args.get(i + 1)
+            && !v.starts_with('-')
+        {
+            out.push(v.clone());
         }
     }
     out

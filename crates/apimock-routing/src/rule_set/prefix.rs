@@ -14,22 +14,20 @@ pub struct Prefix {
 impl Prefix {
     /// validate
     pub fn validate(&self, rule_set_idx: usize) -> bool {
-        let respond_dir_prefix_validate =
-            if let Some(respond_dir_prefix) = self.respond_dir_prefix.as_ref() {
-                let exists = Path::new(respond_dir_prefix.as_str()).exists();
-                if !exists {
-                    log::error!(
-                        "{} of prefix (rule set #{}):\n`{}`",
-                        style("directory not found").red(),
-                        rule_set_idx,
-                        self.respond_dir_prefix.clone().unwrap().as_str()
-                    );
-                }
-                exists
-            } else {
-                true
-            };
-        respond_dir_prefix_validate
+        if let Some(respond_dir_prefix) = self.respond_dir_prefix.as_ref() {
+            let exists = Path::new(respond_dir_prefix.as_str()).exists();
+            if !exists {
+                log::error!(
+                    "{} of prefix (rule set #{}):\n`{}`",
+                    style("directory not found").red(),
+                    rule_set_idx,
+                    self.respond_dir_prefix.clone().unwrap().as_str()
+                );
+            }
+            exists
+        } else {
+            true
+        }
     }
 }
 
@@ -37,12 +35,8 @@ impl std::fmt::Display for Prefix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let has_written = self.url_path_prefix.is_some() || self.respond_dir_prefix.is_some();
 
-        if self.url_path_prefix.is_some() {
-            let _ = writeln!(
-                f,
-                "[url_path_prefix] {}",
-                style(self.url_path_prefix.as_ref().unwrap()).magenta()
-            );
+        if let Some(url_path_prefix) = self.url_path_prefix.as_ref() {
+            let _ = writeln!(f, "[url_path_prefix] {}", style(url_path_prefix).magenta());
         }
 
         if self.respond_dir_prefix.is_some() {
@@ -54,7 +48,7 @@ impl std::fmt::Display for Prefix {
         }
 
         if has_written {
-            let _ = writeln!(f, "");
+            let _ = writeln!(f);
         }
 
         Ok(())

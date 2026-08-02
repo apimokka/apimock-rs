@@ -65,6 +65,12 @@ impl RuleSet {
     /// frequently during development, those panics were a common papercut.
     /// Now any failure becomes an `RoutingError::RuleSetRead` / `::RuleSetParse`
     /// that the caller can surface cleanly.
+    // clippy: RoutingError::RuleSetParse is a public error type (RoutingResult
+    // is part of this crate's stable surface); boxing its large variant would
+    // change that type's shape, which RFC 030 §6 requires escalating rather
+    // than fixing inline. See ESCALATION-002 in the RFC 030 review-request
+    // package for the design request this raises.
+    #[allow(clippy::result_large_err)]
     pub fn new(
         rule_set_file_path: &str,
         current_dir_to_config_dir_relative_path: &str,
@@ -146,17 +152,17 @@ impl RuleSet {
         strategy: Option<&Strategy>,
         rule_set_idx: usize,
     ) -> Option<Respond> {
-        let _ = match self.prefix.as_ref() {
-            Some(prefix) if prefix.url_path_prefix.is_some() => {
-                if !parsed_request
-                    .url_path
-                    .starts_with(prefix.url_path_prefix.as_ref().unwrap())
-                {
-                    return None;
-                }
+        match self.prefix.as_ref() {
+            Some(prefix)
+                if prefix.url_path_prefix.is_some()
+                    && !parsed_request
+                        .url_path
+                        .starts_with(prefix.url_path_prefix.as_ref().unwrap()) =>
+            {
+                return None;
             }
             _ => (),
-        };
+        }
 
         // RFC 025: per-rule-set strategy override.
         // The rule set's own strategy takes precedence over the service-level one.
@@ -287,11 +293,11 @@ impl RuleSet {
 
     /// dir_prefix as string possibly as empty
     pub fn dir_prefix(&self) -> String {
-        if let Some(dir_prefix) = self.prefix.clone().unwrap_or_default().respond_dir_prefix {
-            dir_prefix
-        } else {
-            String::new()
-        }
+        self.prefix
+            .clone()
+            .unwrap_or_default()
+            .respond_dir_prefix
+            .unwrap_or_default()
     }
 }
 
@@ -342,10 +348,7 @@ mod tests {
     /// Build a `RuleSet` with `n` rules, all matching `url_path`,
     /// responding with `"response_0"`, `"response_1"`, …
     fn make_round_robin_set(n: usize, url_path: &str) -> RuleSet {
-        use crate::rule_set::rule::when::request::{
-            http_method::HttpMethod,
-            url_path::{UrlPath, UrlPathConfig},
-        };
+        use crate::rule_set::rule::when::request::url_path::{UrlPath, UrlPathConfig};
 
         let rules = (0..n)
             .map(|i| Rule {

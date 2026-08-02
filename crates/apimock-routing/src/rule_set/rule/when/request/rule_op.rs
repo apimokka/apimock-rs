@@ -5,9 +5,10 @@ mod tests;
 
 use crate::util::glob::glob_match;
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum RuleOp {
+    #[default]
     Equal,
     NotEqual,
     StartsWith,
@@ -19,12 +20,6 @@ pub enum RuleOp {
     WildCard,
     Regex,
     NotRegex,
-}
-
-impl Default for RuleOp {
-    fn default() -> Self {
-        Self::Equal
-    }
 }
 
 impl std::fmt::Display for RuleOp {
@@ -69,8 +64,8 @@ impl RuleOp {
 
     /// format condition params: key, op, value, and optional log_title
     pub fn format_condition(&self, key: &str, value: &str, log_title: Option<&str>) -> String {
-        if log_title.is_some() {
-            format!("[{}] {}{}{}", log_title.unwrap(), key, self, value)
+        if let Some(log_title) = log_title {
+            format!("[{}] {}{}{}", log_title, key, self, value)
         } else {
             format!("{}{}{}", key, self, value)
         }

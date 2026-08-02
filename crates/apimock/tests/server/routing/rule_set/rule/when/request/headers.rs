@@ -181,6 +181,5 @@ async fn not_match_headers_key_1() {
 async fn setup() -> u16 {
     let test_setup =
         TestSetup::default_with_root_config_dir(root_config_dir::RULE_WHEN_REQUEST_HEADERS);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }

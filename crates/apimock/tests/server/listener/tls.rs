@@ -57,13 +57,11 @@ async fn nontls_server_nontls_client() {
 /// internal setup fn on https support config
 async fn tls_setup() -> u16 {
     let test_setup = TestSetup::default_with_root_config_dir(TLS);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }
 
 /// internal setup fn on default config
 async fn default_setup() -> u16 {
     let test_setup = TestSetup::default();
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }

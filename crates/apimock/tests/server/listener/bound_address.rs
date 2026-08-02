@@ -106,7 +106,7 @@ async fn ipv6_localhost_bound_nonlocalhost_request() {
     match ipv6_non_localhost_network_interface {
         Some((_, ip_addr)) => {
             let _ = TestRequest::default("/", port)
-                .with_host(format!("[{}]", ip_addr.to_string()).as_str())
+                .with_host(format!("[{}]", ip_addr).as_str())
                 .send()
                 .await;
         }
@@ -161,27 +161,23 @@ async fn ipv6_global_bound_any_requests() {
 /// internal setup fn on ipv4 localhost listener
 async fn ipv4_localhost_listener_setup() -> u16 {
     let test_setup = TestSetup::default_with_root_config_dir(IPV4_LOCALHOST);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }
 
 /// internal setup fn on ipv4 global listener
 async fn ipv4_global_listener_setup() -> u16 {
     let test_setup = TestSetup::default_with_root_config_dir(IPV4_GLOBAL);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }
 
 /// internal setup fn on on ipv6 localhost listener
 async fn ipv6_localhost_listener_setup() -> u16 {
     let test_setup = TestSetup::default_with_root_config_dir(IPV6_LOCALHOST);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }
 
 /// internal setup fn on on ipv6 global listener
 async fn ipv6_global_listener_setup() -> u16 {
     let test_setup = TestSetup::default_with_root_config_dir(IPV6_GLOBAL);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }

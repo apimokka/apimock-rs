@@ -1,5 +1,3 @@
-#[path = "constant.rs"]
-pub mod constant;
 #[path = "server/listener.rs"]
 pub mod listener;
 #[path = "server/response.rs"]
@@ -8,3 +6,5 @@ mod response;
 mod routing;
 #[path = "util.rs"]
 pub mod util;
+
+pub use util::constant;

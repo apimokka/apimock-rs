@@ -52,20 +52,20 @@ pub fn render_apimock_toml(config: &Config) -> String {
             Value::Table(listener_table(listener)),
         );
     }
-    if let Some(log) = config.log.as_ref() {
-        if let Some(t) = log_table(log) {
-            root.insert("log".to_owned(), Value::Table(t));
-        }
+    if let Some(log) = config.log.as_ref()
+        && let Some(t) = log_table(log)
+    {
+        root.insert("log".to_owned(), Value::Table(t));
     }
     root.insert(
         "service".to_owned(),
         Value::Table(service_table(&config.service)),
     );
 
-    if let Some(ftv) = config.file_tree_view.as_ref() {
-        if let Some(t) = file_tree_view_table(ftv) {
-            root.insert("file_tree_view".to_owned(), Value::Table(t));
-        }
+    if let Some(ftv) = config.file_tree_view.as_ref()
+        && let Some(t) = file_tree_view_table(ftv)
+    {
+        root.insert("file_tree_view".to_owned(), Value::Table(t));
     }
 
     toml::to_string_pretty(&Value::Table(root))

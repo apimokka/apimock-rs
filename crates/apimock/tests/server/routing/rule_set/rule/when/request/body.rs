@@ -448,6 +448,5 @@ async fn not_matches_array_5() {
 async fn setup() -> u16 {
     let test_setup =
         TestSetup::default_with_root_config_dir(root_config_dir::RULE_WHEN_REQUEST_BODY);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }

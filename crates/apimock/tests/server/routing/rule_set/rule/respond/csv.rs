@@ -32,6 +32,5 @@ async fn matches_dyn_data_dir_csv_jsonpath_key() {
 /// internal setup fn
 async fn setup() -> u16 {
     let test_setup = TestSetup::default_with_root_config_dir(root_config_dir::RULE_RESPOND);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }

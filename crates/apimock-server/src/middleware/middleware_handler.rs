@@ -39,6 +39,10 @@ impl MiddlewareHandler {
     /// we deliberately do not try to recover by, say, skipping the offending
     /// script, because silently ignoring a misconfigured middleware would
     /// produce confusing request-time behaviour.
+    // clippy: ServerError is a public error type (RFC 030 §6 escalation
+    // trigger); boxing its large variant would change that type's shape.
+    // See ESCALATION-002 in the RFC 030 review-request package.
+    #[allow(clippy::result_large_err)]
     pub fn new(file_path: &str) -> ServerResult<Self> {
         let path = Path::new(file_path);
         if !path.exists() {

@@ -5,7 +5,7 @@ async fn main() -> anyhow::Result<()> {
         // --init was supplied (or similar): work already done, nothing to run
         return Ok(());
     };
-    let app = apimock::new(&env_args).await?;
+    let app = apimock::App::new(&env_args, None, true).await?;
     app.server.start().await;
     Ok(())
 }

@@ -45,6 +45,5 @@ async fn matches_prefix_url_path_prefix_2() {
 /// internal setup fn
 async fn setup() -> u16 {
     let test_setup = TestSetup::default_with_root_config_dir(root_config_dir::RULE_SET_PREFIX);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }

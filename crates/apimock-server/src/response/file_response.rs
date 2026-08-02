@@ -81,7 +81,7 @@ impl FileResponse {
         let content =
             task::spawn_blocking(move || fs::read_to_string(file_path_to_read_text_file)).await;
 
-        let response = match content {
+        match content {
             Ok(Ok(content)) => {
                 self.text_content = Some(content);
                 self.text_file_content_response()
@@ -96,29 +96,21 @@ impl FileResponse {
                         self.binary_content = Some(content);
                         self.binary_content_type_response()
                     }
-                    Ok(Err(err)) => {
-                        return internal_server_error_response(
-                            &format!("{}: failed to read file - {}", self.file_path, err),
-                            &self.request_headers,
-                        );
-                    }
-                    Err(err) => {
-                        return internal_server_error_response(
-                            &format!("{}: async task failed - {}", self.file_path, err),
-                            &self.request_headers,
-                        );
-                    }
+                    Ok(Err(err)) => internal_server_error_response(
+                        &format!("{}: failed to read file - {}", self.file_path, err),
+                        &self.request_headers,
+                    ),
+                    Err(err) => internal_server_error_response(
+                        &format!("{}: async task failed - {}", self.file_path, err),
+                        &self.request_headers,
+                    ),
                 }
             }
-            Err(err) => {
-                return internal_server_error_response(
-                    &format!("{}: async task failed - {}", self.file_path, err),
-                    &self.request_headers,
-                );
-            }
-        };
-
-        response
+            Err(err) => internal_server_error_response(
+                &format!("{}: async task failed - {}", self.file_path, err),
+                &self.request_headers,
+            ),
+        }
     }
 
     /// text file response

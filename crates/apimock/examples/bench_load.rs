@@ -369,11 +369,7 @@ async fn run_load(cli: &CliArgs, base_url: &str, client: &reqwest::Client) {
             let cur_latency_ns = sampler_latency.load(Ordering::Relaxed);
             let delta_completed = cur_completed.saturating_sub(last_completed);
             let delta_latency_ns = cur_latency_ns.saturating_sub(last_latency_ns);
-            let avg_latency_us = if delta_completed > 0 {
-                (delta_latency_ns / delta_completed) / 1_000
-            } else {
-                0
-            };
+            let avg_latency_us = delta_latency_ns.checked_div(delta_completed).unwrap_or(0) / 1_000;
 
             println!(
                 "{},{},{},{},{},{},{},{}",
@@ -463,11 +459,7 @@ async fn run_load(cli: &CliArgs, base_url: &str, client: &reqwest::Client) {
     let total_done = completed.load(Ordering::Relaxed);
     let total_err = errors.load(Ordering::Relaxed);
     let total_latency_ns = latency_ns_sum.load(Ordering::Relaxed);
-    let avg_latency_us = if total_done > 0 {
-        (total_latency_ns / total_done) / 1_000
-    } else {
-        0
-    };
+    let avg_latency_us = total_latency_ns.checked_div(total_done).unwrap_or(0) / 1_000;
     let peak_rss_kb = samples.iter().map(|s| s.rss_kb).max().unwrap_or(0);
     let final_cpu_user = samples.last().map(|s| s.cpu_user_ticks).unwrap_or(0);
     let final_cpu_sys = samples.last().map(|s| s.cpu_sys_ticks).unwrap_or(0);

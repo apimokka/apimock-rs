@@ -207,9 +207,10 @@ async fn not_matches_config_free_env_level4_2() {
 
 /// internal setup fn
 async fn setup() -> u16 {
-    let mut test_setup = TestSetup::default();
-    test_setup.current_dir_path = Some(root_config_dir::CONFIG_FREE_ENV.to_owned());
-    test_setup.root_config_file_path = None;
-    let port = test_setup.launch().await;
-    port
+    let test_setup = TestSetup {
+        current_dir_path: Some(root_config_dir::CONFIG_FREE_ENV.to_owned()),
+        root_config_file_path: None,
+        ..Default::default()
+    };
+    test_setup.launch().await
 }

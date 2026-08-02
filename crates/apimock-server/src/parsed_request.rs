@@ -128,7 +128,7 @@ pub fn capture_in_log(request: &ParsedRequest, verbose: VerboseConfig) {
     ));
 
     if verbose.header || verbose.body {
-        printed.push_str("\n");
+        printed.push('\n');
     }
     if verbose.header {
         let headers = request
@@ -176,7 +176,7 @@ pub fn capture_in_log(request: &ParsedRequest, verbose: VerboseConfig) {
         }
     }
     if verbose.header || is_verbose_body {
-        printed.push_str("\n");
+        printed.push('\n');
     }
 
     log::info!("{}", printed);

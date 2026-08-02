@@ -16,10 +16,10 @@ pub struct ListenerConfig {
 impl ListenerConfig {
     /// validate
     pub fn validate(&self) -> bool {
-        if let Some(tls) = self.tls.as_ref() {
-            if !tls.validate() {
-                return false;
-            }
+        if let Some(tls) = self.tls.as_ref()
+            && !tls.validate()
+        {
+            return false;
         }
         true
     }

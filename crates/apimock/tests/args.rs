@@ -11,8 +11,10 @@ mod util;
 #[tokio::test]
 async fn port_env_arg_overwrites() {
     let port = u16::MAX;
-    let mut test_setup = TestSetup::default();
-    test_setup.port = Some(port);
+    let test_setup = TestSetup {
+        port: Some(port),
+        ..Default::default()
+    };
     let _ = test_setup.launch().await;
 
     let response = TestRequest::default("/", port).send().await;
@@ -31,9 +33,11 @@ async fn port_env_arg_overwrites() {
 #[tokio::test]
 async fn fallback_response_dir_env_arg_overwrites() {
     let fallback_response_dir_path = "tests/fixtures";
-    let mut test_setup = TestSetup::default();
-    test_setup.root_config_file_path = None;
-    test_setup.fallback_respond_dir_path = Some(fallback_response_dir_path.to_owned());
+    let test_setup = TestSetup {
+        root_config_file_path: None,
+        fallback_respond_dir_path: Some(fallback_response_dir_path.to_owned()),
+        ..Default::default()
+    };
     let port = test_setup.launch().await;
 
     let response = TestRequest::default("/", port).send().await;
@@ -54,9 +58,11 @@ async fn fallback_response_dir_env_arg_overwrites() {
 
 #[tokio::test]
 async fn fallback_response_dir_env_arg_default() {
-    let mut test_setup = TestSetup::default();
-    test_setup.root_config_file_path = None;
-    test_setup.fallback_respond_dir_path = None;
+    let test_setup = TestSetup {
+        root_config_file_path: None,
+        fallback_respond_dir_path: None,
+        ..Default::default()
+    };
     let port = test_setup.launch().await;
 
     let response = TestRequest::default("/", port).send().await;

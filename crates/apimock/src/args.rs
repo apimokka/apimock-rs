@@ -42,6 +42,10 @@ impl EnvArgs {
     /// backtrace for a user-level error. Returning a typed error lets the
     /// binary print "invalid port: foo" and exit 1, which is what users
     /// of CLI tools actually expect.
+    // clippy: renaming `default` would change apimock::args::EnvArgs's
+    // public API surface; this is a fallible constructor, not the
+    // std::default::Default trait's method.
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> AppResult<Option<Self>> {
         let mut ret = EnvArgs::from_args()?;
 
@@ -85,22 +89,22 @@ impl EnvArgs {
     /// process can see but can't read will still produce a better error
     /// downstream at the point it's actually used.
     pub fn validate(&self) -> AppResult<()> {
-        if let Some(config_file_path) = self.config_file_path.as_ref() {
-            if !Path::new(config_file_path.as_str()).exists() {
-                bail!(
-                    "config file specified via --config does not exist: {}",
-                    config_file_path
-                );
-            }
+        if let Some(config_file_path) = self.config_file_path.as_ref()
+            && !Path::new(config_file_path.as_str()).exists()
+        {
+            bail!(
+                "config file specified via --config does not exist: {}",
+                config_file_path
+            );
         }
 
-        if let Some(fallback_respond_dir_path) = self.fallback_respond_dir_path.as_ref() {
-            if !Path::new(fallback_respond_dir_path.as_str()).exists() {
-                bail!(
-                    "fallback response dir specified via --dir does not exist: {}",
-                    fallback_respond_dir_path
-                );
-            }
+        if let Some(fallback_respond_dir_path) = self.fallback_respond_dir_path.as_ref()
+            && !Path::new(fallback_respond_dir_path.as_str()).exists()
+        {
+            bail!(
+                "fallback response dir specified via --dir does not exist: {}",
+                fallback_respond_dir_path
+            );
         }
 
         Ok(())
@@ -221,7 +225,7 @@ fn args_option_value(option_names: &[&str]) -> Option<String> {
 
     let name_index = args
         .iter()
-        .position(|arg| option_names.iter().any(|n| arg.as_str() == *n))?;
+        .position(|arg| option_names.contains(&arg.as_str()))?;
 
     let name_value = args.get(name_index + 1);
     match name_value {

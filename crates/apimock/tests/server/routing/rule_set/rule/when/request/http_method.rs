@@ -123,6 +123,5 @@ async fn not_match_http_method_3() {
 async fn setup() -> u16 {
     let test_setup =
         TestSetup::default_with_root_config_dir(root_config_dir::RULE_WHEN_REQUEST_HTTP_METHOD);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }

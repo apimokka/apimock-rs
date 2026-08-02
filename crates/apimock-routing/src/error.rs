@@ -11,9 +11,8 @@
 //!
 //! - `apimock-routing::RoutingError`  — rule-set read / parse
 //! - `apimock-config::ConfigError`    — config read / parse, middleware
-//!                                      compile, path resolution; wraps
-//!                                      `RoutingError` when the failure
-//!                                      came from a rule set
+//!   compile, path resolution; wraps `RoutingError` when the failure
+//!   came from a rule set
 //! - `apimock-server::ServerError`    — TLS load, listener address
 //!
 //! The façade crate (`apimock`) re-exports all three under one

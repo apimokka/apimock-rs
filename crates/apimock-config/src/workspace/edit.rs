@@ -232,10 +232,10 @@ impl Workspace {
 
         // Actually remove.
         self.config.service.rule_sets.remove(idx);
-        if let Some(paths) = self.config.service.rule_sets_file_paths.as_mut() {
-            if idx < paths.len() {
-                paths.remove(idx);
-            }
+        if let Some(paths) = self.config.service.rule_sets_file_paths.as_mut()
+            && idx < paths.len()
+        {
+            paths.remove(idx);
         }
 
         // Migrate IDs: everything at `idx` onwards in the *old* layout
@@ -250,10 +250,9 @@ impl Workspace {
         for shifted_idx in idx..self.config.service.rule_sets.len() {
             if let Some(shifted_id) = self.ids.id_for(NodeAddress::RuleSet {
                 rule_set: shifted_idx,
-            }) {
-                if !changed.contains(&shifted_id) {
-                    changed.push(shifted_id);
-                }
+            }) && !changed.contains(&shifted_id)
+            {
+                changed.push(shifted_id);
             }
         }
 
@@ -345,7 +344,7 @@ impl Workspace {
                 rule_set: rs_idx,
                 rule: rule_idx,
             })
-            .unwrap_or_else(NodeId::new);
+            .unwrap_or_default();
         Ok(vec![id, resp_id])
     }
 
@@ -396,18 +395,16 @@ impl Workspace {
             if let Some(r_id) = self.ids.id_for(NodeAddress::Rule {
                 rule_set: rs_idx,
                 rule: shifted_idx,
-            }) {
-                if !changed.contains(&r_id) {
-                    changed.push(r_id);
-                }
+            }) && !changed.contains(&r_id)
+            {
+                changed.push(r_id);
             }
             if let Some(resp_id) = self.ids.id_for(NodeAddress::Respond {
                 rule_set: rs_idx,
                 rule: shifted_idx,
-            }) {
-                if !changed.contains(&resp_id) {
-                    changed.push(resp_id);
-                }
+            }) && !changed.contains(&resp_id)
+            {
+                changed.push(resp_id);
             }
         }
 
@@ -845,7 +842,7 @@ impl Workspace {
         body_map
             .0
             .entry(BodyKind::Json)
-            .or_insert_with(indexmap::IndexMap::new)
+            .or_default()
             .insert(path.clone(), stmt);
 
         let cond_id = self.ids.insert(NodeAddress::BodyCondition {
@@ -894,11 +891,11 @@ impl Workspace {
 
         use apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind;
         let rule = &mut self.config.service.rule_sets[rs_idx].rules[rule_idx];
-        if let Some(body) = rule.when.request.body.as_mut() {
-            if let Some(json_map) = body.0.get_mut(&BodyKind::Json) {
-                json_map.shift_remove(&old_path);
-                json_map.insert(new_path.clone(), stmt);
-            }
+        if let Some(body) = rule.when.request.body.as_mut()
+            && let Some(json_map) = body.0.get_mut(&BodyKind::Json)
+        {
+            json_map.shift_remove(&old_path);
+            json_map.insert(new_path.clone(), stmt);
         }
 
         let new_id = self.ids.insert(NodeAddress::BodyCondition {
@@ -930,10 +927,10 @@ impl Workspace {
         };
 
         let rule = &mut self.config.service.rule_sets[rs_idx].rules[rule_idx];
-        if let Some(body) = rule.when.request.body.as_mut() {
-            if let Some(json_map) = body.0.get_mut(&BodyKind::Json) {
-                json_map.shift_remove(&path);
-            }
+        if let Some(body) = rule.when.request.body.as_mut()
+            && let Some(json_map) = body.0.get_mut(&BodyKind::Json)
+        {
+            json_map.shift_remove(&path);
         }
 
         let rule_id = self

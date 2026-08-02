@@ -16,17 +16,12 @@ use super::{
 };
 use crate::types::BoxBody;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum BodyKind {
+    #[default]
     Empty,
     Text(String),
     Binary(Vec<u8>),
-}
-
-impl Default for BodyKind {
-    fn default() -> Self {
-        Self::Empty
-    }
 }
 
 #[derive(Default)]
@@ -85,7 +80,7 @@ impl ResponseHandler {
 
         // - additional custom headers passed from caller
         for (header_key, header_value) in self.headers {
-            let _ = match HeaderName::from_str(header_key.as_str()) {
+            match HeaderName::from_str(header_key.as_str()) {
                 Ok(header_key) => {
                     match HeaderValue::from_str(header_value.unwrap_or_default().as_str()) {
                         Ok(header_value) => {
@@ -193,10 +188,7 @@ pub fn default_response_headers(request_headers: &HeaderMap) -> HeaderMap {
 
     // - access-control-allow-origin, vary
     let origin = if is_likely_authenticated_request(request_headers) {
-        match request_headers.get(ORIGIN) {
-            Some(x) => Some(x.to_owned()),
-            None => None,
-        }
+        request_headers.get(ORIGIN).map(|x| x.to_owned())
     } else {
         None
     };
@@ -220,16 +212,15 @@ pub fn default_response_headers(request_headers: &HeaderMap) -> HeaderMap {
     ));
 
     // header map
-    let ret = header_map_src.iter().fold(HeaderMap::new(),|mut ret,(header_key, header_value)| {
-        match HeaderName::from_str(header_key) {
-            Ok(header_key) => {
-                match HeaderValue::from_str(
-                    header_value.as_str(),
-                ) {
+    header_map_src
+        .iter()
+        .fold(HeaderMap::new(), |mut ret, (header_key, header_value)| {
+            match HeaderName::from_str(header_key) {
+                Ok(header_key) => match HeaderValue::from_str(header_value.as_str()) {
                     Ok(header_value) => {
                         ret.insert(header_key, header_value);
                         ret
-                    },
+                    }
                     Err(err) => {
                         log::warn!(
                             "only header key set because failed to get header value: {} [key = {}] ({})",
@@ -240,15 +231,13 @@ pub fn default_response_headers(request_headers: &HeaderMap) -> HeaderMap {
                         ret.insert(header_key, HeaderValue::from_static(""));
                         ret
                     }
+                },
+                Err(err) => {
+                    log::warn!("failed to set header key: {} ({})", header_key, err);
+                    ret
                 }
             }
-            Err(err) => {
-                log::warn!("failed to set header key: {} ({})", header_key, err);
-                ret
-            }
-    }});
-
-    ret
+        })
 }
 
 /// guess if the request is likely related to authentication

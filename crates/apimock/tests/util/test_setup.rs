@@ -24,19 +24,18 @@ pub struct TestSetup {
 impl TestSetup {
     /// generate setup args with specific dir where root config file is located
     pub fn default_with_root_config_dir(root_config_dir_path: &str) -> Self {
-        let mut ret = Self::default();
-
-        ret.root_config_file_path = Some(
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join(CONFIG_TESTS_ROOT_DIR_PATH)
-                .join(root_config_dir_path)
-                .join(CONFIG_FILE_NAME)
-                .to_str()
-                .expect("failed to generate root config file path")
-                .to_string(),
-        );
-
-        ret
+        Self {
+            root_config_file_path: Some(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join(CONFIG_TESTS_ROOT_DIR_PATH)
+                    .join(root_config_dir_path)
+                    .join(CONFIG_FILE_NAME)
+                    .to_str()
+                    .expect("failed to generate root config file path")
+                    .to_string(),
+            ),
+            ..Default::default()
+        }
     }
 
     /// test initial setup with dynamic port selected
@@ -62,7 +61,7 @@ impl TestSetup {
                 .join(CONFIG_TESTS_ROOT_DIR_PATH)
                 .join(current_dir_path.as_str());
 
-            let _ = match env::set_current_dir(current_dir.clone()) {
+            match env::set_current_dir(current_dir.clone()) {
                 Ok(_) => (),
                 Err(err) => {
                     panic!(

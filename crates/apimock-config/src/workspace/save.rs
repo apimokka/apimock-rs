@@ -103,16 +103,16 @@ impl Workspace {
         // Refresh mtime snapshots so has_external_changes() doesn't
         // immediately fire for files we just wrote (RFC 024).
         for path in self.baseline_files.keys() {
-            if let Ok(meta) = std::fs::metadata(path) {
-                if let Ok(modified) = meta.modified() {
-                    self.file_metas.insert(
-                        path.clone(),
-                        crate::workspace::FileMeta {
-                            modified,
-                            len: meta.len(),
-                        },
-                    );
-                }
+            if let Ok(meta) = std::fs::metadata(path)
+                && let Ok(modified) = meta.modified()
+            {
+                self.file_metas.insert(
+                    path.clone(),
+                    crate::workspace::FileMeta {
+                        modified,
+                        len: meta.len(),
+                    },
+                );
             }
         }
 

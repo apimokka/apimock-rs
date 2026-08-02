@@ -11,10 +11,11 @@ use serde::Deserialize;
 /// - [`UniformRandom`] — pick uniformly at random from all matching rules.
 /// - [`WeightedRandom`] — pick randomly, weighted by each rule's `weight`.
 /// - [`Priority`] — group by priority, apply a tiebreaker within the group.
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum Strategy {
     /// Walk rules in order; return the first that matches. Default.
+    #[default]
     FirstMatch,
 
     /// Pick uniformly at random from all matching rules.
@@ -50,12 +51,6 @@ pub enum PriorityTiebreaker {
     UniformRandom,
 }
 
-impl Default for Strategy {
-    fn default() -> Self {
-        Self::FirstMatch
-    }
-}
-
 impl std::fmt::Display for Strategy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -78,6 +73,10 @@ impl Xorshift64 {
         Self(if seed == 0 { 0xdeadbeef_cafebabe } else { seed })
     }
 
+    // clippy: renaming `next` would change apimock_routing::strategy::
+    // Xorshift64's public API surface; this PRNG helper intentionally does
+    // not implement std::iter::Iterator.
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> u64 {
         let mut x = self.0;
         x ^= x << 13;

@@ -57,7 +57,7 @@ impl Request {
             );
 
         let body_is_match =
-            self.body.is_none() || self.body.as_ref().unwrap().is_match(&parsed_request);
+            self.body.is_none() || self.body.as_ref().unwrap().is_match(parsed_request);
 
         url_path_is_match && http_method_is_match && headers_is_match && body_is_match
     }

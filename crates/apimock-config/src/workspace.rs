@@ -108,6 +108,10 @@ impl Workspace {
     /// directory containing one; a missing file-path is searched for
     /// as `apimock.toml` inside `root`. Mirrors the CLI's existing
     /// resolution rules.
+    // clippy: WorkspaceError is a public error type (RFC 030 §6 escalation
+    // trigger); boxing its large variant would change that type's shape.
+    // See ESCALATION-002 in the RFC 030 review-request package.
+    #[allow(clippy::result_large_err)]
     pub fn load(root: PathBuf) -> Result<Self, WorkspaceError> {
         let resolved = resolve_root(&root)?;
 
@@ -151,16 +155,16 @@ impl Workspace {
         // Snapshot file metadata for external-change detection (RFC 024).
         let mut file_metas: HashMap<PathBuf, FileMeta> = HashMap::new();
         for path in baseline_files.keys() {
-            if let Ok(meta) = std::fs::metadata(path) {
-                if let Ok(modified) = meta.modified() {
-                    file_metas.insert(
-                        path.clone(),
-                        FileMeta {
-                            modified,
-                            len: meta.len(),
-                        },
-                    );
-                }
+            if let Ok(meta) = std::fs::metadata(path)
+                && let Ok(modified) = meta.modified()
+            {
+                file_metas.insert(
+                    path.clone(),
+                    FileMeta {
+                        modified,
+                        len: meta.len(),
+                    },
+                );
             }
         }
 
@@ -223,6 +227,10 @@ impl Workspace {
     ///
     /// After a successful sync, `has_external_changes()` returns `false`
     /// until the next external modification.
+    // clippy: WorkspaceError is a public error type (RFC 030 §6 escalation
+    // trigger); boxing its large variant would change that type's shape.
+    // See ESCALATION-002 in the RFC 030 review-request package.
+    #[allow(clippy::result_large_err)]
     pub fn sync_from_disk(&mut self) -> Result<(), WorkspaceError> {
         let fresh = Self::load(self.root_path.clone())?;
         // Replace the entire workspace state. NodeIDs are re-seeded from
@@ -282,6 +290,10 @@ impl Workspace {
 
     /// Resolve a relative path against the config file's parent dir.
     /// Used by snapshot rendering and by `cmd_add_rule_set`.
+    // clippy: ConfigError is a public error type (RFC 030 §6 escalation
+    // trigger); boxing its large variant would change that type's shape.
+    // See ESCALATION-002 in the RFC 030 review-request package.
+    #[allow(clippy::result_large_err)]
     pub(super) fn config_relative_dir(&self) -> Result<String, ConfigError> {
         self.config.current_dir_to_parent_dir_relative_path()
     }

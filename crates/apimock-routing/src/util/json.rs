@@ -44,9 +44,9 @@ pub const JSON_COMPATIBLE_EXTENSIONS: [&str; 3] = ["json", "json5", "csv"];
 pub fn json_value_by_jsonpath<'a>(value: &'a Value, jsonpath: &str) -> Option<&'a Value> {
     jsonpath
         .split('.')
-        .fold(Some(value), |current, key| match current {
-            Some(Value::Object(map)) => map.get(key),
-            Some(Value::Array(arr)) => key.parse::<usize>().ok().and_then(|i| arr.get(i)),
+        .try_fold(value, |current, key| match current {
+            Value::Object(map) => map.get(key),
+            Value::Array(arr) => key.parse::<usize>().ok().and_then(|i| arr.get(i)),
             _ => None,
         })
 }

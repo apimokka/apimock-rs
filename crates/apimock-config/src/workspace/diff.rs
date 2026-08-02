@@ -95,17 +95,15 @@ impl Workspace {
             .get(&self.root_path)
             .map(|s| s.as_str() == root_rendered.as_str())
             .unwrap_or(false);
-        if !root_baseline_matches {
-            if let Some(root_id) = self.ids.id_for(NodeAddress::Root) {
-                out.push(DiffItem {
-                    kind: DiffKind::Updated,
-                    target: root_id,
-                    summary: format!(
-                        "{}: listener / log / service",
-                        file_basename(&self.root_path)
-                    ),
-                });
-            }
+        if !root_baseline_matches && let Some(root_id) = self.ids.id_for(NodeAddress::Root) {
+            out.push(DiffItem {
+                kind: DiffKind::Updated,
+                target: root_id,
+                summary: format!(
+                    "{}: listener / log / service",
+                    file_basename(&self.root_path)
+                ),
+            });
         }
 
         out
@@ -150,10 +148,11 @@ impl Workspace {
         let common = cur_len.min(base_len);
 
         // Compare overlapping rules.
-        for rule_idx in 0..common {
-            let cur_rendered = rule_to_string(&rule_set.rules[rule_idx]);
-            let base_rendered =
-                toml::to_string_pretty(&baseline_rules[rule_idx]).unwrap_or_default();
+        for (rule_idx, (cur_rule, base_rule)) in
+            rule_set.rules.iter().zip(baseline_rules.iter()).enumerate()
+        {
+            let cur_rendered = rule_to_string(cur_rule);
+            let base_rendered = toml::to_string_pretty(base_rule).unwrap_or_default();
             if cur_rendered == base_rendered {
                 continue;
             }
@@ -163,7 +162,7 @@ impl Workspace {
                     rule_set: rs_idx,
                     rule: rule_idx,
                 })
-                .unwrap_or_else(NodeId::new);
+                .unwrap_or_default();
             out.push(DiffItem {
                 kind: DiffKind::Updated,
                 target: rule_id,
@@ -171,13 +170,7 @@ impl Workspace {
             });
 
             // RFC 029: per-condition items within the changed rule.
-            self.append_condition_diff(
-                rs_idx,
-                rule_idx,
-                &rule_set.rules[rule_idx],
-                &baseline_rules[rule_idx],
-                out,
-            );
+            self.append_condition_diff(rs_idx, rule_idx, cur_rule, base_rule, out);
         }
 
         // Rules added in the current model that weren't in baseline.
@@ -188,7 +181,7 @@ impl Workspace {
                     rule_set: rs_idx,
                     rule: rule_idx,
                 })
-                .unwrap_or_else(NodeId::new);
+                .unwrap_or_default();
             out.push(DiffItem {
                 kind: DiffKind::Added,
                 target,
@@ -253,7 +246,7 @@ impl Workspace {
                     rule: rule_idx,
                     header_name: key.to_string(),
                 })
-                .unwrap_or_else(NodeId::new);
+                .unwrap_or_default();
             out.push(DiffItem {
                 kind: DiffKind::HeaderConditionAdded,
                 target: id,
@@ -297,7 +290,7 @@ impl Workspace {
                     rule: rule_idx,
                     path: path.to_string(),
                 })
-                .unwrap_or_else(NodeId::new);
+                .unwrap_or_default();
             out.push(DiffItem {
                 kind: DiffKind::BodyConditionAdded,
                 target: id,

@@ -118,14 +118,15 @@ pub async fn dyn_route_content(
     });
 
     // Extension inference: `/foo` → `foo.json` / `foo.json5` / `foo.csv`.
-    if found.is_none() && request_path.extension().is_none() {
-        if let Some(stem) = request_path.file_stem().and_then(|s| s.to_str()) {
-            for ext in JSON_COMPATIBLE_EXTENSIONS {
-                let file_path = dir.join(format!("{}.{}", stem, ext));
-                if file_path.exists() {
-                    found = Some(file_path);
-                    break;
-                }
+    if found.is_none()
+        && request_path.extension().is_none()
+        && let Some(stem) = request_path.file_stem().and_then(|s| s.to_str())
+    {
+        for ext in JSON_COMPATIBLE_EXTENSIONS {
+            let file_path = dir.join(format!("{}.{}", stem, ext));
+            if file_path.exists() {
+                found = Some(file_path);
+                break;
             }
         }
     }

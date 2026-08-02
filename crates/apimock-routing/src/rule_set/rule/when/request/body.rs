@@ -100,7 +100,7 @@ impl Body {
             return false;
         }
 
-        for (_, body_kind_map) in self.0.iter() {
+        for body_kind_map in self.0.values() {
             if body_kind_map.is_empty() {
                 return false;
             }

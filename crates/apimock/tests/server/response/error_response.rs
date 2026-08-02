@@ -30,6 +30,5 @@ async fn error403() {
 /// internal setup fn
 async fn setup() -> u16 {
     let test_setup = TestSetup::default_with_root_config_dir(root_config_dir::ERROR_RESPONSE);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }

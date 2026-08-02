@@ -40,12 +40,13 @@ use serde::Deserialize;
 ///   integer).
 /// - [`ArrayContains`]: checks whether any element in the array equals
 ///   the configured value (parsed as JSON for typed comparison).
-#[derive(Clone, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum BodyOperator {
     // ── string-style (baseline) ─────────────────────────────────────
     /// String-coercion equality. Alias: [`EqualString`]. Kept for
     /// backwards compatibility with 5.7.0 rule files.
+    #[default]
     Equal,
     /// Explicit alias for [`Equal`]. Prefer this in new rules for
     /// clarity when numeric or typed operators are also present.
@@ -120,12 +121,6 @@ pub enum BodyOperator {
     /// For non-object needle values, falls back to strict equality
     /// (identical to `ArrayContains`).
     StructuralContains,
-}
-
-impl Default for BodyOperator {
-    fn default() -> Self {
-        Self::Equal
-    }
 }
 
 impl std::fmt::Display for BodyOperator {
@@ -229,15 +224,11 @@ impl BodyOperator {
 
             // ── array operators ──────────────────────────────────────
             Self::ArrayLengthEqual => match resolved {
-                Value::Array(arr) => {
-                    parse_usize(configured_value).map_or(false, |n| arr.len() == n)
-                }
+                Value::Array(arr) => parse_usize(configured_value) == Some(arr.len()),
                 _ => false,
             },
             Self::ArrayLengthAtLeast => match resolved {
-                Value::Array(arr) => {
-                    parse_usize(configured_value).map_or(false, |n| arr.len() >= n)
-                }
+                Value::Array(arr) => parse_usize(configured_value).is_some_and(|n| arr.len() >= n),
                 _ => false,
             },
             Self::ArrayContains => match resolved {
@@ -338,7 +329,7 @@ fn is_subset(needle: &serde_json::Value, haystack: &serde_json::Value) -> bool {
         Value::Object(needle_map) => match haystack {
             Value::Object(haystack_map) => needle_map
                 .iter()
-                .all(|(k, v)| haystack_map.get(k).map_or(false, |hv| is_subset(v, hv))),
+                .all(|(k, v)| haystack_map.get(k).is_some_and(|hv| is_subset(v, hv))),
             _ => false,
         },
         // For non-object needles, strict equality.

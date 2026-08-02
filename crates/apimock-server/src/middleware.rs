@@ -31,6 +31,10 @@ impl LoadedMiddlewares {
     ///
     /// Paths are interpreted relative to `relative_dir_path` — the same
     /// convention used by `Config::new` for rule-set paths.
+    // clippy: ServerError is a public error type (RFC 030 §6 escalation
+    // trigger); boxing its large variant would change that type's shape.
+    // See ESCALATION-002 in the RFC 030 review-request package.
+    #[allow(clippy::result_large_err)]
     pub fn compile(
         middleware_file_paths: &[String],
         relative_dir_path: &str,

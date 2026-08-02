@@ -21,7 +21,7 @@ pub fn json_response(
 
             let mut response_handler = ResponseHandler::default();
 
-            if let Some(custom_headers) = custom_headers.clone() {
+            if let Some(custom_headers) = custom_headers {
                 response_handler = response_handler.with_headers(custom_headers.to_owned());
             }
 

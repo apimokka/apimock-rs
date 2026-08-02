@@ -4,7 +4,7 @@
 // as test mods are compiled separately in rust and therefore the compiler doesn’t consider external calls
 
 #[path = "constant.rs"]
-mod constant;
+pub mod constant;
 #[path = "util/file.rs"]
 mod file;
 #[path = "util/http.rs"]

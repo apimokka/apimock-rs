@@ -14,11 +14,11 @@ impl DefaultRespond {
 
 impl std::fmt::Display for DefaultRespond {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.delay_response_milliseconds.is_some() {
+        if let Some(delay_response_milliseconds) = self.delay_response_milliseconds.as_ref() {
             let _ = write!(
                 f,
                 "[delay_response_milliseconds] {}",
-                self.delay_response_milliseconds.as_ref().unwrap()
+                delay_response_milliseconds
             );
         }
         Ok(())

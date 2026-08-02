@@ -131,7 +131,7 @@ impl std::fmt::Display for ServiceConfig {
                 "[rule_sets.strategy] {}",
                 self.strategy.clone().unwrap_or_default()
             );
-            let _ = writeln!(f, "");
+            let _ = writeln!(f);
         }
 
         for (idx, rule_set) in self.rule_sets.iter().enumerate() {
@@ -141,7 +141,7 @@ impl std::fmt::Display for ServiceConfig {
                 idx + 1,
                 style(rule_set.file_path.as_str()).green()
             );
-            let _ = write!(f, "{}\n", rule_set);
+            let _ = writeln!(f, "{}", rule_set);
         }
 
         if has_rule_sets {

@@ -389,10 +389,10 @@ impl FileTreeFilter {
                     builder.add(g);
                 }
             }
-            if let Ok(set) = builder.build() {
-                if set.is_match(name) {
-                    return false;
-                }
+            if let Ok(set) = builder.build()
+                && set.is_match(name)
+            {
+                return false;
             }
         }
         // .gitignore filter (RFC 019)
@@ -410,10 +410,10 @@ impl FileTreeFilter {
                     builder.add(g);
                 }
             }
-            if let Ok(set) = builder.build() {
-                if !set.is_match(name) {
-                    return false;
-                }
+            if let Ok(set) = builder.build()
+                && !set.is_match(name)
+            {
+                return false;
             }
         }
         true

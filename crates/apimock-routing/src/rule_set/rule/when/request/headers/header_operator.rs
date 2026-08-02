@@ -19,10 +19,11 @@ use crate::rule_set::rule::when::request::rule_op::RuleOp;
 /// request, regardless of its value. Value operators compare the header's
 /// value using the matching semantics of the corresponding [`RuleOp`]
 /// variant.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderOperator {
     // ── value operators ───────────────────────────────────────────────
+    #[default]
     Equal,
     NotEqual,
     StartsWith,
@@ -41,12 +42,6 @@ pub enum HeaderOperator {
     Exists,
     /// Header key must be absent from the request.
     Absent,
-}
-
-impl Default for HeaderOperator {
-    fn default() -> Self {
-        Self::Equal
-    }
 }
 
 impl std::fmt::Display for HeaderOperator {

@@ -4,15 +4,12 @@ use std::path::Path;
 
 /// file extension string from file path
 pub fn file_extension(file_path: &str) -> Option<String> {
-    match Path::new(file_path)
+    Path::new(file_path)
         .extension()
         .unwrap_or_default()
         .to_ascii_lowercase()
         .to_str()
-    {
-        Some(x) => Some(x.to_owned()),
-        None => None,
-    }
+        .map(|x| x.to_owned())
 }
 
 /// content type from text file extension

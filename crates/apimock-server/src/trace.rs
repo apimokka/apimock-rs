@@ -544,11 +544,6 @@ mod tests {
         let emitter = TraceEmitter::new();
         let emitter_clone = emitter.clone();
 
-        // Bind on an ephemeral port.
-        let config = TraceTransportConfig::Tcp {
-            addr: "127.0.0.1:0".to_owned(),
-        };
-
         // We need to know the actual bound port before connecting.
         // Bind the listener ourselves to capture the address, then hand
         // the address to the transport accept loop via a channel.

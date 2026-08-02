@@ -137,6 +137,5 @@ async fn other_w_ext() {
 /// internal setup fn
 async fn setup() -> u16 {
     let test_setup = TestSetup::default_with_root_config_dir(root_config_dir::FILE_RESPONSE);
-    let port = test_setup.launch().await;
-    port
+    test_setup.launch().await
 }

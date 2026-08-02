@@ -49,7 +49,7 @@ async fn http_response_headers_on_request_without_auth() {
         let header = response
             .headers()
             .get(header_key)
-            .expect(&format!("failed to get header: {}", header_key));
+            .unwrap_or_else(|| panic!("failed to get header: {}", header_key));
         if let Some(header_value) = header_value {
             assert_eq!(header, HeaderValue::from_static(header_value),);
         }
@@ -88,7 +88,7 @@ async fn http_response_headers_on_request_with_auth() {
         let header = response
             .headers()
             .get(header_key)
-            .expect(&format!("failed to get header: {}", header_key));
+            .unwrap_or_else(|| panic!("failed to get header: {}", header_key));
         if let Some(header_value) = header_value {
             assert_eq!(header, HeaderValue::from_static(header_value),);
         }
