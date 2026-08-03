@@ -150,8 +150,8 @@ promise into a build-time check. RFC 040 resolves RFC 023's Unresolved
 escalation 002: `RoutingError`, `ConfigError`, `WorkspaceError`, and
 `ServerError` each carry a `toml::de::Error` of ≥136 bytes, so every
 `Result` returning through them trips `clippy::result_large_err`; RFC 030
-suppressed 16 instances with justified `#[allow]`s, and RFC 041 decides
-whether to box the variants and, if so, removes all 16 in the same
+suppressed 15 instances with justified `#[allow]`s, and RFC 041 decides
+whether to box the variants and, if so, removes all 15 in the same
 change. RFC 042 resolves the simplification recorded as ARCH-002 /
 DEC-024 and is the only item in this roadmap that changes what the GUI
 must do; it requires a compatibility round-trip with the GUI team
