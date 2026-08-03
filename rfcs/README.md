@@ -14,7 +14,38 @@ rfcs/
 
 ## Proposed
 
-*(none — all v5.13.0 RFCs implemented)*
+See [ROADMAP.md](../ROADMAP.md) for themes, milestones, release cycle,
+and the rest of the planned portfolio.
+
+### M1 — Pipeline trust → v5.15.0
+
+| ID  | Title | Priority | Depends on | Handoff |
+|-----|-------|----------|------------|---------|
+| 030 | [Warning-clean baseline](./proposed/030-warning-clean-baseline.md) | P0 | — | [yes](./handoffs/030-warning-clean-baseline/implementation-handoff.md) |
+| 031 | [CI quality gates](./proposed/031-ci-quality-gates.md) | P0 | 030 | [yes](./handoffs/031-ci-quality-gates/implementation-handoff.md) |
+| 032 | [Release and packaging repair](./proposed/032-release-and-packaging-repair.md) | P0 | — | [yes](./handoffs/032-release-and-packaging-repair/implementation-handoff.md) |
+| 033 | [Supply-chain gates](./proposed/033-supply-chain-gates.md) | P1 | 031 | pending D-04 |
+
+Execution order: 030 → 031 → 033, with 032 in parallel.
+
+### M2 — Documentation and examples → v5.16.0
+
+| ID  | Title | Priority | Depends on | Handoff |
+|-----|-------|----------|------------|---------|
+| 034 | [Documentation information architecture](./proposed/034-documentation-information-architecture.md) | P0 | — | pending M1 |
+| 035 | User guide and configuration reference rewrite | P0 | 034 | not yet written |
+| 036 | [Example configurations](./proposed/036-example-configs.md) | P0 | — | pending M1 |
+| 037 | README rethink | P1 | 034 | not yet written |
+| 038 | Technical reference refresh and document integrity | P1 | 034 | not yet written |
+
+RFC 034 is design-first and gates 035, 037, and 038; RFC 036 is
+independent and runs in parallel. RFCs 035, 037, and 038 are written
+once 034's page map is agreed — drafting them earlier would mean
+inventing a structure twice.
+
+Handoffs live under `handoffs/NNN-slug/` and inherit their status from
+the governing RFC — they are companion execution documents, not
+separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 
 ## Done (Implemented)
 
@@ -60,10 +91,9 @@ rfcs/
 
 ## Adding a new RFC
 
-1. Pick next free number (027+). Create `rfcs/proposed/NNN-slug.md`.
+1. Pick the next free number — **042+**. Numbers 034–041 are reserved
+   by [ROADMAP.md](../ROADMAP.md) for the planned M2 and M3 RFCs.
+   Create `rfcs/proposed/NNN-slug.md`.
 2. On shipping, move to `done/`, update Status field, update this index.
 
 See [RFC 000](./done/000-rfc-lifecycle-policy.md) for the full policy.
-| 027 | [Rule priority field](./done/027-rule-priority-field.md) | v5.14.0 |
-| 028 | [StructuralContains body operator](./done/028-structural-contains.md) | v5.14.0 |
-| 029 | [Per-condition diff granularity](./done/029-diff-granularity.md) | v5.14.0 |
