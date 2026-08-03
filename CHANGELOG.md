@@ -5,6 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.15.0] - 2026-08-03
+
+A quality and release-infrastructure release. **No user-facing feature
+changes and no API changes** — the library, CLI, and config surface
+behave identically to 5.14.0. What changed is everything around them:
+the npm packaging that was shipping wrong versions, and the absence of
+any automated quality gate.
+
+### Fixed
+
+- **npm packaging has been shipping the wrong binaries, and still is
+  until this release publishes (RFC 032).** The currently-published
+  `apimock-rs@5.10.0` on the npm registry pins its `optionalDependencies`
+  platform packages at `4.6.9`, even though those platform packages have
+  themselves already been published up to `5.10.0` — so installing
+  `apimock-rs` from npm today resolves binaries several minor versions
+  behind the package's own version. All npm package versions and
+  platform pins are now correct in the tree and verified in CI before
+  publication.
+
+  **npm consumers:** the last version actually published to npm is
+  `5.10.0` (2026-05-16); `5.10.1` through `5.14.0` were never published
+  and are not being backfilled, so the npm version history jumps from
+  `5.10.0` to `5.15.0`. (crates.io, unlike npm, is current: all four
+  crates are published through `5.14.0`.)
+
+- **`version.sh --update` was a silent no-op (RFC 032).** Two independent
+  defects, both introduced by the 5.1.1 workspace split: it searched for
+  npm manifests under each crate's directory, which stopped reaching
+  root-level `npm/`; and its TOML rewriter could not match
+  `version.workspace = true`. It reported success without changing
+  anything. Rewritten around an explicit target list, now covering the
+  workspace manifest, the internal crate pins' major component,
+  `Cargo.lock`, and every npm manifest — and it verifies every target it
+  claims to have updated, exiting non-zero if any did not land.
+
+- **`cargo build --workspace --all-features` did not compile.** The
+  `spawn`-gated `apimock::new` takes three arguments, but the binary's
+  only call site passed one, so any `--all-features` build failed. The
+  binary now calls `App::new` directly, matching what every other in-repo
+  caller already did. Behaviour is unchanged.
+
+- **A test could never pass on a host without globally-routable IPv6.**
+  `ipv6_localhost_bound_nonlocalhost_request` selected any non-loopback
+  IPv6 interface, including link-local (`fe80::/10`) addresses, which
+  cannot be dialled without a zone ID — producing `EINVAL` rather than
+  the expected `ConnectionRefused`. It now excludes link-local addresses
+  and skips with a note when no suitable interface exists. Found by CI on
+  its first run.
+
+### Changed
+
+- **The whole workspace is warning-clean (RFC 030).** 120 clippy findings
+  across all four crates and three `rustc` build warnings resolved;
+  `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  now exits 0, and `cargo build --workspace --all-targets` emits nothing.
+  No behaviour change: no public signature altered, no test assertion
+  touched, and the suite count held constant throughout.
+
+  17 `#[allow]` annotations were added, each with an inline justification.
+  15 are `clippy::result_large_err` on the four public error types, all
+  tracing to a `toml::de::Error` of ≥136 bytes carried by each; that is a
+  tracked follow-up, not an oversight.
+
+- **CI now gates every push and pull request (RFC 031).** A new `ci.yaml`
+  runs format, lint, test, and MSRV checks in parallel, all blocking.
+  Previously the only Rust-side CI was a release-time build, so every
+  quality claim in this project's history rested on manual discipline.
+  The release workflow additionally re-runs the gates before building any
+  artifact.
+
+  The MSRV job reads `rust-version` from `Cargo.toml` rather than
+  hardcoding it, and this is the first release in which the pinned
+  `1.91.0` has actually been verified rather than asserted.
+
+- **The mandatory test command is now `cargo test --workspace`.** The
+  previously recorded gate was `--workspace --lib`, which ran 212 tests
+  and silently skipped 159 integration tests. Those 159 were passing all
+  along — the coverage was real, the measurement was not.
+
+- **Dependency hygiene is checked automatically (RFC 033).** `cargo audit`
+  runs on push, pull request, and a weekly schedule — the schedule
+  matters because advisories are published against code that has not
+  changed. A lockfile-freshness check runs on push and pull request.
+
+### Test count
+
+The total did not grow; the measurement became honest.
+
+| Crate / target | 5.14.0 (as reported) | 5.15.0 (actual) |
+|---|---|---|
+| apimock (lib) | 22 | 22 |
+| apimock-config | 56→60 | 60 |
+| apimock-routing | 111→116 | 116 |
+| apimock-server | 14 | 14 |
+| integration tests (`crates/apimock/tests/`) | *not counted* | 159 |
+| **Total** | **212** | **371** |
+
 ## [5.14.0] - 2026-05-22
 
 ### Added
