@@ -10,11 +10,16 @@ lost between releases. That history lives at the bottom of this file.
 
 **Baseline approved.** 2026-08-02, by the project owner.
 **Baseline covers.** v5.15.0 → v5.17.0.
-**Current version.** 5.14.0 — 29 RFCs implemented, 1 withdrawn.
+**Current version.** 5.15.0 — 33 RFCs implemented, 1 withdrawn.
+**M1 complete** (2026-08-03): RFCs 030–033 shipped in v5.15.0.
 
 ---
 
 ## Planning context
+
+*Historical — this records the state that motivated the roadmap, as of
+2026-08-02. Every condition listed below was resolved by M1 in v5.15.0
+except the documentation one, which is M2's subject.*
 
 Every RFC through 029 shipped, and `rfcs/proposed/` was emptied. The
 v5.14.0 review that opened this planning round found the feature work in
@@ -204,7 +209,7 @@ starts immediately.
 | R-01 | RFC 031 turns on `-D warnings` while findings remain, blocking every subsequent PR | Development halts until fixed | Low | 031 depends on 030; 031's acceptance criteria require a green clippy run on the merge commit | architect |
 | R-02 | The 26 clippy fixes in RFC 030 change behaviour | Silent regression | Low | Full test suite must pass unchanged; no test may be modified within RFC 030's scope | architect |
 | R-03 | RFC 039 breaks the GUI team's integration | Downstream breakage | Medium | GUI-team compatibility round-trip is a precondition for writing the RFC, not a follow-up | owner + architect |
-| R-04 | Publishing npm at 5.15.0 leaves 5.8.0–5.14.0 permanently unpublished on that channel | User confusion about which versions exist | High (accepted) | Owner-accepted consequence of repairing rather than backfilling; note it in the 5.15.0 release notes | owner |
+| R-04 | Publishing npm at 5.15.0 leaves 5.10.1–5.14.0 permanently unpublished on that channel | User confusion about which versions exist | High (accepted) | Owner-accepted consequence of repairing rather than backfilling; noted in the 5.15.0 release notes. *Range corrected 2026-08-03 — last published npm version is 5.10.0, not 5.7.0* | owner |
 | R-05 | CI tracks Rust `stable` while `Cargo.toml` pins MSRV 1.91.0 | Release build and local dev can diverge | Medium | RFC 031 adds an explicit MSRV job | architect |
 | R-06 | Scope creep from docs work — rewriting docs surfaces genuine feature gaps | M2 expands into feature work | Medium | Feature gaps discovered during M2 become new RFCs for a later milestone; they do not join M2 | architect |
 | R-07 | No load/performance evidence backs the README's k6 claim | Cannot verify a public claim | Low | Out of scope for this roadmap; revisit only if a regression is suspected | unassigned |
@@ -217,7 +222,6 @@ starts immediately.
 |---|---|---|---|
 | D-01 | Target calendar window for M1–M3, so milestones can be dated | project owner | Scheduling only; RFC work can start without it |
 | D-02 | Whether RFC 039 proceeds, pending the GUI-team compatibility round-trip | project owner | M3 scope |
-| D-04 | Whether RFC 033 keeps its dependency-licence check at all | project owner | RFC 033 scope only |
 
 Decisions taken on 2026-08-02:
 
@@ -225,9 +229,15 @@ Decisions taken on 2026-08-02:
 - npm remains a supported distribution channel; RFC 032 repairs it.
 - Clippy findings are fixed, not suppressed; then gated.
 - One minor release per milestone.
-- **D-03 — npm resumes at the next release.** 5.8.0–5.14.0 are not
-  backfilled; the npm channel goes from 5.7.0 to 5.15.0. The version
-  gap gets a line in the 5.15.0 release notes.
+- **D-03 — npm resumes at the next release.** Not backfilled; the
+  version gap gets a line in the 5.15.0 release notes.
+
+  *Corrected 2026-08-03 against the live registry:* the last version
+  actually published to npm is **5.10.0** (2026-05-16), not 5.7.0, so
+  the gap is **5.10.1–5.14.0**, not 5.8.0–5.14.0. The original figure
+  was inferred from `npm/package.json`'s local content rather than from
+  the registry. crates.io, by contrast, is current — all four crates
+  published through 5.14.0.
 - **Release-archive layout: no change.** The DEC-031 / RISK-003
   "discrepancy" inherited from the v5.14.0 handoff was a
   misapplication — the flat-extraction rule governs *project structure

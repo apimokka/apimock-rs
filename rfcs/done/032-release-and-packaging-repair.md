@@ -251,10 +251,27 @@ the *existing* process trustworthy. Worth revisiting once M1 is done.
 ## Unresolved questions
 
 1. ~~**D-03: backfill npm or resume at the next release?**~~
-   ✅ **Resolved 2026-08-02 by the project owner: resume.** npm goes
-   from 5.7.0 to the next released version; 5.8.0–5.14.0 are not
+   ✅ **Resolved 2026-08-02 by the project owner: resume.** Not
    backfilled. The 5.15.0 release notes should say so plainly, since
    npm users will see a version gap.
+
+   **Factual correction, 2026-08-03.** This RFC states the gap as
+   "5.7.0 → next release, 5.8.0–5.14.0 unpublished". That figure was
+   inferred from `npm/package.json`'s local content and is wrong. The
+   live registry shows the last version actually published to npm is
+   **5.10.0** (2026-05-16); 5.8.0 was never published, but 5.9.0 and
+   5.10.0 were. **The real gap is 5.10.1–5.14.0.** The published 5.10.0
+   carries the `4.6.9` `optionalDependencies` pin this RFC fixes — so
+   the defect was live for npm users, not merely latent in the repo.
+
+   crates.io, by contrast, is current: all four crates published
+   through 5.14.0 as of 2026-08-01.
+
+   The *decision* is unaffected — resume rather than backfill — only
+   the range it describes. Recorded as an addendum rather than by
+   editing the text above, per this project's precedent for correcting
+   a `done/` RFC (see the v5.11 addendum in
+   [RFC 007](./007-rule-evaluation-strategy-variants.md)).
 2. **Are npm registry credentials still valid?** Not verifiable from
    the repository. Must be confirmed before the first release that
    exercises the repaired path, or the release will fail at publish
