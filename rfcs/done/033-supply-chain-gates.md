@@ -1,6 +1,6 @@
 # RFC 033 — Supply-chain and dependency-hygiene gates
 
-**Status.** Proposed
+**Status.** Implemented (v5.15.0)
 **Tracks.** M1 (Pipeline trust). No workflow checks dependencies for
 known vulnerabilities, incompatible licences, or lockfile drift. A
 vulnerable transitive dependency would ship in a release undetected.

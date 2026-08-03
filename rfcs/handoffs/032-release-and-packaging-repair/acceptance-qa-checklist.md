@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 032
 
-**Governing RFC.** [RFC 032](../../proposed/032-release-and-packaging-repair.md)
+**Governing RFC.** [RFC 032](../../done/032-release-and-packaging-repair.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 Paste actual command output into the review-request package, not a

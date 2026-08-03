@@ -83,10 +83,10 @@ Priority: **P0** blocks the milestone · **P1** planned in the milestone ·
 
 | RFC | Title | Pri | Depends on | State |
 |---|---|---|---|---|
-| 030 | [Warning-clean baseline](./rfcs/proposed/030-warning-clean-baseline.md) | P0 | — | Proposed |
-| 031 | [CI quality gates](./rfcs/proposed/031-ci-quality-gates.md) | P0 | 030 | Proposed |
-| 032 | [Release and packaging repair](./rfcs/proposed/032-release-and-packaging-repair.md) | P0 | — | Proposed |
-| 033 | [Supply-chain gates](./rfcs/proposed/033-supply-chain-gates.md) | P1 | 031 | Proposed |
+| 030 | [Warning-clean baseline](./rfcs/done/030-warning-clean-baseline.md) | P0 | — | Implemented (v5.15.0) |
+| 031 | [CI quality gates](./rfcs/done/031-ci-quality-gates.md) | P0 | 030 | Implemented (v5.15.0) |
+| 032 | [Release and packaging repair](./rfcs/done/032-release-and-packaging-repair.md) | P0 | — | Implemented (v5.15.0) |
+| 033 | [Supply-chain gates](./rfcs/done/033-supply-chain-gates.md) | P1 | 031 | Implemented (v5.15.0) |
 
 **Execution order.** 030 → 031 → 033, with 032 running in parallel from
 the start — it shares no code with the others.

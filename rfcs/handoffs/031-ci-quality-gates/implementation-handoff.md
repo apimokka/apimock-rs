@@ -1,12 +1,12 @@
 # Implementation Handoff — RFC 031, CI quality gates
 
-**Governing RFC.** [RFC 031](../../proposed/031-ci-quality-gates.md)
+**Governing RFC.** [RFC 031](../../done/031-ci-quality-gates.md)
 **Milestone.** M1 (Pipeline trust) → v5.15.0
 **Status.** Inherited from RFC 031 (Proposed, approved for implementation
 2026-08-02)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 
-**Prerequisite met.** [RFC 030](../../proposed/030-warning-clean-baseline.md)
+**Prerequisite met.** [RFC 030](../../done/030-warning-clean-baseline.md)
 is approved and the workspace is warning-clean. This handoff was
 deliberately held until that was true rather than predicted.
 

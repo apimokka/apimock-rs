@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 030
 
-**Governing RFC.** [RFC 030](../../proposed/030-warning-clean-baseline.md)
+**Governing RFC.** [RFC 030](../../done/030-warning-clean-baseline.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 Run per slice, then once for the whole. Paste actual output into the

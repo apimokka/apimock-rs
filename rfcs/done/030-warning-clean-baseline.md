@@ -1,6 +1,6 @@
 # RFC 030 — Warning-clean baseline across the workspace
 
-**Status.** Proposed
+**Status.** Implemented (v5.15.0)
 **Tracks.** M1 (Pipeline trust). Strict clippy has never passed on this
 workspace, and because `-D warnings` halts the build at the first
 crate that fails, the true size of the problem was unknown until now.

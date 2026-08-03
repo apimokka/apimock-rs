@@ -17,17 +17,6 @@ rfcs/
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, release cycle,
 and the rest of the planned portfolio.
 
-### M1 — Pipeline trust → v5.15.0
-
-| ID  | Title | Priority | Depends on | Handoff |
-|-----|-------|----------|------------|---------|
-| 030 | [Warning-clean baseline](./proposed/030-warning-clean-baseline.md) | P0 | — | [yes](./handoffs/030-warning-clean-baseline/implementation-handoff.md) |
-| 031 | [CI quality gates](./proposed/031-ci-quality-gates.md) | P0 | 030 | [yes](./handoffs/031-ci-quality-gates/implementation-handoff.md) |
-| 032 | [Release and packaging repair](./proposed/032-release-and-packaging-repair.md) | P0 | — | [yes](./handoffs/032-release-and-packaging-repair/implementation-handoff.md) |
-| 033 | [Supply-chain gates](./proposed/033-supply-chain-gates.md) | P1 | 031 | pending D-04 |
-
-Execution order: 030 → 031 → 033, with 032 in parallel.
-
 ### M2 — Documentation and examples → v5.16.0
 
 | ID  | Title | Priority | Depends on | Handoff |
@@ -80,6 +69,10 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 027 | [Rule priority field](./done/027-rule-priority-field.md) | v5.14.0 |
 | 028 | [StructuralContains body operator](./done/028-structural-contains.md) | v5.14.0 |
 | 029 | [Per-condition diff granularity](./done/029-diff-granularity.md) | v5.14.0 |
+| 030 | [Warning-clean baseline](./done/030-warning-clean-baseline.md) | v5.15.0 |
+| 031 | [CI quality gates](./done/031-ci-quality-gates.md) | v5.15.0 |
+| 032 | [Release and packaging repair](./done/032-release-and-packaging-repair.md) | v5.15.0 |
+| 033 | [Supply-chain gates](./done/033-supply-chain-gates.md) | v5.15.0 |
 
 ## Archive
 

@@ -1,12 +1,12 @@
 # Implementation Handoff — RFC 033, Supply-chain gates
 
-**Governing RFC.** [RFC 033](../../proposed/033-supply-chain-gates.md)
+**Governing RFC.** [RFC 033](../../done/033-supply-chain-gates.md)
 **Milestone.** M1 (Pipeline trust) → v5.15.0 — the last item.
 **Status.** Inherited from RFC 033 (Proposed; scope settled by owner
 decision D-04, 2026-08-02)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 
-**Prerequisite.** [RFC 031](../../proposed/031-ci-quality-gates.md)'s
+**Prerequisite.** [RFC 031](../../done/031-ci-quality-gates.md)'s
 `ci.yaml` must exist — this RFC extends it. RFC 031's implementation is
 approved; its live-run evidence may still be in progress. Coordinate so
 you are not editing `ci.yaml` while that evidence is being captured.

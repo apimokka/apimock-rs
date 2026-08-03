@@ -1,6 +1,6 @@
 # RFC 032 — Release and packaging repair
 
-**Status.** Proposed
+**Status.** Implemented (v5.15.0)
 **Tracks.** M1 (Pipeline trust). The npm distribution path — the one
 the README advertises first — cannot work as currently configured, and
 the tool meant to prevent that (`version.sh`) has been a silent no-op

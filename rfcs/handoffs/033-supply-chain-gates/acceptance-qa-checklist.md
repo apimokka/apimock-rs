@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 033
 
-**Governing RFC.** [RFC 033](../../proposed/033-supply-chain-gates.md)
+**Governing RFC.** [RFC 033](../../done/033-supply-chain-gates.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 Paste actual run output and links into the review-request package.

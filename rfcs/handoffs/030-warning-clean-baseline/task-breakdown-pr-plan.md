@@ -1,6 +1,6 @@
 # Task Breakdown / PR Plan — RFC 030
 
-**Governing RFC.** [RFC 030](../../proposed/030-warning-clean-baseline.md)
+**Governing RFC.** [RFC 030](../../done/030-warning-clean-baseline.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 Four slices, four review units. Each is independently implementable,

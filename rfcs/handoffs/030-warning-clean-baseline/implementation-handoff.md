@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 030, Warning-clean baseline
 
-**Governing RFC.** [RFC 030](../../proposed/030-warning-clean-baseline.md)
+**Governing RFC.** [RFC 030](../../done/030-warning-clean-baseline.md)
 **Milestone.** M1 (Pipeline trust) → v5.15.0
 **Status.** Inherited from RFC 030 (Proposed, approved for implementation
 2026-08-02)
@@ -12,7 +12,7 @@
 ## 1. Purpose
 
 Make the workspace compile and lint clean, so that
-[RFC 031](../../proposed/031-ci-quality-gates.md) can install a blocking
+[RFC 031](../../done/031-ci-quality-gates.md) can install a blocking
 clippy gate. This is a prerequisite, not an improvement in its own right.
 
 ## 2. Background

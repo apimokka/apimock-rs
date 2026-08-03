@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 031
 
-**Governing RFC.** [RFC 031](../../proposed/031-ci-quality-gates.md)
+**Governing RFC.** [RFC 031](../../done/031-ci-quality-gates.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 Paste actual run output and links into the review-request package, not a

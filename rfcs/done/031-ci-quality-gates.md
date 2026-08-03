@@ -1,6 +1,6 @@
 # RFC 031 — CI quality gates on push and pull request
 
-**Status.** Proposed
+**Status.** Implemented (v5.15.0)
 **Tracks.** M1 (Pipeline trust). No CI workflow currently runs
 `cargo fmt --check`, `cargo clippy`, or `cargo test`. Every quality
 claim in this project's history rests on manual session discipline.

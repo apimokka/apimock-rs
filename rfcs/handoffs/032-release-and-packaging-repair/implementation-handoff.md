@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 032, Release and packaging repair
 
-**Governing RFC.** [RFC 032](../../proposed/032-release-and-packaging-repair.md)
+**Governing RFC.** [RFC 032](../../done/032-release-and-packaging-repair.md)
 **Milestone.** M1 (Pipeline trust) → v5.15.0
 **Status.** Inherited from RFC 032 (Proposed, approved for implementation
 2026-08-02)
