@@ -8,32 +8,22 @@
 [![Releases Workflow](https://github.com/apimokka/apimock-rs/actions/workflows/release-executable.yaml/badge.svg)](https://github.com/apimokka/apimock-rs/actions/workflows/release-executable.yaml)
 [![App Docs Workflow](https://github.com/apimokka/apimock-rs/actions/workflows/docs.yaml/badge.svg)](https://github.com/apimokka/apimock-rs/actions/workflows/docs.yaml)
 
-![logo](docs/src/assets/logo.png)
+![logo](https://raw.githubusercontent.com/apimokka/apimock-rs/main/docs/src/assets/logo.png)
 
-Build a working REST API in seconds — without a backend.    
-Frontend blocked by an unfinished backend ?
-Need stable API responses for UI tests or offline development ?    
 Drop JSON files into a folder and your API immediately exists.
 
-## Mock APIs easily 🎈 — just JSON and go
+## Overview
 
-If you’re building or testing APIs, this tool makes mocking painless. It’s super fast, efficient, and flexible when you need it to be.
-All you have to do to start up is just use folders and JSON without any config set.
+apimock-rs is an HTTP(S) mock server built in Rust: point it at a
+folder of JSON files and it serves them as a REST API, zero
+configuration required. An optional TOML rule set adds conditional
+matching, Rhai scripting, and response strategies when you need more.
 
 - ❄️ Zero-config start.
 - 🌬️ Fast to boot, light on memory.
 - 🪄 File-based and rule-based matching. Scripting supported.
 
-### `apimock-rs` handles real project scale
-
-As your project grows, your mock API grows, too. Large mock datasets often cause problems:
-
-- Slow startup
-- High memory usage
-- Crashes during UI testing
-- Unstable CI runs
-
-### When to use ?
+## Why / When
 
 - The backend is not ready yet.
 - You need stable API responses for UI testing.
@@ -41,44 +31,33 @@ As your project grows, your mock API grows, too. Large mock datasets often cause
 - CI tests require a predictable API.
 - Your mock data is becoming large.
 
-### Performance
-
-apimock-rs does not preload responses. Each response file is read only when a request arrives using non-blocking I/O. This keeps:
-
-- Startup nearly instant
-- Memory usage minimal
-- Stable behavior under repeated requests
-
-as validated with k6 load testing.
-You can run UI development and automated tests continuously without worrying about server instability.
-
 ---
 
 ## Quick start
 
-Easy to start with [npm package](https://www.npmjs.com/package/apimock-rs).
+```sh
+# via npm, into your app project
+npm install -D apimock-rs && npx apimock
+```
 
 ```sh
-# install into your app project
-npm install -D apimock-rs
-# and go
-npx apimock
+# or via cargo, as a standalone binary
+cargo install apimock && apimock
 ```
 
 ```sh
 # just use folders and JSON
 mkdir -p api/v1/
 echo '{"hello": "world"}' > api/v1/hello.json
-npx apimock
+npx apimock   # (or `apimock`, if installed via cargo)
 
 # response
 curl http://localhost:3001/api/v1/hello
 # --> {"hello":"world"}
 ```
 
-You may also check it out with browser to visit http://localhost:3001/api/v1/hello .
-
-You now have a running REST endpoint.
+You now have a running REST endpoint (the commands below assume `npx`;
+drop it for `cargo install`).
 
 ### `npx apimock` variation
 
@@ -94,22 +73,21 @@ You now have a running REST endpoint.
 | command | result |
 | --- | --- |
 | `npx apimock --init` | Interactive setup. Prompts for port / IP / fallback dir / whether to scaffold a rule-set file, middleware file, and TLS section, then writes `apimock.toml` (and optionally `apimock-rule-set.toml` / `apimock-middleware.rhai`) customised to your answers. |
-| `npx apimock --init --yes` | Non-interactive setup: skip every prompt and write the same defaults 4.7.0 wrote (`127.0.0.1:3001`, rule-set file included, TLS commented out). Useful in CI or Docker builds. |
+| `npx apimock --init --yes` | Non-interactive setup: skip every prompt and write the default config (`127.0.0.1:3001`, rule-set file included, TLS commented out). Useful in CI or Docker builds. |
 | `npx apimock --init --middleware` | Also scaffold `apimock-middleware.rhai`. Combines with `--yes`. |
 
-When stdin is not a TTY (piped, CI, Docker build), `--init` silently falls back to defaults even without `--yes` — so existing non-interactive usage of 4.7.0 keeps working unchanged.
+When stdin is not a TTY (piped, CI, Docker build), `--init` silently
+falls back to the same defaults even without `--yes` — so
+non-interactive usage in scripts and CI keeps working unchanged.
 
 ### Vite project integration
 
-An example of **scripts** section in **package.json** is as below.
-
-**concurrently** is used to run the Vite and API mock servers simultaneously, while **cross-env** enables terminal output coloring. Before starting, ensure you run:
+Run Vite and apimock-rs together with **concurrently** (parallel
+processes) and **cross-env** (colored output across platforms):
 
 ```sh
 npm install -D concurrently cross-env
 ```
-
-Edit package.json:
 
 ```json
   "scripts": {
@@ -118,11 +96,34 @@ Edit package.json:
   }
 ```
 
-Run:
-
 ```sh
 npm run dev
 ```
+
+---
+
+## Features / Design Notes
+
+**Read-on-demand, not preloaded.** No response is read at startup —
+each is read from disk only when a matching request arrives, off the
+async runtime's request-handling threads via a dedicated blocking-I/O
+thread pool. Startup time and memory use stay flat regardless of
+dataset size, and behaviour stays stable under repeated requests.
+
+**Middleware, then rules, then the file tree.** Every configured
+middleware script gets first refusal; unhandled requests then go
+through the rule sets in order; anything still unmatched falls back to
+serving a file directly by URL path. Zero-config mode is just that
+fallback path with nothing else configured.
+
+**Body matching uses a dotted-path mini-syntax, not JSONPath.**
+`"customer.tier"` or `"items.0.sku"` — keys joined by `.`, numeric
+segments index arrays. It resembles JSONPath but isn't one; a
+`"$.foo.bar"`-style path will not match anything.
+
+**`apimock validate` and `apimock match-test`** check a config, or
+dry-run a rule match, without starting a server — useful in CI. See
+the [docs](https://apimokka.github.io/apimock-rs/user-guide/).
 
 ---
 
@@ -142,4 +143,4 @@ Please understand that the project has its own direction — while we welcome fe
 
 ## Acknowledgements
 
-Depends on [tokio](https://github.com/tokio-rs/tokio) / [hyper](https://hyper.rs/) / [toml](https://github.com/toml-rs/toml) / [serde](https://serde.rs/) / [serde_json](https://github.com/serde-rs/json) / [json5](https://github.com/callum-oakley/json5-rs) / [console](https://github.com/console-rs/console) / [rhai](https://github.com/rhaiscript/rhai) / [thiserror](https://crates.io/crates/thiserror) / [anyhow](https://crates.io/crates/anyhow). In addition, [mdbook](https://github.com/rust-lang/mdBook) (as to workflows).
+Depends on [tokio](https://github.com/tokio-rs/tokio) / [hyper](https://hyper.rs/) / [hyper-util](https://crates.io/crates/hyper-util) / [http-body-util](https://crates.io/crates/http-body-util) / [rustls](https://github.com/rustls/rustls) / [tokio-rustls](https://github.com/rustls/tokio-rustls) / [rhai](https://github.com/rhaiscript/rhai) / [toml](https://github.com/toml-rs/toml) / [json5](https://github.com/callum-oakley/json5-rs) / [csv](https://github.com/BurntSushi/rust-csv) / [regex](https://github.com/rust-lang/regex) / [globset](https://crates.io/crates/globset) / [ignore](https://crates.io/crates/ignore) / [uuid](https://github.com/uuid-rs/uuid) / [console](https://github.com/console-rs/console) / [indexmap](https://github.com/indexmap-rs/indexmap) / [log](https://github.com/rust-lang/log) / [serde](https://serde.rs/) / [serde_json](https://github.com/serde-rs/json) / [thiserror](https://crates.io/crates/thiserror) / [anyhow](https://crates.io/crates/anyhow) / [tempfile](https://crates.io/crates/tempfile). In addition, [mdbook](https://github.com/rust-lang/mdBook) (as to workflows).
