@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 036, Example configurations
 
-**Governing RFC.** [RFC 036](../../proposed/036-example-configs.md)
+**Governing RFC.** [RFC 036](../../done/036-example-configs.md)
 **Milestone.** M2 (Documentation and examples) → v5.16.0
 **Status.** Inherited from RFC 036 (Proposed)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)

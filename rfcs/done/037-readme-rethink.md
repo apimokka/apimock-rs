@@ -1,6 +1,9 @@
 # RFC 037 — README rethink
 
-**Status.** Proposed
+**Status.** Implemented (v5.16.0). Approved 2026-08-04
+(`.git-exclude/reviewed/037-readme-rethink/REVIEW-001.md`).
+**Amended 2026-08-04, amendment applied** — see § Amendment: the README
+links the docs *root only*.
 **Tracks.** M2 (Documentation and examples). The README is the project's
 highest-traffic document and the crates.io landing page, and it has
 drifted: it cites a version eight releases old, makes an unevidenced
@@ -192,3 +195,97 @@ both need it to stand alone.
 2. **How much of § 5 is design notes versus a feature list?** The project
    rule says features move to the docs and only design notes stay. The
    line is a judgement call the implementer should propose and justify.
+
+---
+
+## Amendment 2026-08-04 — the README links the docs root only
+
+### The problem this closes
+
+`README.md` ships inside the published crate as the crates.io landing
+page. **A published crate is immutable**, so whatever URLs are in the
+README at release time are frozen forever.
+
+The implemented version links two deep pages:
+
+```
+https://apimokka.github.io/apimock-rs/user-guide/
+https://apimokka.github.io/apimock-rs/user-guide/configuration-reference.html
+```
+
+RFC 034's page map abolishes `user-guide/`. So once RFCs 035 and 038
+restructure the site, a published README would point at URLs that no
+longer exist — permanently, in that crate version.
+
+### Decision
+
+**Link the documentation root only** —
+`https://apimokka.github.io/apimock-rs/` — and let the site's own
+navigation carry the reader onward. Drop the deep links.
+
+The root never moves under any restructuring, so the frozen artifact
+stops depending on a mutable URL structure altogether. This holds
+regardless of release ordering, which is why it is adopted independently
+of the sequencing decision below.
+
+Cost: a reader lands at the root rather than directly on the
+configuration reference. Accepted — a small navigation step is worth a
+link that cannot rot.
+
+### What this does *not* fix
+
+A reader following the root link still arrives at whatever the docs
+currently say. Until RFCs 035 and 038 land, that is the pre-034 tree,
+which states `service.strategy` is *"the only value supported today"*
+and documents 5 operators against 49 in code.
+
+This RFC removed an unverifiable performance claim on the principle that
+every claim must be checkable. Pointing a reader at a page asserting four
+shipped strategies do not exist is the same failure at one remove.
+
+**That is why v5.16.0 waits for RFCs 035 and 038** (owner decision,
+2026-08-04). See `ROADMAP.md` § M2.
+
+### Implementation — exactly three edits
+
+The amendment as first written said "drop the deep links" without saying
+what replaces the second one. Resolved 2026-08-04, on escalation:
+
+**1. `README.md:126`** — the inline docs link in § 5:
+
+```diff
+- See the [docs](https://apimokka.github.io/apimock-rs/user-guide/).
++ See the [docs](https://apimokka.github.io/apimock-rs/).
+```
+
+**2. `README.md:134`** — the Configuration Reference bullet. **Remove the
+bullet entirely.** Do not repoint it at
+`reference/apimock-toml-root-settings.html`: that is a page which exists
+today, but pointing a *frozen* artifact at it reintroduces precisely the
+coupling this amendment exists to remove. A deep link that happens to be
+valid at publication is still a deep link.
+
+**3. Preserve the signal, not the link.** Dropping the bullet silently
+loses something real — the configuration reference is the single
+most-consulted page, and a reader benefits from knowing it exists. So the
+root link's sentence carries the mention instead:
+
+```diff
+- For more details, **🧭 check out our [full documentation](…/apimock-rs/)**.
+-
+- - Configuration Reference: 📋 [View all settings here](…/user-guide/configuration-reference.html)
++ For more details — including the complete configuration reference —
++ **🧭 check out our [full documentation](https://apimokka.github.io/apimock-rs/)**.
+```
+
+Net: **one docs URL in the whole README**, the root, which cannot rot.
+The reader still learns a configuration reference exists and reaches it
+through the site's own navigation.
+
+### Scope note
+
+`README.md` has been explicit non-change scope in every task this
+milestone, deliberately. This amendment is executed under its own named
+task and no other — the discipline is the reason the file has stayed
+correct.
+

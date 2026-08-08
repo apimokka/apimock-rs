@@ -14,23 +14,13 @@ rfcs/
 
 ## Proposed
 
-See [ROADMAP.md](../ROADMAP.md) for themes, milestones, release cycle,
-and the rest of the planned portfolio.
+See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
+depends-on, and the rest of the planned portfolio.
 
-### M2 — Documentation and examples → v5.16.0
-
-| ID  | Title | Priority | Depends on | Handoff |
-|-----|-------|----------|------------|---------|
-| 034 | [Documentation information architecture](./proposed/034-documentation-information-architecture.md) | P0 | — | pending M1 |
-| 035 | User guide and configuration reference rewrite | P0 | 034 | not yet written |
-| 036 | [Example configurations](./proposed/036-example-configs.md) | P0 | — | pending M1 |
-| 037 | README rethink | P1 | 034 | not yet written |
-| 038 | Technical reference refresh and document integrity | P1 | 034 | not yet written |
-
-RFC 034 is design-first and gates 035, 037, and 038; RFC 036 is
-independent and runs in parallel. RFCs 035, 037, and 038 are written
-once 034's page map is agreed — drafting them earlier would mean
-inventing a structure twice.
+| ID  | Title |
+|-----|-------|
+| 044 | [Release process: documentation and automation](./proposed/044-release-process-documentation-and-automation.md) |
+| 045 | [Configuration accepted but ignored](./proposed/045-configuration-accepted-but-ignored.md) |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
@@ -73,6 +63,11 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 031 | [CI quality gates](./done/031-ci-quality-gates.md) | v5.15.0 |
 | 032 | [Release and packaging repair](./done/032-release-and-packaging-repair.md) | v5.15.0 |
 | 033 | [Supply-chain gates](./done/033-supply-chain-gates.md) | v5.15.0 |
+| 034 | [Documentation information architecture](./done/034-documentation-information-architecture.md) | v5.16.0 |
+| 035 | [User guide and reference rewrite](./done/035-user-guide-and-reference-rewrite.md) | v5.16.0 |
+| 036 | [Example configurations for new users](./done/036-example-configs.md) | v5.16.0 |
+| 037 | [README rethink](./done/037-readme-rethink.md) | v5.16.0 |
+| 038 | [Technical reference refresh and document integrity](./done/038-technical-reference-and-document-integrity.md) | v5.16.0 |
 
 ## Archive
 
@@ -84,9 +79,9 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 
 ## Adding a new RFC
 
-1. Pick the next free number — **042+**. Numbers 034–041 are reserved
-   by [ROADMAP.md](../ROADMAP.md) for the planned M2 and M3 RFCs.
-   Create `rfcs/proposed/NNN-slug.md`.
+1. Pick the next free number — **046+**. Numbers 039–043 are reserved
+   by [ROADMAP.md](../ROADMAP.md) for the planned M3 RFCs; 044 and 045
+   are already open. Create `rfcs/proposed/NNN-slug.md`.
 2. On shipping, move to `done/`, update Status field, update this index.
 
 See [RFC 000](./done/000-rfc-lifecycle-policy.md) for the full policy.

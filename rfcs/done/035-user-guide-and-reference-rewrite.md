@@ -1,6 +1,6 @@
 # RFC 035 — User guide and reference rewrite
 
-**Status.** Proposed
+**Status.** Implemented (v5.16.0).
 **Tracks.** M2. Executes RFC 034's page map for the reader-facing half of
 the documentation: Getting started, Guides, and Reference.
 **Touches.** `docs/src/` — the Getting started, Guides, and Reference

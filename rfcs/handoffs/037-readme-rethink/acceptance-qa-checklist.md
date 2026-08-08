@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 037
 
-**Governing RFC.** [RFC 037](../../proposed/037-readme-rethink.md)
+**Governing RFC.** [RFC 037](../../done/037-readme-rethink.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 Paste actual output into the review-request package.

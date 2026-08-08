@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 037, README rethink
 
-**Governing RFC.** [RFC 037](../../proposed/037-readme-rethink.md)
+**Governing RFC.** [RFC 037](../../done/037-readme-rethink.md)
 **Milestone.** M2 → **release-bearing**: with RFC 036, defines v5.16.0
 **Status.** Inherited from RFC 037 (Proposed)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)

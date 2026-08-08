@@ -1,6 +1,9 @@
 # RFC 034 — Documentation information architecture
 
-**Status.** Proposed — **design decided 2026-08-04**, see § Decisions.
+**Status.** Implemented (v5.16.0). Design decided 2026-08-04, see
+§ Decisions. This RFC is decisions-only — no page under `docs/src` is
+attributable to it directly; its design shipped embodied in RFCs 035,
+037, and 038's output.
 **Tracks.** M2 (Documentation and examples). The docs have accreted
 page-by-page across 14 minor releases without anyone deciding what the
 whole is supposed to be. Before rewriting the prose, decide the shape.

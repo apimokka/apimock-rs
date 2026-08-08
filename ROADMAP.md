@@ -44,7 +44,7 @@ that earlier RFCs explicitly deferred.
 | Milestone | Theme | Objective | Release |
 |---|---|---|---|
 | **M1** | Pipeline trust | Quality gates exist, run automatically, and pass. The release path — including npm — works end to end. | 5.15.0 |
-| **M2** | Documentation and examples | A reader finds every shipped feature, finds nothing contradicting the code, and can predict a config change's effect before making it. | 5.16.0 (examples + README only; docs ship continuously — see § M2) |
+| **M2** | Documentation and examples | A reader finds every shipped feature, finds nothing contradicting the code, and can predict a config change's effect before making it. | 5.16.0 — cut after all five RFCs land (see § M2) |
 | **M3** | Deferred design | The items RFCs 023 / 024 and open question Q-001 explicitly postponed are resolved. | 5.17.0 |
 
 **Order.** M1 → M2 → M3, sequential. M1 is first because the gates it
@@ -103,7 +103,7 @@ Priority: **P0** blocks the milestone · **P1** planned in the milestone ·
 **Execution order.** 030 → 031 → 033, with 032 running in parallel from
 the start — it shares no code with the others.
 
-### M2 — Documentation and examples → 5.16.0 (partly)
+### M2 — Documentation and examples → 5.16.0
 
 **Restructured 2026-08-04.** M2 is no longer a release-shaped milestone,
 because most of it never reaches a release artifact. Two facts settled
@@ -120,14 +120,42 @@ So M2 splits by artifact rather than by theme:
 
 | | RFCs | Ships how |
 |---|---|---|
-| **Release-bearing** | 036, 037 | Define v5.16.0's content; cut the release when both land |
-| **Continuously published** | 034, 035, 038 | Merge to `main` and go live; no version bump, no release gate |
+| **Release-bearing** | 036, 037 | Define v5.16.0's content |
+| **Continuously published** | 034, 035, 038 | Merge to `main` and go live; no version bump |
+
+**Sequencing corrected 2026-08-04 — v5.16.0 waits for 035 and 038.**
+The split above assumed the two halves were independent. They are not:
+`README.md` is release-bearing and **frozen once published**, and it
+links into the docs, which are continuous and moving. That coupling
+means cutting v5.16.0 before the restructure would publish a
+carefully-fact-checked README whose "learn more" link lands the reader on
+a page still claiming `service.strategy` is *"the only value supported
+today"* and documenting 5 operators against 49 in code.
+
+RFC 037 removed an unverifiable claim on the principle that every claim
+must be checkable. Pointing at a page that contradicts the product is the
+same failure at one remove — so the release waits for the documentation
+to be true.
+
+Two consequences:
+
+- **v5.16.0 is cut after RFCs 035 and 038 land**, not when 036 and 037
+  do. Owner decision, 2026-08-04, taken on output quality over schedule.
+- **RFC 037 is amended** to link the docs *root only*
+  (`apimokka.github.io/apimock-rs/`), which never moves under any
+  restructuring. Adopted regardless of ordering: a frozen artifact should
+  not depend on a mutable URL structure. See RFC 037 § Amendment.
+
+RFC 034 D6 (no redirects) therefore **stands, and stands more firmly** —
+with the README no longer deep-linking, the inbound-link surface it was
+weighing is smaller still.
 
 **Consequence for the release cycle.** The roadmap's "one minor release
-per milestone" rule does not fit M2. v5.16.0 is cut when 036 and 037
-land; the documentation restructure flows alongside without blocking it.
-Adjusting minor-release cadence is the architect's under the 2026-08-02
-delegation — recorded here rather than applied silently.
+per milestone" rule still does not fit M2 mechanically — the docs RFCs
+need no version bump and publish on merge. But per the sequencing
+correction above, v5.16.0 is nonetheless **cut after all five land**,
+because the README's frozen links make the halves interdependent in
+practice even though they are independent in publishing mechanism.
 
 **Consequence for RFC 034.** Its planned `SUMMARY.md` skeleton is
 withdrawn: placeholder pages would go live immediately on merge. RFC 034
@@ -145,11 +173,11 @@ documentation is written once, not twice.
 
 | RFC | Title | Pri | Depends on | State |
 |---|---|---|---|---|
-| 034 | [Documentation information architecture](./rfcs/proposed/034-documentation-information-architecture.md) | P0 | — | **Design decided** (2026-08-04) |
-| 035 | User guide and configuration reference rewrite | P0 | 034 *(map decided — no longer blocking)* | Planned |
-| 036 | [Example configurations](./rfcs/proposed/036-example-configs.md) | P0 | — | Proposed |
-| 037 | [README rethink](./rfcs/proposed/037-readme-rethink.md) | P1 | 034 *(map decided)* | Proposed — **release-bearing** |
-| 038 | Technical reference refresh and document integrity | P1 | 034 *(map decided)* | Planned |
+| 034 | [Documentation information architecture](./rfcs/done/034-documentation-information-architecture.md) | P0 | — | Implemented (v5.16.0) |
+| 035 | [User guide and reference rewrite](./rfcs/done/035-user-guide-and-reference-rewrite.md) | P0 | 034 *(map decided)* | Implemented (v5.16.0) |
+| 036 | [Example configurations](./rfcs/done/036-example-configs.md) | P0 | — | Implemented (v5.16.0) |
+| 037 | [README rethink](./rfcs/done/037-readme-rethink.md) | P1 | 034 *(map decided)* | Implemented (v5.16.0) |
+| 038 | [Technical reference and document integrity](./rfcs/done/038-technical-reference-and-document-integrity.md) | P1 | 034 *(map decided)* | Implemented (v5.16.0) |
 
 RFC 034 was deliberately design-first and produced no prose. **Its
 decisions landed 2026-08-04** — personas, a Diátaxis-based section model,

@@ -1,6 +1,6 @@
 # RFC 038 — Technical reference refresh and document integrity
 
-**Status.** Proposed
+**Status.** Implemented (v5.16.0).
 **Tracks.** M2. Executes RFC 034's page map for the explanatory and
 contributor halves — How it works, Contributing — and clears the
 document-integrity defects found across this milestone.

@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 036
 
-**Governing RFC.** [RFC 036](../../proposed/036-example-configs.md)
+**Governing RFC.** [RFC 036](../../done/036-example-configs.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 Paste actual command output into the review-request package.

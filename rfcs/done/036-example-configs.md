@@ -1,6 +1,6 @@
 # RFC 036 — Example configurations for new users
 
-**Status.** Proposed
+**Status.** Implemented (v5.16.0).
 **Tracks.** M2 (Documentation and examples). The shipped examples are
 placeholders, not examples. They are also the *first* thing a new user
 meets, because `apimock --init` scaffolds from them and the release
