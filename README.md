@@ -123,15 +123,14 @@ segments index arrays. It resembles JSONPath but isn't one; a
 
 **`apimock validate` and `apimock match-test`** check a config, or
 dry-run a rule match, without starting a server — useful in CI. See
-the [docs](https://apimokka.github.io/apimock-rs/user-guide/).
+the [docs](https://apimokka.github.io/apimock-rs/).
 
 ---
 
 ### 📖 Documentation - guides and references
 
-For more details, **🧭 check out our [full documentation](https://apimokka.github.io/apimock-rs/)**.
-
-- Configuration Reference: 📋 [View all settings here](https://apimokka.github.io/apimock-rs/user-guide/configuration-reference.html)
+For more details — including the complete configuration reference —
+**🧭 check out our [full documentation](https://apimokka.github.io/apimock-rs/)**.
 
 ---
 
