@@ -38,13 +38,14 @@ npx apimock
 
 ## For Users
 
-- [**User Guide**](user-guide/)
-
-- [Advanced Topics](advanced-topics/)
+- [**Getting started**](getting-started/) — install and your first mock API, in order
+- [Guides](guides/) — task-indexed how-tos
+- [Reference](reference/) — exhaustive lookup
+- [How it works](how-it-works/) — what apimock does and why
 
 ---
 
-## Contribution
+## Contributing
 
-- [Technical Reference](technical-reference/)
+- [Contributing](contributing/) — build, test, and the RFC process
 - [Source code (GitHub)](https://github.com/apimokka/apimock-rs)

@@ -1,0 +1,120 @@
+# `apimock.toml` root settings
+
+The root config file's four top-level tables. All are optional — an
+empty or missing `apimock.toml` is valid, and falls back to
+zero-config, port-`3001`, serve-`./`-by-path behaviour.
+
+```toml
+[listener]
+ip_address = "127.0.0.1"
+port = 3001
+
+[listener.tls]
+cert = "./cert.pem"
+key = "./key.pem"
+# port = 3002   # omit to serve HTTPS-only on `listener.port`
+
+[log]
+verbose = { header = true, body = true }
+
+[service]
+strategy = "first_match"
+rule_sets = ["apimock-rule-set.toml"]
+middlewares = ["apimock-middleware.rhai"]
+fallback_respond_dir = "."
+
+[file_tree_view]
+show_hidden = false
+builtin_excludes = true
+extra_excludes = ["*.bak"]
+include = []
+respect_gitignore = false
+```
+
+## `[listener]`
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `ip_address` | string | `"127.0.0.1"` | Bind address |
+| `port` | integer | `3001` | Bind port |
+
+`ip_address` accepts any address your OS can bind to, IPv4 or IPv6:
+
+| `ip_address` | Binds to |
+|---|---|
+| `127.0.0.1` / `::1` | Loopback only (the default) |
+| A LAN address, e.g. `192.168.1.10` | That interface |
+| `0.0.0.0` / `::` | Every interface — reachable from outside the machine |
+
+Binding to `0.0.0.0`/`::` or a LAN address exposes the mock server
+beyond localhost — fine on a trusted network, a real exposure on
+anything else.
+
+## `[listener.tls]`
+
+Enables HTTPS. Both `cert` and `key` must point at files that exist —
+checked at startup, not lazily.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `cert` | string | — | Path to the certificate PEM file |
+| `key` | string | — | Path to the private key PEM file |
+| `port` | integer, optional | — | If set, HTTPS listens here and plain HTTP continues on `listener.port`. If omitted, `listener.port` itself becomes HTTPS-only — no plaintext HTTP listener starts at all |
+
+**Relative `cert`/`key` paths resolve against the process's current
+directory, not against `apimock.toml`'s own location** — unlike
+`rule_sets` and `fallback_respond_dir` below, which do resolve
+relative to the config file. Run `apimock` from the directory
+containing the cert/key files, or use absolute paths. See
+[Serve over HTTPS](../guides/serve-over-https.md) for a full working
+example.
+
+## `[log]`
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `verbose.header` | bool | `false` | Log request headers |
+| `verbose.body` | bool | `false` | Log request bodies |
+
+## `[service]`
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `strategy` | string or table | `"first_match"` | Default response strategy — see [Vary the response for one path](../guides/vary-the-response-for-one-path.md) for all five and their syntax |
+| `rule_sets` | array of strings, optional | — | Rule-set files, checked in this order — see [Rule-set schema](./rule-set-schema.md) |
+| `middlewares` | array of strings, optional | — | Rhai middleware files, checked in this order before any rule set — see [Script with Rhai middleware](../guides/script-with-rhai-middleware.md) |
+| `fallback_respond_dir` | string | `"."` | Directory served by URL path when nothing above matches |
+
+Relative `rule_sets` and `fallback_respond_dir` paths resolve against
+`apimock.toml`'s own directory, regardless of the process's current
+directory when `apimock` was started.
+
+## `[file_tree_view]`
+
+**This does not affect what the running server serves over HTTP.** It
+filters the file tree shown by the `Workspace` config-editing API
+(consumed by GUI tooling, and incidentally by `apimock validate`'s
+internal rule/rule-set count) — not the `fallback_respond_dir` request
+path. A file inside `node_modules`, `.git`, or any excluded pattern
+here is still served over HTTP if a client requests its exact path.
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `show_hidden` | bool | `false` | Show dotfiles and dot-directories in the editor's file-tree view |
+| `builtin_excludes` | bool | `true` | Apply the built-in exclude list (below) |
+| `extra_excludes` | array of glob strings | `[]` | Additional excludes, matched against each entry's bare filename (not its full path) |
+| `include` | array of glob strings | `[]` | An allow-list — only applies to files, never to directories |
+| `respect_gitignore` | bool | `false` | Also exclude anything a `.gitignore` (found by walking up from the listed directory, stopping at the first `.git`) would ignore |
+
+**Built-in excludes** (when `builtin_excludes = true`, matched by exact
+bare name): `target`, `node_modules`, `dist`, `build`, `out`,
+`__pycache__`, `.venv`, `vendor`, `.cargo`, `.gradle`, `.idea`,
+`.vscode`. Note `.git` itself is *not* in this list — it's hidden by
+the separate dotfile filter when `show_hidden = false`, but would
+reappear in the editor's view if `show_hidden = true` and `.git` isn't
+added to `extra_excludes` explicitly.
+
+`extra_excludes` and `include` both use standard glob syntax (`*`,
+`?`, `[…]`) via the `globset` crate. Filter order, each one able to
+reject an entry outright: dotfile filter → built-in excludes →
+`extra_excludes` → `.gitignore` → `include` (files only).

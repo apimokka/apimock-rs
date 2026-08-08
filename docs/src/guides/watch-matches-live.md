@@ -1,0 +1,44 @@
+# Watch matches live
+
+**Not currently reachable from the `apimock` CLI, or from anywhere
+else outside custom Rust code.** This page documents that state
+honestly rather than a workflow you can actually follow today.
+
+## What exists
+
+`TraceEmitter` (`crates/apimock-server/src/trace.rs`) is a
+`tokio::sync::broadcast`-based channel that the server can emit a
+match/miss event to on every request, including whether a body was
+captured (subject to a `max_body_bytes` cap). A `TraceTransport` type
+can also expose the channel over a Unix-domain socket or TCP, for an
+external process to subscribe to.
+
+## Why you can't reach it
+
+- **No config surface.** `apimock.toml` has no field that sets
+  `TraceConfig` or a transport. The server always constructs the
+  tracer with a fixed default (`capture_body: false`,
+  `max_body_bytes: 8192`) — nothing in the config file changes that.
+- **The socket/TCP transport is never started.** `TraceTransport`'s
+  accept loop is fully implemented but is not called anywhere in this
+  repository — confirmed by searching every source file. There's no
+  flag or setting that turns it on.
+- **The `Workspace` edit API's trace fields are a stub.** The
+  GUI-facing config-editing surface has `EditValue` variants shaped
+  like they'd toggle trace settings, but their handlers only log a
+  message — they don't write anything back to the config. The comment
+  in the source ("stored in config for persistence") doesn't match
+  what the code actually does.
+- **Nothing in the shipped binary subscribes to the channel either.**
+  The only code anywhere that calls `TraceEmitter::subscribe()` is the
+  trace module's own internal unit tests.
+
+## If you need this now
+
+The channel itself works and is unit-tested — an embedder constructing
+a `Server` directly via the `apimock-server` crate (the way
+[`bench_load.rs`](https://github.com/apimokka/apimock-rs/blob/main/crates/apimock/examples/bench_load.rs)
+constructs one in-process for its own purposes, though that example
+doesn't touch tracing) could call `TraceEmitter::subscribe()` on it
+directly. That's a from-source integration; the shipped CLI doesn't
+expose a way to do this today.

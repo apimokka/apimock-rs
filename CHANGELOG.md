@@ -5,6 +5,108 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.16.0] - 2026-08-04
+
+A documentation and examples release. **No behaviour change, no API
+change** — the library, CLI, and config surface are identical to 5.15.0.
+What changed is what you can find out about them.
+
+### Added
+
+- **Eight runnable example configurations (RFC 036).** Task-named and
+  self-contained — serving JSON resources, matching on headers and body,
+  status codes and errors, varying a response by strategy, simulating a
+  slow backend, Rhai middleware, TLS, and validating in CI. Each has a
+  README with the command to run it and a `curl` with its expected
+  response, and each is verified by an integration test that runs on
+  every `cargo test --workspace`.
+
+  These replace three placeholder files that were mostly commented out
+  and answered `"hej ab"`. They matter beyond the repository: `apimock
+  --init` scaffolds from them and every release archive ships them, so
+  they were the first thing a new user saw. There is now a working
+  middleware example, where before there were none anywhere.
+
+- **A contributor section in the documentation.** How to build and test
+  locally, what the six CI gates catch, and how the RFC process works —
+  none of which was documented anywhere.
+
+### Changed
+
+- **The documentation is restructured and, for the first time in a
+  while, true (RFCs 034, 035, 038).** Five sections replacing the old
+  four, each answering one question: Getting started, Guides, Reference,
+  How it works, Contributing. The previous "Advanced Topics" section —
+  whose charter had become "things that did not fit" — is gone, its
+  contents redistributed.
+
+  Roughly two years of shipped features were undocumented and are now
+  covered: `apimock match-test`, the four non-default rule-evaluation
+  strategies, rule `priority` and `weight`, `structural_contains`,
+  `map_has_key`, the negated operators, and `[file_tree_view]`
+  filtering.
+
+  The operator reference now lists **all 49 operators** — 11 `url_path`,
+  13 header, 25 body — generated from the source enums rather than
+  transcribed. The previous reference documented five.
+
+- **The README links the documentation root only.** It ships frozen
+  inside the published crate as the crates.io landing page, so it no
+  longer depends on a URL structure that can change.
+
+### Fixed
+
+- **The configuration reference stated that four shipped strategies did
+  not exist.** It described `first_match` as *"the only value supported
+  today"*. `uniform_random`, `weighted_random`, `priority`, and
+  `round_robin` have shipped since 5.8.0–5.9.0, along with RFC 025's
+  per-rule-set override.
+
+- **The architecture page described software that has not existed since
+  5.0.0** — `src/config.rs`, `src/server.rs`,
+  `src/core/server/routing.rs`. A contributor following it looked for
+  files that were not there.
+
+- **A duplicate `## [5.4.0]` entry in this changelog.** Both were
+  introduced in the same commit as a paste duplication; the one with
+  accurate line counts and correct chronological position was kept.
+
+- Two dead documentation links, and a flowchart showing `200 OK` for
+  `OPTIONS` where the code returns `204 No Content`.
+
+### Documented honestly rather than fixed
+
+Writing runnable examples and verifying every documented claim against
+code turned up features that do not work the way their names suggest.
+None are fixed in this release — they are **documented as they actually
+behave**, and tracked for a later one:
+
+- **`[file_tree_view]` does not filter what the server serves.** It
+  governs the config editor's browsable view only. A file matching an
+  exclude pattern is still served on an exact URL request.
+- **TLS hot-reload is not reachable from the CLI.** The mechanism exists
+  and is tested, but nothing in the shipped binary exposes it. Restarting
+  the process remains the only way to rotate a certificate.
+- **The live match-trace channel has no configuration or CLI surface.**
+- **`[default].delay_response_milliseconds` has no effect.** The
+  per-rule `respond.delay_response_milliseconds` works correctly.
+- **`respond.headers` is unevenly honoured** — dropped entirely on
+  `status`-bearing responses and on plain-text file responses.
+- **`[guard]` does nothing.** It is a placeholder with no fields.
+
+### Test count
+
+| Crate / target | 5.15.0 | 5.16.0 | Delta |
+|---|---|---|---|
+| apimock (lib) | 22 | 22 | — |
+| apimock integration (`tests/`) | 158 | 158 | — |
+| apimock examples (`tests/examples.rs`) | — | **38** | **+38** |
+| apimock-config | 60 | 60 | — |
+| apimock-routing | 116 | 116 | — |
+| apimock-server | 14 | 14 | — |
+| apimock-config (doctest) | 1 | 1 | — |
+| **Total** | **371** | **409** | **+38** |
+
 ## [5.15.0] - 2026-08-03
 
 A quality and release-infrastructure release. **No user-facing feature
@@ -509,76 +611,6 @@ The total did not grow; the measurement became honest.
   types at the apply boundary.
 - `body_op_name_pub` exported from `apimock-routing::view::build` so `toml_writer`
   can serialise `BodyOperator` values to TOML without importing routing internals.
-
-
-
-## [5.4.0] - 2026-04-27
-
-5.4.0 is a refactor-only release. The behaviour of the library and
-the CLI is byte-identical to 5.3.0; the source tree of
-`apimock-config::workspace` is reorganised so the implementation file
-no longer exceeds 1,800 lines.
-
-### Changed
-
-- **`crates/apimock-config/src/workspace.rs` split into a parent
-  module + 9 sibling files.** The parent file now holds only the
-  `Workspace` struct definition, the `load` / `seed_ids` lifecycle,
-  and the small public accessors (`config`, `root_path`,
-  `list_directory`, plus the `config_relative_dir` /
-  `resolve_relative` helpers used by sibling modules). Every other
-  concern moves to a dedicated file:
-
-  | file | content |
-  | --- | --- |
-  | `workspace/id_index.rs` | `NodeAddress` + `IdIndex` machinery |
-  | `workspace/snapshot.rs` | `Workspace::snapshot()` + per-file view builders |
-  | `workspace/edit.rs` | `Workspace::apply()` + the eight `cmd_*` handlers |
-  | `workspace/edit/id_shift.rs` | `shift_rule_sets_down`, `shift_rules_down`, `reorder_rule_ids` |
-  | `workspace/edit/payload.rs` | `EditCommand` payload → routing-model converters |
-  | `workspace/validate.rs` | `Workspace::validate()` + `respond_node_validation` |
-  | `workspace/save.rs` | `Workspace::save()` + `has_unsaved_changes()` + `atomic_write` |
-  | `workspace/diff.rs` | `compute_diff_summary` + per-rule diff walker |
-  | `workspace/path_helpers.rs` | `file_basename`, `resolve_root` |
-
-  `workspace/tests.rs` is unchanged in content; only its import lines
-  were updated to name `crate::view::*` items explicitly now that
-  `super::*` resolves to the slimmed parent module.
-
-- **Field visibility on `Workspace`** changed from private to
-  `pub(super)` so sibling modules under `workspace/` can read
-  `config`, `root_path`, `ids`, `diagnostics`, and `baseline_files`
-  directly. The struct itself remains `pub`; nothing changes for
-  external consumers.
-
-- **`apimock_config::toml_writer::rule_table`** stays at `pub(crate)`
-  (already the case in 5.3.0). No change to the `toml_writer`
-  surface.
-
-- **One dead helper removed**: `routing_to_config` was marked
-  `#[allow(dead_code)]` in 5.3.0 with no callers; deleted.
-
-### Why this refactor
-
-A single 1,847-line implementation file made navigation and code
-review increasingly costly. Splitting along responsibility lines —
-*identity*, *reading*, *mutating*, *persisting*, *validating* — keeps
-each file focused on one concern and lets readers jump to the right
-file by name. Per-module `//!` docs explain the why for each
-grouping.
-
-### No behavioural change
-
-- `cargo test --workspace --lib`: 54/54 pass (same as 5.3.0).
-- `cargo check --release`: clean.
-- `cargo check --benches --examples`: clean.
-- `cargo doc --no-deps`: clean.
-- Public API surface: identical. The only signature-level change is
-  that internal helper methods on `Workspace` (`collect_diagnostics`,
-  `shift_rule_sets_down`, `shift_rules_down`, `reorder_rule_ids`,
-  `compute_diff_summary`) now carry `pub(super)` visibility instead
-  of plain private. They remain unreachable from outside the
-  workspace module.
 
 ## [5.7.0] - 2026-04-28
 
