@@ -1,6 +1,8 @@
 # RFC 044 — Release process: documentation and automation
 
-**Status.** Proposed — design accepted by the project owner 2026-08-02.
+**Status.** Proposed — design accepted by the project owner 2026-08-02;
+**design amended and re-accepted 2026-08-03** (trigger correction,
+draft-first flow, reprioritisation — see § Amendment).
 Stays in `proposed/` per the 4-folder lifecycle ([RFC 000](../done/000-rfc-lifecycle-policy.md));
 implementation is sequenced after v5.15.0 ships (see § Sequencing).
 **Tracks.** Release pipeline. The release process is undocumented, its
@@ -40,13 +42,20 @@ creates a Release, so a human must — via the web UI or `gh release
 create`. That is a legitimate design, but it is an *implicit* one: the
 only way to discover it is to notice that no workflow does it.
 
-### 3. crates.io publishing does not exist — and its script was silently broken
+### 3. crates.io publishing is not automated — and its script was silently broken
 
 This is the largest gap, and it is invisible.
 
 **Nothing publishes to crates.io.** No workflow step, no tracked script.
 Yet `cargo install apimock` is advertised in the README and a docs.rs
 badge sits at the top of it.
+
+*Clarified 2026-08-03:* crates.io itself is **current** — all four
+crates are published through 5.14.0. So the channel is not stale; the
+publishing is being done by hand. That makes this a resilience gap
+rather than a live breakage: a working procedure that exists only in the
+maintainer's head, with the four-crate ordering constraint (§ 5) as its
+sharpest edge and no script left to encode it.
 
 A script existed once (`cargo-publish.sh`, added in `751843c`, removed
 incidentally in `1898f9f`):
@@ -79,7 +88,29 @@ Two defects, both worth recording:
   and the loop continues, potentially publishing a dependent crate
   against an index entry that never landed.
 
-### 4. Ordering is a real constraint, unlike npm
+### 4. The Release is publicly visible before it has any assets
+
+Added 2026-08-03. This is a live, user-visible defect, not a process gap.
+
+`release-executable.yaml` reacts to a Release that a human has already
+created — and, today, already published. Only then does `build` start,
+as a five-target matrix. Each target compiles and then runs
+`gh release upload` for its own asset
+(`release-executable.yaml:223`).
+
+So the sequence a visitor sees is:
+
+1. Release appears, **zero assets**.
+2. Assets trickle in one at a time over several minutes as targets
+   finish.
+3. Release is finally complete.
+
+Anyone landing on the Release page during step 1 or 2 sees an
+incomplete release. Nothing in the current design prevents this, and no
+amount of documentation fixes it — only CI owning Release *creation*
+does, by building the artifact before it is visible.
+
+### 5. Ordering is a real constraint, unlike npm
 
 The four crates must be published in dependency order —
 `apimock-routing` → `apimock-config` → `apimock-server` → `apimock` —
@@ -145,6 +176,151 @@ a human is already paying attention.
 
 Option A is not recommended at any scale this project operates at.
 
+---
+
+## Amendment — 2026-08-03
+
+Two corrections to the design above, both accepted by the project owner.
+The recommendation (B) is unchanged; what changes is the mechanism that
+makes it work, and the priority order of this RFC's three parts.
+
+### A1 — Option B does not work on the current trigger
+
+`release-executable.yaml` fires on `release: types: [created]`. GitHub
+documents `created` as firing when **a draft is saved**, not only when a
+release is published.
+
+So under today's wiring, saving a draft would start the entire chain
+including `npm publish` — the draft would stage nothing, and Option B as
+originally written is unimplementable.
+
+**Correction: the publish jobs must trigger on `release: published`.**
+`published` unambiguously means the release went live, which is exactly
+the semantics Option B needs. `github.ref_name` remains the tag under
+either event, so nothing else in the workflow changes.
+
+This is a one-line fix, but without it the recommended design silently
+degrades into Option A.
+
+*Verify the `created`-on-draft behaviour against current GitHub
+documentation before implementing — it was not confirmable from the
+development environment where this amendment was written. If it turns
+out `created` does not fire on draft save, `published` remains the
+better trigger anyway, for being unambiguous.*
+
+### A2 — CI should create the Release, and this was underrated
+
+The original RFC ranked Release-creation automation as the least
+valuable of its three parts, on the reasoning that it "saves one
+`gh release create` per release". That reasoning was wrong on both
+counts.
+
+**On value:** it fixes Motivation § 4 — the Release being publicly
+visible with no assets while a five-target matrix builds. Documentation
+cannot fix that; only building the artifact before it is visible can.
+
+**On cost:** `release-executable.yaml:223` already runs
+`gh release upload`. The `gh` CLI is already present and already
+authenticated in this workflow. `gh release create` is the same tool —
+no new action, no new dependency.
+
+### A3 — the amended flow
+
+```
+git push origin X.Y.Z              ← tag push: the only human trigger
+        │
+        ├─▶ version-consistency-check ─┐
+        └─▶ quality-gate ──────────────┴─▶ create DRAFT Release
+                                              (notes from CHANGELOG)
+                                                    │
+                          build matrix ─────────────┴─▶ upload all assets
+                                                    │
+        [ human reviews a complete draft, clicks Publish ]
+                                                    │
+                              release: published ───┴─▶ npm publish
+                                                       crates.io publish
+```
+
+Properties this has that manual creation does not:
+
+- The Release is visible only once complete.
+- Release notes are derived from the CHANGELOG section for that version
+  rather than retyped.
+- Tag and Release cannot disagree — both derive from one push.
+- The human approves a finished artifact instead of approving before
+  anything exists.
+
+The tag push remains the only human trigger, and it creates nothing
+public on its own: a draft is not visible, and no publish happens until
+the Publish click.
+
+### A4 — reprioritisation
+
+| | Original | Amended | Why |
+|---|---|---|---|
+| crates.io automation | 1st | **1st** | Unchanged. Zero automation, ordered four-crate publish, script broken then deleted |
+| Release creation + draft-first | 3rd | **2nd** | Fixes a live user-visible defect (Motivation § 4), and is nearly free |
+| Runbook | 2nd | **3rd** | Still required, but a shorter document once the process is mostly CI |
+
+The runbook does not disappear — a human still pushes a tag, reviews a
+draft, and clicks Publish, and the recovery paths still need writing
+down. It simply has less to describe once CI owns the mechanical parts.
+
+### A5 — `cargo publish --workspace` does the hard part already
+
+Established during the v5.15.0 release, 2026-08-04, on cargo 1.97.1.
+
+This RFC's crates.io section was written as though ordered multi-crate
+publishing were logic to be built. It is not. A single command does it:
+
+```sh
+cargo publish --workspace
+```
+
+Observed behaviour in the real 5.15.0 publish:
+
+```
+Uploaded apimock-routing v5.15.0 to registry `crates-io`
+note: waiting for apimock-routing v5.15.0 to be available at registry `crates-io`.
+      3 remaining crates to be published
+Published apimock-routing v5.15.0 at registry `crates-io`
+Uploading apimock-config v5.15.0 …
+```
+
+Cargo resolved the dependency order itself, and **waited for each crate
+to be available on the index before publishing the next** — the exact
+step the deleted `cargo-publish.sh` never did and the one a hand-rolled
+loop is most likely to get wrong. Exit 0, no partial state.
+
+`--dry-run` composes with `--workspace`, so the whole set can be verified
+without uploading — a genuinely useful pre-flight the original design did
+not contemplate.
+
+**Consequences for this RFC:**
+
+- The crates.io automation shrinks from a script with ordering,
+  propagation-waiting, and idempotency logic to approximately one
+  workflow step. Three of the five original requirements are satisfied by
+  cargo, not by us.
+- What remains ours: deciding whether it runs on `release: published`
+  alongside the npm jobs, and confirming the credential path (still
+  unverified — see Unresolved question 2).
+- **Reprioritise again.** With the work this small, the runbook is the
+  larger remaining gap:
+
+  | | A4 (2026-08-03) | A5 (2026-08-04) |
+  |---|---|---|
+  | Release creation + draft-first | 2nd | **1st** — fixes a live user-visible defect |
+  | Runbook | 3rd | **2nd** — the process still lives only in the maintainer's head |
+  | crates.io automation | 1st | **3rd** — one command, already proven in production |
+
+This is the second reprioritisation of the same three items. Both moves
+came from establishing a fact rather than reasoning further — the
+incomplete-release window in A2, and cargo's actual behaviour here. Worth
+noting as a pattern: this RFC's rankings have been wrong twice, in both
+cases because I estimated effort from a description rather than from
+running the thing.
+
 ## Reference-level explanation
 
 ### Release procedure documentation
@@ -164,7 +340,13 @@ a `RELEASING.md` — but it must be discoverable from the repository root.
 
 ### crates.io publishing
 
-Restored as a workflow job, not a loose script. Requirements:
+**Superseded 2026-08-04 — see § Amendment A5.** Cargo does the ordering
+and the index waiting itself. The requirements below were written before
+that was established and overstate the work; they are kept because the
+reasoning about *what could go wrong* remains the acceptance bar, even
+though cargo now satisfies most of it.
+
+Original requirements:
 
 - Publish in strict dependency order.
 - **Fail the whole job on any single crate's failure.** The deleted
@@ -246,16 +428,26 @@ which is the distinction this RFC's confirmation point formalises.
 
 ## Unresolved questions
 
-1. **Which trigger option (A–D)?** Recommendation is B; owner decision,
-   since it determines how much ceremony stands between intent and
-   publication.
+1. ~~**Which trigger option (A–D)?**~~ ✅ **Resolved 2026-08-03: B**, on
+   the amended mechanism in § Amendment A1/A3 — tag push, CI-created
+   draft, human Publish, publish jobs on `release: published`.
 2. **Are crates.io trusted-publishing credentials configured?** Not
    verifiable from the repository. Must be confirmed before
    implementation, or the first run fails for an unrelated reason.
-3. **Has anything been published to crates.io since 5.1.1?** If the
-   façade has been missing from crates.io since then, `cargo install
-   apimock` may be installing a stale version, and that is a user-facing
-   problem this RFC should address explicitly rather than incidentally.
+   Note that crates.io publishing has evidently been done *somehow*
+   through 5.14.0 (see item 3), so some credential path exists — whether
+   it is trusted publishing or a personal token is unknown.
+3. ~~**Has anything been published to crates.io since 5.1.1?**~~
+   ✅ **Resolved 2026-08-03: yes, it is current.** The sparse index
+   shows all four crates published through **5.14.0** (2026-08-01). The
+   speculation that `cargo install apimock` might be serving a stale
+   version was wrong.
+
+   This weakens this RFC's urgency but not its conclusion: the manual
+   crates.io process exists and works, but lives only in the
+   maintainer's head — undocumented, unautomated, and with its only
+   script broken and then deleted. The case is "a working process with
+   no written form or safety net", not "a broken channel".
 4. **Does the runbook live in `CONTRIBUTING.md`, `RELEASING.md`, or
    `docs/`?** Interacts with RFC 034's information architecture if the
    answer is `docs/`.

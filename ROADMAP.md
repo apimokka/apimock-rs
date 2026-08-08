@@ -44,7 +44,7 @@ that earlier RFCs explicitly deferred.
 | Milestone | Theme | Objective | Release |
 |---|---|---|---|
 | **M1** | Pipeline trust | Quality gates exist, run automatically, and pass. The release path — including npm — works end to end. | 5.15.0 |
-| **M2** | Truthful docs | A user reading `docs/src/` finds every shipped feature, and finds nothing that contradicts the code. | 5.16.0 |
+| **M2** | Documentation and examples | A reader finds every shipped feature, finds nothing contradicting the code, and can predict a config change's effect before making it. | 5.16.0 (examples + README only; docs ship continuously — see § M2) |
 | **M3** | Deferred design | The items RFCs 023 / 024 and open question Q-001 explicitly postponed are resolved. | 5.17.0 |
 
 **Order.** M1 → M2 → M3, sequential. M1 is first because the gates it
@@ -64,9 +64,16 @@ once that window is agreed.
 
 ## Release cycle
 
-- **One minor release per milestone.** 5.15.0, 5.16.0, 5.17.0. This
-  continues the batching pattern used across v5.8.0–v5.14.0 (2–3 RFCs
-  per minor release).
+- **One minor release per milestone**, *where the milestone is
+  release-shaped*. M1 → 5.15.0 followed this, continuing the batching
+  pattern of v5.8.0–v5.14.0.
+
+  **Amended 2026-08-04:** the rule does not fit a milestone whose work
+  does not reach a release artifact. M2 is mostly documentation, and
+  `docs.yaml` publishes the site on every push to `main` rather than on
+  release — so those RFCs ship continuously and need no version. A
+  release is cut for what changes the *artifact*, not for what completes
+  a milestone. See § M2.
 - **Patch releases** are reserved for defect fixes against a shipped
   minor. They are not used to land RFC work.
 - **Release tags** are `X.Y.Z` with no `v` prefix, matching all existing
@@ -96,7 +103,37 @@ Priority: **P0** blocks the milestone · **P1** planned in the milestone ·
 **Execution order.** 030 → 031 → 033, with 032 running in parallel from
 the start — it shares no code with the others.
 
-### M2 — Documentation and examples → 5.16.0
+### M2 — Documentation and examples → 5.16.0 (partly)
+
+**Restructured 2026-08-04.** M2 is no longer a release-shaped milestone,
+because most of it never reaches a release artifact. Two facts settled
+this:
+
+- `.github/workflows/docs.yaml` deploys the docs site on **every push to
+  `main`**, not on release. Documentation is already decoupled from the
+  release cycle.
+- Only two of M2's five RFCs touch anything published in a release:
+  RFC 036 (`examples/config/` is packaged into the crate) and RFC 037
+  (`readme = "../../README.md"` — it is the crates.io landing page).
+
+So M2 splits by artifact rather than by theme:
+
+| | RFCs | Ships how |
+|---|---|---|
+| **Release-bearing** | 036, 037 | Define v5.16.0's content; cut the release when both land |
+| **Continuously published** | 034, 035, 038 | Merge to `main` and go live; no version bump, no release gate |
+
+**Consequence for the release cycle.** The roadmap's "one minor release
+per milestone" rule does not fit M2. v5.16.0 is cut when 036 and 037
+land; the documentation restructure flows alongside without blocking it.
+Adjusting minor-release cadence is the architect's under the 2026-08-02
+delegation — recorded here rather than applied silently.
+
+**Consequence for RFC 034.** Its planned `SUMMARY.md` skeleton is
+withdrawn: placeholder pages would go live immediately on merge. RFC 034
+is now decisions-only, and 035/037/038 each land complete sections so
+`main` is coherent at every commit. With the page map decided, those
+three no longer gate each other and can run in parallel.
 
 **Objective revised 2026-08-02 by the project owner.** M2 was originally
 scoped as a correctness catch-up — "make the docs true". The owner
@@ -108,16 +145,17 @@ documentation is written once, not twice.
 
 | RFC | Title | Pri | Depends on | State |
 |---|---|---|---|---|
-| 034 | [Documentation information architecture](./rfcs/proposed/034-documentation-information-architecture.md) | P0 | — | Proposed |
-| 035 | User guide and configuration reference rewrite | P0 | 034 | Planned |
+| 034 | [Documentation information architecture](./rfcs/proposed/034-documentation-information-architecture.md) | P0 | — | **Design decided** (2026-08-04) |
+| 035 | User guide and configuration reference rewrite | P0 | 034 *(map decided — no longer blocking)* | Planned |
 | 036 | [Example configurations](./rfcs/proposed/036-example-configs.md) | P0 | — | Proposed |
-| 037 | README rethink | P1 | 034 | Planned |
-| 038 | Technical reference refresh and document integrity | P1 | 034 | Planned |
+| 037 | [README rethink](./rfcs/proposed/037-readme-rethink.md) | P1 | 034 *(map decided)* | Proposed — **release-bearing** |
+| 038 | Technical reference refresh and document integrity | P1 | 034 *(map decided)* | Planned |
 
-RFC 034 is deliberately design-first and produces no prose: it decides
-the personas, the navigation, and what belongs where, because 035, 037,
-and 038 all inherit those decisions. Writing them before 034 settles
-would mean inventing their structure twice.
+RFC 034 was deliberately design-first and produced no prose. **Its
+decisions landed 2026-08-04** — personas, a Diátaxis-based section model,
+a placement rule, a page map with dispositions for all 38 current pages,
+and a home for the predictability requirement. 035, 037, and 038 inherit
+those decisions and, with the map settled, **run in parallel**.
 
 RFC 035 absorbs the original catch-up scope — the operator tables (5
 documented against 11 `RuleOp` / 13 `HeaderOperator` / 25 `BodyOperator`
@@ -136,8 +174,31 @@ still describes the pre-5.0.0 single-crate layout, and
 `docs/src/technical-reference/workspace.md`, which calls `apimock` the
 workspace-root crate (it moved to `crates/apimock/` in 5.1.1). It also
 carries the document-integrity items: the duplicate `## [5.4.0]` entries
-in `CHANGELOG.md` (lines 417 and 714) and the broken `docs/CONFIGURE.md`
-link in `vision-and-goals.md`.
+in `CHANGELOG.md` (lines 417 and 714), the broken `docs/CONFIGURE.md`
+link in `vision-and-goals.md`, and the broken
+`./getting-started/rule-based-routing.md` link in `user-guide/faq.md`
+(the files are `-1.md` and `-2.md`).
+
+**Scope added 2026-08-03 — the contributor path.** A survey found
+`docs/` carries **no** local development procedure, no build-from-source
+instructions, no test-running guide, and no `cargo install` path, despite
+a crates.io badge in the README. The only contributor-facing technical
+content anywhere is the six gate commands RFCs 031/033 added to
+`.github/CONTRIBUTING.md`, unlinked from `docs/`. RFC 034 decides
+*where* this lives (see its § 1); **RFC 038 owns writing it.** Without
+this assignment the persona the project's own guidelines name third
+would remain unserved by M2 — a gap in the milestone as I originally
+scoped it.
+
+**Scope added 2026-08-03 — RFC 037 (README).** Beyond the rethink, four
+specific defects: two stale "4.7.0" references (`README.md:97`, `:100`)
+that are meaningless to a 5.15.0 reader; an unverified "validated with
+k6 load testing" performance claim (`README.md:52`, carried as RISK-004
+since the v5.14.0 handoff with no evidence ever produced) — either
+reproduce it or soften it; the absent "Features / Design Notes" section
+that the project's own README structure rule specifies as section 5; and
+an Acknowledgements list omitting `rustls`, `tokio-rustls`, `csv`,
+`regex`, `globset`, `ignore`, `uuid`, and `indexmap`.
 
 ### M3 — Deferred design → 5.17.0
 
@@ -148,6 +209,7 @@ link in `vision-and-goals.md`.
 | 041 | Shrink large error variants (`result_large_err`) | P2 | — | Planned |
 | 042 | `sync_from_disk` incremental reconciliation | P2 | — | Planned |
 | 043 | Module split: `workspace/edit.rs`, `server/trace.rs` | P2 | — | Planned |
+| 045 | [Configuration accepted but ignored](./rfcs/proposed/045-configuration-accepted-but-ignored.md) | P1 | — | Proposed |
 
 RFC 039 closes open question Q-001 by turning DEC-014's additive-only
 promise into a build-time check. RFC 040 resolves RFC 023's Unresolved
@@ -273,3 +335,20 @@ stays discoverable.
 ### 5.5.0 round-trip test fixtures used non-existent JSONPath syntax
 
 **Status:** ✅ **Resolved in 5.7.0.** The 5.5.0 round-trip tests in `apimock_config::toml_writer::tests` and `apimock_config::workspace::tests` used `body.json` keys like `"$.user.name"` and `"$.action"` — syntax that *looks* like canonical JSONPath but isn't supported by the routing crate's dotted-path mini-syntax (`apimock_routing::util::json::json_value_by_jsonpath`). The tests still passed because they only verified round-trip preservation, never calling `is_match`. 5.7.0 rewrote the fixtures to use the correct dotted form (`"user.name"`, `"action"`), strengthened the rustdoc on `apimock_routing::util::json`, `apimock_routing::rule_set::rule::when::request::body::Body`, and `apimock_config::toml_writer::request_table` with explicit "not canonical JSONPath / RFC 9535" warnings, expanded the `apimock` example TOML's `body.json` block with realistic dotted-path examples, and added a JSONPath-mismatch note to `docs/src/advanced-topics/rule-set-config-structure/rules/when.md`.
+
+---
+
+## Findings awaiting disposition
+
+Raised by RFC 036 (2026-08-04) while writing runnable examples. Recorded
+here so they are not lost between milestones.
+
+| Finding | Disposition |
+|---|---|
+| `respond.headers` dropped on `status` responses; `content-type` overwritten on `text` | **RFC 045** |
+| `[default].delay_response_milliseconds` parses, validates, logs, does nothing | **RFC 045** |
+| `apimock validate` passes on inert configuration | **RFC 045** goal 4 — the finding underneath both |
+| Bare relative `--config apimock.toml` fails to resolve; `./apimock.toml` works | Defect-fix task, no RFC. Narrow, unambiguous |
+| `Guard` is a zero-field struct with a `// todo:` comment, published in the rule-set schema | **Owner decision** — implement, remove, or document as reserved |
+| Trace channel has no config or CLI surface | Not a defect. RFC 035 documents it as library-only |
+| Pre-existing ~1-in-8 port race in `dynamic_port()` (`tests/util/test_setup.rs`) | Unassigned. A fix was attempted during RFC 036, regressed every IPv6 bound-address test, and was reverted in full — see that review |
