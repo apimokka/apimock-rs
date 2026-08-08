@@ -1,0 +1,11 @@
+# Simulate a slow or flaky backend with delay_response_milliseconds -
+# useful for exercising a client's timeout/retry/loading-state
+# handling against a predictable, artificial delay.
+
+[listener]
+ip_address = "127.0.0.1"
+port = 3001
+
+[service]
+rule_sets = ["apimock-rule-set.toml"]
+fallback_respond_dir = "."

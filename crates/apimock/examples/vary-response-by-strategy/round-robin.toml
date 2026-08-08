@@ -1,0 +1,23 @@
+# RoundRobin: cycles through matching rules in order, one per request
+# - deterministic, and doesn't need `weight` or `priority` on the
+# rules at all.
+#
+# `strategy` must be a root-level key, written before any table header
+# ([prefix], [[rules]], ...) - once a table header opens, a bare
+# `key = value` line belongs to that table instead.
+strategy = "round_robin"
+
+[prefix]
+url_path = "/round-robin"
+
+[[rules]]
+when.request.url_path = ""
+respond.text = "server-a"
+
+[[rules]]
+when.request.url_path = ""
+respond.text = "server-b"
+
+[[rules]]
+when.request.url_path = ""
+respond.text = "server-c"

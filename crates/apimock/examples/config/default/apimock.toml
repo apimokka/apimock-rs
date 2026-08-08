@@ -1,18 +1,25 @@
+# apimock quickstart config.
+#
+# `apimock --init` scaffolds a fresh project from files shaped like
+# this one, and this exact set ships in every release archive. It is
+# deliberately small - a starting point to keep, not a feature tour.
+#
+# Sibling directories under crates/apimock/examples/ each demonstrate
+# one feature end to end: JSON/CSV file responses, header and body
+# matching, response strategies, a slow-backend simulation, a fuller
+# middleware script, TLS, and `apimock validate` / `match-test`.
+#
 # Users Guide:
 # https://apimokka.github.io/apimock-rs/
 
 [listener]
 ip_address = "127.0.0.1"
 port = 3001
-# [listener.tls]
-# cert = "./cert.pem"
-# key = "./key.pem"
-# # port = 3002
 
 [log]
 verbose = { header = true, body = true }
 
 [service]
 rule_sets = ["apimock-rule-set.toml"]
-# middlewares = []
+middlewares = ["apimock-middleware.rhai"]
 fallback_respond_dir = "."

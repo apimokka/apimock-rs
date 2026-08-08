@@ -1,0 +1,19 @@
+# Priority: among matching rules, the highest `priority` wins,
+# deterministically - useful for "this specific case overrides the
+# general case" without reordering rules.
+
+[prefix]
+url_path = "/priority"
+
+[strategy]
+priority = { tiebreaker = "first_match" }
+
+[[rules]]
+when.request.url_path = ""
+respond.text = "general response"
+priority = 1
+
+[[rules]]
+when.request.url_path = ""
+respond.text = "special response (higher priority)"
+priority = 10

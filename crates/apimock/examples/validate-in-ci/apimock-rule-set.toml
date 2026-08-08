@@ -1,0 +1,12 @@
+[[rules]]
+when.request.method = "POST"
+when.request.url_path = "/orders"
+[rules.when.request.body.json]
+"customer.tier" = { op = "equal", value = "gold" }
+[rules.respond]
+text = "VIP customer order"
+
+[[rules]]
+when.request.method = "POST"
+when.request.url_path = "/orders"
+respond = { text = "order created", status = 201 }

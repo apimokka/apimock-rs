@@ -1,0 +1,11 @@
+# Three rule sets, three strategies, each scoped to its own prefix so
+# they can share one server. `strategy` set inside a rule-set file
+# overrides `service.strategy` for that rule set only (RFC 025).
+
+[listener]
+ip_address = "127.0.0.1"
+port = 3001
+
+[service]
+rule_sets = ["priority.toml", "weighted.toml", "round-robin.toml"]
+fallback_respond_dir = "."

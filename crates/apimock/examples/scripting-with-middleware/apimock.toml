@@ -1,0 +1,12 @@
+# Middleware runs before rule sets and can serve a response itself
+# (three ways: a file, literal JSON, or literal text) or fall through
+# to `apimock-rule-set.toml`.
+
+[listener]
+ip_address = "127.0.0.1"
+port = 3001
+
+[service]
+middlewares = ["apimock-middleware.rhai"]
+rule_sets = ["apimock-rule-set.toml"]
+fallback_respond_dir = "."

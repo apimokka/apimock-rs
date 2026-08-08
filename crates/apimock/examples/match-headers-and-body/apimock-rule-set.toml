@@ -1,0 +1,61 @@
+# POST /orders, matched by header presence and by the request body's
+# content - most specific rule first, since the default `first_match`
+# strategy takes the first rule that matches.
+#
+# Body paths use the routing crate's dotted-path mini-syntax (object
+# keys joined by ".", numeric segments index arrays) - NOT canonical
+# JSONPath. Do not write "$.a.b.c".
+
+# 1. Missing API key -> reject before looking at the body at all.
+[[rules]]
+when.request.method = "POST"
+when.request.url_path = "/orders"
+[rules.when.request.headers]
+x-api-key = { op = "absent" }
+[rules.respond]
+text = "missing x-api-key header"
+status = 401
+
+# 2. VIP customers, identified by a nested body field.
+[[rules]]
+when.request.method = "POST"
+when.request.url_path = "/orders"
+[rules.when.request.headers]
+x-api-key = { op = "exists" }
+[rules.when.request.body.json]
+"customer.tier" = { op = "equal", value = "gold" }
+[rules.respond]
+text = "VIP customer order"
+
+# 3. Orders containing a specific product - "items.0.sku" indexes the
+# first element of the "items" array.
+[[rules]]
+when.request.method = "POST"
+when.request.url_path = "/orders"
+[rules.when.request.headers]
+x-api-key = { op = "exists" }
+[rules.when.request.body.json]
+"items.0.sku" = { op = "contains", value = "WIDGET" }
+[rules.respond]
+text = "widget order"
+
+# 4. High-value orders - numeric comparison on a top-level field.
+[[rules]]
+when.request.method = "POST"
+when.request.url_path = "/orders"
+[rules.when.request.headers]
+x-api-key = { op = "exists" }
+[rules.when.request.body.json]
+total = { op = "greater_than", value = "100" }
+[rules.respond]
+text = "high-value order, manual review required"
+
+# 5. Fallback: authenticated, nothing more specific matched.
+[[rules]]
+when.request.method = "POST"
+when.request.url_path = "/orders"
+[rules.when.request.headers]
+x-api-key = { op = "exists" }
+[rules.respond]
+text = "order created"
+status = 201

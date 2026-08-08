@@ -1,0 +1,11 @@
+# Drop JSON files into a folder and your API immediately exists - no
+# rules, no rule set, nothing to author. Every file under `data/` is
+# reachable at the URL path matching its location; the file extension
+# is optional and JSON/JSON5/CSV are all handled automatically.
+
+[listener]
+ip_address = "127.0.0.1"
+port = 3001
+
+[service]
+fallback_respond_dir = "data"

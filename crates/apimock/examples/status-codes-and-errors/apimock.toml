@@ -1,0 +1,12 @@
+# Common REST error responses - a status code, optionally with a
+# message body. Matched by URL path only, to keep the focus on
+# `respond.status`; see ../match-headers-and-body/ for conditional
+# matching.
+
+[listener]
+ip_address = "127.0.0.1"
+port = 3001
+
+[service]
+rule_sets = ["apimock-rule-set.toml"]
+fallback_respond_dir = "."

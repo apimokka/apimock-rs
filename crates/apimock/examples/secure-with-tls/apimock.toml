@@ -1,0 +1,19 @@
+# TLS, HTTPS-only: with `listener.tls.port` omitted, the single port
+# serves HTTPS only (no plaintext HTTP fallback).
+#
+# cert.pem / key.pem here are a throwaway self-signed test certificate
+# (CN=test, valid 2026-2036) - the same one this project's own test
+# suite uses. Never use a checked-in cert/key for anything but local
+# mocking.
+
+[listener]
+ip_address = "127.0.0.1"
+port = 3443
+
+[listener.tls]
+cert = "./cert.pem"
+key = "./key.pem"
+
+[service]
+rule_sets = ["apimock-rule-set.toml"]
+fallback_respond_dir = "."

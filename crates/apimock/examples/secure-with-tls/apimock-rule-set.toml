@@ -1,0 +1,3 @@
+[[rules]]
+when.request.url_path = "/health"
+respond.text = "ok, over https"

@@ -1,0 +1,26 @@
+# WeightedRandom: picks among matching rules randomly, weighted by
+# each rule's `weight` (default 1 if omitted). Unseeded here, so
+# responses genuinely vary between requests, roughly 3:1 toward
+# "variant-a" over "variant-b".
+#
+# `seed` (omitted here) makes the pick fully deterministic - the same
+# request always returns the same response - which is useful for
+# reproducible tests, but defeats the point of a demo meant to be
+# watched varying. See the verification harness for how this set is
+# tested despite being genuinely random.
+
+[prefix]
+url_path = "/weighted"
+
+[strategy]
+weighted_random = {}
+
+[[rules]]
+when.request.url_path = ""
+respond.text = "variant-a"
+weight = 3
+
+[[rules]]
+when.request.url_path = ""
+respond.text = "variant-b"
+weight = 1

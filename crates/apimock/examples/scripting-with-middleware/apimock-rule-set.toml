@@ -1,0 +1,6 @@
+# Reached only when the middleware declines - i.e. for any /orders
+# request that isn't the rush-priority case it handles itself.
+
+[[rules]]
+when.request.url_path = "/orders"
+respond.text = "standard: order queued normally"

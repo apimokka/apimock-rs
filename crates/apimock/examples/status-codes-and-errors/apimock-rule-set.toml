@@ -1,0 +1,34 @@
+[prefix]
+url_path = "/widgets"
+
+[[rules]]
+when.request.url_path = { value = "/create", op = "ends_with" }
+when.request.method = "POST"
+respond = { text = "missing field: name", status = 400 }
+
+[[rules]]
+when.request.url_path = "/private"
+respond = { text = "authentication required", status = 401 }
+
+[[rules]]
+when.request.url_path = { value = "/1", op = "ends_with" }
+when.request.method = "DELETE"
+respond = { text = "insufficient permissions", status = 403 }
+
+[[rules]]
+when.request.url_path = "/999"
+respond = { text = "widget not found", status = 404 }
+
+[[rules]]
+when.request.url_path = "/rate-limited"
+respond = { text = "rate limit exceeded, retry after 30s", status = 429 }
+
+[[rules]]
+when.request.url_path = "/boom"
+respond = { text = "internal error, try again later", status = 500 }
+
+# status alone, no body - a 204-style "accepted, nothing to say" response.
+[[rules]]
+when.request.url_path = "/2"
+when.request.method = "DELETE"
+respond.status = 204
