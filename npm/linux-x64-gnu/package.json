@@ -1,6 +1,6 @@
 {
   "name": "@apimock-rs/bin-linux-x64-gnu",
-  "version": "5.15.0",
+  "version": "5.16.0",
   "os": [
     "linux"
   ],
