@@ -43,3 +43,9 @@ Use `./version.sh --update <version>` to bump the version — it updates
 the workspace manifest and every npm package (including the
 `optionalDependencies` platform-binary pins) together and verifies the
 result. Do not hand-edit version fields individually.
+
+## Cutting a release
+
+See [`RELEASING.md`](../RELEASING.md) at the repository root — version
+bump, tagging, the draft-Release review point, and registry publishing
+are covered there, not here.

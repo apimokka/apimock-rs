@@ -1,0 +1,169 @@
+name: Release publish
+
+# Publish phase (RFC 044 § Amendment A3). Triggered only by a Release
+# transitioning to published — never by a tag push. That is a structural
+# fact, not a convention: this file's `on:` block has no `push:` trigger
+# at all, so there is no job here a tag push could reach, `if:` or no
+# `if:`. The build phase (release-executable.yaml) creates the draft this
+# workflow reacts to and attaches every asset to it before a human ever
+# sees it; clicking "Publish" on that draft is what fires this file.
+#
+# `created` was considered and rejected — see RFC 044 § Amendment A1 and
+# this repository's review-request package for RFC 044, which records
+# the verification against current GitHub documentation. `published` is
+# used specifically because it is unambiguous: it fires once, when a
+# release actually goes live, never on a draft being saved or edited.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PRODUCT_BASENAME: apimock
+  TAG: ${{ github.event.release.tag_name }}
+
+jobs:
+  # RFC 044 § 4.3: the build phase and this phase are two separate
+  # workflow runs (two different trigger events), so `actions/upload-
+  # artifact` / `actions/download-artifact` cannot carry binaries between
+  # them - artifacts are scoped to the run that produced them. Rather
+  # than reach across runs by `run-id` (fragile - depends on locating the
+  # right build run for this tag) or rebuild from source here (wasteful,
+  # and could publish a binary that differs from the one already
+  # attached to the Release), this phase downloads the exact archives the
+  # build phase attached to the draft and extracts the binary from each.
+  # Those archives are what a human just reviewed and approved by
+  # clicking Publish, which makes this the more correct source, not
+  # merely the more convenient one.
+  npm-platforms-publish:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: Linux-x64-gnu
+            npm-target: linux-x64-gnu
+            os: ubuntu-latest
+            bin-ext:
+            archive-ext: .tar.gz
+          - name: macOS-aarch64
+            npm-target: darwin-arm64
+            os: macos-latest
+            bin-ext:
+            archive-ext: .zip
+          - name: Windows-x64
+            npm-target: win32-x64-msvc
+            os: windows-latest
+            bin-ext: .exe
+            archive-ext: .zip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download release asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ASSET_FILENAME="${{ env.PRODUCT_BASENAME }}@${{ matrix.name }}-${{ env.TAG }}${{ matrix.archive-ext }}"
+          gh release download "${{ env.TAG }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "$ASSET_FILENAME" \
+            --dir dl
+          echo "ASSET_FILENAME=${ASSET_FILENAME}" >> $GITHUB_ENV
+
+      - name: Extract binary from archive - Linux
+        if: matrix.archive-ext == '.tar.gz'
+        run: |
+          tar xzf "dl/${{ env.ASSET_FILENAME }}" -C dl
+
+      - name: Extract binary from archive - Windows / macOS
+        if: matrix.archive-ext == '.zip'
+        run: |
+          7z x "dl/${{ env.ASSET_FILENAME }}" -odl
+
+      - name: Place binary for npm packaging
+        run: |
+          ASSET_BASENAME="${{ env.PRODUCT_BASENAME }}@${{ matrix.name }}-${{ env.TAG }}"
+          mkdir -p npm/${{ matrix.npm-target }}
+          cp "dl/${ASSET_BASENAME}/${{ env.PRODUCT_BASENAME }}${{ matrix.bin-ext }}" npm/${{ matrix.npm-target }}/
+
+      - name: npm publish
+        working-directory: npm/${{ matrix.npm-target }}
+        run: |
+          npm install --package-lock-only
+          npm ci
+          npm publish
+
+  npm-core-publish:
+    runs-on: ubuntu-latest
+    needs: npm-platforms-publish
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: npm publish
+        working-directory: npm
+        run: |
+          cp -f ../README.md .
+          npm install --package-lock-only --ignore-scripts
+          npm ci --ignore-scripts
+          npm publish
+
+  # RFC 044 § A5: cargo resolves the workspace's dependency order itself
+  # and waits for each crate to be available on the index before
+  # publishing the next - the exact behaviour the deleted `cargo-
+  # publish.sh` never had. One command replaces what the RFC's original
+  # design treated as ordering/propagation/idempotency logic to build.
+  #
+  # Runs after the npm jobs, matching RFC 044's own dependency diagram
+  # (build -> npm publish -> crates.io publish) rather than in parallel -
+  # the RFC draws this ordering deliberately and this implementation
+  # follows it rather than optimising for concurrency it didn't ask for.
+  #
+  # Credentials: crates.io Trusted Publishing (OIDC), the same class of
+  # mechanism already used for npm above, via the same `id-token: write`
+  # permission this file already declares for that job. This requires
+  # crates.io's own project settings to have Trusted Publishing enabled
+  # for each of the four workspace crates - a registry-side configuration
+  # this repository cannot express and this implementation cannot verify
+  # (RFC 044 Unresolved question 2). If it is not enabled, this job fails
+  # with an authentication error rather than silently falling back to
+  # anything - see the review-request package for what was and wasn't
+  # verifiable here.
+  crates-io-publish:
+    runs-on: ubuntu-latest
+    needs: npm-core-publish
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Authenticate with crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: cargo publish --workspace
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo publish --workspace

@@ -1,12 +1,25 @@
 name: Executable
 
+# Build phase (RFC 044 § Amendment A3). Triggered by the tag push alone —
+# the only human action in the whole release flow. Everything here is
+# invisible to the outside world: it creates a DRAFT Release and attaches
+# assets to it, but publishes nothing. The publish phase lives in
+# release-publish.yaml and only starts once a human clicks "Publish" on
+# the draft this workflow produces — see that file for why the trigger
+# split is a hard boundary (two files, two `on:` blocks) rather than an
+# `if:` condition inside one file.
 on:
-  release:
-    types: [created]
+  push:
+    # `*.*.*` deliberately, not a `[0-9]`-style character class: GitHub's
+    # documented tag-glob special characters are `* ** + ? !` only,
+    # brackets are not among them. This is a coarse filter, not the
+    # correctness check - a tag that isn't a clean X.Y.Z still gets
+    # rejected below, by version-consistency-check's exact string
+    # comparison against [workspace.package].version.
+    tags: ['*.*.*']
 
 permissions:
   contents: write
-  id-token: write
 
 defaults:
   run:
@@ -14,7 +27,7 @@ defaults:
 
 env:
   PRODUCT_BASENAME: apimock
-  TAG: ${{ github.ref_name }}            # tag or branch name
+  TAG: ${{ github.ref_name }}            # tag name, e.g. 5.16.0
   JOB_WORKDIR: tmp-${{ github.run_id }}  # unique number
 
 jobs:
@@ -84,11 +97,11 @@ jobs:
   # RFC 031: re-run the same format/lint/test gates ci.yaml runs on every
   # push and pull request, at release time too. `workflow_run` triggers
   # fire after the fact and can't block a release already in progress,
-  # and a release is triggered by `release: created` on a tag — not
-  # something branch protection on pull requests covers. So the gate is
-  # duplicated here, deliberately, rather than relied on having already
-  # passed at some earlier point. This guarantees the artifact was built
-  # from a tree that was actually green at release time.
+  # and a release is triggered by a tag push — not something branch
+  # protection on pull requests covers. So the gate is duplicated here,
+  # deliberately, rather than relied on having already passed at some
+  # earlier point. This guarantees the artifact was built from a tree
+  # that was actually green at release time.
   quality-gate:
     runs-on: ubuntu-latest
     steps:
@@ -121,8 +134,33 @@ jobs:
       - name: cargo test --workspace
         run: cargo test --workspace
 
-  build:
+  # RFC 044 § A2/A3: create the Release as a DRAFT, before any asset
+  # exists. A draft is not visible to anyone outside the repository's
+  # write-access list, so this creates nothing public. Release notes come
+  # from CHANGELOG.md rather than being retyped; a missing section fails
+  # the job rather than shipping an empty-notes Release (§ 4.4).
+  create-draft-release:
     needs: [version-consistency-check, quality-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          bash .github/workflows/scripts/extract-changelog-section.sh "${{ env.TAG }}" CHANGELOG.md > release-notes.md
+
+      - name: Create draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ env.TAG }}" \
+            --draft \
+            --title "${{ env.TAG }}" \
+            --notes-file release-notes.md
+
+  build:
+    needs: [create-draft-release]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -160,7 +198,7 @@ jobs:
       # [ build ]
       - name: Install Rust
         run: bash .github/workflows/scripts/install-rust.sh stable ${{ matrix.target }}
-      
+
       - name: Cache cargo dependencies and build
         uses: actions/cache@v5
         with:
@@ -175,7 +213,7 @@ jobs:
       - name: Build Rust executable
         run: |
           cargo build --release --target ${{ matrix.target }} --bin ${{ env.PRODUCT_BASENAME }} --locked
-      
+
       # [ release asset ]
       - name: Prepare for release asset
         run: |
@@ -183,14 +221,14 @@ jobs:
           RELEASE_ASSET_BASENAME=${{ env.PRODUCT_BASENAME }}@${{ matrix.name }}-${{ env.TAG }}
           RELEASE_SRC_DIR=${RELEASE_ASSET_BASENAME}
           RELEASE_ASSET_FILENAME=${RELEASE_ASSET_BASENAME}${{ matrix.archive-ext }}
-          
+
           mkdir -p "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}"
 
           cp "crates/apimock/examples/config/default/apimock.toml" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
           cp "crates/apimock/examples/config/default/apimock-rule-set.toml" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
           cp "crates/apimock/examples/config/default/apimock-middleware.rhai" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
           cp "${BUILT_FILE_PATH}" "${{ env.JOB_WORKDIR }}/${RELEASE_SRC_DIR}/"
-          
+
           echo "RELEASE_SRC_DIR=${RELEASE_SRC_DIR}" >> $GITHUB_ENV
           echo "RELEASE_ASSET_FILENAME=${RELEASE_ASSET_FILENAME}" >> $GITHUB_ENV
 
@@ -200,7 +238,7 @@ jobs:
         if: matrix.target == 'aarch64-apple-darwin'
         run: |
           sudo /usr/sbin/purge
-      
+
       - name: Create archive as release asset - Linux
         if: >
           matrix.target != 'aarch64-apple-darwin' &&
@@ -208,7 +246,7 @@ jobs:
         run: |
           cd "${{ env.JOB_WORKDIR }}"
           tar czf "../${RELEASE_ASSET_FILENAME}" "${RELEASE_SRC_DIR}"
-      
+
       - name: Create archive as release asset - Windows / macOS
         if: >
           matrix.target == 'aarch64-apple-darwin' ||
@@ -216,81 +254,8 @@ jobs:
         run: |
           cd "${{ env.JOB_WORKDIR }}"
           7z a "../${RELEASE_ASSET_FILENAME}" "${RELEASE_SRC_DIR}"
-      
-      - name: Update release with new asset
+
+      - name: Upload asset to the draft release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ github.ref_name }} ${RELEASE_ASSET_FILENAME}
-
-      # [ artifact passed to next workflow(s) ]
-      - name: Upload built binary
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ env.PRODUCT_BASENAME }}-${{ matrix.name }}-${{ env.TAG }}
-          path: target/${{ matrix.target }}/release/${{ env.PRODUCT_BASENAME }}${{ matrix.bin-ext }}
-  
-  npm-platforms-publish:
-    runs-on: ${{ matrix.os }}
-    needs: build
-    strategy:
-      matrix:
-        include:
-          # - name: Linux-aarch64-musl
-          #   target: aarch64-unknown-linux-musl
-          #   os: ubuntu-latest
-          - name: Linux-x64-gnu
-            npm-target: linux-x64-gnu
-            os: ubuntu-latest
-          # - name: Linux-x64-musl
-          #   target: x86_64-unknown-linux-musl
-          #   os: ubuntu-latest
-          - name: macOS-aarch64
-            npm-target: darwin-arm64
-            os: macos-latest
-          - name: Windows-x64
-            npm-target: win32-x64-msvc
-            os: windows-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      
-      - name: Setup node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          registry-url: 'https://registry.npmjs.org'
-      
-      - name: Download built binary
-        uses: actions/download-artifact@v8
-        with:
-          name: ${{ env.PRODUCT_BASENAME }}-${{ matrix.name }}-${{ env.TAG }}
-          path: npm/${{ matrix.npm-target }}
-      
-      - name: npm publish
-        working-directory: npm/${{ matrix.npm-target }}
-        run: |
-          npm install --package-lock-only
-          npm ci
-          npm publish
-
-  npm-core-publish:
-    runs-on: ubuntu-latest
-    needs: npm-platforms-publish
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      
-      - name: Setup node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          registry-url: 'https://registry.npmjs.org'
-      
-      - name: npm publish
-        working-directory: npm
-        run: |
-          cp -f ../README.md .
-          npm install --package-lock-only --ignore-scripts
-          npm ci --ignore-scripts
-          npm publish
+        run: gh release upload ${{ env.TAG }} ${RELEASE_ASSET_FILENAME}

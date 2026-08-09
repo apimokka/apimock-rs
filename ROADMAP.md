@@ -10,8 +10,10 @@ lost between releases. That history lives at the bottom of this file.
 
 **Baseline approved.** 2026-08-02, by the project owner.
 **Baseline covers.** v5.15.0 → v5.17.0.
-**Current version.** 5.15.0 — 33 RFCs implemented, 1 withdrawn.
+**Current version.** 5.16.0 — 39 RFCs implemented, 1 withdrawn.
 **M1 complete** (2026-08-03): RFCs 030–033 shipped in v5.15.0.
+**M2 complete** (2026-08-10): RFCs 034–038 shipped in v5.16.0, together
+with cross-cutting RFC 044 — the first release cut by automation.
 
 ---
 
@@ -228,6 +230,18 @@ that the project's own README structure rule specifies as section 5; and
 an Acknowledgements list omitting `rustls`, `tokio-rustls`, `csv`,
 `regex`, `globset`, `ignore`, `uuid`, and `indexmap`.
 
+### Cross-cutting — release pipeline
+
+| RFC | Title | Pri | Depends on | State |
+|---|---|---|---|---|
+| 044 | [Release process: documentation and automation](./rfcs/done/044-release-process-documentation-and-automation.md) | P1 | ships with 5.15.0 observed | Implemented (v5.16.0) |
+
+RFC 044 belongs to no milestone — it is release-pipeline work, drafted
+2026-08-02 and deliberately held until v5.15.0 had been cut by hand so
+the automation was designed against observed behaviour rather than
+assumed behaviour. Implemented and reviewed 2026-08-08; **v5.16.0 is the
+first release cut through it.**
+
 ### M3 — Deferred design → 5.17.0
 
 | RFC | Title | Pri | Depends on | State |
@@ -368,8 +382,9 @@ stays discoverable.
 
 ## Findings awaiting disposition
 
-Raised by RFC 036 (2026-08-04) while writing runnable examples. Recorded
-here so they are not lost between milestones.
+Mostly raised by RFC 036 (2026-08-04) while writing runnable examples;
+the prerelease row came out of RFC 044's live test (2026-08-08).
+Recorded here so they are not lost between milestones.
 
 | Finding | Disposition |
 |---|---|
@@ -379,4 +394,5 @@ here so they are not lost between milestones.
 | Bare relative `--config apimock.toml` fails to resolve; `./apimock.toml` works | Defect-fix task, no RFC. Narrow, unambiguous |
 | `Guard` is a zero-field struct with a `// todo:` comment, published in the rule-set schema | **Owner decision** — implement, remove, or document as reserved |
 | Trace channel has no config or CLI surface | Not a defect. RFC 035 documents it as library-only |
+| **No prerelease version is releasable.** `[workspace.dependencies]` pins the internal crates with caret requirements (`version = "5"`), and a caret requirement never matches a prerelease. Any RC/beta tag fails resolution — established empirically during RFC 044 with both `0.0.0-rfc044-test` and `5.16.1-rfc044-test` | Unassigned. Not a defect; a constraint. Changing the pins to something prerelease-inclusive is a prerequisite for ever cutting an RC |
 | Pre-existing ~1-in-8 port race in `dynamic_port()` (`tests/util/test_setup.rs`) | Unassigned. A fix was attempted during RFC 036, regressed every IPv6 bound-address test, and was reverted in full — see that review |

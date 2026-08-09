@@ -1,10 +1,11 @@
 # RFC 044 — Release process: documentation and automation
 
-**Status.** Proposed — design accepted by the project owner 2026-08-02;
-**design amended and re-accepted 2026-08-03** (trigger correction,
-draft-first flow, reprioritisation — see § Amendment).
-Stays in `proposed/` per the 4-folder lifecycle ([RFC 000](../done/000-rfc-lifecycle-policy.md));
-implementation is sequenced after v5.15.0 ships (see § Sequencing).
+**Status.** Implemented (v5.16.0). Design accepted by the project owner
+2026-08-02; **amended and re-accepted 2026-08-03** (trigger correction,
+draft-first flow, reprioritisation — see § Amendment); implemented and
+reviewed 2026-08-08 (`REVIEW-001`, `REVIEW-002`).
+Implementation was sequenced after v5.15.0 shipped, as § Sequencing
+required. v5.16.0 is the first release cut through this path.
 **Tracks.** Release pipeline. The release process is undocumented, its
 first step is manual, and one of its two distribution channels
 (crates.io) has no automation at all — its only script was broken by the

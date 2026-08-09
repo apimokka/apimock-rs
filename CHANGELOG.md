@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [5.16.0] - 2026-08-04
+## [5.16.0] - 2026-08-10
 
 A documentation and examples release. **No behaviour change, no API
 change** — the library, CLI, and config surface are identical to 5.15.0.
@@ -93,6 +93,22 @@ behave**, and tracked for a later one:
 - **`respond.headers` is unevenly honoured** — dropped entirely on
   `status`-bearing responses and on plain-text file responses.
 - **`[guard]` does nothing.** It is a placeholder with no fields.
+
+### Internal
+
+- **The release process is automated and written down (RFC 044).** This
+  is the first release cut through it. A tag push now runs the version
+  and quality gates, creates a **draft** GitHub Release with notes taken
+  from this file, and attaches all five platform archives to it before
+  anything is visible. Publishing that draft — the one human decision —
+  is what triggers npm and crates.io publishing, in a separate workflow
+  that a tag push cannot reach.
+
+  Previously the Release was created by hand, assets trickled in over
+  the following minutes while it was already public, and crates.io
+  publishing had no automation at all — its script was broken by the
+  5.1.1 workspace split and later deleted. The runbook lives in
+  `RELEASING.md` at the repository root.
 
 ### Test count
 

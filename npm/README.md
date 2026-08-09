@@ -1,4 +1,5 @@
 This file will be overwritten by root README.md.
 
-See /.github/workflows/release-executable.yaml
+Publishing: /.github/workflows/release-publish.yaml
+Binaries built by: /.github/workflows/release-executable.yaml
 

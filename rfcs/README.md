@@ -19,7 +19,6 @@ depends-on, and the rest of the planned portfolio.
 
 | ID  | Title |
 |-----|-------|
-| 044 | [Release process: documentation and automation](./proposed/044-release-process-documentation-and-automation.md) |
 | 045 | [Configuration accepted but ignored](./proposed/045-configuration-accepted-but-ignored.md) |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
@@ -68,6 +67,7 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 036 | [Example configurations for new users](./done/036-example-configs.md) | v5.16.0 |
 | 037 | [README rethink](./done/037-readme-rethink.md) | v5.16.0 |
 | 038 | [Technical reference refresh and document integrity](./done/038-technical-reference-and-document-integrity.md) | v5.16.0 |
+| 044 | [Release process: documentation and automation](./done/044-release-process-documentation-and-automation.md) | v5.16.0 |
 
 ## Archive
 
@@ -80,8 +80,8 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 ## Adding a new RFC
 
 1. Pick the next free number — **046+**. Numbers 039–043 are reserved
-   by [ROADMAP.md](../ROADMAP.md) for the planned M3 RFCs; 044 and 045
-   are already open. Create `rfcs/proposed/NNN-slug.md`.
+   by [ROADMAP.md](../ROADMAP.md) for the planned M3 RFCs; 045 is
+   already open. Create `rfcs/proposed/NNN-slug.md`.
 2. On shipping, move to `done/`, update Status field, update this index.
 
 See [RFC 000](./done/000-rfc-lifecycle-policy.md) for the full policy.
