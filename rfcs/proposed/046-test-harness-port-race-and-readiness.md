@@ -1,6 +1,8 @@
 # RFC 046 — Test harness: port race and server readiness
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Proposed — awaiting owner approval. **Amended 2026-08-12** —
+see § Cause 2 amendment: the original diagnosis of where the bind-failure
+fix needed to attach was wrong.
 **Tracks.** Pipeline trust. The integration test harness picks a port it
 does not hold and waits a fixed interval instead of waiting for the
 server, so tests fail intermittently for reasons unrelated to what they
@@ -107,6 +109,32 @@ test**, and was reverted in full. The obvious change is therefore known
 not to work. Establish from the source — do not assume from this document
 — what addresses the server actually binds, and whether any test asserts
 on a bound address, before choosing an approach.
+
+### Amendment — 2026-08-12 — Cause 2's diagnosis was incomplete
+
+Cause 2 above says *"the spawned task's outcome is dropped"* — worded to
+imply that awaiting the `tokio::spawn`'s `JoinHandle` in the harness
+would be enough to surface a bind failure. Checked against source
+(`crates/apimock-server/src/server.rs`, pre-implementation) rather than
+inherited from this document, as § 2 of the implementation instructs:
+that is not true.
+
+`Server::start()` returns `()` unconditionally. The private methods it
+calls, `http_start`/`https_start`, already swallow their own bind
+failure — `log::error!` plus a bare `return` — **before** the accept
+loop starts and **before** `start()` returns. There is no `Result` for
+any `JoinHandle` to carry, bind failure or not; awaiting it would have
+yielded `Ok(())` in both cases. The fix that shipped had to add a new
+`Result`-returning bind step (`bind_http`/`bind_https`) that did not
+exist before, not merely observe the existing spawn's outcome.
+
+This does not change the *symptom* Cause 2 describes — a bind failure
+still reached the first request as an unexplained connection error, for
+exactly the reason given. It changes where a fix has to attach. Caught
+during implementation and recorded per its instruction to report a
+contradiction rather than design around it silently; see
+`.git-exclude/reviewed/046-test-harness-port-race-and-readiness/REVIEW-001.md`
+§ 2.
 
 ## Goals
 

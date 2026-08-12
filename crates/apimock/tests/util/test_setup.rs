@@ -1,16 +1,18 @@
-use std::{
-    env,
-    net::{SocketAddr, TcpListener},
-    path::Path,
-};
+use std::{env, net::SocketAddr, path::Path, time::Duration};
 
 use apimock::{App, EnvArgs};
-use rand::Rng;
+use tokio::net::TcpStream;
 
 use super::{
     constant::{CONFIG_FILE_NAME, CONFIG_TESTS_ROOT_DIR_PATH},
     tls::{generate_tls_credentials, tls_credentials_are_ready},
 };
+
+/// Bound on how long `launch` waits for the server to accept connections
+/// before giving up. Generous on purpose - a loaded CI runner is the
+/// case this exists for, not the common case.
+const READINESS_TIMEOUT: Duration = Duration::from_secs(5);
+const READINESS_POLL_INTERVAL: Duration = Duration::from_millis(10);
 
 #[derive(Clone)]
 pub struct TestSetup {
@@ -39,23 +41,28 @@ impl TestSetup {
     }
 
     /// test initial setup with dynamic port selected
+    ///
+    /// # No probe-then-drop
+    ///
+    /// `self.port` is honoured verbatim when set (some tests assert on a
+    /// specific literal port). Otherwise the requested port is `0`: the
+    /// OS assigns a free one at bind time, inside `launch_impl`, and
+    /// that exact listener - never released, never rebound - is what the
+    /// server then serves on. There is no separate "pick a port" step
+    /// whose result could go stale before the server binds, which is
+    /// what made the old `dynamic_port()` racy (RFC 046).
     pub async fn launch(&self) -> u16 {
-        let port = if let Some(port) = self.port {
-            port
-        } else {
-            dynamic_port()
-        };
-
         if !tls_credentials_are_ready() {
             generate_tls_credentials();
         }
 
-        let _ = self.launch_impl(port).await;
-        port
+        let requested_port = self.port.unwrap_or(0);
+        self.launch_impl(requested_port).await
     }
 
-    /// test initial setup: start up mock server
-    async fn launch_impl(&self, port: u16) {
+    /// test initial setup: start up mock server. Returns the port
+    /// actually bound (which equals `port` unless `port` was `0`).
+    async fn launch_impl(&self, port: u16) -> u16 {
         if let Some(current_dir_path) = self.current_dir_path.as_ref() {
             let current_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
                 .join(CONFIG_TESTS_ROOT_DIR_PATH)
@@ -83,15 +90,57 @@ impl TestSetup {
             app_env_args.fallback_respond_dir_path = Some(fallback_respond_dir_path.to_owned());
         }
 
-        tokio::spawn(async move {
-            let app = App::new(&app_env_args, None, true)
-                .await
-                .expect("App::new failed in test setup");
-            app.server.start().await
-        });
+        let app = App::new(&app_env_args, None, true)
+            .await
+            .expect("App::new failed in test setup");
 
-        // wait for server started
-        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        // Bind before spawning. A bind failure (or, for HTTPS, a failure
+        // anywhere in the TLS setup `bind_https` does before it binds)
+        // surfaces right here, synchronously, in the test's own task -
+        // not inside a spawned task whose result nothing awaited, which
+        // is how a bind failure used to reach the first request as an
+        // unexplained connection error instead of a message naming the
+        // cause (RFC 046 Defect 2).
+        if let Some(listener) = app
+            .server
+            .bind_http()
+            .await
+            .expect("failed to bind HTTP listener in test setup")
+        {
+            let bound_addr = listener
+                .local_addr()
+                .expect("bound HTTP listener has no local_addr");
+
+            tokio::spawn(async move {
+                app.server.serve_http(listener).await;
+            });
+
+            wait_until_accepting(bound_addr).await;
+            return bound_addr.port();
+        }
+
+        if let Some((listener, acceptor)) = app
+            .server
+            .bind_https()
+            .await
+            .expect("failed to bind HTTPS listener in test setup")
+        {
+            let bound_addr = listener
+                .local_addr()
+                .expect("bound HTTPS listener has no local_addr");
+
+            tokio::spawn(async move {
+                app.server.serve_https(listener, acceptor).await;
+            });
+
+            wait_until_accepting(bound_addr).await;
+            return bound_addr.port();
+        }
+
+        panic!(
+            "test config at {:?} configures neither an HTTP nor an HTTPS listener",
+            self.root_config_file_path
+        );
     }
 }
 
@@ -113,14 +162,54 @@ impl Default for TestSetup {
     }
 }
 
-/// select dynamic port randomly
-fn dynamic_port() -> u16 {
-    let port = rand::rng().random_range(49152..=65535);
+/// Poll `addr` until a TCP connection succeeds, or panic naming the
+/// address once `READINESS_TIMEOUT` elapses.
+///
+/// # Why not connect to `addr` for a wildcard bind
+///
+/// `[listener] ip_address = "0.0.0.0"` / `"[::]"` are bind targets, not
+/// connect targets - a socket cannot dial the unspecified address. Where
+/// `addr.ip()` is unspecified, the loopback equivalent of the same
+/// family is used instead, since loopback is always one of the
+/// interfaces such a listener accepts on. Every other address - notably
+/// a specific IPv6 address, whether loopback or a real interface - is
+/// connected to exactly as bound. A previous attempt at this fix
+/// hardcoded `127.0.0.1` here unconditionally and regressed every IPv6
+/// bound-address test; this is the reason that hardcoding is gone.
+///
+/// # Expected log noise on HTTPS fixtures
+///
+/// This probe only needs the TCP handshake to succeed, so it connects
+/// and drops the stream immediately - it never sends a TLS ClientHello.
+/// For an HTTPS listener, the server's per-connection task then sees the
+/// dropped connection mid-handshake and logs `TLS handshake failed: ...
+/// eof`. That is this probe, not a defect; it happens once per HTTPS
+/// `TestSetup::launch()` call and does not affect the accept loop or the
+/// test that follows.
+async fn wait_until_accepting(addr: SocketAddr) {
+    let connect_addr = if addr.ip().is_unspecified() {
+        let loopback = if addr.is_ipv6() {
+            std::net::Ipv6Addr::LOCALHOST.into()
+        } else {
+            std::net::Ipv4Addr::LOCALHOST.into()
+        };
+        SocketAddr::new(loopback, addr.port())
+    } else {
+        addr
+    };
 
-    let addr: SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
-    match TcpListener::bind(addr) {
-        Ok(_) => port,
-        Err(_) => dynamic_port(),
+    let deadline = tokio::time::Instant::now() + READINESS_TIMEOUT;
+    loop {
+        if TcpStream::connect(connect_addr).await.is_ok() {
+            return;
+        }
+        if tokio::time::Instant::now() >= deadline {
+            panic!(
+                "server did not start accepting connections on {} within {:?}",
+                connect_addr, READINESS_TIMEOUT
+            );
+        }
+        tokio::time::sleep(READINESS_POLL_INTERVAL).await;
     }
 }
 

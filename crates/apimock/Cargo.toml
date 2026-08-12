@@ -29,11 +29,6 @@ hyper                       = { workspace = true }
 serde_json                  = { workspace = true }
 
 [dev-dependencies]
-# Pin rand to ^0.9 because tests use `Rng::random_range`; rand 0.10
-# renamed back to `gen_range`. The ^0 spec used to work but the
-# registry now publishes 0.10, so we lock the major to 0.9 to keep
-# the existing test surface.
-rand                        = "^0.9"
 reqwest                     = { version = "0", default-features = false, features = ["rustls-tls"] }
 rcgen                       = "^0"
 local-ip-address            = "^0"

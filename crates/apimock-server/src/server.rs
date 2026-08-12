@@ -110,23 +110,44 @@ impl Server {
         tokio::join!(http, https);
     }
 
-    async fn http_start(&self) {
+    /// Bind the HTTP listener without accepting connections yet.
+    ///
+    /// Returns `Ok(None)` if no HTTP listener is configured, `Ok(Some(_))`
+    /// on a successful bind, or `Err` if the bind itself failed — this is
+    /// the piece `http_start` used to swallow via `log::error!` + early
+    /// return, with no way for a caller to observe it.
+    ///
+    /// Splitting bind from serve exists for callers (namely the
+    /// integration-test harness) that need the two to be separate steps:
+    /// bind, read back the real port via `local_addr()` (useful when
+    /// `[listener].port` is `0` and the OS assigns one), *then* hand the
+    /// same listener to [`Server::serve_http`]. Because it's the same
+    /// listener throughout, there is no window between "port known" and
+    /// "port held" for another process to take it.
+    pub async fn bind_http(&self) -> ServerResult<Option<TcpListener>> {
         let Some(addr) = self.http_addr else {
-            return;
+            return Ok(None);
         };
 
-        let listener = match TcpListener::bind(addr).await {
-            Ok(l) => l,
-            Err(err) => {
-                log::error!("failed to bind HTTP listener at {}: {}", addr, err);
-                return;
-            }
-        };
+        let listener =
+            TcpListener::bind(addr)
+                .await
+                .map_err(|err| ServerError::ListenerAddress {
+                    addr: addr.to_string(),
+                    reason: err.to_string(),
+                })?;
 
-        log::info!(
-            "Greetings from apimock-rs (API Mock) !!\nListening on {} ...\n",
-            style(format!("http://{}", addr)).cyan()
-        );
+        Ok(Some(listener))
+    }
+
+    /// Accept connections forever on an already-bound HTTP listener.
+    pub async fn serve_http(&self, listener: TcpListener) {
+        if let Ok(addr) = listener.local_addr() {
+            log::info!(
+                "Greetings from apimock-rs (API Mock) !!\nListening on {} ...\n",
+                style(format!("http://{}", addr)).cyan()
+            );
+        }
 
         let app_state = Arc::new(Mutex::new(self.app_state.clone()));
         loop {
@@ -156,64 +177,71 @@ impl Server {
         }
     }
 
-    async fn https_start(&self) {
+    async fn http_start(&self) {
+        match self.bind_http().await {
+            Ok(Some(listener)) => self.serve_http(listener).await,
+            Ok(None) => (),
+            Err(err) => log::error!("{}", err),
+        }
+    }
+
+    /// Bind the HTTPS listener (including loading TLS material) without
+    /// accepting connections yet. See [`Server::bind_http`] for why this
+    /// is split from serving.
+    ///
+    /// Every failure this used to swallow via `log::error!` + early
+    /// return - missing TLS config, unreadable cert/key, a TLS config
+    /// that fails to build, or the bind itself - now surfaces as `Err`.
+    pub async fn bind_https(&self) -> ServerResult<Option<(TcpListener, TlsAcceptor)>> {
         let Some(addr) = self.https_addr else {
-            return;
+            return Ok(None);
         };
 
-        let tls = match self
+        let tls = self
             .app_state
             .config
             .listener
             .as_ref()
             .and_then(|l| l.tls.as_ref())
-        {
-            Some(t) => t.clone(),
-            None => {
-                log::error!("internal: HTTPS listener scheduled without TLS config");
-                return;
-            }
-        };
+            .cloned()
+            .ok_or_else(|| ServerError::ListenerAddress {
+                addr: addr.to_string(),
+                reason: "internal: HTTPS listener scheduled without TLS config".to_owned(),
+            })?;
 
-        let certs = match load_certs(tls.cert.as_str()) {
-            Ok(c) => c,
-            Err(err) => {
-                log::error!("{}", err);
-                return;
-            }
-        };
-        let key = match load_private_key(tls.key.as_str()) {
-            Ok(k) => k,
-            Err(err) => {
-                log::error!("{}", err);
-                return;
-            }
-        };
+        let certs = load_certs(tls.cert.as_str())?;
+        let key = load_private_key(tls.key.as_str())?;
 
         // RFC 020: use a reloadable resolver so TlsCertFile / TlsKeyFile
         // changes are SoftReload (no listener rebind needed).
-        let (tls_config, resolver) = match build_server_config_reloadable(certs, key) {
-            Ok(pair) => pair,
-            Err(err) => {
-                log::error!("failed to build TLS config: {}", err);
-                return;
+        let (tls_config, resolver) = build_server_config_reloadable(certs, key).map_err(|err| {
+            ServerError::ListenerAddress {
+                addr: addr.to_string(),
+                reason: format!("failed to build TLS config: {}", err),
             }
-        };
+        })?;
         let acceptor = TlsAcceptor::from(Arc::new(tls_config));
         drop(resolver); // Server holds the resolver via the config; expose via ServerHandle if needed
 
-        let listener = match TcpListener::bind(addr).await {
-            Ok(l) => l,
-            Err(err) => {
-                log::error!("failed to bind HTTPS listener at {}: {}", addr, err);
-                return;
-            }
-        };
+        let listener =
+            TcpListener::bind(addr)
+                .await
+                .map_err(|err| ServerError::ListenerAddress {
+                    addr: addr.to_string(),
+                    reason: err.to_string(),
+                })?;
 
-        log::info!(
-            "Greetings from apimock-rs (API Mock) !!\nListening on {} ...\n",
-            style(format!("https://{}", addr)).cyan()
-        );
+        Ok(Some((listener, acceptor)))
+    }
+
+    /// Accept connections forever on an already-bound HTTPS listener.
+    pub async fn serve_https(&self, listener: TcpListener, acceptor: TlsAcceptor) {
+        if let Ok(addr) = listener.local_addr() {
+            log::info!(
+                "Greetings from apimock-rs (API Mock) !!\nListening on {} ...\n",
+                style(format!("https://{}", addr)).cyan()
+            );
+        }
 
         let app_state = Arc::new(Mutex::new(self.app_state.clone()));
         loop {
@@ -251,6 +279,14 @@ impl Server {
                     }
                 });
             });
+        }
+    }
+
+    async fn https_start(&self) {
+        match self.bind_https().await {
+            Ok(Some((listener, acceptor))) => self.serve_https(listener, acceptor).await,
+            Ok(None) => (),
+            Err(err) => log::error!("{}", err),
         }
     }
 }
