@@ -46,10 +46,25 @@ cargo install apimock && apimock
 ```
 
 ```sh
+# or download a prebuilt binary — no Node or Rust toolchain needed
+# https://github.com/apimokka/apimock-rs/releases/latest
+tar xzf 'apimock@Linux-x64-gnu-<version>.tar.gz'
+cd 'apimock@Linux-x64-gnu-<version>' && ./apimock
+```
+
+Prebuilt binaries are published for Linux (x64 gnu, x64 musl, aarch64
+musl), macOS (aarch64) and Windows (x64). Linux archives are `.tar.gz`,
+macOS and Windows are `.zip`. Each one also ships an `apimock.toml`,
+`apimock-rule-set.toml` and `apimock-middleware.rhai`, picked up
+automatically when you run from that directory — so a downloaded build
+answers `curl http://localhost:3001/health` straight away, with no setup
+step at all.
+
+```sh
 # just use folders and JSON
 mkdir -p api/v1/
 echo '{"hello": "world"}' > api/v1/hello.json
-npx apimock   # (or `apimock`, if installed via cargo)
+npx apimock   # (or `apimock` / `./apimock`, depending on how you installed it)
 
 # response
 curl http://localhost:3001/api/v1/hello
@@ -57,7 +72,8 @@ curl http://localhost:3001/api/v1/hello
 ```
 
 You now have a running REST endpoint (the commands below assume `npx`;
-drop it for `cargo install`).
+drop it for `cargo install`, or use `./apimock` for a downloaded
+binary).
 
 ### `npx apimock` variation
 
@@ -66,7 +82,7 @@ drop it for `cargo install`).
 | `npx apimock` | Run with all default parameters. |
 | `npx apimock -p 4000` | Run with custom port. |
 | `npx apimock -d tests/apimock-dyn-route` | Run with custom root dir on server response. |
-| `npx apimock -c apimock.toml` | Run with config file giving rich features. Running `npx apimock --init` beforehand is required. |
+| `npx apimock -c ./apimock.toml` | Run with config file giving rich features. Running `npx apimock --init` beforehand is required. Note the `./` — a bare relative path such as `-c apimock.toml` does not resolve. |
 
 ### Setup with `npx apimock --init`
 

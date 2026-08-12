@@ -2,7 +2,7 @@
 
 ## Install
 
-Two ways to get `apimock`:
+Three ways to get `apimock`:
 
 ```sh
 # via npm, into an existing project
@@ -16,8 +16,41 @@ cargo install apimock
 apimock
 ```
 
-Either way, the command you run afterward is `apimock` (the package on
-npm is named `apimock-rs`, but the binary it installs is `apimock`).
+```sh
+# via a prebuilt binary — no Node or Rust toolchain needed
+# download from https://github.com/apimokka/apimock-rs/releases/latest
+tar xzf 'apimock@Linux-x64-gnu-<version>.tar.gz'
+cd 'apimock@Linux-x64-gnu-<version>'
+./apimock
+```
+
+Whichever you choose, the command you run afterward is `apimock` (the
+package on npm is named `apimock-rs`, but the binary it installs is
+`apimock`).
+
+### Which prebuilt archive
+
+| Platform | Archive |
+| --- | --- |
+| Linux x64 (glibc) | `apimock@Linux-x64-gnu-<version>.tar.gz` |
+| Linux x64 (musl) | `apimock@Linux-x64-musl-<version>.tar.gz` |
+| Linux aarch64 (musl) | `apimock@Linux-aarch64-musl-<version>.tar.gz` |
+| macOS aarch64 | `apimock@macOS-aarch64-<version>.zip` |
+| Windows x64 | `apimock@Windows-x64-<version>.zip` |
+
+Each archive unpacks to a directory containing the binary plus an
+`apimock.toml`, `apimock-rule-set.toml` and `apimock-middleware.rhai`.
+Run `./apimock` from that directory and it loads them automatically —
+no `-c` flag and no `apimock --init` step — so a downloaded build is
+already serving the example rules:
+
+```sh
+curl http://localhost:3001/health   # --> ok
+curl http://localhost:3001/greet    # --> Hello, world.
+```
+
+That also means a downloaded build is ready for the
+[config-file walkthrough](./your-first-config-file.md) as it stands.
 
 ## Zero configuration needed
 
