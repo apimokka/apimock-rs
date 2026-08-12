@@ -103,9 +103,23 @@ in `release-publish.yaml`) resolves the four crates' dependency order
 itself and waits for each to land on the index before publishing the
 next — `apimock-routing` → `apimock-config` → `apimock-server` →
 `apimock`. Verified in the real v5.15.0 publish (exit 0, no partial
-state). If it fails partway, re-running the same command is safe:
-already-published crates return "already uploaded" rather than erroring
-the whole run, since cargo checks the index before each publish.
+state).
+
+**If it fails partway, re-running is not automatic.** An earlier version
+of this document claimed already-published crates are skipped with an
+"already uploaded" notice. They are not — v5.16.0 disproved it on the
+first real run:
+
+```
+error: crate apimock@5.16.0 already exists on crates.io index
+```
+
+cargo exits 101 and the job fails. So a partial publish has to be
+finished by hand: work out which crates landed (check crates.io, not the
+job log), and publish the remainder individually with `cargo publish -p
+<crate>` in dependency order — `apimock-routing`, `apimock-config`,
+`apimock-server`, `apimock`. Re-running the whole workflow will only
+fail again on the first crate that already exists.
 
 Authentication is [crates.io Trusted Publishing](https://crates.io/docs/trusted-publishing)
 (OIDC, no stored token) — the same class of mechanism npm already uses
@@ -115,6 +129,54 @@ this repository can't express or verify. If it isn't enabled for one of
 the four crates, `crates-io-publish` fails with an authentication error
 for that crate specifically — check crates.io's settings for it before
 re-running.
+
+**Status as of v5.16.0: `crates-io-publish` has still never published.**
+v5.16.0's crates were uploaded by hand from a maintainer's machine while
+the npm side was being unblocked, so the automated crates.io path remains
+unexercised and **v5.17.0 will be its first real run.** Until it goes
+green once, leave crates.io's *"Require trusted publishing for all new
+versions"* switched **off** — turning it on would gate releases behind a
+path that has never worked, and remove the manual fallback at the same
+time. Turn it on immediately after the first green run; it closes the
+case where a leaked API token publishes a version nobody authorised.
+
+## Trusted publishing binds to the workflow *filename*
+
+Both registries identify the publisher as a **repository plus a workflow
+filename**, recorded **per package**, on the registry's own settings —
+not in this repository. Renaming a workflow file, or moving a publish job
+into a different file, silently invalidates every one of those records.
+
+This cost v5.16.0 four failed publish attempts, so it is worth stating
+exactly how it presents. npm answers an unidentified publish with:
+
+```
+npm error code E404
+npm error 404 Not Found - PUT https://registry.npmjs.org/@apimock-rs%2fbin-linux-x64-gnu
+npm error 404  The requested resource '...' could not be found or you do
+               not have permission to access it.
+```
+
+That reads like a missing or misnamed package. It is not — it is an
+authentication failure. **The reliable signal is the provenance line.** A
+successful trusted publish prints, immediately before `+ package@version`:
+
+```
+npm notice publish Signed provenance statement with source and build information from GitHub Actions
+```
+
+If that line is absent, npm never obtained an identity and published
+anonymously, whatever the error text says.
+
+The records are **per package**, which is the part most easily missed:
+this project has four npm packages and four crates, so **eight separate
+records**, each needing the same edit. Fixing the one package named in
+the error is not enough — the three platform packages publish first, and
+the run dies before ever reaching the core package.
+
+So: if a publish job is ever renamed or moved, update all eight records
+before the next release, and treat the first release afterwards as
+unproven until it goes green.
 
 ## Recovery paths, and their limits
 

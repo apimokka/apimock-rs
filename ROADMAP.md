@@ -382,9 +382,11 @@ stays discoverable.
 
 ## Findings awaiting disposition
 
-Mostly raised by RFC 036 (2026-08-04) while writing runnable examples;
-the prerelease row came out of RFC 044's live test (2026-08-08).
-Recorded here so they are not lost between milestones.
+Things noticed while doing other work and deliberately not fixed there —
+most from RFC 036 (2026-08-04) while writing runnable examples, the
+prerelease row from RFC 044's live test (2026-08-08), the CLI-flag row
+from verifying the published v5.16.0 npm binary (2026-08-12). Recorded
+here so they are not lost between milestones.
 
 | Finding | Disposition |
 |---|---|
@@ -395,4 +397,5 @@ Recorded here so they are not lost between milestones.
 | `Guard` is a zero-field struct with a `// todo:` comment, published in the rule-set schema | **Owner decision** — implement, remove, or document as reserved |
 | Trace channel has no config or CLI surface | Not a defect. RFC 035 documents it as library-only |
 | **No prerelease version is releasable.** `[workspace.dependencies]` pins the internal crates with caret requirements (`version = "5"`), and a caret requirement never matches a prerelease. Any RC/beta tag fails resolution — established empirically during RFC 044 with both `0.0.0-rfc044-test` and `5.16.1-rfc044-test` | Unassigned. Not a defect; a constraint. Changing the pins to something prerelease-inclusive is a prerequisite for ever cutting an RC |
+| **`apimock --version` and `--help` are not supported, and unknown flags are silently ignored** — the binary starts a mock server instead. `args_option_value` (`crates/apimock/src/args.rs:223`) looks up known option names and ignores everything else, so a typo'd flag launches a server rather than erroring. Found 2026-08-12 while verifying the published v5.16.0 npm binary | Unassigned. Small but user-facing; `--version` in particular is the first thing anyone types to check an install |
 | Pre-existing ~1-in-8 port race in `dynamic_port()` (`tests/util/test_setup.rs`) | Unassigned. A fix was attempted during RFC 036, regressed every IPv6 bound-address test, and was reverted in full — see that review |
