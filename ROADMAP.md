@@ -252,6 +252,24 @@ first release cut through it.**
 | 042 | `sync_from_disk` incremental reconciliation | P2 | — | Planned |
 | 043 | Module split: `workspace/edit.rs`, `server/trace.rs` | P2 | — | Planned |
 | 045 | [Configuration accepted but ignored](./rfcs/proposed/045-configuration-accepted-but-ignored.md) | P1 | — | Proposed |
+| 046 | [Test harness: port race and readiness](./rfcs/proposed/046-test-harness-port-race-and-readiness.md) | **P0** | — | Proposed |
+| 047 | [Verify what was actually published](./rfcs/proposed/047-post-publish-artifact-verification.md) | P1 | 044 | Proposed |
+
+**046 and 047 are unfinished M1 work, added 2026-08-12 after v5.16.0.**
+M1's theme was pipeline trust, and both gaps are in that pipeline rather
+than in M3's deferred-design theme — they are placed here because this is
+the next release, not because they belong to the theme.
+
+RFC 046 is **P0 and the only P0 in M3**: the harness flake it fixes can
+fail `quality-gate`, which runs on every tag push, so it can fail a
+release. Three consecutive local runs on 2026-08-12 failed twice, against
+the roughly 1-in-8 recorded below. v5.16.0's release passed on the first
+attempt, which was luck rather than evidence.
+
+RFC 047 closes the class of defect that let npm ship 4.6.9 binaries under
+5.9.0–5.10.0 version numbers, undetected across several releases with
+every CI job green. v5.16.0 was confirmed correct only because it was
+checked by hand.
 
 RFC 039 closes open question Q-001 by turning DEC-014's additive-only
 promise into a build-time check. RFC 040 resolves RFC 023's Unresolved
@@ -314,8 +332,9 @@ starts immediately.
 | R-02 | The 26 clippy fixes in RFC 030 change behaviour | Silent regression | Low | Full test suite must pass unchanged; no test may be modified within RFC 030's scope | architect |
 | R-03 | RFC 039 breaks the GUI team's integration | Downstream breakage | Medium | GUI-team compatibility round-trip is a precondition for writing the RFC, not a follow-up | owner + architect |
 | R-04 | Publishing npm at 5.15.0 leaves 5.10.1–5.14.0 permanently unpublished on that channel | User confusion about which versions exist | High (accepted) | Owner-accepted consequence of repairing rather than backfilling; noted in the 5.15.0 release notes. *Range corrected 2026-08-03 — last published npm version is 5.10.0, not 5.7.0* | owner |
-| R-05 | CI tracks Rust `stable` while `Cargo.toml` pins MSRV 1.91.0 | Release build and local dev can diverge | Medium | RFC 031 adds an explicit MSRV job | architect |
+| R-05 | ~~CI tracks Rust `stable` while `Cargo.toml` pins MSRV 1.91.0~~ | — | — | **Closed 2026-08-12.** RFC 031's `msrv` job exists and reads the pin from `Cargo.toml` rather than hard-coding it (`.github/workflows/ci.yaml:106`) | architect |
 | R-06 | Scope creep from docs work — rewriting docs surfaces genuine feature gaps | M2 expands into feature work | Medium | Feature gaps discovered during M2 become new RFCs for a later milestone; they do not join M2 | architect |
+| R-08 | `crates-io-publish` has never executed successfully — v5.16.0's crates were published by hand | A first-run failure blocks a release mid-flight, after npm has already published | Medium | v5.17.0 is its first real run and is treated as unproven; crates.io's "require trusted publishing" toggle stays off until it goes green (`RELEASING.md`) | architect |
 | R-07 | No load/performance evidence backs the README's k6 claim | Cannot verify a public claim | Low | Out of scope for this roadmap; revisit only if a regression is suspected | unassigned |
 
 ---
@@ -398,4 +417,5 @@ here so they are not lost between milestones.
 | Trace channel has no config or CLI surface | Not a defect. RFC 035 documents it as library-only |
 | **No prerelease version is releasable.** `[workspace.dependencies]` pins the internal crates with caret requirements (`version = "5"`), and a caret requirement never matches a prerelease. Any RC/beta tag fails resolution — established empirically during RFC 044 with both `0.0.0-rfc044-test` and `5.16.1-rfc044-test` | Unassigned. Not a defect; a constraint. Changing the pins to something prerelease-inclusive is a prerequisite for ever cutting an RC |
 | **`apimock --version` and `--help` are not supported, and unknown flags are silently ignored** — the binary starts a mock server instead. `args_option_value` (`crates/apimock/src/args.rs:223`) looks up known option names and ignores everything else, so a typo'd flag launches a server rather than erroring. Found 2026-08-12 while verifying the published v5.16.0 npm binary | Unassigned. Small but user-facing; `--version` in particular is the first thing anyone types to check an install |
+| `TestSetup.current_dir_path` calls `env::set_current_dir`, which is process-global while tests run concurrently — the field's own doc comment says *"caution: affects globally"* | Unassigned. Recorded by **RFC 046**, deliberately out of its scope |
 | Pre-existing ~1-in-8 port race in `dynamic_port()` (`tests/util/test_setup.rs`) | Unassigned. A fix was attempted during RFC 036, regressed every IPv6 bound-address test, and was reverted in full — see that review |
