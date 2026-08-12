@@ -73,32 +73,15 @@ jobs:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Download release asset
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ASSET_FILENAME="${{ env.PRODUCT_BASENAME }}@${{ matrix.name }}-${{ env.TAG }}${{ matrix.archive-ext }}"
-          gh release download "${{ env.TAG }}" \
-            --repo "${{ github.repository }}" \
-            --pattern "$ASSET_FILENAME" \
-            --dir dl
-          echo "ASSET_FILENAME=${ASSET_FILENAME}" >> $GITHUB_ENV
-
-      - name: Extract binary from archive - Linux
-        if: matrix.archive-ext == '.tar.gz'
-        run: |
-          tar xzf "dl/${{ env.ASSET_FILENAME }}" -C dl
-
-      - name: Extract binary from archive - Windows / macOS
-        if: matrix.archive-ext == '.zip'
-        run: |
-          7z x "dl/${{ env.ASSET_FILENAME }}" -odl
-
-      - name: Place binary for npm packaging
-        run: |
-          ASSET_BASENAME="${{ env.PRODUCT_BASENAME }}@${{ matrix.name }}-${{ env.TAG }}"
-          mkdir -p npm/${{ matrix.npm-target }}
-          cp "dl/${ASSET_BASENAME}/${{ env.PRODUCT_BASENAME }}${{ matrix.bin-ext }}" npm/${{ matrix.npm-target }}/
+      - name: Download and extract release binary
+        uses: ./.github/actions/extract-release-binary
+        with:
+          tag: ${{ env.TAG }}
+          product-basename: ${{ env.PRODUCT_BASENAME }}
+          platform-name: ${{ matrix.name }}
+          archive-ext: ${{ matrix.archive-ext }}
+          bin-ext: ${{ matrix.bin-ext }}
+          dest-dir: npm/${{ matrix.npm-target }}
 
       - name: npm publish
         working-directory: npm/${{ matrix.npm-target }}
@@ -167,3 +150,162 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: cargo publish --workspace
+
+  # RFC 047: a green publish job proves an upload succeeded, not that the
+  # right bytes arrived - npm shipped 5.9.0-5.10.0 packages containing a
+  # 4.6.9 binary for months with every job green. This is the check that
+  # would have caught it: pull the artifact back from each registry and
+  # compare it, byte for byte, against the Release asset a human already
+  # reviewed. `needs:` the publish jobs so this only ever runs after -
+  # never gates, never blocks, and by the time it runs the artifact is
+  # already public either way. Read-only and unauthenticated throughout
+  # (`contents: read` only): `npm pack` of a public package needs no
+  # auth, and `gh release download` needs only read access to this repo.
+  verify-published:
+    needs: [npm-platforms-publish, npm-core-publish]
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: Linux-x64-gnu
+            npm-target: linux-x64-gnu
+            npm-package: '@apimock-rs/bin-linux-x64-gnu'
+            os: ubuntu-latest
+            bin-ext:
+            archive-ext: .tar.gz
+          - name: macOS-aarch64
+            npm-target: darwin-arm64
+            npm-package: '@apimock-rs/bin-darwin-arm64'
+            os: macos-latest
+            bin-ext:
+            archive-ext: .zip
+          - name: Windows-x64
+            npm-target: win32-x64-msvc
+            npm-package: '@apimock-rs/bin-win32-x64-msvc'
+            os: windows-latest
+            bin-ext: .exe
+            archive-ext: .zip
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Download and extract Release asset binary
+        uses: ./.github/actions/extract-release-binary
+        with:
+          tag: ${{ env.TAG }}
+          product-basename: ${{ env.PRODUCT_BASENAME }}
+          platform-name: ${{ matrix.name }}
+          archive-ext: ${{ matrix.archive-ext }}
+          bin-ext: ${{ matrix.bin-ext }}
+          dest-dir: release-asset
+
+      # Registries are not instantly consistent right after `npm
+      # publish` returns. 6 attempts x 15s = 90s of headroom before this
+      # is treated as a real failure rather than propagation lag - long
+      # enough that a false failure here should be rare (npm's own
+      # documented behaviour is near-immediate consistency for direct
+      # version fetches; this is headroom for the rare case, not the
+      # expected wait), short enough that a genuine problem is reported
+      # in under two minutes, not left to time out silently.
+      - name: npm pack (public, unauthenticated)
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if npm pack "${{ matrix.npm-package }}@${{ env.TAG }}" --pack-destination npm-pack-out; then
+              break
+            fi
+            if [ "$attempt" -eq 6 ]; then
+              echo "::error::npm pack failed for ${{ matrix.npm-package }}@${{ env.TAG }} after 6 attempts over 90s"
+              exit 1
+            fi
+            echo "npm pack attempt $attempt failed, retrying in 15s..."
+            sleep 15
+          done
+
+      - name: Extract npm package
+        # npm tarballs are always gzipped tar, on every platform - unlike
+        # the Release assets (extracted via the composite action above,
+        # which uses 7z for the two platforms that ship .zip). This is
+        # the first place in this repository `tar` runs on
+        # windows-latest rather than 7z. Considered and expected to
+        # work - `tar` ships in the Git Bash environment these runners
+        # use - but unlike 7z-on-Windows (proven across the real v5.15.0
+        # and v5.16.0 releases via npm-platforms-publish), this specific
+        # combination has not executed for real before this RFC.
+        run: |
+          mkdir -p npm-pack-extracted
+          tar xzf npm-pack-out/*.tgz -C npm-pack-extracted
+
+      - name: Compare binaries by hash
+        run: |
+          # sha256sum is GNU coreutils and does not ship on macOS's base
+          # system (no GNU coreutils on macos-latest images by default).
+          # openssl is present on all three runner OSes we matrix over
+          # here (ubuntu-latest, macos-latest, windows-latest via Git
+          # Bash) with no branching needed - reasoned about for exactly
+          # those three, not verified beyond them.
+          sha256_of() { openssl dgst -sha256 "$1" | awk '{print $NF}'; }
+
+          BINARY_NAME="${{ env.PRODUCT_BASENAME }}${{ matrix.bin-ext }}"
+          RELEASE_BINARY="release-asset/${BINARY_NAME}"
+          NPM_BINARY="npm-pack-extracted/package/${BINARY_NAME}"
+
+          if [ ! -f "$NPM_BINARY" ]; then
+            echo "::error::npm package ${{ matrix.npm-package }}@${{ env.TAG }} does not contain $BINARY_NAME at the expected path"
+            exit 1
+          fi
+
+          RELEASE_HASH=$(sha256_of "$RELEASE_BINARY")
+          NPM_HASH=$(sha256_of "$NPM_BINARY")
+
+          echo "release asset : $RELEASE_HASH  ($RELEASE_BINARY)"
+          echo "npm package   : $NPM_HASH  ($NPM_BINARY)"
+
+          if [ "$RELEASE_HASH" != "$NPM_HASH" ]; then
+            echo "::error::binary mismatch for ${{ matrix.npm-package }}@${{ env.TAG }} — release asset sha256=$RELEASE_HASH ($RELEASE_BINARY) vs npm package sha256=$NPM_HASH ($NPM_BINARY)"
+            exit 1
+          fi
+
+          echo "OK: ${{ matrix.npm-package }}@${{ env.TAG }} binary matches the Release asset ($RELEASE_HASH)"
+
+  # RFC 047 Goal 2: crates.io resolving the released version is a
+  # different claim than "cargo publish exited 0" - this asserts the
+  # former, against the registry's own public API, with no credential.
+  verify-crates-io:
+    needs: crates-io-publish
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        crate: [apimock, apimock-config, apimock-routing, apimock-server]
+    steps:
+      - name: Assert crates.io serves the released version
+        run: |
+          # crates.io's API data-access policy rejects requests with no
+          # identifying User-Agent - a bare curl default gets a 403, not
+          # the crate data. Confirmed locally: this call 403s without
+          # the header below and succeeds with it.
+          for attempt in 1 2 3 4 5 6; do
+            RESPONSE=$(curl -sf \
+              -H "User-Agent: apimock-rs-release-verify (https://github.com/apimokka/apimock-rs)" \
+              "https://crates.io/api/v1/crates/${{ matrix.crate }}" || true)
+            if [ -n "$RESPONSE" ] && echo "$RESPONSE" | jq -e --arg v "${{ env.TAG }}" \
+              '.versions // [] | any(.num == $v)' > /dev/null 2>&1; then
+              echo "OK: ${{ matrix.crate }} ${{ env.TAG }} is live on crates.io"
+              exit 0
+            fi
+            if [ "$attempt" -eq 6 ]; then
+              echo "::error::crates.io does not serve ${{ matrix.crate }}@${{ env.TAG }} after 6 attempts over 90s"
+              exit 1
+            fi
+            echo "attempt $attempt: ${{ matrix.crate }}@${{ env.TAG }} not yet visible on crates.io, retrying in 15s..."
+            sleep 15
+          done

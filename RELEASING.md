@@ -17,6 +17,7 @@ CI:   build 5 targets, attach every asset to the draft
 you:  open the draft on GitHub, check it, click "Publish"
 CI:   npm publish (3 platform packages, then the core package)
 CI:   cargo publish --workspace (4 crates, dependency order)
+CI:   verify published artifacts against the Release assets
 ```
 
 The tag push is the only thing you trigger directly. Everything from
@@ -177,6 +178,25 @@ the run dies before ever reaching the core package.
 So: if a publish job is ever renamed or moved, update all eight records
 before the next release, and treat the first release afterwards as
 unproven until it goes green.
+
+## Post-publish verification
+
+After both registries are published to, `verify-published` and
+`verify-crates-io` (`release-publish.yaml`, RFC 047) pull each artifact
+back down — the npm platform packages via `npm pack`, the Release asset
+via `gh release download`, both hashed and compared; each crate checked
+against crates.io's public API — and fail loudly on any mismatch or
+missing version. This exists because it has actually happened here:
+npm shipped packages labelled 5.9.0–5.10.0 containing a 4.6.9 binary for
+months, undetected, because nothing checked what actually landed.
+
+**A `verify-*` failure means the artifact is already public and needs
+investigating — not re-running.** By the time these jobs run, publishing
+already happened; re-running them changes nothing about what's on the
+registry. Treat a failure the same as discovering the problem by hand:
+check what's actually live (`npm pack`, crates.io's site) against what
+the Release asset says, then decide whether a yank/deprecate is
+warranted (see below).
 
 ## Recovery paths, and their limits
 

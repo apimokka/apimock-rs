@@ -1,0 +1,72 @@
+name: Extract release binary
+description: >
+  Download a GitHub Release asset archive for one platform and extract
+  its binary. RFC 047: this archive-layout knowledge (RELEASE_SRC_DIR
+  naming, tar vs 7z by extension, where the binary sits inside) used to
+  exist only inside npm-platforms-publish. Both that job and the
+  post-publish verification job need it, so it lives here once instead
+  of as two copies that could quietly drift apart.
+
+inputs:
+  tag:
+    description: Release tag (e.g. 5.16.0)
+    required: true
+  product-basename:
+    description: Binary name inside the archive (e.g. apimock)
+    required: true
+  platform-name:
+    description: Matrix display name used in the asset filename (e.g. Linux-x64-gnu)
+    required: true
+  archive-ext:
+    description: ".tar.gz or .zip"
+    required: true
+  bin-ext:
+    description: Binary file extension, empty for Linux/macOS, .exe for Windows
+    required: false
+    default: ""
+  dest-dir:
+    description: Directory to copy the extracted binary into
+    required: true
+
+outputs:
+  binary-path:
+    description: Path to the extracted binary
+    value: ${{ steps.place.outputs.binary-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download release asset
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        DL_DIR="dl-${{ inputs.platform-name }}"
+        ASSET_FILENAME="${{ inputs.product-basename }}@${{ inputs.platform-name }}-${{ inputs.tag }}${{ inputs.archive-ext }}"
+        mkdir -p "$DL_DIR"
+        gh release download "${{ inputs.tag }}" \
+          --repo "${{ github.repository }}" \
+          --pattern "$ASSET_FILENAME" \
+          --dir "$DL_DIR"
+        echo "DL_DIR=${DL_DIR}" >> "$GITHUB_ENV"
+        echo "ASSET_FILENAME=${ASSET_FILENAME}" >> "$GITHUB_ENV"
+
+    - name: Extract archive - tar.gz
+      if: inputs.archive-ext == '.tar.gz'
+      shell: bash
+      run: tar xzf "${{ env.DL_DIR }}/${{ env.ASSET_FILENAME }}" -C "${{ env.DL_DIR }}"
+
+    - name: Extract archive - zip
+      if: inputs.archive-ext == '.zip'
+      shell: bash
+      run: 7z x "${{ env.DL_DIR }}/${{ env.ASSET_FILENAME }}" -o"${{ env.DL_DIR }}"
+
+    - name: Place extracted binary
+      id: place
+      shell: bash
+      run: |
+        ASSET_BASENAME="${{ inputs.product-basename }}@${{ inputs.platform-name }}-${{ inputs.tag }}"
+        BINARY_NAME="${{ inputs.product-basename }}${{ inputs.bin-ext }}"
+        mkdir -p "${{ inputs.dest-dir }}"
+        cp "${{ env.DL_DIR }}/${ASSET_BASENAME}/${BINARY_NAME}" "${{ inputs.dest-dir }}/"
+        echo "binary-path=${{ inputs.dest-dir }}/${BINARY_NAME}" >> "$GITHUB_OUTPUT"
