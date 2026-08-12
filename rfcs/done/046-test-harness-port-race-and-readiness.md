@@ -1,8 +1,10 @@
 # RFC 046 — Test harness: port race and server readiness
 
-**Status.** Proposed — awaiting owner approval. **Amended 2026-08-12** —
-see § Cause 2 amendment: the original diagnosis of where the bind-failure
-fix needed to attach was wrong.
+**Status.** Implemented (v5.17.0). Approved by the project owner
+2026-08-12; **amended the same day** — see § Cause 2 amendment: the
+original diagnosis of where the bind-failure fix needed to attach was
+wrong, established from source during implementation and corrected here.
+Reviewed in `REVIEW-001` / `REVIEW-002` / `REVIEW-003`.
 **Tracks.** Pipeline trust. The integration test harness picks a port it
 does not hold and waits a fixed interval instead of waiting for the
 server, so tests fail intermittently for reasons unrelated to what they

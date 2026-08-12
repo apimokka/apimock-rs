@@ -1,14 +1,17 @@
 # Acceptance / QA Checklist — RFC 047
 
-**Governing RFC.** [RFC 047](../../proposed/047-post-publish-artifact-verification.md)
+**Governing RFC.** [RFC 047](../../done/047-post-publish-artifact-verification.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---
 
 ## The check is the bytes
 
-- [ ] npm platform packages compared **by `sha256sum` of the binary**,
+- [ ] npm platform packages compared **by SHA-256 of the binary**,
       against the corresponding GitHub Release asset's binary
+      *(this originally said `sha256sum`; REVIEW-001 § 3 required a
+      portable command, since macOS ships no GNU coreutils — shipped as
+      `openssl dgst -sha256`)*
 - [ ] Version fields are **not** treated as the check
 - [ ] Mismatch output names **both hashes and both paths**
 - [ ] All four crates asserted present on crates.io at the released

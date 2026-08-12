@@ -9,11 +9,13 @@ development and intentionally postponed, so the original context isn't
 lost between releases. That history lives at the bottom of this file.
 
 **Baseline approved.** 2026-08-02, by the project owner.
-**Baseline covers.** v5.15.0 → v5.17.0.
-**Current version.** 5.16.0 — 39 RFCs implemented, 1 withdrawn.
+**Baseline covers.** v5.15.0 → v5.18.0 *(extended 2026-08-12: M3 split across two releases — see § M3)*.
+**Current version.** 5.17.0 — 41 RFCs implemented, 1 withdrawn.
 **M1 complete** (2026-08-03): RFCs 030–033 shipped in v5.15.0.
 **M2 complete** (2026-08-10): RFCs 034–038 shipped in v5.16.0, together
 with cross-cutting RFC 044 — the first release cut by automation.
+**M3 in progress.** RFCs 046 and 047 shipped in v5.17.0 (2026-08-12);
+039–043 and 045 remain, and now target v5.18.0 — see § M3.
 
 ---
 
@@ -47,7 +49,7 @@ that earlier RFCs explicitly deferred.
 |---|---|---|---|
 | **M1** | Pipeline trust | Quality gates exist, run automatically, and pass. The release path — including npm — works end to end. | 5.15.0 |
 | **M2** | Documentation and examples | A reader finds every shipped feature, finds nothing contradicting the code, and can predict a config change's effect before making it. | 5.16.0 — cut after all five RFCs land (see § M2) |
-| **M3** | Deferred design | The items RFCs 023 / 024 and open question Q-001 explicitly postponed are resolved. | 5.17.0 |
+| **M3** | Deferred design, plus pipeline gaps found in v5.16.0 | The items RFCs 023 / 024 and open question Q-001 explicitly postponed are resolved. | 5.17.0 (046, 047) → 5.18.0 (039–043, 045) |
 
 **Order.** M1 → M2 → M3, sequential. M1 is first because the gates it
 installs are what keep M2's and M3's work from decaying the way
@@ -242,7 +244,7 @@ the automation was designed against observed behaviour rather than
 assumed behaviour. Implemented and reviewed 2026-08-08; **v5.16.0 is the
 first release cut through it.**
 
-### M3 — Deferred design → 5.17.0
+### M3 — Deferred design → 5.17.0 (partial) and 5.18.0
 
 | RFC | Title | Pri | Depends on | State |
 |---|---|---|---|---|
@@ -252,19 +254,27 @@ first release cut through it.**
 | 042 | `sync_from_disk` incremental reconciliation | P2 | — | Planned |
 | 043 | Module split: `workspace/edit.rs`, `server/trace.rs` | P2 | — | Planned |
 | 045 | [Configuration accepted but ignored](./rfcs/proposed/045-configuration-accepted-but-ignored.md) | P1 | — | Proposed |
-| 046 | [Test harness: port race and readiness](./rfcs/proposed/046-test-harness-port-race-and-readiness.md) | **P0** | — | Proposed |
-| 047 | [Verify what was actually published](./rfcs/proposed/047-post-publish-artifact-verification.md) | P1 | 044 | Proposed |
+| 046 | [Test harness: port race and readiness](./rfcs/done/046-test-harness-port-race-and-readiness.md) | **P0** | — | Implemented (v5.17.0) |
+| 047 | [Verify what was actually published](./rfcs/done/047-post-publish-artifact-verification.md) | P1 | 044 | Implemented (v5.17.0) |
 
 **046 and 047 are unfinished M1 work, added 2026-08-12 after v5.16.0.**
 M1's theme was pipeline trust, and both gaps are in that pipeline rather
 than in M3's deferred-design theme — they are placed here because this is
 the next release, not because they belong to the theme.
 
-RFC 046 is **P0 and the only P0 in M3**: the harness flake it fixes can
-fail `quality-gate`, which runs on every tag push, so it can fail a
-release. Three consecutive local runs on 2026-08-12 failed twice, against
-the roughly 1-in-8 recorded below. v5.16.0's release passed on the first
-attempt, which was luck rather than evidence.
+RFC 046 was **P0 and the only P0 in M3**: the harness flake it fixed
+could fail `quality-gate`, which runs on every tag push, so it could fail
+a release. Three consecutive local runs on 2026-08-12 failed twice,
+against the roughly 1-in-8 recorded below. **Closed in v5.17.0** — 20
+consecutive full runs across implementation and review, zero failures.
+
+**v5.17.0 was cut with only 046 and 047**, ahead of the rest of M3 and
+deliberately small. Two pipeline paths had never executed successfully —
+`crates-io-publish` and 047's own verification jobs — and a one-API-
+addition release is a better first exercise for them than a milestone's
+worth of change. The remaining M3 RFCs move to v5.18.0. This follows the
+release-cycle rule as amended for M2: a release is cut for what changes
+the artifact, not for what completes a milestone.
 
 RFC 047 closes the class of defect that let npm ship 4.6.9 binaries under
 5.9.0–5.10.0 version numbers, undetected across several releases with
@@ -310,7 +320,9 @@ M3  031 ──▶ 039
     040
     041
     042  (needs GUI-team round-trip first)
-    043                                     ▶ 5.17.0
+    043                                     ▶ 5.18.0
+    046  (shipped)                          ▶ 5.17.0
+    047  (shipped, depends on 044)          ▶ 5.17.0
 ```
 
 Cross-milestone: 039 depends on the CI infrastructure landed by 031.

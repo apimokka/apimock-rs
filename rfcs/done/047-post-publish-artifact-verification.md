@@ -1,6 +1,9 @@
 # RFC 047 — Verify what was actually published
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Implemented (v5.17.0). Approved by the project owner
+2026-08-12; reviewed in `REVIEW-001` / `REVIEW-002`. The jobs themselves
+first execute during v5.17.0's own release — knowingly, as RFC 044's
+publish phase did before them.
 **Tracks.** Pipeline trust. A green publish job proves an upload
 succeeded. It does not prove the right bytes arrived, and this project
 has already shipped fifteen months of npm packages containing the wrong

@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 046, Test harness port race and readiness
 
-**Governing RFC.** [RFC 046](../../proposed/046-test-harness-port-race-and-readiness.md)
+**Governing RFC.** [RFC 046](../../done/046-test-harness-port-race-and-readiness.md)
 **Milestone.** M3 — **P0, the only P0 in the milestone**
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 

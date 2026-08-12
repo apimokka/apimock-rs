@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 047, Verify what was actually published
 
-**Governing RFC.** [RFC 047](../../proposed/047-post-publish-artifact-verification.md)
+**Governing RFC.** [RFC 047](../../done/047-post-publish-artifact-verification.md)
 **Milestone.** M3 — P1. Independent of RFC 046; the two can run in parallel.
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 

@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 046
 
-**Governing RFC.** [RFC 046](../../proposed/046-test-harness-port-race-and-readiness.md)
+**Governing RFC.** [RFC 046](../../done/046-test-harness-port-race-and-readiness.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---

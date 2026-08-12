@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.17.0] - 2026-08-12
+
+A small release, cut deliberately small. Two release-pipeline paths have
+never executed successfully — crates.io publishing and the new artifact
+verification — and this is the release that runs them for the first time.
+Better that they run over one API addition than over a milestone's worth
+of change.
+
+### Added
+
+- **`Server` can now bind and serve as separate steps (RFC 046).** Four
+  additive methods on `apimock_server::Server`: `bind_http`,
+  `serve_http`, `bind_https`, `serve_https`. Binding returns a
+  `Result`, so a failure to bind is reported to the caller rather than
+  logged and swallowed, and the caller holds the listener — which means
+  it can read the real bound address before anything starts serving.
+  `Server::start()` is unchanged and still does both.
+
+- **Prebuilt binaries are documented as an install route.** The Quick
+  start in `README.md` and the getting-started page now cover
+  downloading a release archive, which needs neither Node nor Rust.
+  Each archive already contains `apimock.toml`, `apimock-rule-set.toml`
+  and `apimock-middleware.rhai`, and running `./apimock` from the
+  extracted directory picks them up with no flag and no `--init` — so a
+  downloaded build answers `/health` and `/greet` immediately.
+
+### Fixed
+
+- **The README documented a command that does not work.** It showed
+  `apimock -c apimock.toml`; a bare relative path fails with `failed to
+  resolve path`. `-c ./apimock.toml` works, and is now what the README
+  shows. The CLI reference already documented the quirk correctly. The
+  underlying path-resolution defect is tracked, not yet fixed.
+
+- **Intermittent integration-test failures (RFC 046).** The test harness
+  chose a port by binding it, releasing it, and letting the server bind
+  the same number several hundred milliseconds later, so tests could
+  take each other's ports; readiness was a fixed sleep rather than a
+  check; and a failed bind was discarded, surfacing much later as an
+  unexplained connection error. Ports are now held from bind to serve,
+  readiness is measured, and a bind failure names itself. This never
+  affected the shipped binary — but it could fail the release gate, and
+  so could have blocked or delayed a release at any time.
+
+### Internal
+
+- **Published artifacts are now verified against the Release assets
+  (RFC 047).** After publishing, CI pulls each npm package back from the
+  registry and compares its binary byte-for-byte with the archive
+  attached to the GitHub Release, and confirms each crate is served by
+  crates.io. This is the check that would have caught npm shipping 4.6.9
+  binaries under 5.9.0–5.10.0 version numbers, which went unnoticed for
+  months with every CI job green.
+
+### Test count
+
+Unchanged from 5.16.0 at **409**. RFC 046 changed how the harness starts
+a server, not what any test asserts; RFC 047 adds no Rust tests. The
+integration binary's wall-clock time fell from ~2s to ~0.03s as a side
+effect of removing a 400 ms sleep per test.
+
 ## [5.16.0] - 2026-08-10
 
 A documentation and examples release. **No behaviour change, no API
