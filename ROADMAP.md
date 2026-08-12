@@ -342,7 +342,7 @@ starts immediately.
 |---|---|---|---|---|---|
 | R-01 | RFC 031 turns on `-D warnings` while findings remain, blocking every subsequent PR | Development halts until fixed | Low | 031 depends on 030; 031's acceptance criteria require a green clippy run on the merge commit | architect |
 | R-02 | The 26 clippy fixes in RFC 030 change behaviour | Silent regression | Low | Full test suite must pass unchanged; no test may be modified within RFC 030's scope | architect |
-| R-03 | RFC 039 breaks the GUI team's integration | Downstream breakage | Medium | GUI-team compatibility round-trip is a precondition for writing the RFC, not a follow-up | owner + architect |
+| R-03 | RFC **042** breaks the GUI team's integration *(corrected 2026-08-12 — both this row and D-02 read "039", a leftover of the 037–041 → 039–043 renumbering. 039 is the additive-only API gate, which cannot break a consumer; 042 is `sync_from_disk` reconciliation, the only item that changes what the GUI must do)* | Downstream breakage | Medium | GUI-team compatibility round-trip is a precondition for writing the RFC, not a follow-up | owner + architect |
 | R-04 | Publishing npm at 5.15.0 leaves 5.10.1–5.14.0 permanently unpublished on that channel | User confusion about which versions exist | High (accepted) | Owner-accepted consequence of repairing rather than backfilling; noted in the 5.15.0 release notes. *Range corrected 2026-08-03 — last published npm version is 5.10.0, not 5.7.0* | owner |
 | R-05 | ~~CI tracks Rust `stable` while `Cargo.toml` pins MSRV 1.91.0~~ | — | — | **Closed 2026-08-12.** RFC 031's `msrv` job exists and reads the pin from `Cargo.toml` rather than hard-coding it (`.github/workflows/ci.yaml:106`) | architect |
 | R-06 | Scope creep from docs work — rewriting docs surfaces genuine feature gaps | M2 expands into feature work | Medium | Feature gaps discovered during M2 become new RFCs for a later milestone; they do not join M2 | architect |
@@ -356,7 +356,7 @@ starts immediately.
 | ID | Decision required | Owner | Blocking |
 |---|---|---|---|
 | D-01 | Target calendar window for M1–M3, so milestones can be dated | project owner | Scheduling only; RFC work can start without it |
-| D-02 | Whether RFC 039 proceeds, pending the GUI-team compatibility round-trip | project owner | M3 scope |
+| D-02 | Whether RFC **042** proceeds, pending the GUI-team compatibility round-trip *(number corrected 2026-08-12 — see R-03)* | project owner | M3 scope |
 
 Decisions taken on 2026-08-02:
 
