@@ -1,8 +1,9 @@
 # RFC 045 — Configuration that is accepted but ignored
 
 **Status.** Proposed — design approved by the project owner 2026-08-04.
-Unresolved questions 1 and 2 remain open and are decided at
-implementation time, not here.
+Unresolved questions 1–3 resolved during implementation; see § Unresolved
+questions. **Amended 2026-08-13** — see § Defect 1's amendment: the
+`file_path` row needed a plain-text caveat.
 **Tracks.** Correctness. Two shipped configuration fields parse, pass
 `apimock validate`, print at startup, and have no runtime effect.
 **Touches.** `apimock-server` (response construction), `apimock-routing`
@@ -50,10 +51,26 @@ an explicit override.
 
 | `respond` shape | `respond.headers` |
 |---|---|
-| `file_path` | honoured |
+| `file_path` (json/json5/csv) | honoured |
+| `file_path` (plain text — everything else) | **all dropped** |
 | `text` alone | honoured, except `content-type` is overwritten |
 | `text` + `status` | **all dropped** |
 | `status` alone | **all dropped** |
+
+**Amendment — 2026-08-13.** The `file_path` row was originally a single
+"honoured", with no plain-text caveat. That was wrong: `FileResponse::
+text_file_content_response`'s non-JSON/CSV branch
+(`crates/apimock-server/src/response/file_response.rs`, pre-fix)
+hardcoded `None` for custom headers in both its `text_response(...)`
+calls, never reading `self.custom_headers` — while the sibling
+`json_file_content_response`/`csv_file_content_response` in the same
+file correctly do. This was already on record in
+`.git-exclude/reviewed/035-user-guide-and-reference-rewrite/REVIEW-001.md`
+§ 4.4, dispositioned as extending this defect, but the disposition never
+made it back into this table. Fixed alongside the rest of Defect 1 during
+implementation — same mechanism, same fix shape, same file — see
+`.git-exclude/reviewed/045-configuration-accepted-but-ignored/REVIEW-001.md`
+§ 2.
 
 The practical impact is on error responses: returning
 `content-type: application/problem+json` with a 4xx, or any correlation
@@ -182,10 +199,43 @@ outcome, but it should be established rather than assumed.
 
 ## Unresolved questions
 
-1. **Defect 2: implement or remove?** Recommend implement. Owner
-   decision if it is treated as user-visible.
-2. **Goal 4: how far?** Options 1–3 above. Worth at least establishing
-   whether option 3 is practical before settling for 1.
-3. **Do the RFC 036 examples get simplified once this lands?** They
-   currently route around defect 1 deliberately. Simplifying them is
-   optional and would touch a shipped example set.
+1. ~~**Defect 2: implement or remove?**~~ ✅ **Resolved — implement**
+   (Option A), per the implementation handoff. A rule-set-wide default
+   delay is a genuine feature; per-rule
+   `respond.delay_response_milliseconds` still overrides it. This is a
+   user-visible behaviour change — flagged for the CHANGELOG.
+2. ~~**Goal 4: how far?**~~ ✅ **Resolved — option 3 rejected, falling
+   back to option 1 for this RFC's own scope.** Investigated with a
+   working prototype (enumerate every `pub` field on a
+   `#[derive(Deserialize)]` struct across `apimock-config` +
+   `apimock-routing`; search all three crates — `apimock-config`,
+   `apimock-routing`, `apimock-server` — for non-cosmetic reads).
+   Corrected re-run: 0 of 47 fields flagged, so the noisy-false-positive
+   version of the argument does not hold once the search covers the
+   crate that actually contains matching and dispatch. The check is
+   still rejected, on a sharper and more direct basis: `Respond` and
+   `DefaultRespond` (`crates/apimock-routing/src/rule_set/rule/respond.rs`,
+   `.../rule_set/default_respond.rs`) both have a field named
+   `delay_response_milliseconds`. Pre-fix, the per-rule copy's
+   legitimate read (`respond_response.rs`, then line 45) would have made
+   a field-*name*-based check report "referenced" and pass — with no
+   visibility into whether the rule-*set* copy specifically was ever
+   touched, which was exactly this RFC's Defect 2. A check that cannot
+   tell two same-named fields on different structs apart cannot be
+   trusted to catch the failure mode this RFC exists to close.
+   Precise, struct-aware exhaustiveness (type-directed, not textual) is
+   a real static-analysis tool, not a test, and is disproportionate to a
+   47-field surface — the RFC's own non-goal. Option 2 has no target: the
+   only fields this RFC found inert are the two just fixed, and
+   everything else known-inert (`[guard]`, `[file_tree_view]`, the trace
+   channel) already has its own, separate disposition. See
+   `.git-exclude/reviewed/045-configuration-accepted-but-ignored/REVIEW-001.md`
+   § 4 for the correction history — the first re-run searched only
+   `apimock-server` and over-attributed the resulting noise to
+   indirection rather than to that search-domain gap.
+3. **Do the RFC 036 examples get simplified once this lands?** Checked
+   during implementation — neither `match-headers-and-body/` nor
+   `status-codes-and-errors/` uses `file_path` at all, and neither
+   demonstrates `respond.headers` in any form, so there was no
+   stale-prose case to fix and no simplification made. Still optional,
+   still untouched.

@@ -1,0 +1,19 @@
+[prefix]
+url_path = "/respond-headers/"
+respond_dir = "@headers-dir"
+
+[[rules]]
+when.request.url_path = "/file"
+respond = { file_path = "hello.txt", headers = { "x-custom" = "file-value" } }
+
+[[rules]]
+when.request.url_path = "/text"
+respond = { text = "hello text", headers = { "x-custom" = "text-value", "content-type" = "text/x-custom" } }
+
+[[rules]]
+when.request.url_path = "/text-status"
+respond = { text = "hello text status", status = 201, headers = { "x-custom" = "text-status-value" } }
+
+[[rules]]
+when.request.url_path = "/status"
+respond = { status = 403, headers = { "x-custom" = "status-value" } }

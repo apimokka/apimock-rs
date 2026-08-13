@@ -426,7 +426,19 @@ async fn rule_set_response(
             rule_set_idx,
         ) {
             let dir_prefix = rule_set.dir_prefix();
-            return Some(respond_response(&respond, dir_prefix.as_str(), parsed_request).await);
+            let rule_set_default_delay_ms = rule_set
+                .default
+                .as_ref()
+                .and_then(|default| default.delay_response_milliseconds);
+            return Some(
+                respond_response(
+                    &respond,
+                    dir_prefix.as_str(),
+                    parsed_request,
+                    rule_set_default_delay_ms,
+                )
+                .await,
+            );
         }
     }
     None

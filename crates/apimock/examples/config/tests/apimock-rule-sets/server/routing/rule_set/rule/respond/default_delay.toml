@@ -1,0 +1,13 @@
+[prefix]
+url_path = "/respond-default-delay/"
+
+[default]
+delay_response_milliseconds = 300
+
+[[rules]]
+when.request.url_path = "/inherits-default"
+respond = { status = 200 }
+
+[[rules]]
+when.request.url_path = "/overrides-default"
+respond = { status = 200, delay_response_milliseconds = 10 }

@@ -114,6 +114,14 @@ impl FileResponse {
     }
 
     /// text file response
+    ///
+    /// `self.custom_headers` is threaded through here the same way
+    /// `json_file_content_response`/`csv_file_content_response` already
+    /// do below - this branch previously hardcoded `None`, silently
+    /// dropping every custom header on a plain-text `file_path` response
+    /// (RFC 045 Defect 1, extended: this contradicted the RFC's own
+    /// "`file_path` | honoured" claim, which held only for the
+    /// json/json5/csv sub-cases).
     fn text_file_content_response(&self) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
         match file_extension(self.file_path.as_str()) {
             Some(ext) => match ext.as_str() {
@@ -122,14 +130,14 @@ impl FileResponse {
                 _ => text_response(
                     self.text_content.clone().unwrap_or_default().as_str(),
                     Some(text_file_content_type(ext).as_str()),
-                    None,
+                    self.custom_headers.as_ref(),
                     &self.request_headers,
                 ),
             },
             None => text_response(
                 self.text_content.clone().unwrap_or_default().as_str(),
                 None,
-                None,
+                self.custom_headers.as_ref(),
                 &self.request_headers,
             ),
         }

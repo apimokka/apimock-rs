@@ -1,5 +1,7 @@
 [service]
 rule_sets = [
     "respond.toml",
+    "headers.toml",
+    "default_delay.toml",
 ]
 fallback_respond_dir = "."

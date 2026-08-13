@@ -37,12 +37,22 @@ use crate::{
 /// `Respond::validate` rejects nonsensical combinations at startup, so
 /// hitting the final `Err` branch means something slipped past
 /// validation — a real bug, not user input.
+///
+/// `rule_set_default_delay_ms` is the matched rule set's
+/// `[default].delay_response_milliseconds`, if any (RFC 045 Defect 2).
+/// The per-rule `respond.delay_response_milliseconds` always overrides
+/// it when both are set; the rule-set value only applies when the rule
+/// itself is silent.
 pub async fn respond_response(
     respond: &Respond,
     dir_prefix: &str,
     parsed_request: &ParsedRequest,
+    rule_set_default_delay_ms: Option<u32>,
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
-    if let Some(delay_ms) = respond.delay_response_milliseconds {
+    if let Some(delay_ms) = respond
+        .delay_response_milliseconds
+        .or(rule_set_default_delay_ms)
+    {
         delay_response(delay_ms).await;
     }
 
@@ -76,9 +86,12 @@ pub async fn respond_response(
 
     if let Some(text) = respond.text.as_ref() {
         return match respond.status_code.as_ref() {
-            Some(status_code) => {
-                status_code_response_with_message(status_code, text.as_str(), request_headers)
-            }
+            Some(status_code) => status_code_response_with_message(
+                status_code,
+                text.as_str(),
+                respond.headers.as_ref(),
+                request_headers,
+            ),
             None => text_response(
                 text.as_str(),
                 None,
@@ -89,7 +102,7 @@ pub async fn respond_response(
     }
 
     if let Some(status_code) = respond.status_code.as_ref() {
-        return status_code_response(status_code, request_headers);
+        return status_code_response(status_code, respond.headers.as_ref(), request_headers);
     }
 
     internal_server_error_response("invalid respond def", request_headers)
