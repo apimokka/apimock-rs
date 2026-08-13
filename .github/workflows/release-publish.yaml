@@ -167,6 +167,13 @@ jobs:
       contents: read
     runs-on: ${{ matrix.os }}
     strategy:
+      # A verification job wants every platform's answer, not the first
+      # failure. v5.17.0's run made the case: the macOS leg failed,
+      # fail-fast cancelled Linux and Windows, and the result read as a
+      # macOS-specific problem when in fact all three would have failed
+      # identically. Cancelling siblings costs information exactly where
+      # information is the whole point of the job.
+      fail-fast: false
       matrix:
         include:
           - name: Linux-x64-gnu
@@ -217,6 +224,14 @@ jobs:
       # in under two minutes, not left to time out silently.
       - name: npm pack (public, unauthenticated)
         run: |
+          # `--pack-destination` does not create the directory; npm fails
+          # with ENOENT trying to write the tarball into it. v5.17.0's
+          # run failed here on every platform (only macOS was observed —
+          # fail-fast cancelled the rest), reproduced identically on
+          # Linux locally. The sibling step below creates its own
+          # directory; this one never did.
+          mkdir -p npm-pack-out
+
           for attempt in 1 2 3 4 5 6; do
             if npm pack "${{ matrix.npm-package }}@${{ env.TAG }}" --pack-destination npm-pack-out; then
               break
