@@ -335,7 +335,7 @@ be finished and handed over.
 | | Work | State |
 |---|---|---|
 | 1 | M3's remainder — RFCs 039–043 | Planned; 042 still blocked on the GUI round-trip (D-02) |
-| 2 | CLI hygiene — `--version`, `--help`, reject unknown flags, bare relative `--config` | Findings table; **promoted to prerequisite** by RFC 048 § 6 |
+| 2 | CLI hygiene — **[RFC 049](./rfcs/proposed/049-cli-front-door.md)** | Drafted 2026-08-17. **Blocks item 4** — a CLI that ignores unknown arguments cannot deliver a deprecation warning |
 | 3 | Enumerate v6's breaking changes | **Blocks the final 5.x** |
 | 4 | Deprecation warnings — stderr, exit code 0, naming the removal version | The deprecation release |
 
