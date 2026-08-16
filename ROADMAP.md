@@ -9,7 +9,7 @@ development and intentionally postponed, so the original context isn't
 lost between releases. That history lives at the bottom of this file.
 
 **Baseline approved.** 2026-08-02, by the project owner.
-**Baseline covers.** v5.15.0 → v5.18.0 *(extended 2026-08-12: M3 split across two releases — see § M3)*.
+**Baseline covers.** v5.15.0 → the close of v5 *(extended 2026-08-17: v5 no longer ends at v5.18.0 — see § Closing v5, opening v6)*.
 **Current version.** 5.17.0 — 41 RFCs implemented, 1 withdrawn.
 **M1 complete** (2026-08-03): RFCs 030–033 shipped in v5.15.0.
 **M2 complete** (2026-08-10): RFCs 034–038 shipped in v5.16.0, together
@@ -82,9 +82,16 @@ once that window is agreed.
   minor. They are not used to land RFC work.
 - **Release tags** are `X.Y.Z` with no `v` prefix, matching all existing
   tags.
-- **Major version** is out of scope for this roadmap. Whether and when
-  6.0.0 happens is the project owner's decision alone, and completing
-  this roadmap does not trigger it.
+- **Major version.** Whether and when 6.0.0 happens remains the project
+  owner's decision alone, and completing this roadmap does not trigger
+  it.
+
+  **Amended 2026-08-17:** v6's *concept* is now accepted
+  ([RFC 048](./rfcs/proposed/048-v6-cli-interface-concept.md)), and the
+  transition is no longer out of scope — because the owner decided a
+  deprecation window ships in a 5.x release first. That makes part of
+  v6's design a prerequisite for finishing v5. See § Closing v5, opening
+  v6. Timing of 6.0.0 itself is still unset.
 - **Release gate.** From RFC 031 onward, no release candidate is
   prepared while any mandatory CI gate is failing.
 
@@ -302,6 +309,57 @@ must do; it requires a compatibility round-trip with the GUI team
 when the *file* is created, and none of these existed as files. **RFC 041
 deliberately kept its number** — it is already referenced externally by
 `.git-exclude/reviewed/030-warning-clean-baseline/DECISIONS-001-002.md`.
+
+---
+
+## Closing v5, opening v6
+
+**Added 2026-08-17.** v6's concept is accepted and recorded in
+[RFC 048](./rfcs/proposed/048-v6-cli-interface-concept.md): the CLI
+becomes an interface in its own right, with `get` and `set` families
+aimed principally at AI CLI agents and CI.
+
+### Why this changes v5's end, rather than following it
+
+The owner decided that v6 **may break 5.x invocations**, and that a
+**deprecation window ships in a 5.x release first** (RFC 048 § 7, § 7.1).
+
+A deprecation warning has to name its replacement. So the *enumeration*
+of v6's breaking changes — which invocations change, and to what, not
+how each is designed — **must be settled before the final 5.x ships**.
+The last v5 release is therefore a v6 deliverable, and v5 cannot simply
+be finished and handed over.
+
+### What now closes v5
+
+| | Work | State |
+|---|---|---|
+| 1 | M3's remainder — RFCs 039–043 | Planned; 042 still blocked on the GUI round-trip (D-02) |
+| 2 | CLI hygiene — `--version`, `--help`, reject unknown flags, bare relative `--config` | Findings table; **promoted to prerequisite** by RFC 048 § 6 |
+| 3 | Enumerate v6's breaking changes | **Blocks the final 5.x** |
+| 4 | Deprecation warnings — stderr, exit code 0, naming the removal version | The deprecation release |
+
+Item 2 was "small but user-facing" while v5 was the whole story. Under
+RFC 048 it is load-bearing twice over: a CLI that silently ignores an
+unknown flag cannot deliver a deprecation notice anyone acts on, and
+silent-wrong-behaviour is disqualifying for the agent users v6 targets.
+
+### Where v5's release numbering lands
+
+**Not yet decided.** v5.18.0 carries M3's remainder as planned. Whether
+the deprecation release is v5.19.0 or v5.18.0 grown depends on how much
+of the breaking enumeration is ready when M3 lands, and is a release
+decision to take then rather than now.
+
+### Security
+
+RFC 048 § 9 opens a threat model for v6 and the owner has asked for it to
+be refined during development. Its sharpest item is **T2**: `set` built
+on the existing `Workspace::save` path would inherit the ability to
+attach Rhai middleware (`toml_writer.rs:190` already emits
+`service.middlewares`), turning a configuration write into code
+execution. That is a scope decision, and it is wanted **before** `set` is
+designed rather than after.
 
 ---
 

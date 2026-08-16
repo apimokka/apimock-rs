@@ -20,6 +20,7 @@ depends-on, and the rest of the planned portfolio.
 | ID  | Title |
 |-----|-------|
 | 045 | [Configuration accepted but ignored](./proposed/045-configuration-accepted-but-ignored.md) |
+| 048 | [v6 concept: the CLI as a first-class interface](./proposed/048-v6-cli-interface-concept.md) — umbrella |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
@@ -81,9 +82,9 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 
 ## Adding a new RFC
 
-1. Pick the next free number — **048+**. Numbers 039–043 are reserved
-   by [ROADMAP.md](../ROADMAP.md) for the planned M3 RFCs; 045 is still
-   open. Create `rfcs/proposed/NNN-slug.md`.
+1. Pick the next free number — **049+**. Numbers 039–043 are reserved
+   by [ROADMAP.md](../ROADMAP.md) for the planned M3 RFCs; 045 and 048
+   are still open. Create `rfcs/proposed/NNN-slug.md`.
 2. On shipping, move to `done/`, update Status field, update this index.
 
 See [RFC 000](./done/000-rfc-lifecycle-policy.md) for the full policy.
