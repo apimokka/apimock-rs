@@ -1,3 +1,5 @@
+use std::{path::Path, process::Command};
+
 use hyper::StatusCode;
 use serde_json::json;
 use util::{
@@ -7,6 +9,16 @@ use util::{
 
 #[path = "util.rs"]
 mod util;
+
+/// A real, shipped example config - used as the "normal workspace"
+/// case for RFC 049's `--version` / `--help` evidence requirement.
+fn normal_workspace_dir() -> std::path::PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/config/default")
+}
+
+fn bin() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_apimock"))
+}
 
 #[tokio::test]
 async fn port_env_arg_overwrites() {
@@ -72,4 +84,246 @@ async fn fallback_response_dir_env_arg_default() {
     let response = TestRequest::default("/tests/fixtures", port).send().await;
 
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+// RFC 049: the CLI front door. These exercise the real compiled binary
+// (`Command`), not `TestSetup`, because the behaviour under test is
+// `env::args()` parsing itself - `--version`/`--help` short-circuiting,
+// exit codes, and stdout/stderr discipline all have to be observed from
+// outside the process.
+
+#[test]
+fn unknown_option_exits_2_on_stderr_and_starts_no_server() {
+    let output = bin()
+        .args(["--bogus-flag-xyz"])
+        .output()
+        .expect("failed to run apimock");
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty(), "stdout was not empty");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("unknown option '--bogus-flag-xyz'"),
+        "stderr was: {stderr}"
+    );
+    // No server started: `.output()` waits for the process to exit on
+    // its own. A server that had (wrongly) started would never exit,
+    // and this call would hang rather than return - the absence of a
+    // hang is itself part of the evidence, not just the message text.
+}
+
+#[test]
+fn unknown_option_near_match_suggests_the_correction() {
+    let output = bin()
+        .args(["--prot", "4000"])
+        .output()
+        .expect("failed to run apimock");
+
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("unknown option '--prot'; did you mean '--port'?"),
+        "stderr was: {stderr}"
+    );
+}
+
+#[test]
+fn unknown_option_with_no_plausible_match_names_it_without_a_suggestion() {
+    let output = bin()
+        .args(["--zzzzzzzz"])
+        .output()
+        .expect("failed to run apimock");
+
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("unknown option '--zzzzzzzz'"), "{stderr}");
+    assert!(!stderr.contains("did you mean"), "stderr was: {stderr}");
+}
+
+#[test]
+fn version_and_help_normal_workspace() {
+    for flag in ["--version", "--help"] {
+        let output = bin()
+            .current_dir(normal_workspace_dir())
+            .args([flag])
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run apimock {flag}: {e}"));
+
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{flag} in a normal workspace"
+        );
+        assert!(output.stderr.is_empty(), "{flag}: stderr was not empty");
+        assert!(!output.stdout.is_empty(), "{flag}: stdout was empty");
+    }
+}
+
+#[test]
+fn version_and_help_no_config_file_present() {
+    let dir = tempfile::tempdir().expect("failed to create temp dir");
+    // deliberately no apimock.toml written
+
+    for flag in ["--version", "--help"] {
+        let output = bin()
+            .current_dir(dir.path())
+            .args([flag])
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run apimock {flag}: {e}"));
+
+        assert_eq!(output.status.code(), Some(0), "{flag} with no config file");
+        assert!(output.stderr.is_empty(), "{flag}: stderr was not empty");
+        assert!(!output.stdout.is_empty(), "{flag}: stdout was empty");
+    }
+}
+
+#[test]
+fn version_and_help_deliberately_invalid_config() {
+    let dir = tempfile::tempdir().expect("failed to create temp dir");
+    std::fs::write(
+        dir.path().join("apimock.toml"),
+        "this is not [[[ valid toml",
+    )
+    .expect("failed to write broken config");
+
+    for flag in ["--version", "--help"] {
+        let output = bin()
+            .current_dir(dir.path())
+            .args([flag])
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run apimock {flag}: {e}"));
+
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{flag} with a broken config present"
+        );
+        assert!(output.stderr.is_empty(), "{flag}: stderr was not empty");
+        assert!(!output.stdout.is_empty(), "{flag}: stdout was empty");
+    }
+}
+
+#[test]
+fn match_test_and_validate_help_are_reachable_per_subcommand() {
+    for subcommand in ["match-test", "validate"] {
+        let output = bin()
+            .args([subcommand, "--help"])
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run apimock {subcommand} --help: {e}"));
+
+        assert_eq!(output.status.code(), Some(0), "{subcommand} --help");
+        assert!(output.stderr.is_empty());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains(&format!("apimock {subcommand}")),
+            "{subcommand} --help stdout was: {stdout}"
+        );
+    }
+}
+
+#[test]
+fn bare_relative_config_resolves_the_same_as_dot_slash_prefixed() {
+    let dir = tempfile::tempdir().expect("failed to create temp dir");
+    std::fs::write(
+        dir.path().join("apimock.toml"),
+        "[listener]\nip_address = \"127.0.0.1\"\nport = 0\n",
+    )
+    .expect("failed to write config");
+
+    for arg in ["apimock.toml", "./apimock.toml"] {
+        // Config loading logs `[config] <path>` to stdout the moment it
+        // succeeds (`config.rs`), before the listener binds - so instead
+        // of a fixed sleep (the exact pattern RFC 046 just removed from
+        // the test harness for the same reason: it's either too short
+        // and flaky or too long and slow), poll for that line or for the
+        // process exiting early, whichever happens first, up to a
+        // bounded deadline.
+        let mut child = bin()
+            .current_dir(dir.path())
+            .args(["-c", arg])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap_or_else(|e| panic!("failed to spawn apimock -c {arg}: {e}"));
+
+        let mut stdout = std::io::BufReader::new(child.stdout.take().expect("piped stdout"));
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            use std::io::BufRead;
+            let mut line = String::new();
+            let _ = stdout.read_line(&mut line);
+            let _ = tx.send(line);
+        });
+
+        let saw_config_line = rx
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .map(|line| line.starts_with("[config]"))
+            .unwrap_or(false);
+
+        let _ = child.kill();
+        let output = child.wait_with_output().expect("failed to reap child");
+
+        assert!(
+            saw_config_line,
+            "-c {arg}: never saw the `[config]` line - resolution likely failed; stderr: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            !String::from_utf8_lossy(&output.stderr).contains("failed to resolve path"),
+            "-c {arg}: stderr: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
+
+/// `-c` with nothing after it was already a meaningless invocation
+/// before RFC 049 (`args_option_value` returns the empty string for a
+/// value-flag given with no value, the same encoding it uses for a
+/// boolean flag's presence) - the normalisation in
+/// `normalize_bare_relative_path` must not turn "no path given" into
+/// "path is `./`", which would trade one confusing error for a
+/// different, more confusing one. Pins the exact pre-existing message.
+#[test]
+fn config_flag_with_no_value_fails_the_same_way_as_before() {
+    let output = bin().args(["-c"]).output().expect("failed to run apimock");
+
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("config file specified via --config does not exist:"),
+        "stderr was: {stderr}"
+    );
+    assert!(
+        !stderr.contains("Is a directory"),
+        "stderr was: {stderr} (this would mean the empty value got normalised to \"./\")"
+    );
+}
+
+#[tokio::test]
+async fn dir_flag_resolves_bare_and_dot_slash_identically() {
+    // RFC 049 § 2 finding: `--dir` never shared `--config`'s resolution
+    // fault. A CLI-supplied `--dir` overrides `fallback_respond_dir`
+    // verbatim (`Config::compute_fallback_respond_dir`'s early return)
+    // without going through the parent-dir resolution `--config` used
+    // to hit, and it's read at request time via a plain `Path::join`
+    // (`dyn_route.rs`), which treats a bare and a `./`-prefixed relative
+    // path identically. `fallback_response_dir_env_arg_overwrites` above
+    // already covers the bare form (`"tests/fixtures"`); this proves the
+    // `./`-prefixed form serves the exact same fixture, so neither is
+    // failing silently by accident.
+    let test_setup = TestSetup {
+        root_config_file_path: None,
+        fallback_respond_dir_path: Some("./tests/fixtures".to_owned()),
+        ..Default::default()
+    };
+    let port = test_setup.launch().await;
+
+    let response = TestRequest::default("/", port).send().await;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body_str = response_body_str(response).await;
+    assert_eq!(
+        body_str.as_str(),
+        json!({"hello": "custom fallback respond dir"}).to_string()
+    );
 }

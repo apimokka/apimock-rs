@@ -5,7 +5,7 @@ pub mod init_interactive;
 
 use constant::*;
 
-use anyhow::{Context, Result as AppResult, bail};
+use anyhow::{Result as AppResult, bail};
 
 /// CLI arguments parsed at process start-up.
 ///
@@ -47,10 +47,26 @@ impl EnvArgs {
     // std::default::Default trait's method.
     #[allow(clippy::should_implement_trait)]
     pub fn default() -> AppResult<Option<Self>> {
-        let mut ret = EnvArgs::from_args()?;
+        let raw: Vec<String> = env::args().collect();
+
+        // `--version` / `--help` short-circuit before anything else -
+        // before a config file is read and before any listener binds
+        // (RFC 049 Goals 2/3). This must work in a directory with no
+        // config file, and in one with a deliberately broken config:
+        // "what version am I running" is asked precisely when something
+        // is wrong, so it can't depend on config loading having
+        // succeeded. `--help` is reachable per subcommand too - the
+        // subcommand name (if any) is `raw.get(1)`.
+        if any_present(&raw, VERSION_OPTION_NAMES.as_ref()) {
+            println!("apimock {}", env!("CARGO_PKG_VERSION"));
+            std::process::exit(0);
+        }
+        if any_present(&raw, HELP_OPTION_NAMES.as_ref()) {
+            println!("{}", help_text(raw.get(1).map(String::as_str)));
+            std::process::exit(0);
+        }
 
         // `apimock match-test …` — dry-run rule matching.
-        let raw: Vec<String> = env::args().collect();
         if raw.get(1).map(String::as_str) == Some("match-test") {
             crate::cmd::match_test::run(&raw[2..])?;
             return Ok(None);
@@ -60,6 +76,16 @@ impl EnvArgs {
         if raw.get(1).map(String::as_str) == Some("validate") {
             std::process::exit(crate::cmd::validate::run(&raw[2..]));
         }
+
+        // RFC 049 Goal 1: anything left that looks like a flag and isn't
+        // one of the top-level names above is unrecognised and must
+        // error, not be silently discarded. Applied before `--init`
+        // branches so both the "start the server" and "--init" surfaces
+        // get the same treatment - the defect this closes isn't
+        // specific to either.
+        reject_unknown_arguments(&raw);
+
+        let mut ret = EnvArgs::from_args()?;
 
         let init_config = args_option_value(INIT_CONFIG_OPTION_NAMES.as_ref()).is_some();
         if init_config {
@@ -112,17 +138,27 @@ impl EnvArgs {
 
     /// Build an `EnvArgs` by reading `env::args()`.
     fn from_args() -> AppResult<Self> {
-        let port = match args_option_value(CONFIG_LISTENER_PORT_OPTION_NAMES.as_ref()) {
-            Some(port_str) => Some(
-                port_str
-                    .parse::<u16>()
-                    .with_context(|| format!("--port value is not a valid u16: {}", port_str))?,
-            ),
-            None => None,
-        };
+        // RFC 049: an invalid --port value is a usage error (exit 2), not
+        // "everything else" (exit 1) - it's caught before any config is
+        // read or listener bound, same as an unknown flag.
+        let port = args_option_value(CONFIG_LISTENER_PORT_OPTION_NAMES.as_ref()).map(|port_str| {
+            port_str.parse::<u16>().unwrap_or_else(|_| {
+                exit_usage_error(&format!("invalid value for --port: '{}'", port_str))
+            })
+        });
 
         Ok(EnvArgs {
-            config_file_path: args_option_value(CONFIG_FILE_PATH_OPTION_NAMES.as_ref()),
+            // RFC 049 Goal 4: a bare relative `--config apimock.toml`
+            // must resolve the same as `--config ./apimock.toml`. The
+            // actual defect is downstream, in
+            // `apimock_config::path_util` (`Path::parent()` returns
+            // `Some("")` for a bare filename, not `None`, and
+            // canonicalizing "" fails) - but this RFC's scope is the CLI
+            // surface only, so the fix is applied to the input here,
+            // before it ever reaches config loading, rather than to
+            // config loading itself.
+            config_file_path: args_option_value(CONFIG_FILE_PATH_OPTION_NAMES.as_ref())
+                .map(normalize_bare_relative_path),
             port,
             fallback_respond_dir_path: args_option_value(
                 FALLBACK_RESPOND_DIR_PATH_OPTION_NAMES.as_ref(),
@@ -231,5 +267,142 @@ fn args_option_value(option_names: &[&str]) -> Option<String> {
     match name_value {
         Some(v) if !v.starts_with('-') => Some(v.to_owned()),
         _ => Some(String::new()),
+    }
+}
+
+/// True if any of `raw` matches one of `option_names` exactly.
+fn any_present(raw: &[String], option_names: &[&str]) -> bool {
+    raw.iter().any(|arg| option_names.contains(&arg.as_str()))
+}
+
+/// Print a usage-error message to stderr and exit 2 (RFC 049: "usage
+/// error - unknown option, missing or invalid value"), without
+/// producing any output on stdout and without starting a server.
+fn exit_usage_error(message: &str) -> ! {
+    eprintln!("apimock: {}", message);
+    std::process::exit(2);
+}
+
+/// RFC 049 Goal 1: after every known top-level flag name is accounted
+/// for, anything left that looks like a flag (starts with `-`) is
+/// unrecognised. Exits 2 naming the offender, with a near-match
+/// suggestion where one exists - the difference between a dead end and
+/// a self-correction, for a person and for an agent alike.
+///
+/// Positional values consumed by a known flag (e.g. the number after
+/// `-p`) are skipped along with that flag, using the exact same
+/// "does the next token start with `-`" rule `args_option_value` uses,
+/// so this never disagrees with how a flag's value actually gets read.
+fn reject_unknown_arguments(raw: &[String]) {
+    let known = KNOWN_TOP_LEVEL_OPTION_NAMES.as_ref();
+    let mut skip_next = false;
+    for (i, arg) in raw.iter().enumerate() {
+        if i == 0 {
+            continue; // argv[0]: the binary path itself
+        }
+        if skip_next {
+            skip_next = false;
+            continue;
+        }
+        if arg == "match-test" || arg == "validate" {
+            // Positional subcommand names are handled by their own
+            // caller before this runs; reaching here at all means
+            // neither matched, so nothing to do with them here either.
+            continue;
+        }
+        if known.contains(&arg.as_str()) {
+            let next_is_value = raw.get(i + 1).is_some_and(|next| !next.starts_with('-'));
+            if next_is_value {
+                skip_next = true;
+            }
+            continue;
+        }
+        if arg.starts_with('-') {
+            match near_match(arg, known) {
+                Some(suggestion) => exit_usage_error(&format!(
+                    "unknown option '{}'; did you mean '{}'?",
+                    arg, suggestion
+                )),
+                None => exit_usage_error(&format!("unknown option '{}'", arg)),
+            }
+        }
+    }
+}
+
+/// Find the closest known flag to an unrecognised one, if the edit
+/// distance is small enough relative to length to be a plausible typo
+/// rather than an unrelated word.
+fn near_match<'a>(unknown: &str, known: &[&'a str]) -> Option<&'a str> {
+    known
+        .iter()
+        .map(|&candidate| (candidate, edit_distance(unknown, candidate)))
+        .filter(|&(candidate, distance)| {
+            distance > 0 && distance <= (unknown.len().max(candidate.len()) / 3).max(1)
+        })
+        .min_by_key(|&(_, distance)| distance)
+        .map(|(candidate, _)| candidate)
+}
+
+/// Levenshtein edit distance, for [`near_match`].
+fn edit_distance(a: &str, b: &str) -> usize {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+
+    let mut prev: Vec<usize> = (0..=b.len()).collect();
+    let mut curr = vec![0usize; b.len() + 1];
+
+    for i in 1..=a.len() {
+        curr[0] = i;
+        for j in 1..=b.len() {
+            let cost = if a[i - 1] == b[j - 1] { 0 } else { 1 };
+            curr[j] = (prev[j] + 1).min(curr[j - 1] + 1).min(prev[j - 1] + cost);
+        }
+        std::mem::swap(&mut prev, &mut curr);
+    }
+
+    prev[b.len()]
+}
+
+/// RFC 049 Goal 4: give a bare relative path (no directory component,
+/// e.g. `"apimock.toml"`) an explicit `./` prefix, so it resolves the
+/// same way `"./apimock.toml"` already does. Absolute paths and paths
+/// that already have a directory component (including a leading `./`
+/// or `../`) are returned unchanged.
+fn normalize_bare_relative_path(path: String) -> String {
+    // `args_option_value` returns `Some("")` for a value-taking flag
+    // given with nothing after it (the same encoding it uses for a
+    // boolean flag's mere presence) - already a meaningless invocation
+    // either way, but prepending "./" to it would turn "path not given"
+    // into "path is the current directory", a more confusing failure
+    // than the original "no such file" for an empty path. Leave it
+    // alone so it fails the same way it always did.
+    if path.is_empty() {
+        return path;
+    }
+
+    let p = Path::new(&path);
+    let has_directory_component = p
+        .parent()
+        .is_some_and(|parent| !parent.as_os_str().is_empty());
+    if has_directory_component || p.is_absolute() {
+        path
+    } else {
+        format!("./{}", path)
+    }
+}
+
+/// Top-level usage text, or a subcommand's, matching
+/// `docs/src/reference/cli-reference.md`.
+fn help_text(subcommand: Option<&str>) -> &'static str {
+    match subcommand {
+        Some("match-test") => {
+            "apimock match-test --rule-set <path> [--rule <n>] [--path <url_path>] \\\n  [--method <METHOD>] [--header \"Name: value\"]... \\\n  [--body <json> | --body-file <path>] [--quiet]\n\nBuilds a synthetic request from the flags below and checks it against\na rule set directly - no server, no network request.\n\n  --rule-set, -r <path>       Required. The rule-set file to check against\n  --rule <n>                  Check only this rule, 1-based\n  --path, -p <url_path>       The synthetic request's URL path\n  --method, -m <METHOD>       The synthetic request's HTTP method\n  --header, -H \"Name: value\"  Add a header; repeatable\n  --body, -b <json>           The synthetic request's JSON body, inline\n  --body-file <path>          The synthetic request's JSON body, from a file\n  --quiet, -q                 Suppress the per-condition breakdown\n\nExit codes: 0 matched, 1 no rule matched, 2 an argument or input error."
+        }
+        Some("validate") => {
+            "apimock validate --config <path> [--strict] [--quiet] [--json]\n\nLoads the whole workspace - root config and every rule set it\nreferences - and reports diagnostics, without binding a port.\n\n  --config, -c <path>  Required. The root config to validate\n  --strict             Treat warnings as failures too\n  --quiet              Suppress non-error output\n  --json               Emit diagnostics as a JSON array\n\nExit codes: 0 clean, 1 at least one error, 2 the config couldn't be loaded."
+        }
+        _ => {
+            "apimock [-p <port>] [-d <dir>] [-c <config>] [--init [--yes] [--middleware]]\n\nRun with no flags to serve the current directory: zero-config mode\nserves ./ by URL path on port 3001, or ./apimock.toml if it exists.\n\n  -c, --config <path>  Load a config file (a bare relative path resolves\n                       the same as one prefixed with ./)\n  -p, --port <port>    Listen on a custom port\n  -d, --dir <dir>      Serve a custom fallback directory instead of ./\n  --init               Scaffold a starting config in the current directory\n  --yes                With --init, skip prompts and accept defaults\n  --middleware         With --init, also scaffold a middleware file\n  -h, --help           Print this help and exit\n  --version            Print the version and exit\n\nSubcommands:\n  match-test  Dry-run a rule match against a rule set, no server\n  validate    Validate a config, no server\n\nRun 'apimock <subcommand> --help' for subcommand-specific help."
+        }
     }
 }

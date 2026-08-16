@@ -82,7 +82,7 @@ binary).
 | `npx apimock` | Run with all default parameters. |
 | `npx apimock -p 4000` | Run with custom port. |
 | `npx apimock -d tests/apimock-dyn-route` | Run with custom root dir on server response. |
-| `npx apimock -c ./apimock.toml` | Run with config file giving rich features. Running `npx apimock --init` beforehand is required. Note the `./` — a bare relative path such as `-c apimock.toml` does not resolve. |
+| `npx apimock -c apimock.toml` | Run with config file giving rich features. Running `npx apimock --init` beforehand is required. |
 
 ### Setup with `npx apimock --init`
 

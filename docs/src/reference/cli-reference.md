@@ -1,5 +1,56 @@
 # CLI reference
 
+## `--version` and `--help`
+
+```
+apimock --version
+apimock --help
+apimock <subcommand> --help
+```
+
+Both short-circuit before anything else — before a config file is read
+and before any listener binds. They work with no config file present
+and with a deliberately broken one; that's deliberate, not incidental:
+"what version am I running" is the question asked precisely when
+something is wrong. `--help` (or `-h`) is reachable per subcommand too —
+`apimock match-test --help` and `apimock validate --help` print that
+subcommand's own usage, not the top-level one.
+
+Output goes to stdout; exit code `0`.
+
+## Unrecognised arguments
+
+Anything starting with `-` that isn't one of the flags documented on
+this page is an error, not silently ignored:
+
+```
+$ apimock --prot 4000
+apimock: unknown option '--prot'; did you mean '--port'?
+```
+
+A near-match suggestion appears where one exists. The message goes to
+stderr, exit code `2`, and no server is started — a typo used to start a
+server on a port nobody asked for; now it doesn't start anything.
+
+## Exit codes
+
+These apply across the whole CLI, `match-test` and `validate` included
+(each also documents its own diagnostic-specific codes below):
+
+| Code | Meaning |
+|---|---|
+| `0` | Success, including `--version` / `--help` |
+| `2` | Usage error — an unrecognised option, or a known option given a value that doesn't parse (e.g. `--port notanumber`) |
+| `1` | Everything else, including a known option given **no** value at all (e.g. `-c` with nothing after it) — the same code as a referenced file not existing |
+
+A flag given with no value is indistinguishable, at the point the
+argument list is scanned, from a boolean flag's mere presence (`--init`
+takes no value; `-c` normally does) — telling them apart would mean
+changing that scan, which every other flag's exact behaviour depends on
+staying untouched. So `-c` with nothing after it isn't caught as a
+usage error; it falls through and fails later, the same way it always
+has, as exit `1`.
+
 ## Running the server
 
 ```
@@ -11,7 +62,7 @@ apimock [-p <port>] [-d <dir>] [-c <config>] [--init [--yes] [--middleware]]
 | *(no flags)* | Zero-config: serves `./` by URL path, port `3001` |
 | `-p`, `--port <port>` | Listen on a custom port |
 | `-d <dir>` | Serve a custom fallback directory instead of `./` |
-| `-c`, `--config <path>` | Load a config file. **Prefix relative paths with `./`** — a bare filename (no directory separator) currently fails to resolve even though the file exists; `-c ./apimock.toml` works, `-c apimock.toml` does not |
+| `-c`, `--config <path>` | Load a config file. A bare relative path resolves the same as one prefixed with `./` — `-c apimock.toml` and `-c ./apimock.toml` are equivalent |
 
 ## `--init`
 
@@ -39,7 +90,7 @@ references — and reports diagnostics, without binding a port.
 
 | Flag | Meaning |
 |---|---|
-| `--config`, `-c <path>` | Required. The root config to validate |
+| `--config`, `-c <path>` | Required. The root config to validate. **Prefix a bare relative path with `./`** — unlike the top-level `-c` above, `validate` parses its own `--config` separately and a bare filename (no directory separator) currently fails to resolve even though the file exists; `--config ./apimock.toml` works, `--config apimock.toml` does not |
 | `--strict` | Treat warnings as failures too (exit `1`, not just `0`) |
 | `--quiet` | Suppress non-error output |
 | `--json` | Emit diagnostics as a JSON array instead of the plain-text summary |
