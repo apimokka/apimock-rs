@@ -36,6 +36,15 @@
 - [ ] Matching, dispatch, response construction untouched
 - [ ] `log.verbose` logging untouched — that is RFC 051
 
+## Public-API break — R-09 *(added 2026-08-17)*
+
+- [ ] Checked whether the change adds a field to `ParsedRequest` and `RequestSummary` — all `pub`,
+      public fields, **not** `#[non_exhaustive]`
+- [ ] Any such addition **reported as a breaking change**, not described
+      as "additive"
+- [ ] `#[non_exhaustive]` **not** added as a tidy-up — owner decision
+      pending across RFCs 040/050/051
+
 ## Suite and gates
 
 - [ ] Full suite green; count reported against the **430** baseline

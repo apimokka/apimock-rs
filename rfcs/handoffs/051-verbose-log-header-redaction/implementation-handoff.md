@@ -42,6 +42,39 @@ definition, not a copy.** A duplicated denylist is the failure mode
 here — two lists that agree today and drift in six months, with nobody
 noticing which emitter honours which.
 
+## 2b. Before you finish — "additive" is not "non-breaking"
+
+**Added 2026-08-17, after this handoff was issued.**
+
+Whatever you choose in § 2, check whether it adds a field to a public
+struct. Every candidate here is `pub`, has public fields, and is **not**
+`#[non_exhaustive]`:
+
+```
+LogConfig      // apimock-config, exported at lib.rs:38
+VerboseConfig  // apimock-config, pub fields
+TraceConfig    // apimock-server::trace
+```
+
+Adding a field to any of them breaks downstream struct literals. TOML
+compatibility is fine — old config files still parse, the new field
+takes its default — but the **Rust API break is real**.
+
+This has already happened once unnoticed: RFC 040 added three fields to
+`TraceConfig`, and that break is unreleased on `main`.
+
+**What to do:** implement as scoped, and **report any such addition as a
+breaking change** in your review request. Do **not** add
+`#[non_exhaustive]` yourself — it changes downstream pattern-matching as
+well as construction, it spans RFCs 040/050/051, and it is an owner
+decision now pending. Recorded as **R-09** in `ROADMAP.md`.
+
+Worth knowing: `apimock-config`'s `view.rs` types *are*
+`#[non_exhaustive]`, deliberately and with a comment saying why. So the
+idiom is known here and applied in one place and not others — this is
+drift, not unawareness, which is also why a single decision across all
+three is better than three local judgements.
+
 ## 3. Constraints
 
 - **Reuse RFC 040's configuration surface.** Do not invent a parallel
