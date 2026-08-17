@@ -39,11 +39,20 @@ and nothing is published to either registry, until that click.
    what it missed; a hand-edited version is exactly the kind of drift
    `version-consistency-check` exists to catch later, at the worst
    possible time.
-2. **CHANGELOG.md.** Add a `## [X.Y.Z] - YYYY-MM-DD` section before
+2. **Remove the `main` development notice from `README.md`** if it is
+   present. `README.md` is `readme = "../../README.md"` in the `apimock`
+   manifest — it *is* the crates.io landing page — so a notice saying
+   "`main` is the 6.0.0 development line" would ship to crates.io as
+   part of the release it is warning people away from.
+
+   Put it back after tagging. It exists so someone browsing the
+   repository on GitHub does not mistake `main` for a released version.
+
+3. **CHANGELOG.md.** Add a `## [X.Y.Z] - YYYY-MM-DD` section before
    tagging. `create-draft-release` extracts this section verbatim as the
    Release notes and **fails the build phase if it's missing** — there
    is no draft-with-empty-notes fallback, by design (RFC 044 § 4.4).
-3. **Push first, and confirm CI is green *on the commit you will tag*.**
+4. **Push first, and confirm CI is green *on the commit you will tag*.**
    Normally that means `main`. The release gates re-run the same checks
    at tag time (see below), but there's no reason to discover a red gate
    for the first time during a release.
@@ -59,19 +68,23 @@ and nothing is published to either registry, until that click.
    that pattern, CI will not run on it at all: use
    `gh workflow run ci.yaml --ref <branch>` and wait for it, rather than
    relying on the tag-time gates alone.
-4. **Tag.** `git tag X.Y.Z && git push origin X.Y.Z` — no `v` prefix.
+5. **Tag.** `git tag X.Y.Z && git push origin X.Y.Z` — no `v` prefix.
    `version-consistency-check` compares the tag literally against
    `[workspace.package].version`; a mismatched tag fails immediately,
    before anything is built.
 
-**No prerelease version is releasable today.** `X.Y.Z-rc.1` and the like
-will fail at `cargo build --locked`, not at the gates: the internal pins
-`apimock-{config,routing,server} = { version = "5" }` are caret
-requirements, and a caret requirement never matches a prerelease
-version. Established empirically during RFC 044's live test with both
-`0.0.0-rfc044-test` and `5.16.1-rfc044-test` — the major version is not
-what causes it. Cutting an RC would first require changing those pins to
-something prerelease-inclusive.
+**Prereleases are releasable — fixed 2026-08-17.** `X.Y.Z-alpha.N`,
+`-beta.N` and `-rc.N` all work: `./version.sh --update` writes the
+**exact** workspace version into the internal pins, and a caret
+requirement containing a prerelease opts into prerelease matching.
+
+Until then it did not work at all. The pins were major-only (`"5"`, i.e.
+`^5`), and a caret requirement never matches a prerelease — so every
+RC, alpha and beta failed at `cargo build --locked` rather than at the
+gates. Established empirically during RFC 044 with both
+`0.0.0-rfc044-test` and `5.16.1-rfc044-test`; the major component was
+never what caused it. Verified fixed by bumping to `6.0.0-alpha.1` and
+building `--locked` before reverting.
 
 ## What each release gate checks
 

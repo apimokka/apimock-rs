@@ -49,9 +49,9 @@ keywords      = ["http", "api", "mock", "testing"]
 [workspace.dependencies]
 # The three responsibility-split member crates. The façade re-exports
 # their public surface and otherwise stays as thin as possible.
-apimock-config              = { version = "5", path = "crates/apimock-config" }
-apimock-routing             = { version = "5", path = "crates/apimock-routing" }
-apimock-server              = { version = "5", path = "crates/apimock-server" }
+apimock-config              = { version = "5.19.0", path = "crates/apimock-config" }
+apimock-routing             = { version = "5.19.0", path = "crates/apimock-routing" }
+apimock-server              = { version = "5.19.0", path = "crates/apimock-server" }
 
 tokio                       = { version = "1.44", features = ["full"] }
 hyper                       = { version = "1", features = ["server", "http1", "http2"] }

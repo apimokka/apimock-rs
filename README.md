@@ -10,6 +10,17 @@
 
 ![logo](https://raw.githubusercontent.com/apimokka/apimock-rs/main/docs/src/assets/logo.png)
 
+> ### ⚠️ `main` is the 6.0.0 development line
+>
+> **The latest release is [5.19.0](https://github.com/apimokka/apimock-rs/releases/latest)** — install from
+> [crates.io](https://crates.io/crates/apimock) or [npm](https://www.npmjs.com/package/apimock-rs) as below and you get that.
+>
+> `main` carries **breaking changes** headed for 6.0.0 and is not a
+> supported version. If you are migrating, see the
+> [migration guide](https://apimokka.github.io/apimock-rs/guides/migrating-to-6-0.html).
+> If you are reading this on crates.io or npm, you are looking at a
+> released version and this notice does not apply to it.
+
 Drop JSON files into a folder and your API immediately exists.
 
 ## Overview

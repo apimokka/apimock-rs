@@ -8,7 +8,7 @@
 #                          external [workspace.dependencies] version pins,
 #                          e.g. tokio/hyper/rustls, are left untouched)
 #   2. Root Cargo.toml     [workspace.dependencies] internal-crate pins
-#                          (apimock-config/-routing/-server) — major
+#                          (apimock-config/-routing/-server) — exact
 #                          component kept in step with the new version, so
 #                          a major bump doesn't silently break resolution
 #   3. Cargo.lock          refreshed via `cargo fetch` and re-verified —
@@ -46,7 +46,7 @@ Options:
   -l, --list                List the workspace crates' version and every
                              npm package's version.
   -u, --update VERSION      Set the workspace manifest, the internal
-                             crate pins' major component, Cargo.lock, and
+                             crate pins (exact version), Cargo.lock, and
                              every npm package (including
                              optionalDependencies pins) to VERSION.
   -d, --dry-run             Used with --update: report exactly what
@@ -138,7 +138,7 @@ fail_target() {
 }
 
 # ---------- update the root manifest: [workspace.package].version, AND
-# the internal-crate pins' major component, in one section-aware pass.
+# the internal-crate pins (exact version), in one section-aware pass.
 # Every external [workspace.dependencies] version pin (tokio, hyper,
 # rustls, ...) is left byte-for-byte unchanged — only lines that are (a)
 # inside [workspace.package] and start with `version =`, or (b) inside
@@ -146,20 +146,28 @@ fail_target() {
 # touched. ----------
 #
 # Why the internal pins need this too: apimock-config/-routing/-server
-# are pinned at a major-only requirement ("5", i.e. Cargo's implicit
-# ^5). That's correct and deliberately untouched across minor/patch
-# bumps (5.14.0 -> 5.15.0: "5" still matches, nothing to do). Across a
-# major bump (5.x -> 6.0.0) it stops matching and `cargo fetch` fails to
-# resolve — so the major component must move in step with the workspace
-# version, the same "versions that must move together" property this
-# script already keeps for npm's optionalDependencies pins.
+# are pinned at the **exact** workspace version, not a major-only
+# requirement.
+#
+# It used to be major-only ("5", i.e. Cargo's implicit "^5"), which kept
+# the pin stable across minor releases. That had a defect nobody hit
+# until someone tried: **a caret requirement never matches a prerelease**,
+# so `6.0.0-alpha.1` failed to resolve and no RC, alpha or beta was
+# releasable at all. Established empirically during RFC 044 with both
+# `0.0.0-rfc044-test` and `5.16.1-rfc044-test` — the major component was
+# not what caused it.
+#
+# An exact pin ("6.0.0-alpha.1", i.e. "^6.0.0-alpha.1") contains a
+# prerelease and therefore opts into prerelease matching, so it resolves.
+# It also states plainly what every published apimock release has always
+# been true of: the four crates ship together, at one version.
 update_root_manifest_version() {
     ver=$1
     major=$(major_version_of "$ver")
 
     if [ "$DRY_RUN" -eq 1 ]; then
         printf '  (dry-run) would update %s [workspace.package].version -> %s\n' "$ROOT_MANIFEST" "$ver"
-        printf '  (dry-run) would update %s internal crate pins -> "%s"\n' "$ROOT_MANIFEST" "$major"
+        printf '  (dry-run) would update %s internal crate pins -> "%s"\n' "$ROOT_MANIFEST" "$ver"
         return
     fi
 
@@ -178,7 +186,7 @@ update_root_manifest_version() {
             next
         }
         section == "deps" && /path[[:space:]]*=[[:space:]]*"crates\// {
-            sub(/version[[:space:]]*=[[:space:]]*"[^"]*"/, "version = \"" major "\"")
+            sub(/version[[:space:]]*=[[:space:]]*"[^"]*"/, "version = \"" nv "\"")
             print
             next
         }
@@ -187,16 +195,16 @@ update_root_manifest_version() {
     mv "$tmp" "$ROOT_MANIFEST" || { rm -f "$tmp"; fail_target "$ROOT_MANIFEST" "mv failed (permission denied?)"; return; }
     git add "$ROOT_MANIFEST" 2>/dev/null || true
     printf '  updated %s [workspace.package].version -> %s\n' "$ROOT_MANIFEST" "$ver"
-    printf '  updated %s internal crate pins -> "%s"\n' "$ROOT_MANIFEST" "$major"
+    printf '  updated %s internal crate pins -> "%s"\n' "$ROOT_MANIFEST" "$ver"
 
     actual=$(read_workspace_version) || actual="<unreadable>"
     [ "$actual" = "$ver" ] || fail_target "$ROOT_MANIFEST" "expected version \"$ver\", found \"$actual\""
 
     stale_pins=""
     for pin in $(read_internal_crate_pin_versions); do
-        [ "$pin" = "$major" ] || stale_pins="${stale_pins}${stale_pins:+, }$pin"
+        [ "$pin" = "$ver" ] || stale_pins="${stale_pins}${stale_pins:+, }$pin"
     done
-    [ -z "$stale_pins" ] || fail_target "$ROOT_MANIFEST" "internal crate pin(s) still not \"$major\": $stale_pins"
+    [ -z "$stale_pins" ] || fail_target "$ROOT_MANIFEST" "internal crate pin(s) still not \"$ver\": $stale_pins"
 }
 
 # ---------- update a plain package.json's .version ----------
