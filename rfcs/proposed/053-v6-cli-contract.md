@@ -225,7 +225,7 @@ The deprecation release's CLI list, as far as this RFC determines it:
 |---|---|
 | `validate --json` — bare array becomes the § 2 envelope | **Yes** — warn when `--json` is used, naming `--format json` |
 | `--json` superseded by `--format json` on `validate` | **Yes** — accept both in 5.x, warn on `--json` |
-| `match-test` output shape aligns to the envelope | **Yes**, if its current output is treated as a contract |
+| ~~`match-test` output shape aligns to the envelope~~ | **Not breaking — resolved 2026-08-17.** 6.0.0 *adds* `--format json` to `match-test` rather than changing its text output. Nothing to warn about, and the "is this text a contract?" question never needs answering |
 | Bare `apimock` | **Not breaking** — kept as an alias (§ Layer 1) |
 
 Everything else v6 breaks is library-side and cannot be warned about
@@ -260,11 +260,11 @@ confirming once those RFCs exist.
 
 ## Unresolved questions
 
-1. **Does `match-test`'s current output count as a contract?** It is
-   human-oriented text today. If nobody parses it, aligning it costs
-   nothing and needs no warning; if someone does, it needs a row in § 7.
-   Not answerable from inside this repository — worth asking alongside
-   the GUI questions already pending.
+1. ~~**Does `match-test`'s current output count as a contract?**~~ ✅
+   **Resolved 2026-08-17 by not needing an answer.** 6.0.0 adds
+   `--format json` to `match-test` and leaves its text output alone, so
+   no consumer of that text is affected either way. A question you can
+   design around is better than one you have to research.
 2. **Should `--format json` imply `--quiet`?** Mixing human progress
    output with a JSON document on the same stream would break parsers,
    but stream discipline may already prevent it. Establish from RFC 049's

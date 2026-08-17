@@ -144,12 +144,13 @@ something different.
 
 ## Unresolved questions
 
-1. **Does `match-test` need a row?** RFC 053 Unresolved 1 asks whether
-   its human-oriented output is treated as a contract by anyone. If yes,
-   it needs the same treatment here; if no, it is aligned freely in 6.0.0
-   and mentioned only in the migration guide. **Answering this is the one
-   thing that could widen this release**, so it is worth asking before
-   the branch is cut rather than during.
+1. ~~**Does `match-test` need a row?**~~ ✅ **Resolved 2026-08-17 — no,
+   and the question dissolves.** It was framed as "is its text output a
+   contract, and must we therefore warn?" The better answer is to **not
+   change its text output at all**: 6.0.0 *adds* `--format json` to
+   `match-test` rather than reshaping what it prints today. Nothing
+   breaks, so nothing needs warning, and the contract question never has
+   to be answered. This release does not touch `match-test`.
 2. **Is 5.19.0 the right number?** It is the next minor from 5.18.0, and
    `main`'s work becomes 6.0.0 — so 5.19.0 is never an ancestor of
    6.0.0's line except through the merge-back. Alternative is a patch
