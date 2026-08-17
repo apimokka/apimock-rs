@@ -359,6 +359,16 @@ be finished and handed over.
 | 3 | Enumerate v6's breaking changes | **Blocks the final 5.x** |
 | 4 | Deprecation warnings — stderr, exit code 0, naming the removal version | **Cut from `5.18.0` on a short-lived branch** (owner decision 2026-08-17) — `main` now carries breaking work and can no longer produce a non-breaking release. See RFC 048 § 7.2 |
 
+**Amended again 2026-08-17 — item 4 is unblocked and drafted as
+[RFC 054](./rfcs/proposed/054-deprecation-release.md).** Checking the
+code showed the deprecation release does *not* wait on v6's CLI design.
+A warning is only needed where an *existing* invocation changes;
+subcommands are matched positionally at `argv[1]` by exact string, so
+`get` and `set` are new tokens that cannot change what any current
+invocation does, and bare `apimock` is kept as an alias. That leaves only
+the output shapes RFC 053 § 7 already enumerates. **v5 can close sooner
+than the amendment below assumed.**
+
 **Amended 2026-08-17 — item 3 is narrower, and item 4's blocker moved.**
 A deprecation window can only warn about **CLI invocations**. There is no
 mechanism to warn that a struct is about to become `#[non_exhaustive]`
