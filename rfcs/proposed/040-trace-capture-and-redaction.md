@@ -209,9 +209,21 @@ still exists. The two do not meet, and this document did not notice.
 
 1. **Denylist or allowlist by default?** Recommendation A above; owner's
    call, because it is a product-risk judgement.
-2. **Does the GUI display trace headers today, and would redaction
-   change what its users see?** Establish from the GUI side — this is
-   the one consumer we know about and cannot inspect from here.
+2. ~~**Does the GUI display trace headers today?**~~ ✅ **Answered
+   2026-08-17: yes, it does.** So GUI users debugging an auth failure
+   will now see `[redacted]` where a credential value used to be.
+
+   **Implementation cost to the GUI: none.** The event's shape is
+   unchanged — same field, same type, same position — so no GUI code
+   has to change. What changes is what a user reads.
+
+   **But the escape hatch is unreachable from the GUI**, and that is the
+   real cost. `header_denylist` lives on `TraceConfig`, which has no
+   config-file surface at all (the same pre-existing state
+   `capture_body` has had since RFC 023), so a GUI user cannot opt a
+   header back in even deliberately. If that matters, giving
+   `TraceConfig` a configuration surface is its own piece of work —
+   larger than this RFC and not assumed by it.
 3. **Should the redaction policy be shared with v6's `get`, or applied
    independently?** Sharing it is the point of redacting at capture, but
    `get` answers from configuration rather than from a live request, so

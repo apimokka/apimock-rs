@@ -1,6 +1,8 @@
 # RFC 050 — Should non-JSON request bodies be captured at all?
 
-**Status.** Proposed — awaiting owner approval. **This is a decision
+**Status.** **Decided 2026-08-17 — answer (2), presence only.** Approved
+by the project owner, who also confirmed the GUI wants body metadata
+(Unresolved 3). **This is a decision
 RFC.** It asks a question and recommends an answer; it does not specify
 an implementation, because the implementation is only worth designing if
 the answer is yes.
@@ -97,23 +99,44 @@ than assumed away.
 - Changing JSON body capture, which works and is already gated and
   capped.
 
-## If the answer is (2) — what it would need
+## Cost — smaller than this RFC first estimated
 
-Sketch only; a real design follows approval.
+Revised 2026-08-17, after checking what already exists rather than
+sketching from the outside. Two findings shrink it:
 
-- `ParsedRequest` gains something like
-  `body_meta: Option<BodyMeta { len: usize, content_type: Option<String> }>`,
-  populated in `parsed_request_from` where the bytes still exist.
-- `RequestSummary` surfaces it, distinguishing the three states: no
-  body · JSON body captured · non-JSON body present, described but not
-  captured.
-- Every consumer of `ParsedRequest` is checked for the new field's
-  effect. There should be none — it is additive — but "should be" is not
-  "was verified".
+**Content type does not need capturing.** It is an ordinary request
+header, it is not on RFC 040's denylist, and `RequestSummary.headers`
+already carries every non-redacted header. A consumer — the GUI
+included — can already read `content-type` from the event today. So the
+`BodyMeta { len, content_type }` this RFC sketched is half redundant.
 
-**The cost that is easy to underestimate:** populating this on every
-request, including when nobody is tracing. It must be cheap or gated,
-and which of those is a design question rather than an obvious call.
+**Presence and length are already computed.** `parsed_request_from`
+(`crates/apimock-server/src/parsed_request.rs`) has `body_bytes` in
+hand and derives `has_body` from it at the point where the bytes still
+exist. Nothing needs measuring that is not already measured; it needs
+*propagating*.
+
+So the work is roughly:
+
+- one small additive field on `apimock_routing::ParsedRequest` carrying
+  body presence and byte length,
+- one line in `parsed_request_from` populating it from values already
+  computed,
+- one field on `RequestSummary` surfacing it, distinguishing **no body**
+  · **JSON body captured** · **non-JSON body present, size known, not
+  captured**,
+- and a check of every `ParsedRequest` consumer. It is additive, so
+  there should be no effect — but "should be" is not "was verified", and
+  `ParsedRequest` is the type the matcher, middleware and `dyn_route`
+  all consume.
+
+**Per-request cost is now clearly negligible** — a `usize` and a `bool`
+already in registers, not a computation. The earlier worry about whether
+to gate it on tracing being active is answered: don't bother.
+
+**What remains genuinely uncertain** is the consumer check. That is real
+work rather than a formality, and it is the part to watch if this turns
+out to cost more than expected.
 
 ## Risks
 
@@ -125,11 +148,10 @@ and which of those is a design question rather than an obvious call.
 
 ## Unresolved questions
 
-1. **Which answer?** Recommendation (2); owner's call, because it is a
-   product judgement about a diagnostic gap versus an exposure.
-2. **If (2): is `body_meta` populated always, or only when tracing is
-   active?** Always is simpler and observable; gated is cheaper. Needs
-   measuring, not guessing.
-3. **Does the GUI want this?** It consumes trace events, and this is the
-   kind of thing it might display. Worth asking in the same conversation
-   as RFC 040's Q2 and RFC 042's round-trip rather than separately.
+1. ~~**Which answer?**~~ ✅ **(2), presence only.** Decided 2026-08-17.
+2. ~~**Populated always, or only when tracing is active?**~~ ✅
+   **Always.** Answered by § Cost: the values are already computed, so
+   there is nothing to gate.
+3. ~~**Does the GUI want this?**~~ ✅ **Yes**, confirmed 2026-08-17 —
+   which is what makes (2) worth building rather than merely defensible.
+   See § Cost, revised for what the codebase already provides.
