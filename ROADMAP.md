@@ -459,7 +459,7 @@ starts immediately.
 | ID | Decision required | Owner | Blocking |
 |---|---|---|---|
 | D-01 | Target calendar window for M1–M3, so milestones can be dated | project owner | Scheduling only; RFC work can start without it |
-| D-02 | Whether RFC **042** proceeds, pending the GUI-team compatibility round-trip *(number corrected 2026-08-12 — see R-03)*. **The round-trip is now written down: § Questions for the GUI team, G1** | project owner | M3 scope |
+| D-02 | Whether RFC **042** proceeds, pending the GUI-team compatibility round-trip *(number corrected 2026-08-12 — see R-03)*. **The round-trip is now a written task: `.git-exclude/tasks/owner/001-gui-integration-questions.md`, G1** | project owner | M3 scope |
 
 Decisions taken on 2026-08-02:
 
@@ -484,63 +484,11 @@ Decisions taken on 2026-08-02:
 
 ---
 
-## Questions for the GUI team
-
-**Raised 2026-08-17.** These accumulated across seven RFCs over two
-weeks, were referred to repeatedly as "the GUI round-trip", and were
-never written down — which made them easy to defer and impossible to act
-on.
-
-Every one is answerable by someone reading the GUI application's source.
-None needs a meeting. Answered questions move to § History, with their
-consequence, so the reasoning stays discoverable after the answer stops
-being news.
-
-`apimock-config` and `apimock-server` are published libraries and the GUI
-is the only consumer we know by name — so these are questions about how
-it *actually* uses our API, not about what it should do.
-
-| # | Question | Decides |
-|---|---|---|
-| **G1** | **When config files change underneath a running GUI session, what does it do today** — reload wholesale, ignore until the user acts, or prompt? | **RFC 042.** The RFC exists to make reconciliation *incremental*; if wholesale reload is acceptable, it may not be needed at all. **The one question that could delete work rather than add it** — and it grows in importance as v6's `set` writes the same files a GUI session has open |
-| **G2** | Does the GUI **construct** `TraceConfig`, `RequestSummary`, `ParsedRequest`, `LogConfig` or `VerboseConfig` — or only read them? | **RFC 052.** `#[non_exhaustive]` costs nothing for a type only read; a constructed one needs a builder, and RFC 052 says not to add builders nobody needs |
-| **G3** | Does it **match on variants** of `ConfigError` / `WorkspaceError` / `SaveError` / `ApplyError`, or only format them? | **RFC 041.** If it only calls `Display`, boxing the large variants is near-free; matching means a compile-time break to coordinate |
-| **G4** | Does anything use `apimock validate --json`? | Whether removing it in 6.0.0 hurts a known consumer. A migration path exists **today** — v5.19.0 ships `--format json` alongside |
-| **G5** | Would the GUI eventually consume v6's CLI contract, or keep the library API? | **RFC 048 § 12** — whether we maintain one interface or two, permanently |
-
-**An answer of "we don't use that at all" is the most valuable one
-available here.** It deletes work.
-
----
-
 ## History — resolved deferred items
 
 Items below were postponed during earlier development and have since
 been resolved. They are kept, not deleted, so the original rationale
 stays discoverable.
-
-### GUI trace-header display, and body metadata *(G6, G7 — answered 2026-08-17)*
-
-**G6 — does the GUI display trace-event headers? → Yes.** So RFC 040's
-redaction means GUI users see `[redacted]` where a credential value was.
-No GUI code change was needed: the event's shape is unchanged, only
-values differ.
-
-**Not fully resolved, and worth keeping visible:** the escape hatch is
-unreachable from the GUI. `header_denylist` lives on `TraceConfig`, which
-has no config-file surface, so a GUI user cannot opt a header back in
-even deliberately. Giving `TraceConfig` a configuration surface is its
-own unscheduled piece of work.
-
-**G7 — would the GUI want request body metadata? → Yes.** RFC 050
-reports body presence and byte length, never content, so a trace event
-now distinguishes *no body* from *body present but not captured*.
-
-Checking the cost changed the design: it came out roughly half what the
-RFC first estimated, because `content-type` was already carried in the
-event as an ordinary header and the byte length was already computed at
-parse time. Both answers came with *"tell me if it costs too much"*,
-and checking rather than assuming is what made that answerable.
 
 ### Hidden / VCS / build-artifact directory filtering in `FileTreeView`
 
@@ -588,5 +536,6 @@ here so they are not lost between milestones.
 | **No prerelease version is releasable.** `[workspace.dependencies]` pins the internal crates with caret requirements (`version = "5"`), and a caret requirement never matches a prerelease. Any RC/beta tag fails resolution — established empirically during RFC 044 with both `0.0.0-rfc044-test` and `5.16.1-rfc044-test` | Unassigned. Not a defect; a constraint. Changing the pins to something prerelease-inclusive is a prerequisite for ever cutting an RC |
 | **`apimock --version` and `--help` are not supported, and unknown flags are silently ignored** — the binary starts a mock server instead. `args_option_value` (`crates/apimock/src/args.rs:223`) looks up known option names and ignores everything else, so a typo'd flag launches a server rather than erroring. Found 2026-08-12 while verifying the published v5.16.0 npm binary | **Resolved — RFC 049.** `--version`/`--help` short-circuit before config or a listener; an unrecognised flag is now exit 2 on stderr with a near-match suggestion, no server started |
 | `TestSetup.current_dir_path` calls `env::set_current_dir`, which is process-global while tests run concurrently — the field's own doc comment says *"caution: affects globally"* | Unassigned. Recorded by **RFC 046**, deliberately out of its scope |
+| **The trace channel's redaction policy has no configuration surface.** `header_denylist` / `header_allowlist` live on `TraceConfig` (`apimock-server`), which is configurable only at the Rust level — so a GUI or CLI user cannot opt a redacted header back in even deliberately. Surfaced 2026-08-17 when the GUI confirmed it displays trace headers | Unassigned. Giving `TraceConfig` a config-file surface is its own piece of work; RFC 040 deliberately did not add one |
 | **`apimock validate` can never exit `1`, and `--strict` has nothing to act on.** `Workspace::load` checks — identically — every condition the diagnostics walker reports on (empty or conflicting `respond`, missing `respond.file_path`, missing `fallback_respond_dir`), so a config either loads with zero diagnostics (exit 0) or fails to load (exit 2); nothing anywhere constructs a warning-severity diagnostic. True since `validate` shipped in v5.13.0. Found 2026-08-17 while building RFC 054's test fixtures | Unassigned. Documented honestly in v5.19.0 rather than fixed — a real fix loosens a load gate shared with server startup, or defers rejection into `validate()`, both larger than that release |
 | Pre-existing ~1-in-8 port race in `dynamic_port()` (`tests/util/test_setup.rs`) | Unassigned. A fix was attempted during RFC 036, regressed every IPv6 bound-address test, and was reverted in full — see that review |
