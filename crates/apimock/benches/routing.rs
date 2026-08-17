@@ -94,6 +94,7 @@ fn parsed_request_for(url_path: &str) -> ParsedRequest {
         url_path: url_path.to_owned(),
         component_parts,
         body_json: None,
+        body_len: None,
     }
 }
 

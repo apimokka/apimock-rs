@@ -58,6 +58,7 @@ fn make_parsed_request(body_json: Option<Value>) -> ParsedRequest {
         url_path: "/test".to_owned(),
         component_parts,
         body_json,
+        body_len: None,
     }
 }
 

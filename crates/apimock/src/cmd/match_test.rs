@@ -163,6 +163,11 @@ fn build_parsed_request(
         url_path: args.path.clone(),
         component_parts: parts,
         body_json,
+        // No real body-collection step here (`--body`/`--body-file` go
+        // straight to parsed JSON), and `match-test` never reaches the
+        // trace channel — `body_len`'s only consumer — so there is
+        // nothing meaningful to report (RFC 050).
+        body_len: None,
     })
 }
 
@@ -405,6 +410,7 @@ mod tests {
             url_path: path.to_owned(),
             component_parts: parts,
             body_json: body,
+            body_len: None,
         }
     }
 

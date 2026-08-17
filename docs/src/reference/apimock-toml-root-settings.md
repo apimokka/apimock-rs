@@ -73,8 +73,8 @@ example.
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `verbose.header` | bool | `false` | Log request headers |
-| `verbose.body` | bool | `false` | Log request bodies |
+| `verbose.header` | bool | `false` | Log request headers. Credential-bearing headers (`authorization`, `cookie`, `set-cookie`, `proxy-authorization`, `x-api-key`) print as `[redacted]` — same policy, same defaults, as the trace channel (RFC 040, RFC 051) |
+| `verbose.body` | bool | `false` | Log request bodies. **Not redacted** — a JSON body's field values print verbatim, including any credentials it happens to carry. Name-based redaction doesn't transfer to body content (there are no header names to match against), and value-scanning bodies for secrets is out of scope for the same reason it is for the trace channel |
 
 ## `[service]`
 

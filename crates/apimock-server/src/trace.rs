@@ -92,6 +92,21 @@ pub struct RequestSummary {
     /// `true` when the body was omitted because it exceeded `max_body_bytes`.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub body_truncated: bool,
+    /// Byte length of the request body, if one arrived (RFC 050) —
+    /// presence and size only, **never content**: no bytes, no snippet,
+    /// no preview. Populated for every body, JSON included — required
+    /// 2026-08-17 by review of this RFC, which found the original,
+    /// JSON-excluding version left the *common* case (a JSON body with
+    /// `capture_body` at its default `false`) still indistinguishable
+    /// from no body at all, the exact ambiguity this RFC exists to
+    /// close. So the three states this field distinguishes, together
+    /// with `body_json`, are: both absent (no body); `body_len` present
+    /// and `body_json` present (body present, JSON captured); `body_len`
+    /// present and `body_json` absent (body present, not captured —
+    /// non-JSON, capture disabled, or over `max_body_bytes`; the last of
+    /// those is further distinguished by `body_truncated`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body_len: Option<usize>,
 }
 
 impl RequestSummary {
@@ -100,10 +115,16 @@ impl RequestSummary {
     /// redaction happens — do not build `RequestSummary` from live
     /// request headers any other way; a future formatter or display
     /// path must not need to know about redaction at all.
+    ///
+    /// `body_len` should be the source request's own `ParsedRequest.body_len`
+    /// (RFC 050) — pass it through unconditionally, JSON body or not;
+    /// `enrich_with_body` populates `body_json` separately for the JSON
+    /// case, and the two fields together carry the distinction.
     pub fn new(
         method: String,
         url_path: String,
         headers: Vec<(String, String)>,
+        body_len: Option<usize>,
         config: &TraceConfig,
     ) -> Self {
         Self {
@@ -112,6 +133,7 @@ impl RequestSummary {
             headers: config.redact_headers(headers),
             body_json: None,
             body_truncated: false,
+            body_len,
         }
     }
 }
@@ -191,6 +213,25 @@ impl Default for TraceConfig {
 }
 
 impl TraceConfig {
+    /// Whether `name` is redacted under this config's policy
+    /// (case-insensitive). The single definition behind both places a
+    /// request header can leave the process: the trace channel
+    /// (`redact_headers`, below) and verbose console logging
+    /// (`capture_in_log` in `parsed_request.rs`, RFC 051) — one policy,
+    /// shared by reference, not copied.
+    pub(crate) fn is_header_redacted(&self, name: &str) -> bool {
+        match self.header_redaction {
+            HeaderRedactionMode::Denylist => self
+                .header_denylist
+                .iter()
+                .any(|denied| denied.eq_ignore_ascii_case(name)),
+            HeaderRedactionMode::Allowlist => !self
+                .header_allowlist
+                .iter()
+                .any(|allowed| allowed.eq_ignore_ascii_case(name)),
+        }
+    }
+
     /// Redact header values per this config's policy. Names and order
     /// are preserved; only a matched entry's value is replaced with
     /// [`REDACTED_HEADER_VALUE`] (RFC 040 Goal 4 — marked, not omitted).
@@ -198,17 +239,7 @@ impl TraceConfig {
         headers
             .into_iter()
             .map(|(name, value)| {
-                let redact = match self.header_redaction {
-                    HeaderRedactionMode::Denylist => self
-                        .header_denylist
-                        .iter()
-                        .any(|denied| denied.eq_ignore_ascii_case(&name)),
-                    HeaderRedactionMode::Allowlist => !self
-                        .header_allowlist
-                        .iter()
-                        .any(|allowed| allowed.eq_ignore_ascii_case(&name)),
-                };
-                if redact {
+                if self.is_header_redacted(&name) {
                     (name, REDACTED_HEADER_VALUE.to_string())
                 } else {
                     (name, value)
@@ -552,6 +583,7 @@ mod tests {
                 headers: vec![],
                 body_json: None,
                 body_truncated: false,
+                body_len: None,
             },
             Outcome::Miss { status: 404 },
         );
@@ -577,6 +609,7 @@ mod tests {
                 headers: vec![],
                 body_json: None,
                 body_truncated: false,
+                body_len: None,
             },
             Outcome::Miss { status: 404 },
         );
@@ -590,6 +623,7 @@ mod tests {
                 headers: vec![],
                 body_json: None,
                 body_truncated: false,
+                body_len: None,
             },
             Outcome::Miss { status: 200 },
         );
@@ -621,6 +655,7 @@ mod tests {
                 headers: vec![],
                 body_json: None,
                 body_truncated: false,
+                body_len: None,
             },
             outcome: Outcome::Matched {
                 rule_set_index: 0,
@@ -668,6 +703,7 @@ mod tests {
                 headers: vec![],
                 body_json: None,
                 body_truncated: false,
+                body_len: None,
             },
             Outcome::Miss { status: 404 },
         );
@@ -701,6 +737,7 @@ mod tests {
             headers: vec![],
             body_json: None,
             body_truncated: false,
+            body_len: None,
         };
         let body = serde_json::json!({"action": "create"});
         emitter.enrich_with_body(&mut summary, Some(&body));
@@ -724,6 +761,7 @@ mod tests {
             headers: vec![],
             body_json: None,
             body_truncated: false,
+            body_len: None,
         };
         let body = serde_json::json!({"action": "create", "user_id": 42});
         emitter.enrich_with_body(&mut summary, Some(&body));
@@ -748,6 +786,7 @@ mod tests {
             headers: vec![],
             body_json: None,
             body_truncated: false,
+            body_len: None,
         };
         let body = serde_json::json!({"data": "this is longer than 10 bytes"});
         emitter.enrich_with_body(&mut summary, Some(&body));
@@ -766,6 +805,7 @@ mod tests {
             headers: vec![],
             body_json: None,
             body_truncated: false,
+            body_len: None,
         };
         let json = serde_json::to_string(&summary).unwrap();
         assert!(
@@ -799,6 +839,7 @@ mod tests {
             "POST".into(),
             "/login".into(),
             headers_with_credentials(),
+            None,
             &config,
         );
 
@@ -821,6 +862,7 @@ mod tests {
             "POST".into(),
             "/login".into(),
             headers_with_credentials(),
+            None,
             &config,
         );
 
@@ -849,7 +891,7 @@ mod tests {
             ("Authorization".into(), "Bearer secret-token".into()),
             ("COOKIE".into(), "session=abc123".into()),
         ];
-        let summary = RequestSummary::new("GET".into(), "/".into(), headers, &config);
+        let summary = RequestSummary::new("GET".into(), "/".into(), headers, None, &config);
 
         let json = serde_json::to_string(&summary).unwrap();
         assert!(!json.contains("Bearer secret-token"), "json was: {json}");
@@ -872,7 +914,7 @@ mod tests {
             ("authorization".into(), "Bearer secret-token".into()),
             ("x-request-id".into(), "not-a-credential".into()),
         ];
-        let summary = RequestSummary::new("GET".into(), "/".into(), headers, &config);
+        let summary = RequestSummary::new("GET".into(), "/".into(), headers, None, &config);
 
         let by_name = |name: &str| {
             summary
@@ -903,8 +945,73 @@ mod tests {
             "GET".into(),
             "/".into(),
             vec![("content-type".into(), "application/json".into())],
+            None,
             &config,
         );
         assert_eq!(summary.headers[0].1, REDACTED_HEADER_VALUE);
+    }
+
+    // ── RFC 050: body presence (never content) ──────────────────────────
+
+    /// The three states RFC 050 exists to distinguish, asserted on the
+    /// *serialised* event — since that is what reaches a consumer.
+    /// `body_len` is populated for every body (RFC 050 review, R-09-
+    /// adjacent fix, 2026-08-17) — including the JSON-captured case,
+    /// which the first version of this RFC omitted, leaving the common
+    /// case (`capture_body`'s own default, `false`) still indistinguishable
+    /// from no body at all.
+    #[test]
+    fn three_body_states_are_distinguishable_in_the_serialised_form() {
+        let config = TraceConfig::default();
+
+        let no_body = RequestSummary::new("GET".into(), "/".into(), vec![], None, &config);
+        let no_body_json = serde_json::to_string(&no_body).unwrap();
+        assert!(!no_body_json.contains("body_json"), "{no_body_json}");
+        assert!(!no_body_json.contains("body_len"), "{no_body_json}");
+
+        let mut json_captured =
+            RequestSummary::new("POST".into(), "/".into(), vec![], Some(11), &config);
+        let emitter = TraceEmitter::with_config(TraceConfig {
+            capture_body: true,
+            ..Default::default()
+        });
+        emitter.enrich_with_body(&mut json_captured, Some(&serde_json::json!({"a": 1})));
+        let json_captured_str = serde_json::to_string(&json_captured).unwrap();
+        assert!(
+            json_captured_str.contains("\"body_json\""),
+            "{json_captured_str}"
+        );
+        assert!(
+            json_captured_str.contains("\"body_len\":11"),
+            "a JSON-captured body must still report its length: {json_captured_str}"
+        );
+
+        let body_present_not_captured =
+            RequestSummary::new("POST".into(), "/".into(), vec![], Some(27), &config);
+        let not_captured_str = serde_json::to_string(&body_present_not_captured).unwrap();
+        assert!(
+            !not_captured_str.contains("body_json"),
+            "{not_captured_str}"
+        );
+        assert!(
+            not_captured_str.contains("\"body_len\":27"),
+            "{not_captured_str}"
+        );
+    }
+
+    /// No content, ever — a recognisable string from the original body
+    /// must not appear anywhere in the serialised event, however it got
+    /// there.
+    #[test]
+    fn non_json_body_reports_length_but_never_content() {
+        let config = TraceConfig::default();
+        let summary = RequestSummary::new("POST".into(), "/".into(), vec![], Some(32), &config);
+        let json = serde_json::to_string(&summary).unwrap();
+
+        assert!(json.contains("\"body_len\":32"), "json was: {json}");
+        assert!(
+            !json.contains("username") && !json.contains("hunter2"),
+            "no fragment of a body — captured or not — should appear: {json}"
+        );
     }
 }

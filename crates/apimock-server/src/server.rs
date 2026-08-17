@@ -37,7 +37,7 @@ use crate::{
     dyn_route::dyn_route_content,
     error::{ServerError, ServerResult},
     middleware::LoadedMiddlewares,
-    parsed_request::{capture_in_log, parsed_request_from},
+    parsed_request::{capture_in_log_with_trace_config, parsed_request_from},
     respond_response::respond_response,
     response::error_response::internal_server_error_response,
     response_handler::default_response_headers,
@@ -350,9 +350,10 @@ pub async fn service(
         .as_millis() as u64;
     let start = std::time::Instant::now();
 
-    capture_in_log(
+    capture_in_log_with_trace_config(
         &parsed_request,
         config.log.clone().unwrap_or_default().verbose,
+        &tracer.config,
     );
 
     if let Some(response) = middleware_response(&middlewares, &parsed_request).await {
@@ -372,6 +373,7 @@ pub async fn service(
                 parsed_request.component_parts.method.to_string(),
                 parsed_request.url_path.clone(),
                 headers,
+                parsed_request.body_len,
                 &tracer.config,
             );
             tracer.enrich_with_body(&mut summary, parsed_request.body_json.as_ref());

@@ -342,6 +342,7 @@ mod tests {
             url_path: url_path.to_owned(),
             component_parts: parts,
             body_json: None,
+            body_len: None,
         }
     }
 
