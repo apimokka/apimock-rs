@@ -27,10 +27,6 @@ depends-on, and the rest of the planned portfolio.
 | 053 | [The v6 CLI contract](./proposed/053-v6-cli-contract.md) |
 | 054 | [The v5 deprecation release](./proposed/054-deprecation-release.md) |
 
-[`gui-integration-questions.md`](./gui-integration-questions.md) — the
-open questions for the GUI team, which several RFCs above are blocked
-on. Not an RFC; a coordination record.
-
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
 separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).

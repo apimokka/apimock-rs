@@ -459,7 +459,7 @@ starts immediately.
 | ID | Decision required | Owner | Blocking |
 |---|---|---|---|
 | D-01 | Target calendar window for M1–M3, so milestones can be dated | project owner | Scheduling only; RFC work can start without it |
-| D-02 | Whether RFC **042** proceeds, pending the GUI-team compatibility round-trip *(number corrected 2026-08-12 — see R-03)*. **The round-trip is now a written list: [`rfcs/gui-integration-questions.md`](./rfcs/gui-integration-questions.md), Q1** | project owner | M3 scope |
+| D-02 | Whether RFC **042** proceeds, pending the GUI-team compatibility round-trip *(number corrected 2026-08-12 — see R-03)*. **The round-trip is now written down: § Questions for the GUI team, G1** | project owner | M3 scope |
 
 Decisions taken on 2026-08-02:
 
@@ -484,11 +484,63 @@ Decisions taken on 2026-08-02:
 
 ---
 
+## Questions for the GUI team
+
+**Raised 2026-08-17.** These accumulated across seven RFCs over two
+weeks, were referred to repeatedly as "the GUI round-trip", and were
+never written down — which made them easy to defer and impossible to act
+on.
+
+Every one is answerable by someone reading the GUI application's source.
+None needs a meeting. Answered questions move to § History, with their
+consequence, so the reasoning stays discoverable after the answer stops
+being news.
+
+`apimock-config` and `apimock-server` are published libraries and the GUI
+is the only consumer we know by name — so these are questions about how
+it *actually* uses our API, not about what it should do.
+
+| # | Question | Decides |
+|---|---|---|
+| **G1** | **When config files change underneath a running GUI session, what does it do today** — reload wholesale, ignore until the user acts, or prompt? | **RFC 042.** The RFC exists to make reconciliation *incremental*; if wholesale reload is acceptable, it may not be needed at all. **The one question that could delete work rather than add it** — and it grows in importance as v6's `set` writes the same files a GUI session has open |
+| **G2** | Does the GUI **construct** `TraceConfig`, `RequestSummary`, `ParsedRequest`, `LogConfig` or `VerboseConfig` — or only read them? | **RFC 052.** `#[non_exhaustive]` costs nothing for a type only read; a constructed one needs a builder, and RFC 052 says not to add builders nobody needs |
+| **G3** | Does it **match on variants** of `ConfigError` / `WorkspaceError` / `SaveError` / `ApplyError`, or only format them? | **RFC 041.** If it only calls `Display`, boxing the large variants is near-free; matching means a compile-time break to coordinate |
+| **G4** | Does anything use `apimock validate --json`? | Whether removing it in 6.0.0 hurts a known consumer. A migration path exists **today** — v5.19.0 ships `--format json` alongside |
+| **G5** | Would the GUI eventually consume v6's CLI contract, or keep the library API? | **RFC 048 § 12** — whether we maintain one interface or two, permanently |
+
+**An answer of "we don't use that at all" is the most valuable one
+available here.** It deletes work.
+
+---
+
 ## History — resolved deferred items
 
 Items below were postponed during earlier development and have since
 been resolved. They are kept, not deleted, so the original rationale
 stays discoverable.
+
+### GUI trace-header display, and body metadata *(G6, G7 — answered 2026-08-17)*
+
+**G6 — does the GUI display trace-event headers? → Yes.** So RFC 040's
+redaction means GUI users see `[redacted]` where a credential value was.
+No GUI code change was needed: the event's shape is unchanged, only
+values differ.
+
+**Not fully resolved, and worth keeping visible:** the escape hatch is
+unreachable from the GUI. `header_denylist` lives on `TraceConfig`, which
+has no config-file surface, so a GUI user cannot opt a header back in
+even deliberately. Giving `TraceConfig` a configuration surface is its
+own unscheduled piece of work.
+
+**G7 — would the GUI want request body metadata? → Yes.** RFC 050
+reports body presence and byte length, never content, so a trace event
+now distinguishes *no body* from *body present but not captured*.
+
+Checking the cost changed the design: it came out roughly half what the
+RFC first estimated, because `content-type` was already carried in the
+event as an ordinary header and the byte length was already computed at
+parse time. Both answers came with *"tell me if it costs too much"*,
+and checking rather than assuming is what made that answerable.
 
 ### Hidden / VCS / build-artifact directory filtering in `FileTreeView`
 
