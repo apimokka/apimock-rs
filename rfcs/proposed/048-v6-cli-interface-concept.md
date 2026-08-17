@@ -319,6 +319,50 @@ prerequisites that make a deprecation legible at all — a CLI that
 silently ignores unknown flags cannot deliver a warning that anyone
 acts on.
 
+### 7.2 Amendment — 2026-08-17 — the deprecation release ships from a branch
+
+**Owner decision.** `main` now carries breaking work — RFC 040's
+`TraceConfig` fields and RFC 050's additions to `ParsedRequest` and
+`RequestSummary` — landed *before* the enumeration § 7.1 says must
+precede it. So `main` can no longer produce a non-breaking deprecation
+release, and a deprecation release that itself breaks is close to
+useless.
+
+**The deprecation release is therefore cut from `5.18.0`** on a
+short-lived branch carrying only deprecation warnings, not any of
+040/050/051. The security fix stays landed on `main`; the branch lives
+only as long as the release takes.
+
+This is a sequencing error we walked into rather than a discovery: § 7.1
+already said the enumeration blocks the final 5.x, and breaking work
+landed anyway.
+
+### 7.3 What a deprecation window can and cannot warn about
+
+Established while planning the branch, and it narrows the release
+considerably.
+
+**CLI invocation changes can be warned about.** A superseded invocation
+prints to stderr, keeps exit code 0, and names its replacement. That is
+§ 7.1's mechanism and it works.
+
+**Most of v6's library breaks cannot be.** There is no mechanism to warn
+that a struct is about to become `#[non_exhaustive]`, or that a field is
+about to be added — both change what downstream *may write*, and no lint
+exists to say "you are using a struct literal on a type that will stop
+allowing them". `#[deprecated]` covers removal, not this.
+
+**Consequence for the plan.** The deprecation release is a **CLI**
+deprecation release. RFC 052's `#[non_exhaustive]` change, RFC 041's
+error boxing, and RFC 050's field additions reach users through the
+**migration guide** instead, and are announced rather than warned.
+
+**And that reorders the critical path.** The deprecation release is
+gated not on the library enumeration — which is largely known already —
+but on v6's **CLI surface** being designed far enough to say which
+invocations change and to what. That is § 11's items 3, 4 and 5, and it
+is now the work standing between here and the close of v5.
+
 ## 8. `toml_writer` — the honesty problem in "safer than by hand"
 
 `toml_writer` builds `toml::Value` trees and renders with

@@ -357,7 +357,20 @@ be finished and handed over.
 | 1 | M3's remainder — RFCs 039–043 | Planned; 042 still blocked on the GUI round-trip (D-02) |
 | 2 | CLI hygiene — **[RFC 049](./rfcs/done/049-cli-front-door.md)** | ✅ **Shipped v5.18.0.** Item 4 is unblocked — an unrecognised flag now fails loudly, so a deprecation warning can be delivered |
 | 3 | Enumerate v6's breaking changes | **Blocks the final 5.x** |
-| 4 | Deprecation warnings — stderr, exit code 0, naming the removal version | The deprecation release |
+| 4 | Deprecation warnings — stderr, exit code 0, naming the removal version | **Cut from `5.18.0` on a short-lived branch** (owner decision 2026-08-17) — `main` now carries breaking work and can no longer produce a non-breaking release. See RFC 048 § 7.2 |
+
+**Amended 2026-08-17 — item 3 is narrower, and item 4's blocker moved.**
+A deprecation window can only warn about **CLI invocations**. There is no
+mechanism to warn that a struct is about to become `#[non_exhaustive]`
+or gain a field — both change what downstream *may write*, and no lint
+covers that. So RFC 052's change, RFC 041's error boxing and RFC 050's
+field additions reach users through the **migration guide**, announced
+rather than warned (RFC 048 § 7.3).
+
+The consequence is that the deprecation release is gated on **v6's CLI
+surface being designed**, not on the library enumeration — which is
+already largely known. That design is RFC 048 § 11's items 3–5, and it
+is now the work standing between here and the close of v5.
 
 Item 2 was "small but user-facing" while v5 was the whole story. Under
 RFC 048 it is load-bearing twice over: a CLI that silently ignores an
