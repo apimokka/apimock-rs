@@ -30,9 +30,16 @@ depending on a bug, but it must appear in the CHANGELOG — flag it in your
 review request so it isn't missed when the release notes are written.
 
 **Unresolved 3 — do the RFC 036 examples get simplified?
-→ NOT IN THIS CHANGE.** `match-headers-and-body/` and
+→ NOT IN THIS CHANGE.** ~~`match-headers-and-body/` and
 `status-codes-and-errors/` use `file_path` where `text` + headers would
-now work. Simplifying them touches a shipped example set that
+now work.~~ **Corrected 2026-08-17: this premise was wrong.** Neither
+example uses `file_path` at all — both already use `text`/`status`
+directly, and neither demonstrates `respond.headers` in any form. The
+outcome is unchanged (no simplification), but for a more basic reason
+than stated: these examples never attempted the pattern that was broken.
+Established by the dev team; see
+`.git-exclude/reviewed/045-configuration-accepted-but-ignored/REVIEW-001.md`
+§ 5. Simplifying them touches a shipped example set that
 `apimock --init` scaffolds from and every release archive ships, for no
 correctness gain. Out of scope.
 
@@ -52,7 +59,8 @@ Established in the RFC against source, line-cited, so it is checkable —
 
 | `respond` shape | today | required |
 |---|---|---|
-| `file_path` | honoured | unchanged |
+| `file_path` (json/json5/csv) | honoured | unchanged |
+| `file_path` (plain text) | **all dropped** — *added 2026-08-17; this table originally said `file_path` was honoured with no caveat, which was wrong. See RFC 045 § Defect 1's amendment* | honoured |
 | `text` alone | honoured, but `content-type` is overwritten | explicit `content-type` wins |
 | `text` + `status` | all dropped | honoured |
 | `status` alone | all dropped | honoured |

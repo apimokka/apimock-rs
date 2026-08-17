@@ -48,11 +48,43 @@ The three states are the point. Two of them exist today and are
 conflated; a consumer must be able to tell them apart, which is the
 whole reason this RFC exists.
 
-## 4. The part that is real work, not a formality
+## 4. Correction — "additive" is true internally and false for semver
+
+**Added 2026-08-17, after this handoff was issued. Read this before
+finishing.**
+
+This document called the new field additive and implied that settles the
+compatibility question. It does not. Checked since:
+
+```
+pub struct ParsedRequest   // apimock-routing, re-exported at lib.rs:43
+pub struct RequestSummary  // apimock-server::trace
+```
+
+Both are **`pub`, with public fields, and neither is
+`#[non_exhaustive]`.** Adding a field to such a struct breaks every
+downstream struct literal — so each of the two fields this RFC asks for
+is a **breaking change to a public API**, however additive its effect on
+our own code.
+
+This is not hypothetical: RFC 040 already did exactly this to
+`TraceConfig`, unnoticed, and the break is sitting unreleased on `main`.
+
+**What to do:** implement the field as scoped, and **report the break in
+your review request** — do not decide the remedy. Whether these structs
+should become `#[non_exhaustive]` (one deliberate break, then immunity
+from this whole class) is an owner decision now pending, and it spans
+RFC 040, RFC 050 and RFC 051 rather than belonging to any one of them.
+
+Do **not** add `#[non_exhaustive]` yourself as a tidy-up. It changes
+downstream pattern-matching as well as construction, and it wants
+deciding once across all three.
+
+## 5. The part that is real work, not a formality
 
 **`ParsedRequest` is the type the matcher, middleware and `dyn_route`
-all consume.** The change is additive, so there should be no effect on
-any of them.
+all consume.** The change is additive *in effect*, so there should be no
+effect on any of them — but see § 4 for what "additive" does not mean.
 
 *Should be* is not *was verified*. Check every consumer and say in your
 review request which ones you checked. If the field turns out not to be
@@ -61,7 +93,7 @@ exhaustive destructure — that is exactly the kind of thing this
 instruction exists to surface, and it may mean the change is larger than
 RFC 050 estimated.
 
-## 5. Do not capture content
+## 6. Do not capture content
 
 Stated plainly because it is the one way this work could go wrong in a
 way that matters. **No bytes, no snippet, no truncated preview, not even
@@ -74,7 +106,7 @@ non-goal.
 
 Length and presence only.
 
-## 6. Evidence required
+## 7. Evidence required
 
 - A request with **no body**, one with a **JSON body**, and one with a
   **non-JSON body** produce three distinguishable trace events —
@@ -85,12 +117,12 @@ Length and presence only.
   in the serialised event.
 - The JSON path is unchanged: `body_json` and `body_truncated` behave
   exactly as before, existing tests untouched.
-- Consumers of `ParsedRequest` enumerated and checked (§ 4).
+- Consumers of `ParsedRequest` enumerated and checked (§ 5), **and the public-API break reported (§ 4)**.
 - Full suite green; report the count against the **430** baseline.
 - Gates: `cargo fmt --all --check`, `cargo clippy --workspace
   --all-targets --all-features -- -D warnings`.
 
-## 7. Scope boundaries
+## 8. Scope boundaries
 
 - **In:** `apimock-routing`'s `ParsedRequest`, `apimock-server`'s
   `parsed_request_from`, `trace.rs`'s `RequestSummary`, documentation.
@@ -100,7 +132,7 @@ Length and presence only.
 - If the additive field turns out not to be additive, **stop and
   escalate** rather than reshaping consumers to fit.
 
-## 8. Escalation
+## 9. Escalation
 
 Per project convention, blocking issues and design questions go in a
 `.git-exclude/review-request/` package.
