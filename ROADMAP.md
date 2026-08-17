@@ -459,7 +459,7 @@ starts immediately.
 | ID | Decision required | Owner | Blocking |
 |---|---|---|---|
 | D-01 | Target calendar window for M1–M3, so milestones can be dated | project owner | Scheduling only; RFC work can start without it |
-| D-02 | Whether RFC **042** proceeds, pending the GUI-team compatibility round-trip *(number corrected 2026-08-12 — see R-03)* | project owner | M3 scope |
+| D-02 | Whether RFC **042** proceeds, pending the GUI-team compatibility round-trip *(number corrected 2026-08-12 — see R-03)*. **The round-trip is now a written list: [`rfcs/gui-integration-questions.md`](./rfcs/gui-integration-questions.md), Q1** | project owner | M3 scope |
 
 Decisions taken on 2026-08-02:
 
