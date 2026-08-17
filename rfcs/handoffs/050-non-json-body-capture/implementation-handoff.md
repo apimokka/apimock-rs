@@ -70,15 +70,19 @@ our own code.
 This is not hypothetical: RFC 040 already did exactly this to
 `TraceConfig`, unnoticed, and the break is sitting unreleased on `main`.
 
-**What to do:** implement the field as scoped, and **report the break in
-your review request** — do not decide the remedy. Whether these structs
-should become `#[non_exhaustive]` (one deliberate break, then immunity
-from this whole class) is an owner decision now pending, and it spans
-RFC 040, RFC 050 and RFC 051 rather than belonging to any one of them.
+**Decided 2026-08-17.** `#[non_exhaustive]` is approved for all five
+affected types, as **one coordinated change** —
+[RFC 052](../../proposed/052-non-exhaustive-public-types.md) — not
+piecemeal inside three RFCs.
 
-Do **not** add `#[non_exhaustive]` yourself as a tidy-up. It changes
-downstream pattern-matching as well as construction, and it wants
-deciding once across all three.
+**What that means for you:** this RFC adds fields by its very nature, so
+unlike RFC 051 it cannot avoid the break. Implement the field as scoped
+and **report the break in your review request**. Do **not** add
+`#[non_exhaustive]` yourself — applying it in one place while four others
+wait is how the current inconsistency arose.
+
+Expect this work to ship at the v6 boundary rather than in a 5.x minor,
+for that reason. It does not change what you build.
 
 ## 5. The part that is real work, not a formality
 

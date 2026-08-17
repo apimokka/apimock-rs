@@ -63,11 +63,24 @@ takes its default — but the **Rust API break is real**.
 This has already happened once unnoticed: RFC 040 added three fields to
 `TraceConfig`, and that break is unreleased on `main`.
 
-**What to do:** implement as scoped, and **report any such addition as a
-breaking change** in your review request. Do **not** add
-`#[non_exhaustive]` yourself — it changes downstream pattern-matching as
-well as construction, it spans RFCs 040/050/051, and it is an owner
-decision now pending. Recorded as **R-09** in `ROADMAP.md`.
+**Decided 2026-08-17 — and it changes your primary instruction.**
+
+**Try first to land this RFC with *no* new public fields at all.** Share
+RFC 040's denylist by reference; do not add a configuration surface for
+it. If that works, this security fix ships in an honest minor release
+while all the API churn defers to the v6 boundary — which is the outcome
+we want, because a delayed security fix and a broken semver promise are
+both costs and this avoids paying either.
+
+If it cannot be done without adding a public field, **stop and escalate**
+rather than adding one. That is a scope decision now, not an
+implementation detail.
+
+Either way, do **not** add `#[non_exhaustive]` yourself. The owner has
+approved applying it to all five affected types — `TraceConfig`,
+`RequestSummary`, `ParsedRequest`, `LogConfig`, `VerboseConfig` — but as
+**one coordinated change**, [RFC 052](../../proposed/052-non-exhaustive-public-types.md),
+not piecemeal inside three RFCs. Recorded as **R-09** in `ROADMAP.md`.
 
 Worth knowing: `apimock-config`'s `view.rs` types *are*
 `#[non_exhaustive]`, deliberately and with a comment saying why. So the
