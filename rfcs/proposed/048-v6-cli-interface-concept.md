@@ -457,7 +457,7 @@ Indicative, to be numbered when written.
 |---|---|---|
 | 1 | `toml_edit` migration — preserve comments and ordering | § 8, first |
 | 2 | CLI hygiene: `--version`, `--help`, reject unknown flags, fix relative `--config` | § 6, prerequisite |
-| 3 | The contract: invocation, schemas, error taxonomy, exit codes | § 3 |
+| 3 | [**RFC 053**](./053-v6-cli-contract.md) — the contract: invocation, schemas, error taxonomy, exit codes | § 3. Drafted 2026-08-17 |
 | 3b | **Threat model refinement** — settle T2 (data vs code) before `set` is designed | § 9, blocks RFC 5 |
 | 4 | `get` — W1/W2/W3, including the "answered from" provenance | § 2, § 4 |
 | 5 | `set` — W4/W6, preview, transaction boundary | § 2 |
