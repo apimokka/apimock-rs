@@ -5,6 +5,90 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.18.0] - 2026-08-17
+
+Two things that looked like they worked and didn't: configuration that
+was accepted and then ignored, and a command line that accepted anything
+and understood almost none of it.
+
+### Fixed
+
+- **`respond.headers` is now honoured on every response shape
+  (RFC 045).** It was dropped entirely whenever `status` was set, and its
+  `content-type` entry was overwritten on `text` responses. An explicitly
+  configured header now beats an inferred default, everywhere.
+
+  A fourth case turned up while fixing it: plain-text `file_path`
+  responses dropped custom headers too, while the JSON/JSON5/CSV
+  siblings in the same file passed them through correctly. Fixed in the
+  same change.
+
+- **`[default].delay_response_milliseconds` now delays (RFC 045).** It
+  parsed, validated, printed at startup, and did nothing — it was read
+  only to display it. A per-rule `respond.delay_response_milliseconds`
+  still overrides it.
+
+  **This is a behaviour change you can observe.** A configuration that
+  sets it today waits ~0 ms and will now wait the configured time.
+  Depending on the old behaviour means depending on a bug, but the
+  change is real.
+
+- **The CLI no longer ignores what it does not understand (RFC 049).**
+  `apimock --version` used to start a mock server. So did `--help`, and
+  so did any typo — an unrecognised flag was silently discarded and the
+  server started on a port nobody asked for. Now:
+
+  ```
+  $ apimock --prot 4000
+  apimock: unknown option '--prot'; did you mean '--port'?
+  ```
+
+  on stderr, exit code 2, and no server started.
+
+- **A bare relative `--config` path resolves.** `apimock -c apimock.toml`
+  failed while `-c ./apimock.toml` worked. Both work now.
+
+  `apimock validate --config` parses its own flag separately and still
+  needs the `./` prefix — documented in the CLI reference rather than
+  silently inconsistent.
+
+### Added
+
+- **`--version` and `--help`.** Both short-circuit before any
+  configuration is read or any listener is bound, so they work in a
+  broken workspace — which is exactly when you want to know what version
+  you are running. `--help` is reachable per subcommand.
+
+- **Documented exit codes across the whole CLI**: `0` success, `2` usage
+  error, `1` everything else. Diagnostics go to stderr; only
+  `--version` / `--help` write to stdout.
+
+### Internal
+
+- **`verify-published` was broken on its first real run and is fixed
+  (RFC 047).** `npm pack --pack-destination` does not create its target
+  directory, so the job failed on every platform; only macOS was
+  observed, because fail-fast cancelled the rest. The matrix now sets
+  `fail-fast: false` — a verification job wants every platform's answer,
+  not the first failure. No artifact was affected: v5.17.0's binaries
+  were verified by hand against the Release assets and matched.
+
+- **v6's concept is recorded (RFC 048)** — the CLI as an interface in its
+  own right. Planning only; nothing in this release depends on it.
+
+### Test count
+
+| Crate / target | 5.17.0 | 5.18.0 | Delta |
+|---|---|---|---|
+| apimock (lib) | 22 | 22 | — |
+| apimock integration (`tests/`) | 158 | **174** | **+16** |
+| apimock examples (`tests/examples.rs`) | 38 | 38 | — |
+| apimock-config | 60 | 60 | — |
+| apimock-routing | 116 | 116 | — |
+| apimock-server | 14 | 14 | — |
+| apimock-config (doctest) | 1 | 1 | — |
+| **Total** | **409** | **425** | **+16** |
+
 ## [5.17.0] - 2026-08-12
 
 A small release, cut deliberately small. Two release-pipeline paths have

@@ -10,7 +10,7 @@ lost between releases. That history lives at the bottom of this file.
 
 **Baseline approved.** 2026-08-02, by the project owner.
 **Baseline covers.** v5.15.0 → the close of v5 *(extended 2026-08-17: v5 no longer ends at v5.18.0 — see § Closing v5, opening v6)*.
-**Current version.** 5.17.0 — 41 RFCs implemented, 1 withdrawn.
+**Current version.** 5.18.0 — 43 RFCs implemented, 1 withdrawn.
 **M1 complete** (2026-08-03): RFCs 030–033 shipped in v5.15.0.
 **M2 complete** (2026-08-10): RFCs 034–038 shipped in v5.16.0, together
 with cross-cutting RFC 044 — the first release cut by automation.
@@ -260,7 +260,7 @@ first release cut through it.**
 | 041 | Shrink large error variants (`result_large_err`) | P2 | — | Planned |
 | 042 | `sync_from_disk` incremental reconciliation | P2 | — | Planned |
 | 043 | Module split: `workspace/edit.rs`, `server/trace.rs` | P2 | — | Planned |
-| 045 | [Configuration accepted but ignored](./rfcs/proposed/045-configuration-accepted-but-ignored.md) | P1 | — | Proposed |
+| 045 | [Configuration accepted but ignored](./rfcs/done/045-configuration-accepted-but-ignored.md) | P1 | — | Implemented (v5.18.0) |
 | 046 | [Test harness: port race and readiness](./rfcs/done/046-test-harness-port-race-and-readiness.md) | **P0** | — | Implemented (v5.17.0) |
 | 047 | [Verify what was actually published](./rfcs/done/047-post-publish-artifact-verification.md) | P1 | 044 | Implemented (v5.17.0) |
 
@@ -335,7 +335,7 @@ be finished and handed over.
 | | Work | State |
 |---|---|---|
 | 1 | M3's remainder — RFCs 039–043 | Planned; 042 still blocked on the GUI round-trip (D-02) |
-| 2 | CLI hygiene — **[RFC 049](./rfcs/proposed/049-cli-front-door.md)** | Drafted 2026-08-17. **Blocks item 4** — a CLI that ignores unknown arguments cannot deliver a deprecation warning |
+| 2 | CLI hygiene — **[RFC 049](./rfcs/done/049-cli-front-door.md)** | ✅ **Shipped v5.18.0.** Item 4 is unblocked — an unrecognised flag now fails loudly, so a deprecation warning can be delivered |
 | 3 | Enumerate v6's breaking changes | **Blocks the final 5.x** |
 | 4 | Deprecation warnings — stderr, exit code 0, naming the removal version | The deprecation release |
 

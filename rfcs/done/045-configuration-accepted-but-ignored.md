@@ -1,6 +1,6 @@
 # RFC 045 — Configuration that is accepted but ignored
 
-**Status.** Proposed — design approved by the project owner 2026-08-04.
+**Status.** Implemented (v5.18.0). Design approved by the project owner 2026-08-04; reviewed in `REVIEW-001` / `REVIEW-002`.
 Unresolved questions 1–3 resolved during implementation; see § Unresolved
 questions. **Amended 2026-08-13** — see § Defect 1's amendment: the
 `file_path` row needed a plain-text caveat.

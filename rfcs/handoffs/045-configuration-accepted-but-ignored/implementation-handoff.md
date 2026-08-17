@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 045, Configuration accepted but ignored
 
-**Governing RFC.** [RFC 045](../../proposed/045-configuration-accepted-but-ignored.md)
+**Governing RFC.** [RFC 045](../../done/045-configuration-accepted-but-ignored.md)
 **Milestone.** M3 — P1, targeting **v5.18.0**
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 

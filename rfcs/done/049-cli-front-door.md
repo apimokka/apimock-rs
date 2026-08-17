@@ -1,6 +1,7 @@
 # RFC 049 — The CLI front door: version, help, and refusing what it does not understand
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Implemented (v5.18.0). Approved by the project owner
+2026-08-17; reviewed in `REVIEW-001` / `REVIEW-002`.
 **Tracks.** Correctness and product readiness. `apimock --version` starts
 a mock server. So does `--help`. So does any typo. The CLI accepts
 everything and understands almost none of it.

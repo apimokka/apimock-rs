@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 045
 
-**Governing RFC.** [RFC 045](../../proposed/045-configuration-accepted-but-ignored.md)
+**Governing RFC.** [RFC 045](../../done/045-configuration-accepted-but-ignored.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---

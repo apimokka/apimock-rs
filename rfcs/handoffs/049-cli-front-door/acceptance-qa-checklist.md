@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 049
 
-**Governing RFC.** [RFC 049](../../proposed/049-cli-front-door.md)
+**Governing RFC.** [RFC 049](../../done/049-cli-front-door.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---

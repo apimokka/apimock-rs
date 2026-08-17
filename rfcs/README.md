@@ -19,9 +19,7 @@ depends-on, and the rest of the planned portfolio.
 
 | ID  | Title |
 |-----|-------|
-| 045 | [Configuration accepted but ignored](./proposed/045-configuration-accepted-but-ignored.md) |
 | 048 | [v6 concept: the CLI as a first-class interface](./proposed/048-v6-cli-interface-concept.md) — umbrella |
-| 049 | [The CLI front door: version, help, and refusing what it does not understand](./proposed/049-cli-front-door.md) |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
@@ -72,6 +70,8 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 044 | [Release process: documentation and automation](./done/044-release-process-documentation-and-automation.md) | v5.16.0 |
 | 046 | [Test harness: port race and readiness](./done/046-test-harness-port-race-and-readiness.md) | v5.17.0 |
 | 047 | [Verify what was actually published](./done/047-post-publish-artifact-verification.md) | v5.17.0 |
+| 045 | [Configuration accepted but ignored](./done/045-configuration-accepted-but-ignored.md) | v5.18.0 |
+| 049 | [The CLI front door](./done/049-cli-front-door.md) | v5.18.0 |
 
 ## Archive
 
@@ -84,8 +84,8 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 ## Adding a new RFC
 
 1. Pick the next free number — **050+**. Numbers 039–043 are reserved
-   by [ROADMAP.md](../ROADMAP.md) for the planned M3 RFCs; 045, 048 and
-   049 are still open. Create `rfcs/proposed/NNN-slug.md`.
+   by [ROADMAP.md](../ROADMAP.md) for the planned M3 RFCs; 048 (the v6
+   umbrella) is still open. Create `rfcs/proposed/NNN-slug.md`.
 2. On shipping, move to `done/`, update Status field, update this index.
 
 See [RFC 000](./done/000-rfc-lifecycle-policy.md) for the full policy.

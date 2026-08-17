@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 049, the CLI front door
 
-**Governing RFC.** [RFC 049](../../proposed/049-cli-front-door.md)
+**Governing RFC.** [RFC 049](../../done/049-cli-front-door.md)
 **Umbrella.** [RFC 048](../../proposed/048-v6-cli-interface-concept.md) § 6
 **Milestone.** Closing v5 — **blocks the deprecation release**
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
@@ -35,8 +35,18 @@ Judge it on two things and report both:
    `--init --yes` behaves fails the test regardless of what else it
    gives.
 2. **What does it cost under the existing supply-chain policy?**
-   RFC 033's `cargo-deny` gates apply. Report the added dependency
-   count and whether the licence allow-list needs touching.
+   ~~RFC 033's `cargo-deny` gates apply. Report the added dependency
+   count and whether the licence allow-list needs touching.~~
+
+   **Corrected 2026-08-17 — this was wrong.** There is no `deny.toml`
+   and `cargo-deny` is not invoked anywhere: owner decision **D-04**
+   dropped it on 2026-08-02, and `rfcs/done/033-supply-chain-gates.md`
+   § 204 records that plainly. The real gate is `cargo audit`
+   (`.github/workflows/ci.yaml`). The dev team checked rather than
+   complied and reported the contradiction — see
+   `.git-exclude/reviewed/049-cli-front-door/REVIEW-001.md` § 2. Left
+   struck through rather than rewritten, so the record shows what was
+   asked and that it was wrong.
 
 My leaning, offered as input and not as instruction: v6 will restructure
 this surface into subcommands, and a crate is the likely answer *then*.
