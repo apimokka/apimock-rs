@@ -116,11 +116,32 @@ error: crate apimock@5.16.0 already exists on crates.io index
 ```
 
 cargo exits 101 and the job fails. So a partial publish has to be
-finished by hand: work out which crates landed (check crates.io, not the
-job log), and publish the remainder individually with `cargo publish -p
-<crate>` in dependency order — `apimock-routing`, `apimock-config`,
-`apimock-server`, `apimock`. Re-running the whole workflow will only
-fail again on the first crate that already exists.
+finished by hand — but **since 2026-08-17 that is no longer a single
+command.**
+
+### If crates.io publishing fails partway
+
+With *"Require trusted publishing for all new versions"* on, a local
+`cargo publish` authenticates with an API token and is therefore
+**rejected**. The obvious recovery — running `cargo publish -p <crate>`
+from a maintainer's machine — cannot work, and re-running the whole
+workflow only fails again on the first crate that already exists.
+
+The procedure is:
+
+1. Work out which crates actually landed. **Check crates.io, not the job
+   log** — the log tells you what the job attempted.
+2. On crates.io, temporarily switch *"Require trusted publishing"*
+   **off** for the crates still to publish.
+3. Publish the remainder individually, in dependency order:
+   `apimock-routing`, `apimock-config`, `apimock-server`, `apimock`.
+4. **Switch it back on.** This is the step that gets forgotten, and
+   forgetting it silently returns the project to the state the switch
+   exists to prevent.
+
+Deliberately more steps than before. The alternative was leaving a
+token-shaped hole open permanently against a failure that has not yet
+happened once.
 
 Authentication is [crates.io Trusted Publishing](https://crates.io/docs/trusted-publishing)
 (OIDC, no stored token) — the same class of mechanism npm already uses
@@ -131,15 +152,21 @@ the four crates, `crates-io-publish` fails with an authentication error
 for that crate specifically — check crates.io's settings for it before
 re-running.
 
-**Status as of v5.16.0: `crates-io-publish` has still never published.**
-v5.16.0's crates were uploaded by hand from a maintainer's machine while
-the npm side was being unblocked, so the automated crates.io path remains
-unexercised and **v5.17.0 will be its first real run.** Until it goes
-green once, leave crates.io's *"Require trusted publishing for all new
-versions"* switched **off** — turning it on would gate releases behind a
-path that has never worked, and remove the manual fallback at the same
-time. Turn it on immediately after the first green run; it closes the
-case where a leaked API token publishes a version nobody authorised.
+**Status as of v5.18.0: the automated path is proven, and trusted
+publishing is now *required*.** `crates-io-publish` published for the
+first time in v5.17.0 and again in v5.18.0. RFC 047's `verify-published`
+jobs failed on their first outing (a missing `mkdir`) and ran clean in
+v5.18.0, which was the first release where every job in this workflow
+went green end to end.
+
+Accordingly, crates.io's *"Require trusted publishing for all new
+versions"* was switched **on** for all four crates on 2026-08-17. A
+leaked or stale API token can no longer publish a version nobody
+authorised.
+
+**Read § "If crates.io publishing fails partway" before relying on any
+manual `cargo publish`** — that switch is what makes the old advice
+wrong.
 
 ## Trusted publishing binds to the workflow *filename*
 

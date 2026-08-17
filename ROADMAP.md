@@ -256,8 +256,8 @@ first release cut through it.**
 | RFC | Title | Pri | Depends on | State |
 |---|---|---|---|---|
 | 039 | `cargo public-api` additive-only enforcement | P1 | 031 | Planned |
-| 040 | Trace channel: non-JSON body capture and redaction | P1 | — | Planned |
-| 041 | Shrink large error variants (`result_large_err`) | P2 | — | Planned |
+| 040 | [Trace channel: redaction, and non-JSON body capture](./rfcs/proposed/040-trace-capture-and-redaction.md) | P1 | — | Drafted 2026-08-17 |
+| 041 | Shrink large error variants (`result_large_err`) | P2 | — | **Deferred to 6.0.0** — breaking; see below |
 | 042 | `sync_from_disk` incremental reconciliation | P2 | — | Planned |
 | 043 | Module split: `workspace/edit.rs`, `server/trace.rs` | P2 | — | Planned |
 | 045 | [Configuration accepted but ignored](./rfcs/done/045-configuration-accepted-but-ignored.md) | P1 | — | Implemented (v5.18.0) |
@@ -287,6 +287,23 @@ RFC 047 closes the class of defect that let npm ship 4.6.9 binaries under
 5.9.0–5.10.0 version numbers, undetected across several releases with
 every CI job green. v5.16.0 was confirmed correct only because it was
 checked by hand.
+
+**RFC 041 is deferred to 6.0.0. Established 2026-08-17, from source
+rather than assumed.** The large payload is a *public named field* —
+`source: toml::de::Error` on `ConfigError::ConfigParse`
+(`crates/apimock-config/src/error.rs:43`) and on the equivalent in
+`apimock-routing` (`error.rs:46`). Neither enum is `#[non_exhaustive]`,
+so downstream code can construct those variants, and changing the field
+to `Box<toml::de::Error>` stops that construction compiling. Pattern
+matches would mostly survive via `Deref`, but construction and any
+explicit type annotation would not.
+
+No non-breaking formulation exists: adding `#[non_exhaustive]` first is
+itself breaking, and the payload cannot be shrunk without changing the
+field's type. So 041 is a breaking change, and belongs where breaking is
+sanctioned. Deferring costs nothing operationally — RFC 030's fifteen
+suppressions are **function-targeted, not blanket**, so a new function
+tripping `result_large_err` still fails `-D warnings`.
 
 RFC 039 closes open question Q-001 by turning DEC-014's additive-only
 promise into a build-time check. RFC 040 resolves RFC 023's Unresolved

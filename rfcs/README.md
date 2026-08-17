@@ -19,6 +19,7 @@ depends-on, and the rest of the planned portfolio.
 
 | ID  | Title |
 |-----|-------|
+| 040 | [Trace channel: redaction, and non-JSON body capture](./proposed/040-trace-capture-and-redaction.md) |
 | 048 | [v6 concept: the CLI as a first-class interface](./proposed/048-v6-cli-interface-concept.md) — umbrella |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
