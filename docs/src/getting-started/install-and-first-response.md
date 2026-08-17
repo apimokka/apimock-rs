@@ -30,6 +30,9 @@ package on npm is named `apimock-rs`, but the binary it installs is
 
 ### Which prebuilt archive
 
+**⬇️ [Download from the latest release](https://github.com/apimokka/apimock-rs/releases/latest)**,
+then pick the archive for your platform:
+
 | Platform | Archive |
 | --- | --- |
 | Linux x64 (glibc) | `apimock@Linux-x64-gnu-<version>.tar.gz` |

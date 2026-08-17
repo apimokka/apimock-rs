@@ -63,7 +63,8 @@ tar xzf 'apimock@Linux-x64-gnu-<version>.tar.gz'
 cd 'apimock@Linux-x64-gnu-<version>' && ./apimock
 ```
 
-Prebuilt binaries are published for Linux (x64 gnu, x64 musl, aarch64
+**⬇️ [Download from the latest release](https://github.com/apimokka/apimock-rs/releases/latest)**
+— prebuilt binaries are published for Linux (x64 gnu, x64 musl, aarch64
 musl), macOS (aarch64) and Windows (x64). Linux archives are `.tar.gz`,
 macOS and Windows are `.zip`. Each one also ships an `apimock.toml`,
 `apimock-rule-set.toml` and `apimock-middleware.rhai`, picked up
