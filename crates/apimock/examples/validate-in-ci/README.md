@@ -19,7 +19,10 @@ $ echo $?
 ```
 
 `--json` emits the diagnostics array instead (empty here, since
-there's nothing to report):
+there's nothing to report). **Deprecated as of 5.19.0** — still works,
+byte-identical, but now prints a one-line warning to stderr; `--format
+json` (the [CLI reference](../../../../docs/src/reference/cli-reference.md#the-response-envelope---format-json))
+is the replacement for new CI steps:
 
 ```sh
 $ apimock validate --config ./apimock.toml --json
@@ -27,8 +30,14 @@ $ apimock validate --config ./apimock.toml --json
 Validation passed (2 rules across 1 rule set(s)).
 ```
 
-Exit codes: `0` clean, `1` at least one error (or, with `--strict`, any
-warning), `2` the config couldn't even be loaded.
+Exit codes: `0` clean, `2` the config couldn't even be loaded. **Exit
+`1` and `--strict` are documented but not reachable through this
+command** — the load step above already rejects, identically, every
+condition that would otherwise become a reported diagnostic, so a
+problem fails validation by failing to *load* (exit `2`), before
+`--strict` or an exit-`1` "N error(s)" outcome ever come into play. See
+the [CLI reference](../../../../docs/src/reference/cli-reference.md#apimock-validate)
+for the detail.
 
 **Note the `./`.** `--config apimock.toml` (no `./`) currently fails
 to resolve the path even though the file is right there - a real quirk

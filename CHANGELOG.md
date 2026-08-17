@@ -5,6 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.19.0] - 2026-08-17
+
+**The last v5 release.** It warns about what 6.0.0 changes, and ships
+the new output shape alongside the old one so the migration can be made
+and verified before the break rather than after it.
+
+### Added
+
+- **`apimock validate --format text|json`.** `--format json` emits the
+  v6 response envelope — a JSON object carrying `schema`, the binary
+  version, and exactly one of `result` / `error`:
+
+  ```json
+  {
+    "schema": 1,
+    "apimock": "5.19.0",
+    "result": { "diagnostics": [], "summary": { "errors": 0, "warnings": 0, "rule_sets": 0, "rules": 0 } }
+  }
+  ```
+
+  The point of shipping it now is that you can switch flags, adapt a
+  parser, and check it against a real binary **before** 6.0.0 removes
+  the old path.
+
+- **A migration guide** — `docs/src/guides/migrating-to-6-0.md` —
+  covering the 6.0.0 changes that *cannot* be warned about at runtime,
+  because no mechanism exists to warn about them: several public structs
+  become `#[non_exhaustive]`, some gain fields, and the error enums may
+  be reshaped.
+
+### Deprecated
+
+- **`apimock validate --json`.** It still emits the same bare
+  diagnostics array, byte-identical, so an existing parser reading
+  stdout is unaffected. Using it now prints one line to stderr naming
+  `--format json` as the replacement. **Removed in 6.0.0.**
+
+  `--json` and `--format` together is a usage error rather than a silent
+  precedence rule between two conflicting requests for the output shape.
+
+### Documented honestly rather than fixed
+
+- **`apimock validate` can never exit `1`, and `--strict` has nothing to
+  act on.** Found while building this release's own test fixtures.
+
+  `Workspace::load` already checks — identically — every condition that
+  could otherwise appear in the diagnostics report: an empty or
+  conflicting `respond` block, a `respond.file_path` that does not
+  exist, a missing `fallback_respond_dir`. So a configuration either
+  loads with zero diagnostics (exit `0`) or fails to load (exit `2`),
+  and never reaches the exit-`1` path. Nothing anywhere constructs a
+  warning-severity diagnostic either, so `--strict`, which only promotes
+  warnings, has nothing to promote even in principle.
+
+  This has been true since `validate` shipped in v5.13.0. The
+  documentation now says so; a real fix means changing configuration-load
+  semantics shared with server startup, which is larger than this
+  release.
+
+### Test count
+
+| Crate / target | 5.18.0 | 5.19.0 | Delta |
+|---|---|---|---|
+| apimock integration (`tests/`) | 174 | **187** | **+13** |
+| everything else | 251 | 251 | — |
+| **Total** | **425** | **438** | **+13** |
+
 ## [5.18.0] - 2026-08-17
 
 Two things that looked like they worked and didn't: configuration that
