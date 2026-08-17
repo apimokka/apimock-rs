@@ -82,7 +82,7 @@ falls back to the same defaults `--yes` would produce, even without
 ## `apimock validate`
 
 ```
-apimock validate --config <path> [--strict] [--quiet] [--json]
+apimock validate --config <path> [--strict] [--quiet] [--json] [--format text|json]
 ```
 
 Loads the whole workspace — root config and every rule set it
@@ -91,12 +91,71 @@ references — and reports diagnostics, without binding a port.
 | Flag | Meaning |
 |---|---|
 | `--config`, `-c <path>` | Required. The root config to validate. **Prefix a bare relative path with `./`** — unlike the top-level `-c` above, `validate` parses its own `--config` separately and a bare filename (no directory separator) currently fails to resolve even though the file exists; `--config ./apimock.toml` works, `--config apimock.toml` does not |
-| `--strict` | Treat warnings as failures too (exit `1`, not just `0`) |
+| `--strict` | Documented to treat warnings as failures (exit `1`). **Not reachable today** — see the note below the exit-codes table |
 | `--quiet` | Suppress non-error output |
-| `--json` | Emit diagnostics as a JSON array instead of the plain-text summary |
+| `--json` | **Deprecated, removed in 6.0.0.** Emits the same bare diagnostics array 5.18.0 and earlier did, byte-identical — an existing parser reading stdout is unaffected. Using it prints a one-line warning to stderr, once, naming `--format json` as the replacement |
+| `--format text` | Default. Today's plain-text summary — unchanged whether written explicitly or left implicit |
+| `--format json` | The [RFC 053 response envelope](#the-response-envelope---format-json): an object with `schema`, `apimock`, and exactly one of `result`/`error`, instead of a bare array |
 
-Exit codes: `0` clean, `1` at least one error (or any warning under
-`--strict`), `2` the config couldn't be loaded at all.
+`--json` and `--format` may not be combined — that is a usage error,
+exit `2`, not a silent precedence rule between the two.
+
+Exit codes: `0` clean, `2` the config couldn't be loaded at all, or the
+invocation itself was invalid (e.g. `--json --format json` together, or
+`--format` given a value other than `text`/`json`).
+
+**Exit `1` ("at least one error") is documented but not reachable
+today, and neither is `--strict`'s effect.** `Workspace::load` — which
+`validate` calls before it ever produces a diagnostic — already checks,
+identically, every condition that could otherwise appear in the
+diagnostics report (a `respond` block that's empty or has conflicting
+fields, a `respond.file_path` that doesn't exist, a missing
+`fallback_respond_dir`) and fails to load if any of them is present.
+So a config either loads with zero diagnostics (exit `0`) or fails to
+load (exit `2`) before reaching the exit-`1` path at all; nothing
+anywhere constructs a `Severity::Warning` diagnostic either, so
+`--strict` (which only promotes warnings to failures) has nothing to
+act on even in principle. Documented as-is rather than fixed — a real
+fix changes config-load validation shared with server startup, larger
+than this page's scope.
+
+### The response envelope (`--format json`)
+
+Introduced in 5.19.0 (RFC 054), ahead of 6.0.0's `get`/`set`, which will
+use the same shape. A successful validation:
+
+```json
+{
+  "schema": 1,
+  "apimock": "5.19.0",
+  "result": {
+    "diagnostics": [
+      { "severity": "error", "message": "…", "node_id": "…", "file": "…" }
+    ],
+    "summary": { "errors": 0, "warnings": 0, "rule_sets": 1, "rules": 2 }
+  }
+}
+```
+
+A config that failed to *load* (`validate` never got as far as
+producing diagnostics):
+
+```json
+{
+  "schema": 1,
+  "apimock": "5.19.0",
+  "error": { "kind": "config_invalid", "message": "…" }
+}
+```
+
+`error.kind` is one of `usage`, `config_invalid`, `config_unreadable`,
+`io`, `conflict`, `internal` — a closed, stable set; treat an
+unrecognised value as a generic failure rather than erroring on it, since
+new kinds may be added later without a `schema` bump. **A validation
+that ran and found problems is still a `result`, not an `error`** — the
+envelope's top-level shape answers "did this command run", not "is the
+config valid"; check `result.summary.errors` for the latter. `schema`
+starts at `1`; a later, incompatible change to this shape increments it.
 
 ## `apimock match-test`
 

@@ -6,9 +6,62 @@
 //! |------|---------|
 //! | 0    | No errors (warnings are printed but not fatal). |
 //! | 1    | At least one `Severity::Error` diagnostic (or `--strict` and warnings present). |
-//! | 2    | Config could not be loaded (parse / file-read error). |
+//! | 2    | Config could not be loaded (parse / file-read error), or a bad invocation. |
+//!
+//! **Exit `1` is not reachable today, and `--strict` has nothing to
+//! act on.** `Workspace::load` (called below, before `report` exists)
+//! already checks — identically — every condition
+//! `respond_node_validation` would otherwise turn into a
+//! `Severity::Error` diagnostic, so a config with such a problem fails
+//! to *load* (exit 2) rather than loading and being reported. Nothing
+//! anywhere constructs `Severity::Warning`/`Info` either. So
+//! `report.diagnostics` is always empty by the time this module sees
+//! it, through the CLI. Found 2026-08-17 building RFC 054's test
+//! fixtures; documented here rather than fixed, since a real fix
+//! changes config-load validation shared with server startup — larger
+//! than this file's scope. The table above is left describing the
+//! *design* (unchanged by RFC 054, per its Non-goals), not current
+//! reachability.
+//!
+//! # `--json` vs `--format` (RFC 054)
+//!
+//! `--json` is deprecated but **byte-identical** to what it always
+//! emitted — a bare diagnostics array — so an existing parser is
+//! unaffected; using it prints a one-line deprecation warning to
+//! stderr. `--format json` is the replacement: RFC 053's envelope
+//! (`crate::cmd::envelope`), with room to grow beyond a diagnostics
+//! array without breaking anything reading it. Both shapes ship in this
+//! release so a caller can migrate and verify before 6.0.0 removes
+//! `--json`.
 
-use apimock_config::{Severity, Workspace};
+use apimock_config::{ConfigError, Severity, Workspace, WorkspaceError};
+
+use crate::cmd::envelope::{self, ErrorKind};
+
+/// Map a `Workspace::load` failure to one of RFC 053's error kinds,
+/// rather than labelling every load failure `config_unreadable`
+/// regardless of cause. `ConfigError` is exhaustively matched
+/// (not `#[non_exhaustive]` — RFC 052 §Unresolved 2) deliberately: a
+/// future variant added here fails to compile until it's given a
+/// considered `ErrorKind`, rather than silently falling through to
+/// whatever the last arm happened to be.
+fn error_kind_for_load_failure(e: &WorkspaceError) -> ErrorKind {
+    match e {
+        WorkspaceError::InvalidRoot { .. } => ErrorKind::ConfigUnreadable,
+        WorkspaceError::Config(ConfigError::ConfigRead { .. }) => ErrorKind::ConfigUnreadable,
+        WorkspaceError::Config(ConfigError::PathResolve { .. }) => ErrorKind::ConfigUnreadable,
+        WorkspaceError::Config(ConfigError::ConfigParse { .. }) => ErrorKind::ConfigInvalid,
+        WorkspaceError::Config(ConfigError::Validation) => ErrorKind::ConfigInvalid,
+        WorkspaceError::Config(ConfigError::RuleSet(_)) => ErrorKind::ConfigInvalid,
+    }
+}
+
+/// `--format`'s value.
+#[derive(PartialEq, Eq)]
+pub enum Format {
+    Text,
+    Json,
+}
 
 /// Flags parsed from the `apimock validate` command line.
 pub struct ValidateArgs {
@@ -16,24 +69,79 @@ pub struct ValidateArgs {
     pub strict: bool,
     pub quiet: bool,
     pub json: bool,
+    pub format: Option<Format>,
 }
 
 const CONFIG_NAMES: &[&str] = &["--config", "-c"];
 const STRICT_FLAG: &str = "--strict";
 const QUIET_FLAG: &str = "--quiet";
 const JSON_FLAG: &str = "--json";
+const FORMAT_FLAG: &str = "--format";
+
+/// Printed once to stderr whenever `--json` is used, per RFC 054 § "The
+/// warning text".
+const JSON_DEPRECATION_WARNING: &str = "apimock validate: --json is deprecated and will be removed in 6.0.0.\n  Use --format json, which emits the new response envelope.";
 
 impl ValidateArgs {
     pub fn parse(args: &[String]) -> Result<Self, String> {
         let config_path = super::match_test::flag_value(args, CONFIG_NAMES)
             .ok_or_else(|| "missing required flag --config / -c".to_owned())?;
+
+        let json = args.iter().any(|a| a == JSON_FLAG);
+        let format_raw = super::match_test::flag_value(args, &[FORMAT_FLAG]);
+
+        // RFC 054: "--json --format json together is a usage error, not
+        // a silent precedence rule." Read broadly — any `--format`
+        // value alongside `--json` is the same ambiguity (which one
+        // wins?), so both are rejected together rather than only the
+        // `json` value.
+        if json && format_raw.is_some() {
+            return Err(
+                "--json and --format cannot be used together; --format json is --json's replacement"
+                    .to_owned(),
+            );
+        }
+
+        let format = match format_raw.as_deref() {
+            None => None,
+            Some("text") => Some(Format::Text),
+            Some("json") => Some(Format::Json),
+            Some(other) => {
+                return Err(format!(
+                    "invalid value for --format: '{}' (expected 'text' or 'json')",
+                    other
+                ));
+            }
+        };
+
         Ok(Self {
             config_path,
             strict: args.iter().any(|a| a == STRICT_FLAG),
             quiet: args.iter().any(|a| a == QUIET_FLAG),
-            json: args.iter().any(|a| a == JSON_FLAG),
+            json,
+            format,
         })
     }
+}
+
+/// Build the diagnostics array shape shared by `--json` and
+/// `--format json` — the content is identical between the two; only
+/// what wraps it differs (RFC 054 Non-goal: "changing validate's
+/// diagnostics... the content does not [change]").
+fn diagnostics_json(report: &apimock_config::ValidationReport) -> serde_json::Value {
+    let items: Vec<serde_json::Value> = report
+        .diagnostics
+        .iter()
+        .map(|d| {
+            serde_json::json!({
+                "severity": format!("{:?}", d.severity).to_lowercase(),
+                "message": d.message,
+                "node_id": d.node_id.map(|n| n.0.to_string()),
+                "file": d.file.as_ref().map(|p| p.to_string_lossy().into_owned()),
+            })
+        })
+        .collect();
+    serde_json::Value::Array(items)
 }
 
 /// Run validation and print results. Returns the process exit code.
@@ -43,16 +151,33 @@ pub fn run(args: &[String]) -> i32 {
         Err(e) => {
             eprintln!("apimock validate: {}", e);
             eprintln!(
-                "Usage: apimock validate --config <apimock.toml> [--strict] [--quiet] [--json]"
+                "Usage: apimock validate --config <apimock.toml> [--strict] [--quiet] [--json] [--format text|json]"
             );
             return 2;
         }
     };
+    let is_envelope = parsed.format == Some(Format::Json);
+
+    // RFC 054: printed once, on stderr, regardless of --quiet or
+    // whether the config even loads — the warning is about the
+    // invocation, not the validation result.
+    if parsed.json {
+        eprintln!("{}", JSON_DEPRECATION_WARNING);
+    }
 
     let ws = match Workspace::load(parsed.config_path.clone().into()) {
         Ok(ws) => ws,
         Err(e) => {
-            if !parsed.quiet {
+            if is_envelope {
+                let envelope = envelope::err(
+                    error_kind_for_load_failure(&e),
+                    format!("failed to load config: {}", e),
+                );
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&envelope).unwrap_or_default()
+                );
+            } else if !parsed.quiet {
                 eprintln!("apimock validate: failed to load config: {}", e);
             }
             return 2;
@@ -61,28 +186,47 @@ pub fn run(args: &[String]) -> i32 {
 
     let report = ws.validate();
 
-    // Collect rule-set and rule counts for the success banner.
+    // Collect rule-set and rule counts for the success banner / summary.
     let snap = ws.snapshot();
     let rule_set_count = snap.routes.rule_sets.len();
     let rule_count: usize = snap.routes.rule_sets.iter().map(|rs| rs.rules.len()).sum();
+    let error_count = report
+        .diagnostics
+        .iter()
+        .filter(|d| matches!(d.severity, Severity::Error))
+        .count();
+    let warning_count = report
+        .diagnostics
+        .iter()
+        .filter(|d| matches!(d.severity, Severity::Warning))
+        .count();
+    let has_errors = error_count > 0;
+    let has_warnings = warning_count > 0;
 
     if parsed.json {
-        // Emit diagnostics as a JSON array.
-        let items: Vec<serde_json::Value> = report
-            .diagnostics
-            .iter()
-            .map(|d| {
-                serde_json::json!({
-                    "severity": format!("{:?}", d.severity).to_lowercase(),
-                    "message": d.message,
-                    "node_id": d.node_id.map(|n| n.0.to_string()),
-                    "file": d.file.as_ref().map(|p| p.to_string_lossy().into_owned()),
-                })
-            })
-            .collect();
+        // Unchanged since 5.18.0: a bare diagnostics array, nothing else
+        // added around it — that byte-for-byte sameness is the whole
+        // point of keeping this flag working at all.
         println!(
             "{}",
-            serde_json::to_string_pretty(&items).unwrap_or_default()
+            serde_json::to_string_pretty(&diagnostics_json(&report)).unwrap_or_default()
+        );
+    } else if is_envelope {
+        // RFC 053's envelope, with room this bare array never had: a
+        // `summary` alongside `diagnostics`, addable later without
+        // moving `diagnostics` or changing its type.
+        let result = serde_json::json!({
+            "diagnostics": diagnostics_json(&report),
+            "summary": {
+                "errors": error_count,
+                "warnings": warning_count,
+                "rule_sets": rule_set_count,
+                "rules": rule_count,
+            },
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&envelope::ok(result)).unwrap_or_default()
         );
     } else if !parsed.quiet {
         for d in &report.diagnostics {
@@ -100,42 +244,26 @@ pub fn run(args: &[String]) -> i32 {
         }
     }
 
-    let has_errors = report
-        .diagnostics
-        .iter()
-        .any(|d| matches!(d.severity, Severity::Error));
-    let has_warnings = report
-        .diagnostics
-        .iter()
-        .any(|d| matches!(d.severity, Severity::Warning));
-
+    // The pass/fail banners are human text; `--format json` already
+    // said all of this inside the envelope's `summary`; adding it again
+    // as loose stderr/stdout lines would be an inconsistent second
+    // source of truth for the one caller who asked for a single
+    // machine-parseable answer.
     if has_errors || (parsed.strict && has_warnings) {
-        if !parsed.quiet {
-            let e = report
-                .diagnostics
-                .iter()
-                .filter(|d| matches!(d.severity, Severity::Error))
-                .count();
-            let w = report
-                .diagnostics
-                .iter()
-                .filter(|d| matches!(d.severity, Severity::Warning))
-                .count();
-            eprintln!("Validation failed: {} error(s), {} warning(s).", e, w);
+        if !is_envelope && !parsed.quiet {
+            eprintln!(
+                "Validation failed: {} error(s), {} warning(s).",
+                error_count, warning_count
+            );
         }
         return 1;
     }
 
-    if !parsed.quiet {
-        let w = report
-            .diagnostics
-            .iter()
-            .filter(|d| matches!(d.severity, Severity::Warning))
-            .count();
-        if w > 0 {
+    if !is_envelope && !parsed.quiet {
+        if has_warnings {
             println!(
                 "Validation passed with {} warning(s) ({} rules across {} rule set(s)).",
-                w, rule_count, rule_set_count
+                warning_count, rule_count, rule_set_count
             );
         } else {
             println!(
