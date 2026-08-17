@@ -2,7 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # `release/*` matters: v5.19.0 was cut from a branch off the 5.18.0
+    # tag (RFC 054), and with `main` alone here that branch had **no CI
+    # at all**. The gap was invisible — `gh run list` happily showed a
+    # green run, which belonged to `main` at an unrelated commit. Any
+    # future branch-cut release gets covered automatically rather than
+    # depending on someone noticing which branch a green tick came from.
+    branches: [main, "release/*"]
   pull_request:
   workflow_dispatch:
   # RFC 033: advisories are published against code that hasn't changed,

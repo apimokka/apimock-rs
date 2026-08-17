@@ -43,10 +43,22 @@ and nothing is published to either registry, until that click.
    tagging. `create-draft-release` extracts this section verbatim as the
    Release notes and **fails the build phase if it's missing** — there
    is no draft-with-empty-notes fallback, by design (RFC 044 § 4.4).
-3. **Commit and push to `main` first.** The tag must point at a commit
-   already on `main` with CI green — the release gates re-run the same
-   checks at tag time (see below), but there's no reason to discover a
-   red gate for the first time during a release.
+3. **Push first, and confirm CI is green *on the commit you will tag*.**
+   Normally that means `main`. The release gates re-run the same checks
+   at tag time (see below), but there's no reason to discover a red gate
+   for the first time during a release.
+
+   **Check which commit the green run belongs to**, not just that a
+   green run exists. This step used to read "already on `main` with CI
+   green", which v5.19.0 showed to be unmeetable for a release cut from
+   a branch — and worse, satisfiable by mistake, since `main`'s green run
+   at an unrelated commit looks identical in a run listing.
+
+   **Releasing from a branch** (see § below) is now covered by
+   `ci.yaml`'s `release/*` trigger. If you ever cut from a branch outside
+   that pattern, CI will not run on it at all: use
+   `gh workflow run ci.yaml --ref <branch>` and wait for it, rather than
+   relying on the tag-time gates alone.
 4. **Tag.** `git tag X.Y.Z && git push origin X.Y.Z` — no `v` prefix.
    `version-consistency-check` compares the tag literally against
    `[workspace.package].version`; a mismatched tag fails immediately,
@@ -205,6 +217,30 @@ the run dies before ever reaching the core package.
 So: if a publish job is ever renamed or moved, update all eight records
 before the next release, and treat the first release afterwards as
 unproven until it goes green.
+
+## Releasing from a branch
+
+Used for the first time by **v5.19.0** (RFC 054), because `main` carried
+breaking work that the release had to exclude.
+
+```sh
+git checkout -b release/X.Y <base-tag>
+```
+
+Everything else is unchanged — the tag-push trigger does not care which
+branch a tag lives on, `version-consistency-check` reads the *tag's*
+tree, and `create-draft-release` extracts notes from the CHANGELOG at
+the tag. `main` need not contain the release's CHANGELOG section at all.
+
+Two things that are easy to get wrong:
+
+- **The branch's baseline is its base tag's, not `main`'s.** v5.19.0's
+  was 425 tests, while `main` was at 437. A test count compared against
+  the wrong baseline looks like a regression or a windfall, and is
+  neither.
+- **Merge the branch back to `main` afterwards**, or the release's work
+  exists only on a tag. The version bump comes with it, which is correct:
+  `main` then reads the released version until the next bump.
 
 ## Post-publish verification
 

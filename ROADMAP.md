@@ -10,7 +10,8 @@ lost between releases. That history lives at the bottom of this file.
 
 **Baseline approved.** 2026-08-02, by the project owner.
 **Baseline covers.** v5.15.0 → the close of v5 *(extended 2026-08-17: v5 no longer ends at v5.18.0 — see § Closing v5, opening v6)*.
-**Current version.** 5.18.0 — 43 RFCs implemented, 1 withdrawn.
+**Current version.** 5.19.0 — 47 RFCs implemented, 1 withdrawn.
+**v5 is closed** (2026-08-17). `main` is the 6.0.0 line.
 **M1 complete** (2026-08-03): RFCs 030–033 shipped in v5.15.0.
 **M2 complete** (2026-08-10): RFCs 034–038 shipped in v5.16.0, together
 with cross-cutting RFC 044 — the first release cut by automation.
@@ -535,4 +536,5 @@ here so they are not lost between milestones.
 | **No prerelease version is releasable.** `[workspace.dependencies]` pins the internal crates with caret requirements (`version = "5"`), and a caret requirement never matches a prerelease. Any RC/beta tag fails resolution — established empirically during RFC 044 with both `0.0.0-rfc044-test` and `5.16.1-rfc044-test` | Unassigned. Not a defect; a constraint. Changing the pins to something prerelease-inclusive is a prerequisite for ever cutting an RC |
 | **`apimock --version` and `--help` are not supported, and unknown flags are silently ignored** — the binary starts a mock server instead. `args_option_value` (`crates/apimock/src/args.rs:223`) looks up known option names and ignores everything else, so a typo'd flag launches a server rather than erroring. Found 2026-08-12 while verifying the published v5.16.0 npm binary | **Resolved — RFC 049.** `--version`/`--help` short-circuit before config or a listener; an unrecognised flag is now exit 2 on stderr with a near-match suggestion, no server started |
 | `TestSetup.current_dir_path` calls `env::set_current_dir`, which is process-global while tests run concurrently — the field's own doc comment says *"caution: affects globally"* | Unassigned. Recorded by **RFC 046**, deliberately out of its scope |
+| **`apimock validate` can never exit `1`, and `--strict` has nothing to act on.** `Workspace::load` checks — identically — every condition the diagnostics walker reports on (empty or conflicting `respond`, missing `respond.file_path`, missing `fallback_respond_dir`), so a config either loads with zero diagnostics (exit 0) or fails to load (exit 2); nothing anywhere constructs a warning-severity diagnostic. True since `validate` shipped in v5.13.0. Found 2026-08-17 while building RFC 054's test fixtures | Unassigned. Documented honestly in v5.19.0 rather than fixed — a real fix loosens a load gate shared with server startup, or defers rejection into `validate()`, both larger than that release |
 | Pre-existing ~1-in-8 port race in `dynamic_port()` (`tests/util/test_setup.rs`) | Unassigned. A fix was attempted during RFC 036, regressed every IPv6 bound-address test, and was reverted in full — see that review |
