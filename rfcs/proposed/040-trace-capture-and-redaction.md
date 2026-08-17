@@ -1,11 +1,18 @@
-# RFC 040 — Trace channel: redaction, and non-JSON body capture
+# RFC 040 — Trace channel: header redaction
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Proposed — approved by the project owner 2026-08-17.
+**Amended 2026-08-17, during implementation:** goal 3 (non-JSON body
+capture) is **removed from this RFC** — it could not be built inside the
+scope this RFC set. See § Amendment.
 **Tracks.** Security, and RFC 023's two deferred questions.
-**Touches.** `crates/apimock-server/src/trace.rs`, the trace-event
-construction site in `server.rs`, `TraceConfig` in `apimock-config`,
-documentation. **No change to matching or response construction.**
-**Related.** Resolves RFC 023 Unresolved 1 and 2. Constrains
+**Touches.** `crates/apimock-server/src/trace.rs` (including
+`TraceConfig`, which lives there — *corrected 2026-08-17; this line
+originally said `apimock-config`, which was wrong and impossible, since
+`apimock-server` depends on `apimock-config` and not the reverse*), the
+trace-event construction site in `server.rs`, documentation.
+**No change to matching or response construction.**
+**Related.** Resolves RFC 023 Unresolved 2; Unresolved 1 is **reopened**,
+see § Amendment. Constrains
 [RFC 048](./048-v6-cli-interface-concept.md) § 9's threat **T4**.
 
 ## Summary
@@ -14,7 +21,8 @@ The trace channel captures request bodies only when asked, capped by
 size. It captures **every request header unconditionally**. Decide what
 gets redacted, and do the redaction where it cannot be bypassed later.
 
-Also settle how non-JSON bodies are represented, which RFC 023 left open.
+~~Also settle how non-JSON bodies are represented, which RFC 023 left
+open.~~ **Removed 2026-08-17 — see § Amendment.**
 
 ## Motivation
 
@@ -69,7 +77,8 @@ wide perspective and security in mind up front.
 
 1. Credential-bearing headers are not captured by default.
 2. Redaction happens **at capture**, not at each point of display.
-3. Non-JSON bodies have a defined representation (RFC 023 Unresolved 1).
+3. ~~Non-JSON bodies have a defined representation (RFC 023
+   Unresolved 1).~~ **Removed — see § Amendment.**
 4. What is redacted is visible to the consumer — a redacted field is
    marked, not silently absent, so nobody mistakes redaction for "the
    request didn't have one".
@@ -133,20 +142,45 @@ otherwise tell whether the request lacked one or the value was removed,
 and that difference matters when debugging an auth failure — the exact
 situation in which someone reaches for the trace channel.
 
-### Non-JSON bodies (RFC 023 Unresolved 1)
+### Non-JSON bodies — removed
 
-RFC 023 captured JSON only and omitted everything else. Options it
-named: raw bytes as base64, or a truncated text snippet.
+See § Amendment. This RFC no longer covers them.
 
-**Recommendation: a truncated UTF-8 snippet, subject to the same size
-cap and the same redaction posture**, with a flag distinguishing "not
-captured" from "captured and truncated" — mirroring the existing
-`body_truncated`. Base64 raw capture is more faithful and considerably
-more dangerous: it captures form-encoded credentials verbatim while
-looking opaque enough that nobody inspects it.
+## Amendment — 2026-08-17 — goal 3 could not be built here
 
-If raw capture is wanted later, it should be its own opt-in, argued
-separately.
+Goal 3 asked for a truncated UTF-8 snippet of a non-JSON body, captured
+under the same size cap and the same redaction posture. **It cannot be
+implemented within this RFC's stated Touches list**, and the reason is a
+fact about the code that this RFC failed to check before specifying the
+work.
+
+`ParsedRequest` (`crates/apimock-routing/src/parsed_request.rs`) carries
+`body_json: Option<Value>` and no raw bytes. The bytes are a local in
+`parsed_request_from` (`crates/apimock-server/src/parsed_request.rs`):
+collected, offered to `serde_json::from_slice`, and — for anything that
+is not JSON — dropped when the function returns.
+
+So a snippet must be produced **before** the bytes cease to exist, which
+is upstream of where `RequestSummary` is built. That means either a new
+field on `apimock_routing::ParsedRequest` or threading a snippet out of
+`parsed_request_from` — and `ParsedRequest` is the type the whole
+matching pipeline is built on, not a contained type like
+`RequestSummary`.
+
+This RFC's load-bearing principle is *redact at capture*. Capture, for
+this channel, happens downstream of the point where a non-JSON body
+still exists. The two do not meet, and this document did not notice.
+
+**Consequences.**
+
+- RFC 040 is now header redaction only, and is complete as such.
+- **RFC 023's Unresolved 1 returns to open.**
+- The follow-up is
+  [RFC 050](./050-non-json-body-capture-decision.md), deliberately framed
+  as *whether* non-JSON bodies should be captured rather than how. This
+  RFC's own argument is that the channel captures more than it should;
+  capturing non-JSON bodies makes it capture more. That question was not
+  visible until someone tried to build it.
 
 ## Testing and verification
 

@@ -362,18 +362,18 @@ pub async fn service(
     if let Some(response) = rule_set_response(&config, &parsed_request).await {
         // Emit trace event on match.
         if tracer.has_subscribers() {
-            let mut summary = RequestSummary {
-                method: parsed_request.component_parts.method.to_string(),
-                url_path: parsed_request.url_path.clone(),
-                headers: parsed_request
-                    .component_parts
-                    .headers
-                    .iter()
-                    .filter_map(|(k, v)| v.to_str().ok().map(|v| (k.to_string(), v.to_owned())))
-                    .collect(),
-                body_json: None,
-                body_truncated: false,
-            };
+            let headers = parsed_request
+                .component_parts
+                .headers
+                .iter()
+                .filter_map(|(k, v)| v.to_str().ok().map(|v| (k.to_string(), v.to_owned())))
+                .collect();
+            let mut summary = RequestSummary::new(
+                parsed_request.component_parts.method.to_string(),
+                parsed_request.url_path.clone(),
+                headers,
+                &tracer.config,
+            );
             tracer.enrich_with_body(&mut summary, parsed_request.body_json.as_ref());
             tracer.emit(
                 received_at_ms,

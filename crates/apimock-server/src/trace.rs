@@ -80,7 +80,10 @@ pub struct MatchTraceEvent {
 pub struct RequestSummary {
     pub method: String,
     pub url_path: String,
-    /// Selected request headers (display-only).
+    /// Request headers, redacted per `TraceConfig`'s policy at capture
+    /// (RFC 040) — not otherwise filtered by name. A redacted header
+    /// keeps its name and carries [`REDACTED_HEADER_VALUE`] instead of
+    /// its real value, so its presence stays visible.
     pub headers: Vec<(String, String)>,
     /// Captured JSON body (RFC 023). Present only when `TraceConfig::capture_body`
     /// is `true` and the request body is valid JSON within the size cap.
@@ -92,19 +95,67 @@ pub struct RequestSummary {
 }
 
 impl RequestSummary {
-    /// Construct with no body capture (the common case before RFC 023).
-    pub fn without_body(method: String, url_path: String, headers: Vec<(String, String)>) -> Self {
+    /// Construct from a live request's headers, applying `config`'s
+    /// redaction policy (RFC 040). This is the only place header
+    /// redaction happens — do not build `RequestSummary` from live
+    /// request headers any other way; a future formatter or display
+    /// path must not need to know about redaction at all.
+    pub fn new(
+        method: String,
+        url_path: String,
+        headers: Vec<(String, String)>,
+        config: &TraceConfig,
+    ) -> Self {
         Self {
             method,
             url_path,
-            headers,
+            headers: config.redact_headers(headers),
             body_json: None,
             body_truncated: false,
         }
     }
 }
 
-/// Trace-channel behaviour configuration (RFC 023).
+/// Placeholder value substituted for a redacted header (RFC 040 Goal 4).
+/// The header name is kept so a consumer can tell "redacted" from
+/// "the request never sent this header" — only the value differs.
+pub const REDACTED_HEADER_VALUE: &str = "[redacted]";
+
+/// Built-in denylist of well-known credential-bearing request headers,
+/// applied by default (RFC 040 Q1). Compared case-insensitively.
+///
+/// `set-cookie` is a *response* header and can never appear on a
+/// request, so it never matches here — kept anyway because RFC 040's
+/// own example list included it; dropping it silently would read as
+/// deliberately narrowing the list rather than the request-only scope
+/// this RFC already states.
+pub const DEFAULT_HEADER_DENYLIST: &[&str] = &[
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "proxy-authorization",
+    "x-api-key",
+];
+
+/// Which request headers get redacted before a trace event is built
+/// (RFC 040 Q1).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum HeaderRedactionMode {
+    /// Redact headers named in `TraceConfig::header_denylist`; capture
+    /// everything else. Fails open on an unanticipated header name —
+    /// accepted deliberately, see RFC 040's Risks table.
+    Denylist,
+    /// Capture only headers named in `TraceConfig::header_allowlist`;
+    /// redact everything else. Fails closed.
+    Allowlist,
+}
+
+/// Trace-channel behaviour configuration (RFC 023, extended by RFC 040).
+///
+/// Configurable today only at this Rust level — the trace channel has
+/// no config-file or CLI surface yet (RFC 040's own Motivation notes
+/// this; RFC 023's `[trace]` TOML section was never wired to this
+/// struct). `TraceEmitter::new()` always uses `TraceConfig::default()`.
 #[derive(Clone, Debug)]
 pub struct TraceConfig {
     /// Capture the JSON request body in each event. Default: `false`.
@@ -112,6 +163,16 @@ pub struct TraceConfig {
     /// Maximum serialised body size in bytes. Bodies larger than this
     /// are omitted and `body_truncated = true` is set. Default: 8 192.
     pub max_body_bytes: usize,
+    /// Denylist or allowlist by default. Default: `Denylist`.
+    pub header_redaction: HeaderRedactionMode,
+    /// Header names redacted when `header_redaction` is `Denylist`.
+    /// Compared case-insensitively. Default: [`DEFAULT_HEADER_DENYLIST`].
+    pub header_denylist: Vec<String>,
+    /// Header names captured when `header_redaction` is `Allowlist`;
+    /// every other header is redacted. Compared case-insensitively.
+    /// Default: empty, i.e. allowlist mode redacts everything until
+    /// configured — the safe direction for a fail-closed mode.
+    pub header_allowlist: Vec<String>,
 }
 
 impl Default for TraceConfig {
@@ -119,7 +180,41 @@ impl Default for TraceConfig {
         Self {
             capture_body: false,
             max_body_bytes: 8_192,
+            header_redaction: HeaderRedactionMode::Denylist,
+            header_denylist: DEFAULT_HEADER_DENYLIST
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            header_allowlist: Vec::new(),
         }
+    }
+}
+
+impl TraceConfig {
+    /// Redact header values per this config's policy. Names and order
+    /// are preserved; only a matched entry's value is replaced with
+    /// [`REDACTED_HEADER_VALUE`] (RFC 040 Goal 4 — marked, not omitted).
+    fn redact_headers(&self, headers: Vec<(String, String)>) -> Vec<(String, String)> {
+        headers
+            .into_iter()
+            .map(|(name, value)| {
+                let redact = match self.header_redaction {
+                    HeaderRedactionMode::Denylist => self
+                        .header_denylist
+                        .iter()
+                        .any(|denied| denied.eq_ignore_ascii_case(&name)),
+                    HeaderRedactionMode::Allowlist => !self
+                        .header_allowlist
+                        .iter()
+                        .any(|allowed| allowed.eq_ignore_ascii_case(&name)),
+                };
+                if redact {
+                    (name, REDACTED_HEADER_VALUE.to_string())
+                } else {
+                    (name, value)
+                }
+            })
+            .collect()
     }
 }
 
@@ -621,6 +716,7 @@ mod tests {
         let emitter = TraceEmitter::with_config(TraceConfig {
             capture_body: true,
             max_body_bytes: 8_192,
+            ..Default::default()
         });
         let mut summary = RequestSummary {
             method: "POST".into(),
@@ -644,6 +740,7 @@ mod tests {
         let emitter = TraceEmitter::with_config(TraceConfig {
             capture_body: true,
             max_body_bytes: 10,
+            ..Default::default()
         });
         let mut summary = RequestSummary {
             method: "POST".into(),
@@ -679,5 +776,135 @@ mod tests {
             !json.contains("body_truncated"),
             "false body_truncated must be skipped"
         );
+    }
+
+    // ── RFC 040: header redaction ──────────────────────────────────────
+
+    fn headers_with_credentials() -> Vec<(String, String)> {
+        vec![
+            ("authorization".into(), "Bearer secret-token".into()),
+            ("cookie".into(), "session=abc123".into()),
+            ("x-api-key".into(), "sk-live-very-secret".into()),
+            ("content-type".into(), "application/json".into()),
+        ]
+    }
+
+    /// RFC 040 evidence requirement: with no trace configuration at all —
+    /// `TraceConfig::default()` — none of the three credential values
+    /// appear in the *serialised* event.
+    #[test]
+    fn default_config_redacts_credential_headers_in_serialised_output() {
+        let config = TraceConfig::default();
+        let summary = RequestSummary::new(
+            "POST".into(),
+            "/login".into(),
+            headers_with_credentials(),
+            &config,
+        );
+
+        let json = serde_json::to_string(&summary).unwrap();
+        assert!(!json.contains("Bearer secret-token"), "json was: {json}");
+        assert!(!json.contains("session=abc123"), "json was: {json}");
+        assert!(!json.contains("sk-live-very-secret"), "json was: {json}");
+        assert!(
+            json.contains("application/json"),
+            "a non-credential header must survive: {json}"
+        );
+    }
+
+    /// Redacted headers stay present, marked with the placeholder — not
+    /// silently dropped from the list (RFC 040 Goal 4).
+    #[test]
+    fn redacted_headers_are_present_and_marked_not_absent() {
+        let config = TraceConfig::default();
+        let summary = RequestSummary::new(
+            "POST".into(),
+            "/login".into(),
+            headers_with_credentials(),
+            &config,
+        );
+
+        assert_eq!(summary.headers.len(), 4, "no header should be dropped");
+        let authorization = summary
+            .headers
+            .iter()
+            .find(|(name, _)| name == "authorization")
+            .expect("authorization header must still be present");
+        assert_eq!(authorization.1, REDACTED_HEADER_VALUE);
+
+        let json = serde_json::to_string(&summary).unwrap();
+        assert!(
+            json.contains("\"authorization\""),
+            "redacted header name must still appear: {json}"
+        );
+        assert!(json.contains(REDACTED_HEADER_VALUE), "json was: {json}");
+    }
+
+    /// Header names are case-insensitive; a denylist compared
+    /// case-sensitively would let a non-lowercase spelling through.
+    #[test]
+    fn denylist_matches_case_insensitively() {
+        let config = TraceConfig::default();
+        let headers = vec![
+            ("Authorization".into(), "Bearer secret-token".into()),
+            ("COOKIE".into(), "session=abc123".into()),
+        ];
+        let summary = RequestSummary::new("GET".into(), "/".into(), headers, &config);
+
+        let json = serde_json::to_string(&summary).unwrap();
+        assert!(!json.contains("Bearer secret-token"), "json was: {json}");
+        assert!(!json.contains("session=abc123"), "json was: {json}");
+        assert!(json.contains(REDACTED_HEADER_VALUE), "json was: {json}");
+    }
+
+    /// Allowlist mode fails closed: only the named header survives, and
+    /// an ordinary, non-credential header not on the list is redacted
+    /// too.
+    #[test]
+    fn allowlist_mode_redacts_everything_not_listed() {
+        let config = TraceConfig {
+            header_redaction: HeaderRedactionMode::Allowlist,
+            header_allowlist: vec!["content-type".into()],
+            ..Default::default()
+        };
+        let headers = vec![
+            ("content-type".into(), "application/json".into()),
+            ("authorization".into(), "Bearer secret-token".into()),
+            ("x-request-id".into(), "not-a-credential".into()),
+        ];
+        let summary = RequestSummary::new("GET".into(), "/".into(), headers, &config);
+
+        let by_name = |name: &str| {
+            summary
+                .headers
+                .iter()
+                .find(|(n, _)| n == name)
+                .map(|(_, v)| v.as_str())
+        };
+        assert_eq!(by_name("content-type"), Some("application/json"));
+        assert_eq!(by_name("authorization"), Some(REDACTED_HEADER_VALUE));
+        assert_eq!(
+            by_name("x-request-id"),
+            Some(REDACTED_HEADER_VALUE),
+            "an unlisted, non-credential header must still be redacted in allowlist mode"
+        );
+    }
+
+    /// An empty allowlist — the state before anyone configures one —
+    /// redacts every header. That is the safe direction for a
+    /// fail-closed mode, not an oversight.
+    #[test]
+    fn allowlist_mode_with_no_entries_redacts_everything() {
+        let config = TraceConfig {
+            header_redaction: HeaderRedactionMode::Allowlist,
+            ..Default::default()
+        };
+        let summary = RequestSummary::new(
+            "GET".into(),
+            "/".into(),
+            vec![("content-type".into(), "application/json".into())],
+            &config,
+        );
+        assert_eq!(summary.headers[0].1, REDACTED_HEADER_VALUE);
     }
 }

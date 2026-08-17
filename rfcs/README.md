@@ -21,6 +21,8 @@ depends-on, and the rest of the planned portfolio.
 |-----|-------|
 | 040 | [Trace channel: redaction, and non-JSON body capture](./proposed/040-trace-capture-and-redaction.md) |
 | 048 | [v6 concept: the CLI as a first-class interface](./proposed/048-v6-cli-interface-concept.md) — umbrella |
+| 050 | [Should non-JSON request bodies be captured at all?](./proposed/050-non-json-body-capture-decision.md) — decision RFC |
+| 051 | [Redact credential headers in verbose request logging](./proposed/051-verbose-log-header-redaction.md) |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
@@ -84,7 +86,7 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 
 ## Adding a new RFC
 
-1. Pick the next free number — **050+**. Numbers 039–043 are reserved
+1. Pick the next free number — **052+**. Numbers 039–043 are reserved
    by [ROADMAP.md](../ROADMAP.md) for the planned M3 RFCs; 048 (the v6
    umbrella) is still open. Create `rfcs/proposed/NNN-slug.md`.
 2. On shipping, move to `done/`, update Status field, update this index.

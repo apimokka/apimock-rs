@@ -13,6 +13,19 @@ captured (subject to a `max_body_bytes` cap). A `TraceTransport` type
 can also expose the channel over a Unix-domain socket or TCP, for an
 external process to subscribe to.
 
+**Request headers are redacted before an event is built (RFC 040).**
+By default, well-known credential-bearing headers — `authorization`,
+`cookie`, `set-cookie`, `proxy-authorization`, `x-api-key` — are
+replaced with the placeholder `[redacted]`; the header name still
+appears, so a consumer can tell "redacted" from "the request never
+sent this header". Matching is case-insensitive. This is a denylist by
+default; an allowlist mode exists (`TraceConfig::header_redaction =
+HeaderRedactionMode::Allowlist`), which redacts every header except
+the ones named in `TraceConfig::header_allowlist`. Both lists are
+plain `Vec<String>` fields on `TraceConfig` — configurable only at
+this Rust level, for the same reason as everything else on this page:
+there is no config-file or CLI surface yet.
+
 ## Why you can't reach it
 
 - **No config surface.** `apimock.toml` has no field that sets
