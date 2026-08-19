@@ -124,4 +124,23 @@ pub enum SaveError {
     /// usually a programmer error in the edit layer.
     #[error("internal inconsistency: {reason}")]
     Inconsistent { reason: String },
+    /// The file changed on disk since it was last loaded or saved.
+    /// In-place editing (RFC 056) re-reads the text it mutates, so it
+    /// notices this where the old rebuild-from-model path could not.
+    /// Overwriting would silently discard whatever changed it made —
+    /// the caller must reload and reapply instead.
+    #[error("`{path}` changed on disk since it was loaded; reload before saving")]
+    Conflict { path: PathBuf },
+    /// Re-reading a file to check it for external changes (RFC 056 §2
+    /// Q3, ahead of an in-place save) failed — permission denied, the
+    /// file deleted out from under us, etc. Distinct from `Conflict`:
+    /// this is "we couldn't tell whether it changed," not "we could
+    /// tell, and it did." Reloading — `Conflict`'s remedy — will not
+    /// fix a permission error, so the two need different messages.
+    #[error("failed to read `{path}` to check for external changes: {source}")]
+    Read {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
 }

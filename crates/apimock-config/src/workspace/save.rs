@@ -20,6 +20,7 @@
 //! against; once `baseline_files` is updated to the freshly-written
 //! contents, the diff would always come back empty.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::error::SaveError;
@@ -32,61 +33,110 @@ impl Workspace {
     ///
     /// # Algorithm
     ///
-    /// 1. Render each editable file (root + each rule set) to TOML text.
-    /// 2. Compare against `baseline_files`. Files whose rendered output
-    ///    is byte-identical to the baseline are skipped — the user's
-    ///    formatting / comments survive untouched in that case.
-    /// 3. For files that *do* differ, write atomically via
+    /// 1. Render each editable file (root + each rule set) to a
+    ///    canonical TOML string *and* an editable-subset `Table`.
+    /// 2. Compare the canonical string against `baseline_files`. Files
+    ///    whose canonical output is byte-identical to the baseline are
+    ///    skipped entirely — nothing about them changed.
+    /// 3. For files that *do* differ: first confirm none of them
+    ///    changed on disk since we last saw them (RFC 056 §2 Q3) —
+    ///    checked for every file before any write, so a conflict on
+    ///    one file can't leave another half-written.
+    /// 4. Mutate each file's own previous text in place
+    ///    (`toml_writer::apply_in_place`) rather than rebuilding it, so
+    ///    comments, blank lines and key order survive; only the values
+    ///    that actually changed do. Write atomically via
     ///    `tempfile::NamedTempFile::persist` (same-directory rename(2)
     ///    on POSIX, `MoveFileExW` on Windows). On any single-file
-    ///    failure, the partial state is whatever rename(2)s have
+    ///    write failure, the partial state is whatever rename(2)s have
     ///    already succeeded — see the type-level docstring on
     ///    `SaveError` for the rationale.
-    /// 4. After all writes succeed, refresh `baseline_files` so a
-    ///    subsequent save() won't re-write the same files needlessly.
-    /// 5. Compute `DiffItem`s by node, comparing the in-memory state
+    /// 5. After all writes succeed, refresh `baseline_files` (to the
+    ///    canonical string) and `original_text` (to the just-written
+    ///    text) so a subsequent save() and conflict check both compare
+    ///    against what's now actually on disk.
+    /// 6. Compute `DiffItem`s by node, comparing the in-memory state
     ///    to the load-time baseline (parsed; not text-diff).
-    /// 6. Compute `requires_reload` / `requires_restart` from the set
+    /// 7. Compute `requires_reload` / `requires_restart` from the set
     ///    of changed files: changes to `[listener]` need a restart,
     ///    everything else just a reload.
-    ///
-    /// # The "save loses comments" diagnostic
-    ///
-    /// Per the GUI spec §6 / §11, save is allowed to lose comments and
-    /// formatting. We surface this as an `Info`-severity diagnostic
-    /// the first time a save would actually overwrite a file that has
-    /// non-trivial formatting (any file whose TOML round-trip is not
-    /// byte-identical, which is essentially every hand-edited file).
-    /// A polished GUI shows it once per session.
     pub fn save(&mut self) -> Result<SaveResult, SaveError> {
-        // --- Render every file's new content -------------------------
+        // --- Render every file's canonical text + editable-subset
+        // target table -------------------------------------------------
+        let root_target = crate::toml_writer::root_table(&self.config);
         let new_root_toml = crate::toml_writer::render_apimock_toml(&self.config);
 
-        let mut rule_set_renders: Vec<(PathBuf, String)> = Vec::new();
+        let mut rule_set_renders: Vec<(PathBuf, toml::value::Table, String)> = Vec::new();
         for rule_set in self.config.service.rule_sets.iter() {
             let path = PathBuf::from(rule_set.file_path.as_str());
+            let target = crate::toml_writer::rule_set_table(rule_set);
             let text = crate::toml_writer::render_rule_set_toml(rule_set);
-            rule_set_renders.push((path, text));
+            rule_set_renders.push((path, target, text));
         }
 
-        // --- Compute changed-file set --------------------------------
-        let mut to_write: Vec<(PathBuf, String)> = Vec::new();
+        // --- Compute changed-file set ---------------------------------
+        // Unchanged in spirit from before RFC 056: compares the
+        // canonical render to the canonical baseline, so hand
+        // formatting on a never-edited file is never "changed".
+        let mut to_write: Vec<(PathBuf, toml::value::Table, String)> = Vec::new();
 
         let baseline_root = self.baseline_files.get(&self.root_path);
         if baseline_root.map(String::as_str) != Some(new_root_toml.as_str()) {
-            to_write.push((self.root_path.clone(), new_root_toml.clone()));
+            to_write.push((self.root_path.clone(), root_target, new_root_toml));
         }
-        for (path, text) in rule_set_renders.iter() {
-            let baseline = self.baseline_files.get(path);
+        for (path, target, text) in rule_set_renders {
+            let baseline = self.baseline_files.get(&path);
             if baseline.map(String::as_str) != Some(text.as_str()) {
-                to_write.push((path.clone(), text.clone()));
+                to_write.push((path, target, text));
             }
         }
 
-        // --- Atomic write via tempfile::persist ----------------------
+        // --- Q3: refuse rather than overwrite a file that changed on
+        // disk since load()/save() last saw it. Checked for every file
+        // up front, before any write. A read failure (permission
+        // denied, the file deleted) is reported as `Read`, not folded
+        // into `Conflict` — the two need different remedies, and
+        // `Conflict`'s message ("reload before saving") would be
+        // actively wrong advice for a permission error. --------------
+        for (path, _, _) in &to_write {
+            if let Some(original) = self.original_text.get(path) {
+                match std::fs::read_to_string(path) {
+                    Ok(current) if &current != original => {
+                        return Err(SaveError::Conflict { path: path.clone() });
+                    }
+                    Ok(_) => {}
+                    Err(source) => {
+                        return Err(SaveError::Read {
+                            path: path.clone(),
+                            source,
+                        });
+                    }
+                }
+            }
+        }
+
+        // --- Mutate each file's own previous text in place, so
+        // comments / blank lines / key order survive. Falls back to
+        // the canonical render only when we never captured original
+        // text for a path (see the doc comment on `original_text`). --
         let mut written: Vec<PathBuf> = Vec::with_capacity(to_write.len());
-        for (path, text) in &to_write {
-            atomic_write(path, text)?;
+        let mut fresh_text: HashMap<PathBuf, String> = HashMap::new();
+        let mut fresh_baseline: HashMap<PathBuf, String> = HashMap::new();
+        for (path, target, rendered) in &to_write {
+            let text =
+                match self.original_text.get(path) {
+                    Some(original) => crate::toml_writer::apply_in_place(original, target)
+                        .map_err(|source| SaveError::Inconsistent {
+                            reason: format!(
+                                "`{}` could not be re-parsed for an in-place save: {source}",
+                                path.display()
+                            ),
+                        })?,
+                    None => rendered.clone(),
+                };
+            atomic_write(path, &text)?;
+            fresh_text.insert(path.clone(), text);
+            fresh_baseline.insert(path.clone(), rendered.clone());
             written.push(path.clone());
         }
 
@@ -96,9 +146,12 @@ impl Workspace {
         // baseline below, every node would compare equal again.
         let diff_summary = self.compute_diff_summary();
 
-        // --- Refresh baseline ---------------------------------------
-        for (path, text) in to_write.into_iter() {
-            self.baseline_files.insert(path, text);
+        // --- Refresh baselines ----------------------------------------
+        for (path, rendered) in fresh_baseline {
+            self.baseline_files.insert(path, rendered);
+        }
+        for (path, text) in fresh_text {
+            self.original_text.insert(path, text);
         }
         // Refresh mtime snapshots so has_external_changes() doesn't
         // immediately fire for files we just wrote (RFC 024).

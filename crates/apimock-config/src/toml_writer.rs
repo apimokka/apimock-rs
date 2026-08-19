@@ -1,4 +1,5 @@
-//! TOML rendering for the editable subset of `Config` and `RuleSet`.
+//! TOML rendering for the editable subset of `Config` and `RuleSet`,
+//! plus in-place mutation of a previously-loaded document (RFC 056).
 //!
 //! # Why hand-rolled instead of `serde::Serialize`
 //!
@@ -11,16 +12,31 @@
 //! both shorter and inherently selective: the writer only emits
 //! editable-on-purpose fields.
 //!
-//! # Why we don't try to preserve formatting
+//! # Two ways to turn that tree into text
 //!
-//! Per the GUI extension spec §6 ("コメント保持は best effort（必須要件
-//! ではない）") and §11 ("完全なコメント保持" is explicit non-goal),
-//! the save path is allowed to lose comments and key ordering. The
-//! `SaveResult` returned by `Workspace::save` includes an `Info`
-//! diagnostic noting this so the GUI can warn the user once.
+//! `render_apimock_toml`/`render_rule_set_toml` serialise the tree
+//! fresh with `toml::to_string_pretty` — sorted keys, no comments,
+//! canonical quoting. `workspace.rs` uses this for the rendered
+//! baseline (RFC 056 §2 Q1: kept, deliberately, so
+//! `has_unsaved_changes` keeps comparing apples to apples), and
+//! `diff.rs` uses it to diff *models*, which turn out not to care
+//! about trivia either (RFC 056 §2 Q2: established from source — no
+//! change needed there).
 //!
-//! Future work could swap this module for `toml_edit` to preserve
-//! formatting; the public `Workspace::save` API would not change.
+//! `apply_in_place` instead mutates a `toml_edit::DocumentMut` parsed
+//! from the file's own previous text, so comments, blank lines and key
+//! order survive a save that only changed a few values. This is what
+//! `workspace/save.rs` writes to disk. Building a fresh `toml_edit`
+//! document from the model and serialising it would preserve nothing —
+//! that would be today's old behaviour with a new dependency, so this
+//! module never does that.
+//!
+//! Previously this module always rendered fresh, and the module doc
+//! here (and `workspace/save.rs`'s) claimed `Workspace::save` carried
+//! an `Info` diagnostic warning that comments and key order were lost.
+//! That diagnostic was never actually wired into `SaveResult` — no
+//! `Severity::Info` is constructed anywhere in this crate — so nothing
+//! needed removing beyond that stale claim.
 
 use apimock_routing::{
     Respond, RuleSet,
@@ -44,6 +60,15 @@ use crate::{Config, ListenerConfig, ServiceConfig, config::log_config::LogConfig
 
 /// Render the root `apimock.toml` to TOML text.
 pub fn render_apimock_toml(config: &Config) -> String {
+    render_table_pretty(&root_table(config))
+}
+
+/// Build the editable-subset `Table` for the root `apimock.toml`.
+///
+/// Split out from `render_apimock_toml` so `workspace/save.rs` can use
+/// the same tree as the *target* for `apply_in_place` without a second
+/// hand-written builder to keep in sync with this one.
+pub(crate) fn root_table(config: &Config) -> Table {
     let mut root = Table::new();
 
     if let Some(listener) = config.listener.as_ref() {
@@ -68,12 +93,17 @@ pub fn render_apimock_toml(config: &Config) -> String {
         root.insert("file_tree_view".to_owned(), Value::Table(t));
     }
 
-    toml::to_string_pretty(&Value::Table(root))
-        .unwrap_or_else(|err| format!("# failed to render apimock.toml: {}\n", err))
+    root
 }
 
 /// Render one rule-set TOML to text.
 pub fn render_rule_set_toml(rule_set: &RuleSet) -> String {
+    render_table_pretty(&rule_set_table(rule_set))
+}
+
+/// Build the editable-subset `Table` for one rule-set file. See
+/// `root_table` for why this is split out.
+pub(crate) fn rule_set_table(rule_set: &RuleSet) -> Table {
     let mut root = Table::new();
 
     if let Some(prefix) = rule_set.prefix.as_ref() {
@@ -103,8 +133,12 @@ pub fn render_rule_set_toml(rule_set: &RuleSet) -> String {
         root.insert("rules".to_owned(), Value::Array(rules));
     }
 
-    toml::to_string_pretty(&Value::Table(root))
-        .unwrap_or_else(|err| format!("# failed to render rule set: {}\n", err))
+    root
+}
+
+fn render_table_pretty(root: &Table) -> String {
+    toml::to_string_pretty(&Value::Table(root.clone()))
+        .unwrap_or_else(|err| format!("# failed to render: {}\n", err))
 }
 
 // -------------------------------------------------------------------
@@ -398,6 +432,190 @@ fn respond_table(r: &Respond) -> Table {
         );
     }
     t
+}
+
+// -------------------------------------------------------------------
+// In-place mutation (RFC 056) — reconcile a parsed `toml_edit`
+// document against the editable-subset `Table` above. This mutates
+// the document rather than rebuilding one: existing keys keep their
+// comments, blank lines and position; only a changed key's *value* is
+// replaced, and only when it actually differs in shape or content.
+// -------------------------------------------------------------------
+
+/// Apply `target` onto `original`'s previous text, preserving
+/// everything `target` doesn't touch. Returns the file's new text.
+///
+/// # Errors
+///
+/// Only if `original` fails to re-parse as TOML. In practice this
+/// path is unreachable in normal operation: `workspace/save.rs` only
+/// calls this after confirming the on-disk text is still exactly
+/// `original` (RFC 056 §2 Q3's conflict check), and `original` was
+/// itself accepted by `Config::new`'s `toml`-crate parser at load
+/// time — `toml` and `toml_edit` are the same project's siblings
+/// targeting the same TOML spec version, so what one accepts the
+/// other does too. Kept as a `Result` rather than an `unwrap` because
+/// that reasoning lives in prose, not in the type system.
+pub(crate) fn apply_in_place(
+    original: &str,
+    target: &Table,
+) -> Result<String, toml_edit::TomlError> {
+    let mut doc: toml_edit::DocumentMut = original.parse()?;
+    reconcile_table(doc.as_table_mut(), target);
+    Ok(doc.to_string())
+}
+
+/// Reconcile one `toml_edit` table against the corresponding `target`
+/// table: remove keys `target` no longer has, recurse into nested
+/// tables, recurse index-by-index into `[[rules]]`-style
+/// arrays-of-tables (mirroring `workspace/diff.rs`'s own precedent for
+/// comparing them), and otherwise overwrite the leaf value in place.
+fn reconcile_table(doc: &mut toml_edit::Table, target: &Table) {
+    let stale: Vec<String> = doc
+        .iter()
+        .map(|(k, _)| k.to_owned())
+        .filter(|k| !target.contains_key(k.as_str()))
+        .collect();
+    for key in &stale {
+        doc.remove(key);
+    }
+
+    for (key, value) in target.iter() {
+        match value {
+            Value::Table(sub) => reconcile_subtable(doc, key, sub),
+            Value::Array(items) if is_table_array(items) => {
+                reconcile_array_of_tables(doc, key, items)
+            }
+            leaf => set_scalar(doc, key, edit_value_from_leaf(leaf)),
+        }
+    }
+}
+
+fn reconcile_subtable(doc: &mut toml_edit::Table, key: &str, target: &Table) {
+    if let Some(existing) = doc.get_mut(key)
+        && let Some(existing_table) = existing.as_table_mut()
+    {
+        reconcile_table(existing_table, target);
+        return;
+    }
+    let mut fresh = toml_edit::Table::new();
+    fill_table(&mut fresh, target);
+    doc.insert(key, toml_edit::Item::Table(fresh));
+}
+
+fn reconcile_array_of_tables(doc: &mut toml_edit::Table, key: &str, target_rows: &[Value]) {
+    if target_rows.is_empty() {
+        doc.remove(key);
+        return;
+    }
+    let already_array_of_tables = doc
+        .get(key)
+        .map(toml_edit::Item::is_array_of_tables)
+        .unwrap_or(false);
+    if !already_array_of_tables {
+        doc.insert(
+            key,
+            toml_edit::Item::ArrayOfTables(toml_edit::ArrayOfTables::new()),
+        );
+    }
+    let aot = doc
+        .get_mut(key)
+        .and_then(toml_edit::Item::as_array_of_tables_mut)
+        .expect("just inserted or confirmed an array-of-tables at this key");
+
+    while aot.len() > target_rows.len() {
+        aot.remove(aot.len() - 1);
+    }
+    for (index, row) in target_rows.iter().enumerate() {
+        let row_table = row
+            .as_table()
+            .expect("is_table_array guarantees every row is a Value::Table");
+        if index < aot.len() {
+            let existing_row = aot.get_mut(index).expect("index < aot.len()");
+            reconcile_table(existing_row, row_table);
+        } else {
+            let mut fresh = toml_edit::Table::new();
+            fill_table(&mut fresh, row_table);
+            aot.push(fresh);
+        }
+    }
+}
+
+/// Overwrite `key`'s value, carrying over its previous decor (leading
+/// blank lines / comment lines, and same-line trailing comment) so a
+/// scalar edit doesn't strip formatting that belongs to that line.
+fn set_scalar(doc: &mut toml_edit::Table, key: &str, mut new_value: toml_edit::Value) {
+    if let Some(old_decor) = doc
+        .get(key)
+        .and_then(toml_edit::Item::as_value)
+        .map(toml_edit::Value::decor)
+        .cloned()
+    {
+        *new_value.decor_mut() = old_decor;
+    }
+    doc.insert(key, toml_edit::Item::Value(new_value));
+}
+
+/// A `toml::Value::Array` counts as an array-of-tables target when
+/// every element is itself a table — mirrors how `toml::to_string_pretty`
+/// already renders such an array as `[[key]]` sections.
+fn is_table_array(items: &[Value]) -> bool {
+    !items.is_empty() && items.iter().all(|v| matches!(v, Value::Table(_)))
+}
+
+/// Convert a `toml::Value` leaf (never a bare `Table`, and never an
+/// array of tables — those are handled by the two functions above) to
+/// its `toml_edit` equivalent.
+fn edit_value_from_leaf(value: &Value) -> toml_edit::Value {
+    match value {
+        Value::String(s) => toml_edit::Value::from(s.clone()),
+        Value::Integer(i) => toml_edit::Value::from(*i),
+        Value::Float(f) => toml_edit::Value::from(*f),
+        Value::Boolean(b) => toml_edit::Value::from(*b),
+        Value::Array(items) => {
+            let mut array = toml_edit::Array::new();
+            for item in items {
+                array.push(edit_value_from_leaf(item));
+            }
+            toml_edit::Value::from(array)
+        }
+        Value::Datetime(_) | Value::Table(_) => unreachable!(
+            "toml_writer's editable subset never emits a datetime, \
+             and a bare Table is handled by reconcile_subtable before \
+             reaching a leaf converter"
+        ),
+    }
+}
+
+/// Populate a brand-new `toml_edit::Table` from a `toml::Table` — used
+/// only for keys/rows that don't exist in the document being edited
+/// yet (e.g. a rule just added via `EditCommand::AddRule`), so there's
+/// no prior formatting to preserve.
+fn fill_table(dst: &mut toml_edit::Table, src: &Table) {
+    for (key, value) in src.iter() {
+        match value {
+            Value::Table(sub) => {
+                let mut nested = toml_edit::Table::new();
+                fill_table(&mut nested, sub);
+                dst.insert(key, toml_edit::Item::Table(nested));
+            }
+            Value::Array(items) if is_table_array(items) => {
+                let mut aot = toml_edit::ArrayOfTables::new();
+                for row in items {
+                    let row_table = row
+                        .as_table()
+                        .expect("is_table_array guarantees every row is a Value::Table");
+                    let mut row_out = toml_edit::Table::new();
+                    fill_table(&mut row_out, row_table);
+                    aot.push(row_out);
+                }
+                dst.insert(key, toml_edit::Item::ArrayOfTables(aot));
+            }
+            leaf => {
+                dst.insert(key, toml_edit::value(edit_value_from_leaf(leaf)));
+            }
+        }
+    }
 }
 
 #[cfg(test)]

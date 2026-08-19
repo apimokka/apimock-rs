@@ -26,6 +26,11 @@ serde                       = { workspace = true }
 # workspace pin so versions don't drift.
 serde_json                  = { workspace = true }
 toml                        = { workspace = true }
+# Format-preserving parser used only by the save path (RFC 056): mutate
+# a parsed document instead of rebuilding one, so comments and key
+# order survive a save. `toml` above stays the model's Deserialize
+# path and diff.rs's canonical-comparison path — unchanged by this.
+toml_edit                   = { workspace = true }
 thiserror                   = { workspace = true }
 uuid                        = { workspace = true }
 # `tempfile` provides `NamedTempFile::persist` for atomic file

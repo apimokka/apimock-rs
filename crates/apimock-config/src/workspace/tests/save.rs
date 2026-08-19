@@ -1,10 +1,266 @@
 //! Workspace::save — persistence, round-trip, atomic write, diff tracking.
 
-use super::common::make_workspace;
+use super::common::{make_workspace, make_workspace_with_headers_and_body};
 use crate::{
     view::{ConfigFileKind, EditCommand, EditValue, NodeKind},
     workspace::Workspace,
 };
+
+// -----------------------------------------------------------------
+// RFC 056 — in-place save. This is the point of the whole RFC and,
+// per the handoff, was written before any of the implementation below
+// it existed.
+// -----------------------------------------------------------------
+
+#[test]
+fn save_preserves_comments_blank_lines_and_key_order() {
+    let dir = tempfile::tempdir().unwrap();
+    let fallback = dir.path().join("fallback");
+    std::fs::create_dir_all(&fallback).unwrap();
+
+    let rs_toml = concat!(
+        "[[rules]]\n",
+        "when.request.url_path = \"/api/users\"\n",
+        "respond = { text = \"ok\" }\n",
+    );
+    let rs_path = dir.path().join("apimock-rule-set.toml");
+    std::fs::write(&rs_path, rs_toml).unwrap();
+
+    // Hand-written: a leading comment, a blank line, and the
+    // listener's keys in a person's own order (port before
+    // ip_address) — none of which canonical rendering would ever
+    // produce (it sorts keys and never emits comments).
+    let root_toml = format!(
+        "# apimock config -- do not remove this comment\n\
+         [listener]\n\
+         port = 3001\n\
+         ip_address = \"127.0.0.1\"\n\
+         \n\
+         # rule sets live in a sibling file\n\
+         [service]\n\
+         rule_sets = [\"{}\"]\n\
+         fallback_respond_dir = \"{}\"\n",
+        rs_path.file_name().unwrap().to_string_lossy(),
+        fallback.file_name().unwrap().to_string_lossy(),
+    );
+    let root_path = dir.path().join("apimock.toml");
+    std::fs::write(&root_path, &root_toml).unwrap();
+
+    let mut ws = Workspace::load(root_path.clone()).expect("load");
+    ws.apply(EditCommand::UpdateRootSetting {
+        key: crate::view::RootSettingKey::ListenerPort,
+        value: EditValue::Integer(9999),
+    })
+    .expect("apply");
+    ws.save().expect("save");
+
+    let saved = std::fs::read_to_string(&root_path).expect("read back");
+
+    assert!(
+        saved.contains("# apimock config -- do not remove this comment"),
+        "leading comment must survive:\n{saved}"
+    );
+    assert!(
+        saved.contains("# rule sets live in a sibling file"),
+        "mid-file comment must survive:\n{saved}"
+    );
+    assert!(
+        saved.contains("\n\n"),
+        "the blank line separating sections must survive:\n{saved}"
+    );
+    // Hand-chosen key order (port before ip_address) must survive —
+    // canonical rendering would sort alphabetically instead.
+    let port_pos = saved.find("port = 9999").expect("edited value present");
+    let ip_pos = saved.find("ip_address").expect("untouched key present");
+    assert!(
+        port_pos < ip_pos,
+        "key order (port before ip_address) must survive:\n{saved}"
+    );
+    assert!(
+        !saved.contains("port = 3001"),
+        "the old value must be gone:\n{saved}"
+    );
+}
+
+#[test]
+fn save_of_one_file_leaves_the_other_byte_identical() {
+    let (_dir, root) = make_workspace();
+    let rs_path = root.parent().unwrap().join("apimock-rule-set.toml");
+    let rs_before = std::fs::read_to_string(&rs_path).expect("read rule set before save");
+
+    let mut ws = Workspace::load(root.clone()).expect("load");
+    ws.apply(EditCommand::UpdateRootSetting {
+        key: crate::view::RootSettingKey::ListenerPort,
+        value: EditValue::Integer(4242),
+    })
+    .expect("apply");
+    let save = ws.save().expect("save");
+
+    assert!(
+        save.changed_files.iter().any(|p| p == &root),
+        "expected the root file to be the one that changed"
+    );
+    assert!(
+        !save.changed_files.iter().any(|p| p == &rs_path),
+        "the untouched rule-set file must not be reported as changed"
+    );
+
+    let rs_after = std::fs::read_to_string(&rs_path).expect("read rule set after save");
+    assert_eq!(
+        rs_before, rs_after,
+        "a save touching only the root file must leave the rule-set file byte-identical"
+    );
+}
+
+#[test]
+fn save_refuses_rather_than_overwrites_a_file_changed_on_disk() {
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root.clone()).expect("load");
+
+    ws.apply(EditCommand::UpdateRootSetting {
+        key: crate::view::RootSettingKey::ListenerPort,
+        value: EditValue::Integer(5555),
+    })
+    .expect("apply");
+
+    // Someone else edits the same file on disk after our load().
+    let external_edit = "[listener]\nip_address = \"127.0.0.1\"\nport = 7777\n\n[service]\nrule_sets = [\"apimock-rule-set.toml\"]\nfallback_respond_dir = \"fallback\"\n";
+    std::fs::write(&root, external_edit).expect("simulate external edit");
+
+    let err = ws
+        .save()
+        .expect_err("save must refuse an externally-changed file");
+    assert!(
+        matches!(&err, crate::error::SaveError::Conflict { path } if path == &root),
+        "expected SaveError::Conflict{{ path: root }}, got {err:?}"
+    );
+
+    // The external edit must survive untouched — the worst outcome is
+    // silently discarding it, which is exactly what this refusal
+    // prevents.
+    let on_disk = std::fs::read_to_string(&root).expect("read after refused save");
+    assert_eq!(
+        on_disk, external_edit,
+        "a refused save must not touch the file it refused to overwrite"
+    );
+}
+
+#[test]
+fn save_reports_a_read_failure_distinctly_from_a_conflict() {
+    // REVIEW-001 §4: a read failure ahead of the conflict check (here,
+    // the file having been deleted out from under us) must not be
+    // folded into `Conflict` — `Conflict`'s message tells the caller to
+    // reload, which is not a fix for "the file is gone" any more than
+    // it would be for a permission error.
+    let (_dir, root) = make_workspace();
+    let mut ws = Workspace::load(root.clone()).expect("load");
+
+    ws.apply(EditCommand::UpdateRootSetting {
+        key: crate::view::RootSettingKey::ListenerPort,
+        value: EditValue::Integer(6161),
+    })
+    .expect("apply");
+
+    std::fs::remove_file(&root).expect("simulate the file vanishing externally");
+
+    let err = ws
+        .save()
+        .expect_err("save must fail when it can't confirm the file is unchanged");
+    assert!(
+        matches!(&err, crate::error::SaveError::Read { path, .. } if path == &root),
+        "expected SaveError::Read{{ path: root, .. }}, got {err:?}"
+    );
+}
+
+#[test]
+fn save_add_then_remove_header_condition_round_trips_in_place() {
+    // The riskiest part of in-place reconciliation is a dynamically
+    // keyed sub-table (headers, here) gaining a key and later losing
+    // it, across two *separate, real* saves — stale-key removal
+    // exercised against a document that in-place mutation itself
+    // wrote, not just against the freshly-loaded original file.
+    //
+    // Both edits target the header condition this test adds — RFC 016
+    // per-condition NodeIds aren't seeded at load() (only assigned
+    // when `AddHeaderCondition` creates one), so there's no supported
+    // way to address the fixture's own pre-existing "x-api-key"
+    // condition here. That's an existing RFC 016 addressing gap, not
+    // something this RFC touches; "x-api-key" instead serves this
+    // test as the untouched sibling key that must survive both saves.
+    let (_dir, root) = make_workspace_with_headers_and_body();
+    let mut ws = Workspace::load(root.clone()).expect("load");
+    let rule_id = ws
+        .snapshot()
+        .files
+        .iter()
+        .find(|f| matches!(f.kind, ConfigFileKind::RuleSet))
+        .unwrap()
+        .nodes
+        .iter()
+        .find(|n| matches!(n.kind, NodeKind::Rule))
+        .unwrap()
+        .id;
+
+    let add_result = ws
+        .apply(EditCommand::AddHeaderCondition {
+            rule_id,
+            condition: crate::view::HeaderConditionPayload {
+                name: "x-new-header".to_owned(),
+                op: crate::view::HeaderOp::Equal,
+                value: Some("new-value".to_owned()),
+            },
+        })
+        .expect("add header condition");
+    let cond_id = add_result
+        .changed_nodes
+        .iter()
+        .copied()
+        .find(|id| *id != rule_id)
+        .expect("AddHeaderCondition returns the new condition's id");
+    ws.save().expect("save after add");
+
+    // Round 1, confirmed via a fresh load: the insert-new-key path
+    // persisted, and the fixture's own header condition is untouched.
+    let ws_after_add = Workspace::load(root.clone()).expect("reload after add");
+    let rule_after_add = &ws_after_add.config().service.rule_sets[0].rules[0];
+    let headers_after_add = rule_after_add
+        .when
+        .request
+        .headers
+        .as_ref()
+        .expect("headers");
+    assert!(
+        headers_after_add.0.contains_key("x-new-header"),
+        "newly added header condition must survive a save + reload"
+    );
+    assert!(
+        headers_after_add.0.contains_key("x-api-key"),
+        "the fixture's original header condition must still be present"
+    );
+
+    // Round 2, same still-open `ws` (its `original_text` now reflects
+    // what round 1 actually wrote): remove the condition just added.
+    ws.apply(EditCommand::RemoveHeaderCondition { id: cond_id })
+        .expect("remove the condition added above");
+    ws.save().expect("save after remove");
+
+    let ws_after_remove = Workspace::load(root).expect("reload after remove");
+    let rule_after_remove = &ws_after_remove.config().service.rule_sets[0].rules[0];
+    let headers_after_remove = rule_after_remove
+        .when
+        .request
+        .headers
+        .as_ref()
+        .expect("x-api-key keeps the headers table alive");
+    assert!(
+        !headers_after_remove.0.contains_key("x-new-header"),
+        "the removed header condition must not come back after save + reload"
+    );
+    assert!(
+        headers_after_remove.0.contains_key("x-api-key"),
+        "the untouched sibling header condition must survive the other one's removal"
+    );
+}
 
 // -----------------------------------------------------------------
 // 5.2.0 — save() + diff tests

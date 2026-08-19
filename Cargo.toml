@@ -61,6 +61,11 @@ rustls                      = { version = "0.23.43", default-features = false, f
 tokio-rustls                = { version = "0.26.4", default-features = false, features = ["logging", "ring", "tls12"] }
 rhai                        = { version = "1", features = ["sync", "serde"] }
 toml                        = "1"
+# Format-preserving sibling of `toml` above — same project, same TOML
+# spec version. Used only by `apimock-config`'s save path (RFC 056) to
+# mutate a parsed document in place instead of rebuilding one, so a
+# save keeps the comments and key order a person wrote.
+toml_edit                   = "0.25"
 json5                       = "1"
 csv                         = "1"
 regex                       = "1"

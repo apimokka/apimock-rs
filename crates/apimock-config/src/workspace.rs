@@ -88,6 +88,19 @@ pub struct Workspace {
     pub(super) diagnostics: Vec<Diagnostic>,
     /// Rendered baseline for save/diff detection.
     pub(super) baseline_files: HashMap<PathBuf, String>,
+    /// Each file's own on-disk text as of the last `load()` or
+    /// successful `save()`. Two jobs (RFC 056):
+    ///
+    /// - the base `save()` mutates in place via `toml_writer::apply_in_place`,
+    ///   so a save's untouched keys keep their comments and order;
+    /// - the baseline `save()` compares fresh on-disk text against
+    ///   before writing, to refuse (`SaveError::Conflict`) rather than
+    ///   overwrite a file someone else changed since we last saw it.
+    ///
+    /// Distinct from `baseline_files`, which stays a *canonical
+    /// rendering* by design (§2 Q1) — this field is the only place raw
+    /// on-disk text is kept.
+    pub(super) original_text: HashMap<PathBuf, String>,
     /// Modification-time + size snapshot of every loaded file,
     /// captured at `load()` and refreshed after each `save()`.
     /// Used by `has_external_changes()` and `sync_from_disk()`.
@@ -140,6 +153,12 @@ impl Workspace {
         // loaded workspace has rendered == baseline by construction,
         // so `has_unsaved_changes` is false. Edits flip it to true,
         // and only the files that diverge get rewritten on save.
+        //
+        // That "which files diverge" question is still the rendered
+        // baseline's job even after RFC 056. The literal on-disk text
+        // is captured separately below, into `original_text` — that's
+        // the in-place mutation source and the Q3 conflict baseline,
+        // not a second change-detection mechanism.
         // The user's hand-formatting on never-edited files survives
         // untouched.
         let mut baseline_files: HashMap<PathBuf, String> = HashMap::new();
@@ -150,6 +169,24 @@ impl Workspace {
         for rule_set in config.service.rule_sets.iter() {
             let path = PathBuf::from(rule_set.file_path.as_str());
             baseline_files.insert(path, crate::toml_writer::render_rule_set_toml(rule_set));
+        }
+
+        // Capture each file's own text as of this load (RFC 056): the
+        // mutation source for a later in-place save, and the baseline
+        // Q3's conflict check compares fresh reads against. A read
+        // failure here (the file vanishing between `Config::new`'s
+        // read and this one) just leaves no entry — `save()` falls
+        // back to a canonical re-render for that one path rather than
+        // failing the whole save over an unrelated, narrow race.
+        let mut original_text: HashMap<PathBuf, String> = HashMap::new();
+        if let Ok(text) = std::fs::read_to_string(&resolved) {
+            original_text.insert(resolved.clone(), text);
+        }
+        for rule_set in config.service.rule_sets.iter() {
+            let path = PathBuf::from(rule_set.file_path.as_str());
+            if let Ok(text) = std::fs::read_to_string(&path) {
+                original_text.insert(path, text);
+            }
         }
 
         // Snapshot file metadata for external-change detection (RFC 024).
@@ -174,6 +211,7 @@ impl Workspace {
             ids: IdIndex::default(),
             diagnostics: Vec::new(),
             baseline_files,
+            original_text,
             file_metas,
         };
         workspace.seed_ids();
