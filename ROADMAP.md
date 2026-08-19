@@ -264,7 +264,7 @@ first release cut through it.**
 | 051 | [Redact credential headers in verbose logging](./rfcs/proposed/051-verbose-log-header-redaction.md) | **P1** | 040 | Drafted 2026-08-17 — security. Attempted **without new public fields** so it can ship in a true minor |
 | 052 | [`#[non_exhaustive]` on public types](./rfcs/proposed/052-non-exhaustive-public-types.md) | P1 | — | **Decision approved 2026-08-17.** Breaking; ships at the v6 boundary |
 | 041 | Shrink large error variants (`result_large_err`) | P2 | — | **Deferred to 6.0.0** — breaking; see below |
-| 042 | `sync_from_disk` incremental reconciliation | P2 | — | Planned |
+| 042 | ~~`sync_from_disk` incremental reconciliation~~ → **rescoped, and much smaller** | P2 | — | **G1 answered 2026-08-17.** The owner rejects both automatic behaviour change *and* continuous watching, so no filesystem watcher and no `notify` dependency. Detection is a boot-time file list plus an existence/mtime poll; the response is to **ask the user**, not to act. That removes RFC 042's premise — it existed to make reconciliation *incremental* because wholesale reload was assumed too costly to do often, and a reload gated on explicit confirmation does not happen often. RFC 024 already covers part of the remainder |
 | 043 | Module split: `workspace/edit.rs`, `server/trace.rs` | P2 | — | Planned |
 | 045 | [Configuration accepted but ignored](./rfcs/done/045-configuration-accepted-but-ignored.md) | P1 | — | Implemented (v5.18.0) |
 | 046 | [Test harness: port race and readiness](./rfcs/done/046-test-harness-port-race-and-readiness.md) | **P0** | — | Implemented (v5.17.0) |
@@ -409,6 +409,29 @@ designed rather than after.
 
 ---
 
+## v6 API principle — stated by the owner 2026-08-17
+
+> "I would not like to pay such backward compatibility cost. … I would
+> like to make APIs of v6 simple, clean, robust and stable, functional,
+> and sophisticated as possible."
+
+Given in answer to G4 (should `validate --json` be removed), but stated
+generally, so it governs decisions not yet taken: **prefer a clean v6 API
+over preserving a compatibility affordance.**
+
+**It puts one already-taken decision back in play.** RFC 053 Layer 1 kept
+bare `apimock` as an alias for `apimock serve`, explicitly on
+compatibility grounds — *"breaking it buys tidiness alone"*. That
+reasoning predates this principle and now sits against it.
+
+My reading is that the alias survives, because bare `apimock` is not a
+compatibility affordance but the zero-config entry point — the README's
+opening promise, and the shape every example uses. Keeping it is a UX
+decision, not a debt. **But that is a reading, and the owner's principle
+is the owner's; it is theirs to overturn.**
+
+---
+
 ## Dependency map
 
 ```
@@ -446,7 +469,7 @@ starts immediately.
 |---|---|---|---|---|---|
 | R-01 | RFC 031 turns on `-D warnings` while findings remain, blocking every subsequent PR | Development halts until fixed | Low | 031 depends on 030; 031's acceptance criteria require a green clippy run on the merge commit | architect |
 | R-02 | The 26 clippy fixes in RFC 030 change behaviour | Silent regression | Low | Full test suite must pass unchanged; no test may be modified within RFC 030's scope | architect |
-| R-03 | RFC **042** breaks the GUI team's integration *(corrected 2026-08-12 — both this row and D-02 read "039", a leftover of the 037–041 → 039–043 renumbering. 039 is the additive-only API gate, which cannot break a consumer; 042 is `sync_from_disk` reconciliation, the only item that changes what the GUI must do)* | Downstream breakage | Medium | GUI-team compatibility round-trip is a precondition for writing the RFC, not a follow-up | owner + architect |
+| R-03 | ~~RFC **042** breaks the GUI team's integration~~ **Closed 2026-08-17** — G1 answered and rescoped it; there is no incremental-reconciliation design left to break against. Original text: RFC **042** breaks the GUI team's integration *(corrected 2026-08-12 — both this row and D-02 read "039", a leftover of the 037–041 → 039–043 renumbering. 039 is the additive-only API gate, which cannot break a consumer; 042 is `sync_from_disk` reconciliation, the only item that changes what the GUI must do)* | Downstream breakage | Medium | GUI-team compatibility round-trip is a precondition for writing the RFC, not a follow-up | owner + architect |
 | R-04 | Publishing npm at 5.15.0 leaves 5.10.1–5.14.0 permanently unpublished on that channel | User confusion about which versions exist | High (accepted) | Owner-accepted consequence of repairing rather than backfilling; noted in the 5.15.0 release notes. *Range corrected 2026-08-03 — last published npm version is 5.10.0, not 5.7.0* | owner |
 | R-05 | ~~CI tracks Rust `stable` while `Cargo.toml` pins MSRV 1.91.0~~ | — | — | **Closed 2026-08-12.** RFC 031's `msrv` job exists and reads the pin from `Cargo.toml` rather than hard-coding it (`.github/workflows/ci.yaml:106`) | architect |
 | R-06 | Scope creep from docs work — rewriting docs surfaces genuine feature gaps | M2 expands into feature work | Medium | Feature gaps discovered during M2 become new RFCs for a later milestone; they do not join M2 | architect |
@@ -461,7 +484,7 @@ starts immediately.
 | ID | Decision required | Owner | Blocking |
 |---|---|---|---|
 | D-01 | Target calendar window for M1–M3, so milestones can be dated | project owner | Scheduling only; RFC work can start without it |
-| D-02 | Whether RFC **042** proceeds, pending the GUI-team compatibility round-trip *(number corrected 2026-08-12 — see R-03)*. **The round-trip is now a written task: `.git-exclude/tasks/owner/001-gui-integration-questions.md`, G1** | project owner | M3 scope |
+| D-02 | ~~Whether RFC **042** proceeds~~ ✅ **Resolved 2026-08-17.** G1 answered: no watcher, no automatic action, confirm with the user. RFC 042 is rescoped to a fraction of its original size — see the M3 table | project owner | M3 scope |
 
 Decisions taken on 2026-08-02:
 
