@@ -36,9 +36,9 @@ which rather than leaving a reader to assume.
 |-----|-------|-------|
 | 039 | [An additive-only gate for the public API](./accepted/039-public-api-additive-only-gate.md) — enable after 6.0.0 | not started; **enable after 6.0.0** |
 | 040 | [Trace channel: redaction, and non-JSON body capture](./accepted/040-trace-capture-and-redaction.md) | merged to `main` |
-| 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./accepted/041-error-type-shape.md) | not started; breaking |
-| 042 | [External change detection: correct the contract](./accepted/042-external-change-detection.md) | not started |
-| 043 | [Module split: `workspace/edit.rs`](./accepted/043-module-split-edit-rs.md) | not started; **after RFC 057** |
+| 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./accepted/041-error-type-shape.md) | handed off; breaking |
+| 042 | [External change detection: correct the contract](./accepted/042-external-change-detection.md) | handed off |
+| 043 | [Module split: `workspace/edit.rs`](./accepted/043-module-split-edit-rs.md) | handed off; 057 landed, unblocked |
 | 048 | [v6 concept: the CLI as a first-class interface](./accepted/048-v6-cli-interface-concept.md) — umbrella | governs the rest |
 | 050 | [Should non-JSON request bodies be captured at all?](./accepted/050-non-json-body-capture-decision.md) — decision RFC | merged to `main` |
 | 051 | [Redact credential headers in verbose request logging](./accepted/051-verbose-log-header-redaction.md) | merged to `main` |

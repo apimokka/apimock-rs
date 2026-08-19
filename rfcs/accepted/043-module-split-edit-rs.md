@@ -2,6 +2,7 @@
 
 **Status.** **Accepted** — approved by the project owner 2026-08-20.
 **Not yet implemented.** Sequence **after** RFC 057, which has landed.
+[Handed off](../handoffs/043-module-split-edit-rs/implementation-handoff.md) 2026-08-20.
 **Tracks.** Maintainability. Non-breaking; no public surface changes.
 **Touches.** `crates/apimock-config/src/workspace/edit.rs` and the
 existing `crates/apimock-config/src/workspace/edit/` directory.

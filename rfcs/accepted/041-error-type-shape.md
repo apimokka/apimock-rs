@@ -2,6 +2,8 @@
 
 **Status.** **Accepted** — approved by the project owner 2026-08-20.
 **Not yet implemented.** Breaking; 6.0.0.
+[Handed off](../handoffs/041-error-type-shape/implementation-handoff.md) 2026-08-20,
+with both open questions decided.
 **Tracks.** v6 API quality. The error half of what
 [RFC 052](../accepted/052-non-exhaustive-public-types.md) did for the
 trace and request types.

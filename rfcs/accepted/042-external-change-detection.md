@@ -2,6 +2,7 @@
 
 **Status.** **Accepted** — approved by the project owner 2026-08-20.
 **Not yet implemented.**
+[Handed off](../handoffs/042-external-change-detection/implementation-handoff.md) 2026-08-20.
 **Tracks.** v6 API quality; GUI integration. **Rescoped** after the
 owner's G1 answer (2026-08-17) removed its original premise.
 **Touches.** `crates/apimock-config/src/workspace.rs` — chiefly its
