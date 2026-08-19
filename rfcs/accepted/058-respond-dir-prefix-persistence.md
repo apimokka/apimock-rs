@@ -1,12 +1,13 @@
 # RFC 058 — `respond_dir` is resolved at load and written back, growing on every save
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-19.
+**Not yet implemented.**
 **Tracks.** Correctness; released-version data integrity. Risk **R-10**.
 **Touches.** `crates/apimock-routing/src/rule_set.rs`,
 `crates/apimock-routing/src/rule_set/prefix.rs`,
 `crates/apimock-config/src/toml_writer.rs`.
 **Depends on.** Nothing. Interacts with
-[RFC 041](./041-error-type-shape.md) — see § Public surface.
+[RFC 041](../proposed/041-error-type-shape.md) — see § Public surface.
 
 ## Summary
 

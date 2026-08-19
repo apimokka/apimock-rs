@@ -28,7 +28,6 @@ depends-on, and the rest of the planned portfolio.
 | 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./proposed/041-error-type-shape.md) |
 | 042 | [External change detection: correct the contract](./proposed/042-external-change-detection.md) |
 | 043 | [Module split: `workspace/edit.rs`](./proposed/043-module-split-edit-rs.md) |
-| 058 | [`respond_dir` is resolved at load and written back, growing on every save](./proposed/058-respond-dir-prefix-persistence.md) — **released defect, R-10** |
 
 ## Accepted
 
@@ -49,6 +48,7 @@ which rather than leaving a reader to assume.
 | 055 | [`apimock get`: what will this request return?](./accepted/055-get-command.md) | merged to `main` |
 | 056 | [Preserve what people wrote: `toml_edit` for the save path](./accepted/056-toml-edit-migration.md) | merged to `main` |
 | 057 | [`apimock set`: make the server answer X under condition Y](./accepted/057-set-command.md) | handed off; not started |
+| 058 | [`respond_dir` grows on every save](./accepted/058-respond-dir-prefix-persistence.md) — **released defect, R-10** | not started |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
