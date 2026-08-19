@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 054
 
-**Governing RFC.** [RFC 054](../../proposed/054-deprecation-release.md)
+**Governing RFC.** [RFC 054](../../done/054-deprecation-release.md)
 **Contract.** [RFC 053](../../proposed/053-v6-cli-contract.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 

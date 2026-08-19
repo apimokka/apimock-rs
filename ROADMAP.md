@@ -15,8 +15,10 @@ lost between releases. That history lives at the bottom of this file.
 **M1 complete** (2026-08-03): RFCs 030–033 shipped in v5.15.0.
 **M2 complete** (2026-08-10): RFCs 034–038 shipped in v5.16.0, together
 with cross-cutting RFC 044 — the first release cut by automation.
-**M3 in progress.** RFCs 046 and 047 shipped in v5.17.0 (2026-08-12);
-039–043 and 045 remain, and now target v5.18.0 — see § M3.
+**M3 partly shipped, then overtaken.** RFCs 046–047 shipped in v5.17.0,
+045 and 049 in v5.18.0, 054 in v5.19.0. **RFCs 039, 041, 042 and 043 were
+never written** and now target 6.0.0 — 041 because it is breaking, the
+rest because v5 closed first. See § Closing v5, opening v6.
 
 ---
 
@@ -50,7 +52,7 @@ that earlier RFCs explicitly deferred.
 |---|---|---|---|
 | **M1** | Pipeline trust | Quality gates exist, run automatically, and pass. The release path — including npm — works end to end. | 5.15.0 |
 | **M2** | Documentation and examples | A reader finds every shipped feature, finds nothing contradicting the code, and can predict a config change's effect before making it. | 5.16.0 — cut after all five RFCs land (see § M2) |
-| **M3** | Deferred design, plus pipeline gaps found in v5.16.0 | The items RFCs 023 / 024 and open question Q-001 explicitly postponed are resolved. | 5.17.0 (046, 047) → 5.18.0 (039–043, 045) |
+| **M3** | Deferred design, plus pipeline gaps found in v5.16.0 | The items RFCs 023 / 024 and open question Q-001 explicitly postponed are resolved. | **Partly shipped** — 046/047 in 5.17.0, 045 in 5.18.0. **039, 041, 042, 043 unwritten, carried to 6.0.0** |
 
 **Order.** M1 → M2 → M3, sequential. M1 is first because the gates it
 installs are what keep M2's and M3's work from decaying the way
@@ -361,7 +363,7 @@ be finished and handed over.
 | 4 | Deprecation warnings — stderr, exit code 0, naming the removal version | **Cut from `5.18.0` on a short-lived branch** (owner decision 2026-08-17) — `main` now carries breaking work and can no longer produce a non-breaking release. See RFC 048 § 7.2 |
 
 **Amended again 2026-08-17 — item 4 is unblocked and drafted as
-[RFC 054](./rfcs/proposed/054-deprecation-release.md).** Checking the
+[RFC 054](./rfcs/done/054-deprecation-release.md).** Checking the
 code showed the deprecation release does *not* wait on v6's CLI design.
 A warning is only needed where an *existing* invocation changes;
 subcommands are matched positionally at `argv[1]` by exact string, so

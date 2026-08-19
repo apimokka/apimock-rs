@@ -25,7 +25,6 @@ depends-on, and the rest of the planned portfolio.
 | 051 | [Redact credential headers in verbose request logging](./proposed/051-verbose-log-header-redaction.md) |
 | 052 | [`#[non_exhaustive]` on the public types that keep growing](./proposed/052-non-exhaustive-public-types.md) |
 | 053 | [The v6 CLI contract](./proposed/053-v6-cli-contract.md) |
-| 054 | [The v5 deprecation release](./proposed/054-deprecation-release.md) |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
@@ -78,6 +77,7 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 047 | [Verify what was actually published](./done/047-post-publish-artifact-verification.md) | v5.17.0 |
 | 045 | [Configuration accepted but ignored](./done/045-configuration-accepted-but-ignored.md) | v5.18.0 |
 | 049 | [The CLI front door](./done/049-cli-front-door.md) | v5.18.0 |
+| 054 | [The v5 deprecation release](./done/054-deprecation-release.md) | v5.19.0 |
 
 ## Archive
 

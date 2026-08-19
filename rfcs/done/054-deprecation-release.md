@@ -1,6 +1,7 @@
 # RFC 054 — The v5 deprecation release
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Implemented (v5.19.0) — **the final v5 release**. Approved by
+the project owner 2026-08-17; reviewed in `REVIEW-001` / `REVIEW-002`.
 **Tracks.** Closing v5. The 5.x release that warns about what 6.0.0
 changes, so a user or a pipeline meets the change once while the old
 behaviour still works.

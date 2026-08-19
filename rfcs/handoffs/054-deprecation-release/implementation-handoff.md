@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 054, the v5 deprecation release
 
-**Governing RFC.** [RFC 054](../../proposed/054-deprecation-release.md)
+**Governing RFC.** [RFC 054](../../done/054-deprecation-release.md)
 **Contract.** [RFC 053](../../proposed/053-v6-cli-contract.md) — the
 envelope you are implementing for the first time
 **Milestone.** **Closes v5.** Ships as **5.19.0**
