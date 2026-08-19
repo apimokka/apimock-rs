@@ -414,10 +414,42 @@ neither is true of v5.
 | **T6** | Server-hosted configuration API — unauthenticated remote *write* on a process frequently bound to `0.0.0.0` in CI and Docker | Deferred (§ 4). If ever built: separate port, loopback only, disabled by default |
 | **T7** | Supply chain of the new `toml_edit` dependency | RFC 033's existing `cargo-deny` gates apply; no new mechanism needed |
 
-**T2 is the one to settle first**, because it is the only threat where
-the safe answer is a *scope decision* rather than an implementation
-detail — and because the machinery to do the unsafe thing already exists
-and would be inherited by default.
+### T2 — ✅ decided 2026-08-17: `set` may not attach middleware
+
+**Owner decision.** `set` may not add, change or remove an entry in
+`service.middlewares`. Existing entries pass through untouched —
+preserving what is already in the model and the file is not attaching
+anything.
+
+**The rule is not "middleware is untouchable."** `apimock --init
+--middleware` already writes `middlewares = ["./apimock-middleware.rhai"]`
+into the config it generates (`args/init_interactive.rs`), so a flat
+prohibition would contradict shipped behaviour. The rule is:
+
+> **The caller does not get to name arbitrary code for the server to
+> execute.**
+
+`--init` scaffolds *our own template* at a *fixed path*, interactively,
+at project creation. `set` attaching middleware would let a caller point
+at *arbitrary code* at an *arbitrary path*, non-interactively — possibly
+code the same agent wrote moments earlier. Those are different acts, and
+only the second is refused.
+
+That framing leaves room for a future `set` that scaffolds from our
+template, should anyone want it. It would be a separate decision with its
+own reasoning, not a loophole in this one.
+
+**The deciding argument was maintenance, not security.** The security
+case is real but arguably manageable; the cost case is not. A `set`
+surface for middleware means owning Rhai validation, path resolution and
+liveness checks from the CLI — for the most advanced feature in the
+product, which the agents this release targets mostly do not need. Rules
+and responses are what they build.
+
+**Original note, kept:** T2 is the one to settle first, because it is the
+only threat where the safe answer is a *scope decision* rather than an
+implementation detail — and because the machinery to do the unsafe thing
+already exists and would be inherited by default.
 
 ### 9.4 Explicit non-threats
 
