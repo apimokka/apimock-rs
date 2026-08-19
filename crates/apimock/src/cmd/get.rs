@@ -490,7 +490,19 @@ fn result_json(
             rule_set_index,
             rule_index,
             ..
-        } => serde_json::json!({ "rule_set_index": rule_set_index, "rule_index": rule_index }),
+        } => {
+            let rule_set_file = config
+                .service
+                .rule_sets
+                .get(*rule_set_index)
+                .map(|rs| rs.file_path.as_str())
+                .unwrap_or_default();
+            serde_json::json!({
+                "rule_set_index": rule_set_index,
+                "rule_set_file": rule_set_file,
+                "rule_index": rule_index,
+            })
+        }
         Stage::Options | Stage::DynRoute { .. } => serde_json::Value::Null,
     };
     let stage_name = match stage {

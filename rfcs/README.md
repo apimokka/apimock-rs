@@ -28,6 +28,7 @@ depends-on, and the rest of the planned portfolio.
 | 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./proposed/041-error-type-shape.md) |
 | 042 | [External change detection: correct the contract](./proposed/042-external-change-detection.md) |
 | 043 | [Module split: `workspace/edit.rs`](./proposed/043-module-split-edit-rs.md) |
+| 058 | [`respond_dir` is resolved at load and written back, growing on every save](./proposed/058-respond-dir-prefix-persistence.md) — **released defect, R-10** |
 
 ## Accepted
 

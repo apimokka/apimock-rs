@@ -82,6 +82,11 @@ impl EnvArgs {
             std::process::exit(crate::cmd::get::run(&raw[2..]));
         }
 
+        // `apimock set …` — add or change a rule. (RFC 057)
+        if raw.get(1).map(String::as_str) == Some("set") {
+            std::process::exit(crate::cmd::set::run(&raw[2..]));
+        }
+
         // RFC 049 Goal 1: anything left that looks like a flag and isn't
         // one of the top-level names above is unrecognised and must
         // error, not be silently discarded. Applied before `--init`
@@ -309,7 +314,7 @@ fn reject_unknown_arguments(raw: &[String]) {
             skip_next = false;
             continue;
         }
-        if arg == "match-test" || arg == "validate" || arg == "get" {
+        if arg == "match-test" || arg == "validate" || arg == "get" || arg == "set" {
             // Positional subcommand names are handled by their own
             // caller before this runs; reaching here at all means
             // neither matched, so nothing to do with them here either.
@@ -337,7 +342,7 @@ fn reject_unknown_arguments(raw: &[String]) {
 /// Find the closest known flag to an unrecognised one, if the edit
 /// distance is small enough relative to length to be a plausible typo
 /// rather than an unrelated word.
-fn near_match<'a>(unknown: &str, known: &[&'a str]) -> Option<&'a str> {
+pub(crate) fn near_match<'a>(unknown: &str, known: &[&'a str]) -> Option<&'a str> {
     known
         .iter()
         .map(|&candidate| (candidate, edit_distance(unknown, candidate)))
@@ -409,8 +414,11 @@ fn help_text(subcommand: Option<&str>) -> &'static str {
         Some("get") => {
             "apimock get <path> [-c <config>] [-m <METHOD>] [-H \"Name: value\"]... \\\n  [-b <json> | --body-file <path>] [--why] [--format text|json]\n\nAnswers what the server would return for this request - status, body,\nheaders - from configuration on disk, no server running. Covers the\nsame dispatch order the server uses: OPTIONS, then rule sets, then the\nfallback directory (zero-config mode included). Configured middleware\nis never executed; if any is configured, the answer says so and is\nmarked incomplete rather than silently skipping it.\n\n  --config, -c <path>   The root config to answer from (default: ./apimock.toml, or zero-config if absent)\n  --method, -m <METHOD> The request's HTTP method (default: GET)\n  --header, -H \"Name: value\"  Add a header; repeatable\n  --body, -b <json>     The request's JSON body, inline\n  --body-file <path>    The request's JSON body, from a file\n  --why                 Explain which rule decided the answer, and which condition failed for a near-miss. Off by default in text, on by default with --format json\n  --format text|json    text (default): human-readable. json: the RFC 053 response envelope, with provenance\n\nmatch-test still exits 1 on no match; get exits 0 with a result saying\nso - deliberately different, per RFC 053.\n\nExit codes: 0 answered (including a 404 or no match), 2 a bad invocation or the config couldn't be loaded."
         }
+        Some("set") => {
+            "apimock set rule [-c <config>] [--rule-set <path>] [--rule <n>] \\\n  [--path <url_path>] [--method <METHOD>] [-H \"Name: value\"]... \\\n  [--status <code>] [--json <value> | --text <value>] [--file <path>] \\\n  [--delay <ms>] [--dry-run] [--format text|json]\n\nAdds a rule (default), or changes an existing one when --rule is\ngiven, and writes it to the rule-set file - keeping that file's\ncomments and formatting (RFC 056). Neither the root config nor the\nrule-set file need to exist yet; a fresh directory gets a minimal\nstarting pair of files.\n\nAddressing is by (rule-set file, 0-based rule index) - never a\nprocess-local id - so an address printed by `get --why` can be passed\nto --rule-set/--rule unmodified.\n\n  --config, -c <path>   The root config to edit (default: ./apimock.toml, created if absent)\n  --rule-set <path>     The rule-set file to add to or edit within (default: ./apimock-rule-set.toml, created if absent)\n  --rule <n>            Edit the existing rule at this 0-based index, instead of adding a new one\n  --path <url_path>     The rule's url_path condition\n  --method <METHOD>     The rule's method condition\n  --header, -H \"Name: value\"  Add a header condition; repeatable. With --rule, layers onto the existing rule's conditions rather than replacing them\n  --status <code>       The response status code\n  --json <value>        The response body, as JSON (validated, stored as text)\n  --text <value>        The response body, as plain text (mutually exclusive with --json)\n  --file <path>         The response body, served from a file\n  --delay <ms>          Delay the response by this many milliseconds\n  --dry-run             Show what would change, without writing anything\n  --format text|json    text (default): human-readable. json: the RFC 053 response envelope\n\nA config file changed on disk since it was loaded fails the save with\nerror.kind \"conflict\", rather than overwriting it (RFC 056).\n\nExit codes: 0 applied (or, under --dry-run, would apply), 1 loaded and addressed successfully but the save failed, 2 a bad invocation or the config couldn't be loaded."
+        }
         _ => {
-            "apimock [-p <port>] [-d <dir>] [-c <config>] [--init [--yes] [--middleware]]\n\nRun with no flags to serve the current directory: zero-config mode\nserves ./ by URL path on port 3001, or ./apimock.toml if it exists.\n\n  -c, --config <path>  Load a config file (a bare relative path resolves\n                       the same as one prefixed with ./)\n  -p, --port <port>    Listen on a custom port\n  -d, --dir <dir>      Serve a custom fallback directory instead of ./\n  --init               Scaffold a starting config in the current directory\n  --yes                With --init, skip prompts and accept defaults\n  --middleware         With --init, also scaffold a middleware file\n  -h, --help           Print this help and exit\n  --version            Print the version and exit\n\nSubcommands:\n  get         What would the server return for this request? No server\n  match-test  Dry-run a rule match against a rule set, no server\n  validate    Validate a config, no server\n\nRun 'apimock <subcommand> --help' for subcommand-specific help."
+            "apimock [-p <port>] [-d <dir>] [-c <config>] [--init [--yes] [--middleware]]\n\nRun with no flags to serve the current directory: zero-config mode\nserves ./ by URL path on port 3001, or ./apimock.toml if it exists.\n\n  -c, --config <path>  Load a config file (a bare relative path resolves\n                       the same as one prefixed with ./)\n  -p, --port <port>    Listen on a custom port\n  -d, --dir <dir>      Serve a custom fallback directory instead of ./\n  --init               Scaffold a starting config in the current directory\n  --yes                With --init, skip prompts and accept defaults\n  --middleware         With --init, also scaffold a middleware file\n  -h, --help           Print this help and exit\n  --version            Print the version and exit\n\nSubcommands:\n  get         What would the server return for this request? No server\n  set         Add or change a rule, and write it to disk\n  match-test  Dry-run a rule match against a rule set, no server\n  validate    Validate a config, no server\n\nRun 'apimock <subcommand> --help' for subcommand-specific help."
         }
     }
 }

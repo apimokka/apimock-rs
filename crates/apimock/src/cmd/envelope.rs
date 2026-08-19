@@ -91,6 +91,49 @@ pub fn kind_for_config_error(e: &apimock_config::ConfigError) -> ErrorKind {
     }
 }
 
+/// Map a `Workspace::load` failure to one of RFC 053's error kinds.
+/// `WorkspaceError` adds one variant (`InvalidRoot`) on top of
+/// `ConfigError`, which `kind_for_config_error` already maps — that
+/// shared mapping does the rest.
+///
+/// Relocated here from `validate.rs` (RFC 057): `set` needs the exact
+/// same judgement `validate` already made, and a second private copy
+/// is the drift this module's own doc comment argues against.
+pub fn kind_for_workspace_error(e: &apimock_config::WorkspaceError) -> ErrorKind {
+    use apimock_config::WorkspaceError;
+    match e {
+        WorkspaceError::InvalidRoot { .. } => ErrorKind::ConfigUnreadable,
+        WorkspaceError::Config(inner) => kind_for_config_error(inner),
+    }
+}
+
+/// Map a `Workspace::apply` failure to RFC 053's error kinds. Every
+/// `ApplyError` variant (RFC 057: `set`'s first caller of this) is the
+/// same shape of mistake — a bad address or a bad payload the *caller*
+/// supplied, not a state, filesystem or internal problem — so all three
+/// map to `usage` rather than needing a per-variant judgement call.
+pub fn kind_for_apply_error(_e: &apimock_config::ApplyError) -> ErrorKind {
+    ErrorKind::Usage
+}
+
+/// Map a `Workspace::save` failure to RFC 053's error kinds. `Conflict`
+/// is the one RFC 053 § 6 reserved specifically for this (`set` is its
+/// first producer); `Read`/`Write` are filesystem failures ahead of or
+/// during the write, mapped to `io`; `Serialize`/`Inconsistent` are
+/// this crate's own bugs, not the caller's mistake, mapped to
+/// `internal`. `SaveError` is `#[non_exhaustive]`-free today, so a
+/// future variant fails to compile here rather than silently landing
+/// in whichever arm came last — same discipline `kind_for_config_error`
+/// already applies.
+pub fn kind_for_save_error(e: &apimock_config::SaveError) -> ErrorKind {
+    use apimock_config::SaveError;
+    match e {
+        SaveError::Conflict { .. } => ErrorKind::Conflict,
+        SaveError::Read { .. } | SaveError::Write { .. } => ErrorKind::Io,
+        SaveError::Serialize { .. } | SaveError::Inconsistent { .. } => ErrorKind::Internal,
+    }
+}
+
 /// Build a success envelope: `{ "schema": 1, "apimock": "<version>",
 /// "result": <result> }`. `result` is a plain JSON value rather than a
 /// generic `T: Serialize`, since every caller already has one

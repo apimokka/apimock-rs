@@ -50,6 +50,7 @@ use crate::{
     view::Diagnostic,
 };
 
+mod address;
 mod diff;
 mod edit;
 mod id_index;

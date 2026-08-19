@@ -187,6 +187,12 @@ wrong for that case, which is most of them.
 | `--format text` | Default. Human-readable |
 | `--format json` | The [RFC 053 response envelope](#the-response-envelope---format-json), including provenance (the absolute paths of the config and rule sets that answered) |
 
+**`--format json`'s `matched` object also carries `rule_set_file`**
+alongside `rule_set_index`/`rule_index` — the same rule-set path
+`--why` reports (see below), added so the address can be handed to
+[`apimock set`](#apimock-set)'s `--rule-set`/`--rule` unmodified,
+without a second `--why` round trip just to learn the path.
+
 **Middleware is never executed.** If any is configured, the answer says
 so explicitly (`middleware.configured`/`middleware.note` in JSON, a
 console note in text) and proceeds anyway — the response may be wrong if
@@ -256,6 +262,77 @@ either, so they aren't listed here. `actual` is always present, even
 for conditions whose text-format output never showed it historically
 (`url_path`, headers) — the JSON shape is not constrained to match
 `match-test`'s older, narrower text output.
+
+## `apimock set`
+
+```
+apimock set rule [-c <config>] [--rule-set <path>] [--rule <n>] \
+  [--path <url_path>] [--method <METHOD>] [-H "Name: value"]... \
+  [--status <code>] [--json <value> | --text <value>] [--file <path>] \
+  [--delay <ms>] [--dry-run] [--format text|json]
+```
+
+Adds a rule (the default), or changes an existing one when `--rule` is
+given, and writes it to the rule-set file — keeping that file's
+comments and formatting (RFC 056).
+Neither the root config nor the rule-set file need to exist yet — a
+fresh directory gets a minimal starting pair of files, not the
+example-filled scaffold `--init` writes.
+
+**Addressing is by natural key, never a process ID.** Every
+`apimock set` invocation is a new process, so a new load of the
+config — anything keyed by a process-local ID would be meaningless to
+the next invocation. `set` addresses a rule by `(rule-set file path,
+0-based rule index)` instead — the same shape [`get`'s `--format json`
+`matched`/`--why`](#apimock-get) already reports. An address printed
+by `get` can be passed to `--rule-set`/`--rule` unmodified.
+
+| Flag | Meaning |
+|---|---|
+| `--config`, `-c <path>` | The root config to edit. Default: `./apimock.toml`, created if absent |
+| `--rule-set <path>` | The rule-set file to add to, or edit within. Default: `./apimock-rule-set.toml`, created if absent |
+| `--rule <n>` | Edit the existing rule at this **0-based** index, instead of adding a new one |
+| `--path <url_path>` | The rule's `url_path` condition |
+| `--method <METHOD>` | The rule's method condition |
+| `--header`, `-H "Name: value"` | Add a header condition; repeatable. With `--rule`, layers onto the existing rule's conditions rather than replacing them |
+| `--status <code>` | The response status code |
+| `--json <value>` | The response body, as JSON (validated at parse time, stored as text) |
+| `--text <value>` | The response body, as plain text — mutually exclusive with `--json` |
+| `--file <path>` | The response body, served from a file |
+| `--delay <ms>` | Delay the response by this many milliseconds |
+| `--dry-run` | Show what would change, without writing anything |
+| `--format text` | Default. Human-readable |
+| `--format json` | The [RFC 053 response envelope](#the-response-envelope---format-json) |
+
+**`--rule`'s index is 0-based**, matching `get`'s JSON contract rather
+than its 1-based text display — the machine-readable convention, since
+that is the one meant to compose. Addressing a rule set by a path not
+in `service.rule_sets` when `--rule` is also given, or an out-of-range
+rule index, is a `usage` error — not a panic, and not a silent no-op.
+
+**A file changed on disk since it was loaded is refused, not
+overwritten** (RFC 056) —
+`error.kind: "conflict"`, distinguished from an unrelated read failure
+(`"io"`). No file is modified when either happens.
+
+**`--dry-run` never reports a `NodeId`.** Its preview resolves every
+changed node back to the same natural-key address `set` accepts, the
+same way a successful save's own `changes` array does — nothing
+process-local ever appears in `set`'s output, on any path, success or
+error.
+
+**Scope of this cut.** `service.middlewares` is never added, changed
+or removed by any `set` invocation — existing entries pass through
+untouched (RFC 048 § 9 T2, deferred rather than refused). `DeleteRule`,
+`MoveRule` and `RemoveRuleSet` aren't reachable from `set` yet — those
+renumber existing rules, which would break the positional address this
+command's whole design depends on staying stable across invocations.
+One rule change per invocation; there is no batch flag.
+
+Exit codes: `0` applied (or, under `--dry-run`, would apply), `1`
+loaded and addressed successfully but the save failed (conflict, io,
+or an internal error), `2` a bad invocation or the configuration
+couldn't be loaded.
 
 ## `apimock match-test`
 

@@ -82,6 +82,30 @@ fn returns_the_matched_rules_body_and_status() {
     assert_eq!(v["result"]["matched"]["rule_index"], 0);
 }
 
+// ── RFC 057 handoff § 1.2: `matched` carries `rule_set_file` too, so
+// its address composes with `set`'s (path, index) addressing without
+// the caller needing a second `--why` round trip just to learn the
+// path. Additive to RFC 055's shape — an accepted-but-unreleased
+// command, so this costs nothing now and a breaking change later. ──
+
+#[test]
+fn matched_carries_rule_set_file_alongside_the_index() {
+    let dir = workspace_with_two_rules();
+    let output = bin()
+        .current_dir(dir.path())
+        .args(["get", "/orders", "-m", "POST", "--format", "json"])
+        .output()
+        .expect("failed to run apimock get");
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let v: serde_json::Value =
+        serde_json::from_str(&stdout).unwrap_or_else(|e| panic!("{e}\nstdout:\n{stdout}"));
+    // The second rule (no body condition) matches when there's no body.
+    assert_eq!(v["result"]["matched"]["rule_index"], 1);
+    assert_eq!(v["result"]["matched"]["rule_set_file"], "./rules.toml");
+}
+
 // ── `--why`: names the deciding rule; a near-miss names the failing condition ──
 
 #[test]

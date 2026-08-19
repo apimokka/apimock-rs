@@ -34,22 +34,9 @@
 //! release so a caller can migrate and verify before 6.0.0 removes
 //! `--json`.
 
-use apimock_config::{Severity, Workspace, WorkspaceError};
+use apimock_config::{Severity, Workspace};
 
-use crate::cmd::envelope::{self, ErrorKind, Format};
-
-/// Map a `Workspace::load` failure to one of RFC 053's error kinds.
-/// `WorkspaceError` adds one variant (`InvalidRoot`) on top of the
-/// `ConfigError` `envelope::kind_for_config_error` already maps — that
-/// shared mapping does the rest, since `get` (RFC 055) loads a plain
-/// `Config` and needs the exact same judgement without `Workspace`'s
-/// extra `InvalidRoot` case.
-fn error_kind_for_load_failure(e: &WorkspaceError) -> ErrorKind {
-    match e {
-        WorkspaceError::InvalidRoot { .. } => ErrorKind::ConfigUnreadable,
-        WorkspaceError::Config(inner) => envelope::kind_for_config_error(inner),
-    }
-}
+use crate::cmd::envelope::{self, Format};
 
 /// Flags parsed from the `apimock validate` command line.
 pub struct ValidateArgs {
@@ -158,7 +145,7 @@ pub fn run(args: &[String]) -> i32 {
         Err(e) => {
             if is_envelope {
                 let envelope = envelope::err(
-                    error_kind_for_load_failure(&e),
+                    envelope::kind_for_workspace_error(&e),
                     format!("failed to load config: {}", e),
                 );
                 println!(
