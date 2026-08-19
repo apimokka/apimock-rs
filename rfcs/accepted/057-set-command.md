@@ -1,12 +1,13 @@
 # RFC 057 — `apimock set`: make the server answer X under condition Y
 
-**Status.** Proposed — awaiting owner approval.
-**Tracks.** v6. [RFC 048](../accepted/048-v6-cli-interface-concept.md) § 11 item 5
+**Status.** **Accepted** — approved by the project owner 2026-08-19.
+**Not yet implemented**; the implementation handoff follows.
+**Tracks.** v6. [RFC 048](./048-v6-cli-interface-concept.md) § 11 item 5
 — the write half, and the last of the umbrella's portfolio.
 **Touches.** `crates/apimock/src/cmd/` (a new command), and whatever
 `apimock-config` must expose to address a node from outside a session.
-**Depends on.** [RFC 053](../accepted/053-v6-cli-contract.md) (contract),
-[RFC 056](../accepted/056-toml-edit-migration.md) (formatting survives a write),
+**Depends on.** [RFC 053](./053-v6-cli-contract.md) (contract),
+[RFC 056](./056-toml-edit-migration.md) (formatting survives a write),
 RFC 048 § 9 **T2** (scope).
 
 ## Summary

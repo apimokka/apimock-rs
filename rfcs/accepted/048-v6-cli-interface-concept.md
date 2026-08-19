@@ -522,12 +522,12 @@ Indicative, to be numbered when written.
 
 | # | Subject | Note |
 |---|---|---|
-| 1 | [**RFC 056**](./056-toml-edit-migration.md) — `toml_edit`, preserve comments and ordering | § 8, first. Drafted 2026-08-17 |
+| 1 | [**RFC 056**](./056-toml-edit-migration.md) — `toml_edit`, preserve comments and ordering | § 8, first. Drafted 2026-08-19; **accepted**, implemented |
 | 2 | CLI hygiene: `--version`, `--help`, reject unknown flags, fix relative `--config` | § 6, prerequisite |
-| 3 | [**RFC 053**](./053-v6-cli-contract.md) — the contract: invocation, schemas, error taxonomy, exit codes | § 3. Drafted 2026-08-17 |
+| 3 | [**RFC 053**](./053-v6-cli-contract.md) — the contract: invocation, schemas, error taxonomy, exit codes | § 3. Drafted 2026-08-17; **accepted** |
 | 3b | **Threat model refinement** — settle T2 (data vs code) before `set` is designed | § 9, blocks RFC 5 |
-| 4 | [**RFC 055**](./055-get-command.md) — `get`, W1/W2/W3, with provenance | § 2, § 4. Drafted 2026-08-17 |
-| 5 | [**RFC 057**](../proposed/057-set-command.md) — `set`, W4/W6, preview, transaction boundary | § 2. Drafted 2026-08-17 |
+| 4 | [**RFC 055**](./055-get-command.md) — `get`, W1/W2/W3, with provenance | § 2, § 4. Drafted 2026-08-19; **accepted**, implemented |
+| 5 | [**RFC 057**](./057-set-command.md) — `set`, W4/W6, preview, transaction boundary | § 2. Drafted 2026-08-19; **accepted** 2026-08-19, not yet implemented |
 | 6 | **Enumerate v6's breaking changes** — the list, not the designs | § 7.1, **blocks the final 5.x** |
 | 7 | Deprecation warnings in 5.x, on stderr, with a named removal version | § 7.1, ships in v5 |
 | 8 | Migration guide and the loud-failure requirement | § 7 |
