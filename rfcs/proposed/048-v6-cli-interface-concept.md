@@ -414,37 +414,70 @@ neither is true of v5.
 | **T6** | Server-hosted configuration API — unauthenticated remote *write* on a process frequently bound to `0.0.0.0` in CI and Docker | Deferred (§ 4). If ever built: separate port, loopback only, disabled by default |
 | **T7** | Supply chain of the new `toml_edit` dependency | RFC 033's existing `cargo-deny` gates apply; no new mechanism needed |
 
-### T2 — ✅ decided 2026-08-17: `set` may not attach middleware
+### T2 — ✅ decided 2026-08-17: deferred, not refused
 
-**Owner decision.** `set` may not add, change or remove an entry in
-`service.middlewares`. Existing entries pass through untouched —
-preserving what is already in the model and the file is not attaching
-anything.
+**Owner decision, after a correction to the cost picture.** `set`'s first
+cut does **not** add, change or remove entries in `service.middlewares`.
+Existing entries pass through untouched — preserving what is already in
+the model and the file is not attaching anything.
 
-**The rule is not "middleware is untouchable."** `apimock --init
---middleware` already writes `middlewares = ["./apimock-middleware.rhai"]`
-into the config it generates (`args/init_interactive.rs`), so a flat
-prohibition would contradict shipped behaviour. The rule is:
+**But this is a priority decision, not a prohibition.** In the owner's
+words: *"it can be implemented but it is unnecessary to be prioritized"*,
+with the caveat that it *"requires strict error handling."*
 
-> **The caller does not get to name arbitrary code for the server to
-> execute.**
+#### The argument that was wrong, recorded because it was the deciding one
 
-`--init` scaffolds *our own template* at a *fixed path*, interactively,
-at project creation. `set` attaching middleware would let a caller point
-at *arbitrary code* at an *arbitrary path*, non-interactively — possibly
-code the same agent wrote moments earlier. Those are different acts, and
-only the second is refused.
+This was first decided against on **maintenance cost** — that a `set`
+surface for middleware would mean owning Rhai validation, path resolution
+and liveness checks from the CLI. Checking the source shows all three
+already exist:
 
-That framing leaves room for a future `set` that scaffolds from our
-template, should anyone want it. It would be a separate decision with its
-own reasoning, not a loophole in this one.
+- `Server::new` compiles middleware at startup (`server.rs`) and
+  propagates the failure with `?`, so a broken script already fails the
+  server loudly.
+- Middleware paths already resolve against the config file's directory,
+  at startup.
+- `requires_reload` on both `SaveResult` and `ApplyResult` already models
+  reboot semantics.
 
-**The deciding argument was maintenance, not security.** The security
-case is real but arguably manageable; the cost case is not. A `set`
-surface for middleware means owning Rhai validation, path resolution and
-liveness checks from the CLI — for the most advanced feature in the
-product, which the agents this release targets mostly do not need. Rules
-and responses are what they build.
+Under a reboot model — which this project already assumes — writing a
+`middlewares` entry needs no new machinery. **The cost claim was asserted
+without checking, and it was the architect's, not the owner's.**
+
+#### What the security argument is actually worth
+
+A caller who can invoke `set` could cause the server to execute a file of
+their choosing on next boot. For a person at a terminal that is
+unremarkable — they could edit the file. For an agent acting on untrusted
+input (**T3**) it is the difference between changing what a mock returns
+and running code in the process.
+
+That argument has a hole worth stating: **refusing does not prevent it.**
+An agent that can be induced to run `apimock set …` can be induced to
+write the `.rhai` file directly. The refusal is a speed bump against a
+capable attacker, not a barrier.
+
+#### The real cost, for whoever picks this up
+
+Not maintenance — **correctness**. `set` writing a middleware path can
+leave a workspace that no longer boots: a missing file or a script that
+does not compile fails at `Server::new`, long after `set` reported
+success. That is precisely U2's failure mode — a command that appears to
+succeed without achieving anything.
+
+So an implementation must **verify the file exists and compiles before
+reporting success**, which means pulling Rhai compilation into `set`'s
+path. Compiling is not executing, but it is a real dependency and a real
+error surface, and it is what "strict error handling" means here.
+
+#### If it is built later
+
+Through an **explicit command or flag**, never a generic "set this
+field" verb — so that code execution is never a side effect of an
+ordinary config edit, and an explicit intent is visible in a command log.
+Note `apimock --init --middleware` already writes
+`middlewares = ["./apimock-middleware.rhai"]`, so the project is not
+prohibiting the idea, only declining to generalise it now.
 
 **Original note, kept:** T2 is the one to settle first, because it is the
 only threat where the safe answer is a *scope decision* rather than an
