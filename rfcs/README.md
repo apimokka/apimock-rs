@@ -22,12 +22,7 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-| ID  | Title |
-|-----|-------|
-| 039 | [An additive-only gate for the public API](./proposed/039-public-api-additive-only-gate.md) — enable after 6.0.0 |
-| 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./proposed/041-error-type-shape.md) |
-| 042 | [External change detection: correct the contract](./proposed/042-external-change-detection.md) |
-| 043 | [Module split: `workspace/edit.rs`](./proposed/043-module-split-edit-rs.md) |
+*(None open.)*
 
 ## Accepted
 
@@ -39,7 +34,11 @@ which rather than leaving a reader to assume.
 
 | ID  | Title | State |
 |-----|-------|-------|
+| 039 | [An additive-only gate for the public API](./accepted/039-public-api-additive-only-gate.md) — enable after 6.0.0 | not started; **enable after 6.0.0** |
 | 040 | [Trace channel: redaction, and non-JSON body capture](./accepted/040-trace-capture-and-redaction.md) | merged to `main` |
+| 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./accepted/041-error-type-shape.md) | not started; breaking |
+| 042 | [External change detection: correct the contract](./accepted/042-external-change-detection.md) | not started |
+| 043 | [Module split: `workspace/edit.rs`](./accepted/043-module-split-edit-rs.md) | not started; **after RFC 057** |
 | 048 | [v6 concept: the CLI as a first-class interface](./accepted/048-v6-cli-interface-concept.md) — umbrella | governs the rest |
 | 050 | [Should non-JSON request bodies be captured at all?](./accepted/050-non-json-body-capture-decision.md) — decision RFC | merged to `main` |
 | 051 | [Redact credential headers in verbose request logging](./accepted/051-verbose-log-header-redaction.md) | merged to `main` |
@@ -47,8 +46,8 @@ which rather than leaving a reader to assume.
 | 053 | [The v6 CLI contract](./accepted/053-v6-cli-contract.md) | contract; completed by 057 |
 | 055 | [`apimock get`: what will this request return?](./accepted/055-get-command.md) | merged to `main` |
 | 056 | [Preserve what people wrote: `toml_edit` for the save path](./accepted/056-toml-edit-migration.md) | merged to `main` |
-| 057 | [`apimock set`: make the server answer X under condition Y](./accepted/057-set-command.md) | handed off; not started |
-| 058 | [`respond_dir` grows on every save](./accepted/058-respond-dir-prefix-persistence.md) — **released defect, R-10** | not started |
+| 057 | [`apimock set`: make the server answer X under condition Y](./accepted/057-set-command.md) | merged to `main` |
+| 058 | [`respond_dir` grows on every save](./accepted/058-respond-dir-prefix-persistence.md) — **released defect, R-10** | merged to `main` |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not

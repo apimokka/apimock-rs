@@ -1,7 +1,8 @@
 # RFC 039 — An additive-only gate for the public API
 
-**Status.** Proposed — awaiting owner approval. **Deliberately not for
-6.0.0** — see § When this turns on.
+**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Not yet implemented, and deliberately not for 6.0.0** — the design is
+settled; the gate is enabled after 6.0.0 ships. See § When this turns on.
 **Tracks.** CI quality gates; API stability. Follows
 [RFC 031](../done/031-ci-quality-gates.md).
 **Touches.** `.github/workflows/ci.yaml`, a checked-in API baseline per

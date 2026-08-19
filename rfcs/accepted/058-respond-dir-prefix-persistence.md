@@ -7,7 +7,7 @@
 `crates/apimock-routing/src/rule_set/prefix.rs`,
 `crates/apimock-config/src/toml_writer.rs`.
 **Depends on.** Nothing. Interacts with
-[RFC 041](../proposed/041-error-type-shape.md) — see § Public surface.
+[RFC 041](./041-error-type-shape.md) — see § Public surface.
 
 ## Summary
 

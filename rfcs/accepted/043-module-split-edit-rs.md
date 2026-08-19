@@ -1,6 +1,7 @@
 # RFC 043 — Module split: `workspace/edit.rs`
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Not yet implemented.** Sequence **after** RFC 057, which has landed.
 **Tracks.** Maintainability. Non-breaking; no public surface changes.
 **Touches.** `crates/apimock-config/src/workspace/edit.rs` and the
 existing `crates/apimock-config/src/workspace/edit/` directory.

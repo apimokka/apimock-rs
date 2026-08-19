@@ -1,6 +1,7 @@
 # RFC 042 — External change detection: correct the contract, don't build a watcher
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Not yet implemented.**
 **Tracks.** v6 API quality; GUI integration. **Rescoped** after the
 owner's G1 answer (2026-08-17) removed its original premise.
 **Touches.** `crates/apimock-config/src/workspace.rs` — chiefly its
