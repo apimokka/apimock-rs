@@ -22,7 +22,12 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-*(None open.)*
+| ID  | Title |
+|-----|-------|
+| 039 | [An additive-only gate for the public API](./proposed/039-public-api-additive-only-gate.md) — enable after 6.0.0 |
+| 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./proposed/041-error-type-shape.md) |
+| 042 | [External change detection: correct the contract](./proposed/042-external-change-detection.md) |
+| 043 | [Module split: `workspace/edit.rs`](./proposed/043-module-split-edit-rs.md) |
 
 ## Accepted
 
