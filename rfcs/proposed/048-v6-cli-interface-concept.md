@@ -459,7 +459,7 @@ Indicative, to be numbered when written.
 | 2 | CLI hygiene: `--version`, `--help`, reject unknown flags, fix relative `--config` | § 6, prerequisite |
 | 3 | [**RFC 053**](./053-v6-cli-contract.md) — the contract: invocation, schemas, error taxonomy, exit codes | § 3. Drafted 2026-08-17 |
 | 3b | **Threat model refinement** — settle T2 (data vs code) before `set` is designed | § 9, blocks RFC 5 |
-| 4 | `get` — W1/W2/W3, including the "answered from" provenance | § 2, § 4 |
+| 4 | [**RFC 055**](./055-get-command.md) — `get`, W1/W2/W3, with provenance | § 2, § 4. Drafted 2026-08-17 |
 | 5 | `set` — W4/W6, preview, transaction boundary | § 2 |
 | 6 | **Enumerate v6's breaking changes** — the list, not the designs | § 7.1, **blocks the final 5.x** |
 | 7 | Deprecation warnings in 5.x, on stderr, with a named removal version | § 7.1, ships in v5 |
