@@ -549,6 +549,7 @@ here so they are not lost between milestones.
 
 | Finding | Disposition |
 |---|---|
+| **`apimock get` accepts unknown flags silently.** `apimock get /a --bogus` exits `0` and answers normally; the flag is neither rejected nor reported. `validate` rejects correctly (exit `2`), so the inconsistency was invisible. Shipped with RFC 055 and **missed by my own review of it**; found 2026-08-19 while reviewing RFC 057, whose `set` had the same gap in a worse form (a mistyped `set` corrupted the config). Violates RFC 049's front-door rule and RFC 053's `usage`/exit-`2` contract. Worst for U2, the agent that fails silently — a typo reads as success | **Fix before 6.0.0.** `set`'s half is required in RFC 057's REVIEW-001 § 3; this is the `get` half, deliberately kept out of that package's scope. Needs its own small RFC or a rider on RFC 049 — architect to decide which |
 | `respond.headers` dropped on `status` responses; `content-type` overwritten on `text` | **RFC 045** |
 | `[default].delay_response_milliseconds` parses, validates, logs, does nothing | **RFC 045** |
 | `apimock validate` passes on inert configuration | **RFC 045** goal 4 — the finding underneath both |

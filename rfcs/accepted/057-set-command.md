@@ -124,12 +124,35 @@ than a feature list. Here it is, and this RFC proposes it as the bar:
 
 ```sh
 mkdir demo && cd demo
-apimock set rule --path /users/1 --status 200 --json '{"id":1}'          --format json
 apimock set rule --path /users/1 --header 'x-api-key: k1' --status 403   --format json
+apimock set rule --path /users/1 --status 200 --json '{"id":1}'          --format json
 apimock get /users/1                                                     --format json
 apimock get /users/1 --header 'x-api-key: k1'                            --format json
-apimock validate                                                         --format json
+apimock validate -c ./apimock.toml                                       --format json
 ```
+
+**Amended 2026-08-19, during implementation.** The first two lines were
+originally the other way round, and the script did not demonstrate what
+it claimed: `Strategy::FirstMatch` scans rules in array order with no
+specificity tie-break (`apimock-routing/src/rule_set.rs:181-187`), and
+`AddRule` only appends (`workspace/edit.rs:288`), so the unconditional
+rule added first answered *every* request to `/users/1` and the
+header-gated rule was never reached. The second `get` returned 200, not
+403.
+
+**Specific condition first, general fallback second.** No new command is
+needed — append-only ordering is sufficient, and the fix is to choose the
+invocation order.
+
+`validate` also needs an explicit `-c ./apimock.toml`: it has no
+default-config convenience, and its `-c` does not get RFC 049's
+bare-relative-path normalisation. Pre-existing, first recorded in RFC
+055's review.
+
+Found by the dev team by **running** the script and asserting response
+content — exit codes alone pass either ordering, since `get` exits 0
+whether or not anything matched. That is a lesson about how this project
+specifies acceptance tests, not only about this script.
 
 Every step non-interactive, every exit code asserted, running in CI on
 every commit. **If that script is awkward to write, the design is
