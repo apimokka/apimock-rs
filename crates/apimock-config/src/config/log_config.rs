@@ -6,6 +6,7 @@ use verbose_config::VerboseConfig;
 
 /// log
 #[derive(Clone, Default, Deserialize)]
+#[non_exhaustive]
 pub struct LogConfig {
     pub verbose: VerboseConfig,
 }

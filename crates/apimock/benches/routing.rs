@@ -90,12 +90,7 @@ fn parsed_request_for(url_path: &str) -> ParsedRequest {
         .body(())
         .expect("build request");
     let (component_parts, _) = req.into_parts();
-    ParsedRequest {
-        url_path: url_path.to_owned(),
-        component_parts,
-        body_json: None,
-        body_len: None,
-    }
+    ParsedRequest::new(url_path.to_owned(), component_parts)
 }
 
 fn bench_find_matched(c: &mut Criterion) {

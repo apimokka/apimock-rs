@@ -93,12 +93,7 @@ pub async fn parsed_request_from(
             .len()
     });
 
-    Ok(ParsedRequest {
-        url_path,
-        component_parts,
-        body_json,
-        body_len,
-    })
+    Ok(ParsedRequest::new(url_path, component_parts).with_body(body_json, body_len))
 }
 
 /// Emit a single log line describing the request.
@@ -249,18 +244,10 @@ mod tests {
         }
         let req = builder.body(()).unwrap();
         let (component_parts, _) = req.into_parts();
-        ParsedRequest {
-            url_path: "/".to_owned(),
-            component_parts,
-            body_json: None,
-            body_len: None,
-        }
+        ParsedRequest::new("/".to_owned(), component_parts)
     }
 
-    const VERBOSE_HEADERS_ONLY: VerboseConfig = VerboseConfig {
-        header: true,
-        body: false,
-    };
+    const VERBOSE_HEADERS_ONLY: VerboseConfig = VerboseConfig::new(true, false);
 
     /// RFC 051 evidence requirement: with `log.verbose.header` on and no
     /// other configuration (`TraceConfig::default()`), the rendered log

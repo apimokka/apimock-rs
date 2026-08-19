@@ -159,16 +159,12 @@ fn build_parsed_request(
         .with_context(|| format!("invalid URI or headers for path {}", args.path))?
         .into_parts();
 
-    Ok(ParsedRequest {
-        url_path: args.path.clone(),
-        component_parts: parts,
-        body_json,
-        // No real body-collection step here (`--body`/`--body-file` go
-        // straight to parsed JSON), and `match-test` never reaches the
-        // trace channel — `body_len`'s only consumer — so there is
-        // nothing meaningful to report (RFC 050).
-        body_len: None,
-    })
+    // No real body-collection step here (`--body`/`--body-file` go
+    // straight to parsed JSON), and `match-test` never reaches the
+    // trace channel — `body_len`'s only consumer — so there is nothing
+    // meaningful to report (RFC 050); hence `None` even though a body
+    // may be attached.
+    Ok(ParsedRequest::new(args.path.clone(), parts).with_body(body_json, None))
 }
 
 // ── Match runner ──────────────────────────────────────────────────────
@@ -406,12 +402,7 @@ mod tests {
             .body(())
             .unwrap()
             .into_parts();
-        ParsedRequest {
-            url_path: path.to_owned(),
-            component_parts: parts,
-            body_json: body,
-            body_len: None,
-        }
+        ParsedRequest::new(path.to_owned(), parts).with_body(body, None)
     }
 
     #[test]

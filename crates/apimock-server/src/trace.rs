@@ -77,6 +77,7 @@ pub struct MatchTraceEvent {
 
 /// Key fields from the incoming HTTP request.
 #[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
 pub struct RequestSummary {
     pub method: String,
     pub url_path: String,
@@ -179,6 +180,7 @@ pub enum HeaderRedactionMode {
 /// this; RFC 023's `[trace]` TOML section was never wired to this
 /// struct). `TraceEmitter::new()` always uses `TraceConfig::default()`.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub struct TraceConfig {
     /// Capture the JSON request body in each event. Default: `false`.
     pub capture_body: bool,

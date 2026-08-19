@@ -40,32 +40,51 @@ No other CLI invocation that works today is expected to change.
 to it rather than reshaping what it prints. Bare `apimock` keeps working
 as an alias for `apimock serve`.
 
-## Library: five public structs become `#[non_exhaustive]`
+## Library: five public structs are now `#[non_exhaustive]`
 
-**Expected**, not yet done — this is RFC 052, not yet implemented as of
-5.19.0.
+**Done, on `main`, ahead of 6.0.0's eventual release** (RFC 052) — this
+is the one item on this page that has already shipped rather than being
+a preview, because `main` is the 6.0.0 line and the break is real from
+this point on for anyone building against it.
 
 `TraceConfig`, `RequestSummary` (`apimock-server::trace`),
 `ParsedRequest` (`apimock-routing`), `LogConfig`, and `VerboseConfig`
-(`apimock-config`) are all `pub` structs with public fields today, which
-means constructing one with a struct literal, or exhaustively
+(`apimock-config`) are all `pub` structs with public fields. Before this
+change, constructing one with a struct literal, or exhaustively
 destructuring one (`let Foo { a, b, c } = value;` naming every field),
-both compile. In 6.0.0 they gain `#[non_exhaustive]`, and both of those
-stop compiling from outside their defining crate.
+both compiled from any crate. Now both stop compiling from outside the
+type's defining crate — fields stay publicly readable by name
+(`value.body_json` still works everywhere), only literal construction
+and exhaustive destructuring are affected.
 
-**What replaces a struct literal:** a constructor or builder function,
-for the two of these five you're likely to construct —
-`TraceConfig` and (if you build requests by hand rather than through
-this crate's own HTTP path) `ParsedRequest`. **We don't yet know the
-exact shape of that constructor** — RFC 052 names this as work still to
-be scoped, established against how these types are actually used
-downstream before the API is designed. If you construct any of these
-five types today, that is worth telling the project about now, so the
-replacement is designed against real usage rather than guessed at.
+**What replaces a struct literal, concretely — the two types with a
+real cross-crate constructor:**
+
+- **`ParsedRequest::new(url_path: String, component_parts: hyper::http::request::Parts) -> Self`**
+  builds one with no body (`body_json`/`body_len` both `None`) — the
+  shape every existing caller outside `apimock-routing` actually wanted.
+  Chain **`.with_body(body_json: Option<Value>, body_len: Option<usize>)`**
+  to attach one, replacing whatever was there before (it doesn't merge
+  with a prior call).
+- **`VerboseConfig::new(header: bool, body: bool) -> Self`** — a `const
+  fn`, so it works in a `const` initializer, which a runtime-only
+  builder would not. `LogConfig` didn't need one: nothing outside
+  `apimock-config` ever constructed it with a literal — every existing
+  use goes through `Default` or `Deserialize`, both untouched by
+  `#[non_exhaustive]`.
+
+**`TraceConfig` and `RequestSummary` got the attribute but no new
+constructor** — every construction site for both, checked across the
+whole workspace, was already inside `apimock-server`, the crate that
+defines them, so nothing outside that crate was ever affected.
+`TraceConfig::default()` (already existed) remains how to build one from
+elsewhere if you need to; a real cross-crate literal site would need
+its own constructor the same way `ParsedRequest`'s did, and none exists
+today.
 
 **What replaces exhaustive destructuring:** match or destructure with
 `..` to ignore fields you don't use (`let Foo { a, .. } = value;`), which
-already compiles today and keeps compiling after the change — the
+already compiled before this change and keeps compiling after it — the
 mechanical fix, if you hit this, is adding `..`.
 
 **Why now, in one release, rather than piecemeal:** three RFCs landing
@@ -73,15 +92,21 @@ on `main` this month (040, 050, and the shape of 051's own configuration
 surface) each added fields to one or more of these types, and every one
 of those additions was, strictly, a breaking API change that went
 unnoticed until asked about directly. RFC 052 takes that break once,
-deliberately, instead of repeating it by accident. See RFC 052 itself
+deliberately, instead of repeating it by accident — see RFC 052 itself
 for the full reasoning.
 
-## Library: `TraceConfig`, `ParsedRequest`, and `RequestSummary` already have new fields
+**Whether the GUI constructs any of these five is still an open
+question** (RFC 052's Unresolved 1) — the constructors above were built
+for what this workspace's own code needs, established from source
+rather than guessed at. If the GUI turns out to construct one of the
+three that didn't get a constructor, that's an additive addition on top
+of this shape, not a redesign.
 
-Already true on `main` as of RFC 040 and RFC 050 — not a 6.0.0 change,
-but worth listing here because it's the same class of break (a struct
-literal that named every field now needs updating) and someone reading
-this page for "what do I need to change" should see it in one place:
+## Library: `TraceConfig`, `ParsedRequest`, and `RequestSummary` already had new fields, before `#[non_exhaustive]`
+
+For the historical record — the reason RFC 052 exists at all. RFC 040
+and RFC 050 each added fields to these types before `#[non_exhaustive]`
+existed to absorb that:
 
 - `TraceConfig` gained `header_redaction`, `header_denylist`,
   `header_allowlist` (RFC 040 — request-header redaction for the trace
@@ -89,10 +114,11 @@ this page for "what do I need to change" should see it in one place:
 - `ParsedRequest` and `RequestSummary` each gained `body_len` (RFC 050 —
   a non-JSON request body's presence and length, never its content).
 
-If you construct either type with a struct literal or destructure them
-exhaustively, this already needs a code change on `main`, independent of
-6.0.0. Once RFC 052 lands, this is exactly the situation `#[non_exhaustive]`
-exists to prevent from recurring.
+Both additions predate `#[non_exhaustive]` landing, so a struct literal
+written against an older version of either type would already have
+needed updating for this reason alone, independent of the
+`#[non_exhaustive]` change above. This is exactly the class of break
+`#[non_exhaustive]` now exists to prevent recurring.
 
 ## Library: error enums may be reshaped
 
