@@ -422,7 +422,7 @@ async fn rule_set_response(
     parsed_request: &ParsedRequest,
 ) -> Option<Result<hyper::Response<BoxBody>, hyper::http::Error>> {
     for (rule_set_idx, rule_set) in config.service.rule_sets.iter().enumerate() {
-        if let Some(respond) = rule_set.find_matched(
+        if let Some((_rule_idx, respond)) = rule_set.find_matched(
             parsed_request,
             config.service.strategy.as_ref(),
             rule_set_idx,
@@ -446,8 +446,10 @@ async fn rule_set_response(
     None
 }
 
-/// OPTIONS request handler (CORS preflight).
-fn handle_options(
+/// OPTIONS request handler (CORS preflight). `pub` so `apimock get`
+/// (RFC 055) can answer for an `OPTIONS` request through the exact same
+/// function `service` calls, rather than reimplementing it.
+pub fn handle_options(
     request_headers: &HeaderMap,
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     let mut response = Response::new(Empty::new().boxed());

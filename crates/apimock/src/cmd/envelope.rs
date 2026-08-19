@@ -59,6 +59,38 @@ impl ErrorKind {
     }
 }
 
+/// `--format`'s value — shared by every command that offers it
+/// (`validate`, `get`), so there is one definition of "text or json"
+/// rather than a copy per command.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Format {
+    Text,
+    Json,
+}
+
+/// Map a config-loading failure to one of RFC 053's error kinds, rather
+/// than labelling every load failure the same way. Shared by `validate`
+/// and `get` — both load an `apimock_config::Config` (or the
+/// `Workspace` wrapper around one) and both need this exact judgement:
+/// file genuinely missing/unreadable is `config_unreadable`; the file
+/// was read but is syntactically or semantically invalid is
+/// `config_invalid`.
+///
+/// `ConfigError` is matched exhaustively deliberately (it is not
+/// `#[non_exhaustive]` — RFC 052 § Unresolved 2): a future variant
+/// fails to compile here until it's given a considered `ErrorKind`,
+/// rather than silently falling into whichever arm came last.
+pub fn kind_for_config_error(e: &apimock_config::ConfigError) -> ErrorKind {
+    use apimock_config::ConfigError;
+    match e {
+        ConfigError::ConfigRead { .. } => ErrorKind::ConfigUnreadable,
+        ConfigError::PathResolve { .. } => ErrorKind::ConfigUnreadable,
+        ConfigError::ConfigParse { .. } => ErrorKind::ConfigInvalid,
+        ConfigError::Validation => ErrorKind::ConfigInvalid,
+        ConfigError::RuleSet(_) => ErrorKind::ConfigInvalid,
+    }
+}
+
 /// Build a success envelope: `{ "schema": 1, "apimock": "<version>",
 /// "result": <result> }`. `result` is a plain JSON value rather than a
 /// generic `T: Serialize`, since every caller already has one

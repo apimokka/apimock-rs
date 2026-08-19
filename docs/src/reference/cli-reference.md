@@ -34,8 +34,9 @@ server on a port nobody asked for; now it doesn't start anything.
 
 ## Exit codes
 
-These apply across the whole CLI, `match-test` and `validate` included
-(each also documents its own diagnostic-specific codes below):
+These apply across the whole CLI, `match-test`, `validate` and `get`
+included (each also documents its own diagnostic-specific codes below —
+`get` in particular reuses `0`/`2` only, never `1`; see its own section):
 
 | Code | Meaning |
 |---|---|
@@ -121,8 +122,9 @@ than this page's scope.
 
 ### The response envelope (`--format json`)
 
-Introduced in 5.19.0 (RFC 054), ahead of 6.0.0's `get`/`set`, which will
-use the same shape. A successful validation:
+Introduced in 5.19.0 (RFC 054), ahead of 6.0.0's `get`/`set` — `get`
+(below) is the first of the two to actually use it. A successful
+validation:
 
 ```json
 {
@@ -156,6 +158,104 @@ that ran and found problems is still a `result`, not an `error`** — the
 envelope's top-level shape answers "did this command run", not "is the
 config valid"; check `result.summary.errors` for the latter. `schema`
 starts at `1`; a later, incompatible change to this shape increments it.
+
+## `apimock get`
+
+```
+apimock get <path> [-c <config>] [-m <METHOD>] [-H "Name: value"]... \
+  [-b <json> | --body-file <path>] [--why] [--format text|json]
+```
+
+Answers *what would the server return for this request* — status,
+headers, body — from configuration on disk, with no server running.
+Unlike `match-test`, it answers from the whole workspace (`apimock.toml`
+and everything it references), and covers **every** dispatch stage the
+server does, in the same order: `OPTIONS` → rule sets → the fallback
+directory. A zero-config workspace (no rule sets at all) is answered
+correctly, because the fallback-directory stage is where zero-config
+mode's answers come from — a `get` that stopped at rule sets would be
+wrong for that case, which is most of them.
+
+| Flag | Meaning |
+|---|---|
+| `--config`, `-c <path>` | The root config to answer from. Default: `./apimock.toml` if it exists, otherwise zero-config — same resolution the server itself uses |
+| `--method`, `-m <METHOD>` | The request's HTTP method (default: `GET`) |
+| `--header`, `-H "Name: value"` | Add a header; repeatable |
+| `--body`, `-b <json>` | The request's JSON body, inline |
+| `--body-file <path>` | The request's JSON body, from a file |
+| `--why` | Explain which rule set and rule decided the answer, and for a near-miss, which specific condition failed. Off by default in text, **on by default with `--format json`** |
+| `--format text` | Default. Human-readable |
+| `--format json` | The [RFC 053 response envelope](#the-response-envelope---format-json), including provenance (the absolute paths of the config and rule sets that answered) |
+
+**Middleware is never executed.** If any is configured, the answer says
+so explicitly (`middleware.configured`/`middleware.note` in JSON, a
+console note in text) and proceeds anyway — the response may be wrong if
+a middleware would have intercepted the request, and the answer is
+marked incomplete rather than silently omitting that risk. There is no
+flag to run middleware; that would mean executing Rhai scripts as a side
+effect of a read command, which this project's stated preference for the
+safer option rules out.
+
+**Exit codes deliberately differ from `match-test`'s.** `get` exits `0`
+even when nothing matched — a 404, or "no rule matched", is a legitimate
+answer to a legitimate question (RFC 053: this is a `result`, not an
+`error`). `match-test` still exits `1` on no match; the two commands
+answer similar-sounding questions with different exit semantics on
+purpose, documented here rather than aligned, since changing
+`match-test`'s exit code now would be an unannounced breaking change.
+
+Exit codes: `0` answered (including a 404 or no match), `2` a bad
+invocation or the configuration couldn't be loaded.
+
+**Two honest limits, both narrow.** A `[[rules]] strategy = "round_robin"`
+(or `uniform_random`/`weighted_random`, or `priority` with a
+`uniform_random` tiebreak) rule set can answer differently from what a
+*running* server would return next. `get` loads its own rule sets fresh
+from disk each run, with their own round-robin counter starting at `0`
+and their own random draw — it has no way to observe how far a live
+server's selector has already advanced, or to reproduce an unseeded
+draw, so its answer is one legitimate possibility, not a prediction of
+the server's next response. There's no fix for this: it's the same
+drift a static answer always risks against live state, which is exactly
+what [provenance](#the-response-envelope---format-json) exists to name
+rather than hide. `strategy = "first_match"` (the default) and
+`priority` with the default `first_match` tiebreak are unaffected — both
+are deterministic from the request alone. Separately, a response body
+that isn't valid UTF-8 is shown with replacement characters rather than
+round-tripping exactly, in both `--format text` and `--format json` — a
+mock server's bodies are expected to be JSON or text, so this is
+believed to be a narrow gap rather than a common one.
+
+### `--why`'s JSON shape
+
+```json
+"why": {
+  "note": "Answered from a rule set.",
+  "rule_sets": [
+    {
+      "rule_set_index": 0,
+      "rule_set_file": "/abs/path/apimock-rule-set.toml",
+      "rules": [
+        {
+          "rule_index": 0,
+          "matched": false,
+          "conditions": [
+            { "name": "url_path", "expectation": "equal \"/orders\"", "actual": "/orders", "matched": true },
+            { "name": "body.json:customer.tier", "expectation": "equal \"gold\"", "actual": "\"silver\"", "matched": false }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Only the rule sets dispatch actually consulted are listed — if an
+earlier one answered, later ones were never reached by the server
+either, so they aren't listed here. `actual` is always present, even
+for conditions whose text-format output never showed it historically
+(`url_path`, headers) — the JSON shape is not constrained to match
+`match-test`'s older, narrower text output.
 
 ## `apimock match-test`
 

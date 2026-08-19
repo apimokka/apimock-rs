@@ -77,6 +77,11 @@ impl EnvArgs {
             std::process::exit(crate::cmd::validate::run(&raw[2..]));
         }
 
+        // `apimock get …` — what would the server return? (RFC 055)
+        if raw.get(1).map(String::as_str) == Some("get") {
+            std::process::exit(crate::cmd::get::run(&raw[2..]));
+        }
+
         // RFC 049 Goal 1: anything left that looks like a flag and isn't
         // one of the top-level names above is unrecognised and must
         // error, not be silently discarded. Applied before `--init`
@@ -304,7 +309,7 @@ fn reject_unknown_arguments(raw: &[String]) {
             skip_next = false;
             continue;
         }
-        if arg == "match-test" || arg == "validate" {
+        if arg == "match-test" || arg == "validate" || arg == "get" {
             // Positional subcommand names are handled by their own
             // caller before this runs; reaching here at all means
             // neither matched, so nothing to do with them here either.
@@ -401,8 +406,11 @@ fn help_text(subcommand: Option<&str>) -> &'static str {
         Some("validate") => {
             "apimock validate --config <path> [--strict] [--quiet] [--json] [--format text|json]\n\nLoads the whole workspace - root config and every rule set it\nreferences - and reports diagnostics, without binding a port.\n\n  --config, -c <path>  Required. The root config to validate\n  --strict             Treat warnings as failures too\n  --quiet              Suppress non-error output\n  --json               Deprecated - emits the same bare diagnostics array as before, with a one-line warning on stderr. Use --format json\n  --format text|json   text (default): today's output. json: the RFC 053 response envelope\n\n--json and --format may not be combined.\n\nExit codes: 0 clean, 1 at least one error, 2 the config couldn't be loaded, or a bad invocation."
         }
+        Some("get") => {
+            "apimock get <path> [-c <config>] [-m <METHOD>] [-H \"Name: value\"]... \\\n  [-b <json> | --body-file <path>] [--why] [--format text|json]\n\nAnswers what the server would return for this request - status, body,\nheaders - from configuration on disk, no server running. Covers the\nsame dispatch order the server uses: OPTIONS, then rule sets, then the\nfallback directory (zero-config mode included). Configured middleware\nis never executed; if any is configured, the answer says so and is\nmarked incomplete rather than silently skipping it.\n\n  --config, -c <path>   The root config to answer from (default: ./apimock.toml, or zero-config if absent)\n  --method, -m <METHOD> The request's HTTP method (default: GET)\n  --header, -H \"Name: value\"  Add a header; repeatable\n  --body, -b <json>     The request's JSON body, inline\n  --body-file <path>    The request's JSON body, from a file\n  --why                 Explain which rule decided the answer, and which condition failed for a near-miss. Off by default in text, on by default with --format json\n  --format text|json    text (default): human-readable. json: the RFC 053 response envelope, with provenance\n\nmatch-test still exits 1 on no match; get exits 0 with a result saying\nso - deliberately different, per RFC 053.\n\nExit codes: 0 answered (including a 404 or no match), 2 a bad invocation or the config couldn't be loaded."
+        }
         _ => {
-            "apimock [-p <port>] [-d <dir>] [-c <config>] [--init [--yes] [--middleware]]\n\nRun with no flags to serve the current directory: zero-config mode\nserves ./ by URL path on port 3001, or ./apimock.toml if it exists.\n\n  -c, --config <path>  Load a config file (a bare relative path resolves\n                       the same as one prefixed with ./)\n  -p, --port <port>    Listen on a custom port\n  -d, --dir <dir>      Serve a custom fallback directory instead of ./\n  --init               Scaffold a starting config in the current directory\n  --yes                With --init, skip prompts and accept defaults\n  --middleware         With --init, also scaffold a middleware file\n  -h, --help           Print this help and exit\n  --version            Print the version and exit\n\nSubcommands:\n  match-test  Dry-run a rule match against a rule set, no server\n  validate    Validate a config, no server\n\nRun 'apimock <subcommand> --help' for subcommand-specific help."
+            "apimock [-p <port>] [-d <dir>] [-c <config>] [--init [--yes] [--middleware]]\n\nRun with no flags to serve the current directory: zero-config mode\nserves ./ by URL path on port 3001, or ./apimock.toml if it exists.\n\n  -c, --config <path>  Load a config file (a bare relative path resolves\n                       the same as one prefixed with ./)\n  -p, --port <port>    Listen on a custom port\n  -d, --dir <dir>      Serve a custom fallback directory instead of ./\n  --init               Scaffold a starting config in the current directory\n  --yes                With --init, skip prompts and accept defaults\n  --middleware         With --init, also scaffold a middleware file\n  -h, --help           Print this help and exit\n  --version            Print the version and exit\n\nSubcommands:\n  get         What would the server return for this request? No server\n  match-test  Dry-run a rule match against a rule set, no server\n  validate    Validate a config, no server\n\nRun 'apimock <subcommand> --help' for subcommand-specific help."
         }
     }
 }

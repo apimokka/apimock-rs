@@ -214,6 +214,9 @@ fn run_match(
 
 // ── Per-rule output ───────────────────────────────────────────────────
 
+/// Prints each condition's `legacy_text` from the shared evaluator
+/// (`super::rule_check`) — byte-identical to what this function printed
+/// before RFC 055 factored the checks out for `get --why` to reuse.
 fn print_rule_result(
     idx: usize,
     rule: &apimock_routing::rule_set::rule::Rule,
@@ -234,121 +237,8 @@ fn print_rule_result(
     };
     println!("\nRule #{}: {}  {}{}", idx + 1, label, tag, winner);
 
-    check_url_path(req, parsed);
-    check_method(req, parsed);
-    check_headers(req, parsed);
-    check_body(req, parsed);
-}
-
-fn check_url_path(
-    req: &apimock_routing::rule_set::rule::when::request::Request,
-    parsed: &ParsedRequest,
-) {
-    use apimock_routing::rule_set::rule::when::request::url_path::UrlPathConfig;
-    match req.url_path_config.as_ref() {
-        None => {}
-        Some(UrlPathConfig::Simple(p)) => {
-            let ok = parsed.url_path == *p;
-            println!("  {}  url_path equal {:?}", tick(ok), p);
-        }
-        Some(UrlPathConfig::Detailed(u)) => {
-            let op = u.op.clone().unwrap_or_default();
-            let ok = op.is_match(&parsed.url_path, &u.value);
-            println!("  {}  url_path {} {:?}", tick(ok), op, u.value);
-        }
-    }
-}
-
-fn check_method(
-    req: &apimock_routing::rule_set::rule::when::request::Request,
-    parsed: &ParsedRequest,
-) {
-    use apimock_routing::rule_set::rule::when::request::http_method::HttpMethod;
-    let expected = match req.http_method.as_ref() {
-        None => return,
-        Some(HttpMethod::Get) => "GET",
-        Some(HttpMethod::Post) => "POST",
-        Some(HttpMethod::Put) => "PUT",
-        Some(HttpMethod::Delete) => "DELETE",
-    };
-    let actual = parsed.component_parts.method.as_str();
-    let ok = actual.eq_ignore_ascii_case(expected);
-    println!("  {}  method {} (actual: {})", tick(ok), expected, actual);
-}
-
-fn check_headers(
-    req: &apimock_routing::rule_set::rule::when::request::Request,
-    parsed: &ParsedRequest,
-) {
-    let headers = match req.headers.as_ref() {
-        None => return,
-        Some(h) => h,
-    };
-    for (name, stmt) in &headers.0 {
-        use apimock_routing::rule_set::rule::when::request::headers::header_operator::HeaderOperator;
-        let op = stmt.op.clone().unwrap_or_default();
-        let ok = match &op {
-            HeaderOperator::Exists => parsed.component_parts.headers.contains_key(name.as_str()),
-            HeaderOperator::Absent => !parsed.component_parts.headers.contains_key(name.as_str()),
-            _ => match parsed.component_parts.headers.get(name.as_str()) {
-                None => false,
-                Some(hv) => {
-                    let v = hv.to_str().unwrap_or("");
-                    op.to_rule_op().is_match(v, &stmt.value)
-                }
-            },
-        };
-        println!(
-            "  {}  header {:?} {} {:?}",
-            tick(ok),
-            name,
-            stmt.op.clone().unwrap_or_default(),
-            stmt.value
-        );
-    }
-}
-
-fn check_body(
-    req: &apimock_routing::rule_set::rule::when::request::Request,
-    parsed: &ParsedRequest,
-) {
-    use apimock_routing::rule_set::rule::when::request::body::body_kind::BodyKind;
-    use apimock_routing::rule_set::rule::when::request::body::body_operator::BodyOperator;
-    use apimock_routing::util::json::json_value_by_jsonpath;
-
-    let body = match req.body.as_ref() {
-        None => return,
-        Some(b) => b,
-    };
-    let body_json = match parsed.body_json.as_ref() {
-        None => {
-            println!("  {}  body (request has no JSON body)", tick(false));
-            return;
-        }
-        Some(j) => j,
-    };
-    let conditions = match body.0.get(&BodyKind::Json) {
-        None => return,
-        Some(c) => c,
-    };
-    for (path, stmt) in conditions {
-        let op = stmt.op.clone().unwrap_or_default();
-        let resolved = json_value_by_jsonpath(body_json, path);
-        let ok = match resolved {
-            None => matches!(op, BodyOperator::Absent),
-            Some(v) => op.is_match(v, &stmt.value),
-        };
-        let actual = resolved
-            .map(|v| v.to_string())
-            .unwrap_or_else(|| "(absent)".to_owned());
-        println!(
-            "  {}  body.json {:?} {} {:?}  (actual: {})",
-            tick(ok),
-            path,
-            op,
-            stmt.value,
-            actual
-        );
+    for check in super::rule_check::evaluate_rule(rule, parsed) {
+        println!("  {}  {}", tick(check.matched), check.legacy_text);
     }
 }
 
@@ -358,27 +248,7 @@ fn tick(ok: bool) -> &'static str {
 
 // ── CLI parsing helpers ───────────────────────────────────────────────
 
-pub(super) fn flag_value(args: &[String], names: &[&str]) -> Option<String> {
-    let idx = args.iter().position(|a| names.iter().any(|n| a == n))?;
-    args.get(idx + 1).filter(|v| !v.starts_with('-')).cloned()
-}
-
-fn flag_values_all(args: &[String], names: &[&str]) -> Vec<String> {
-    let mut out = Vec::new();
-    for (i, a) in args.iter().enumerate() {
-        if names.iter().any(|n| a == n)
-            && let Some(v) = args.get(i + 1)
-            && !v.starts_with('-')
-        {
-            out.push(v.clone());
-        }
-    }
-    out
-}
-
-fn flag_present(args: &[String], names: &[&str]) -> bool {
-    args.iter().any(|a| names.iter().any(|n| a == n))
-}
+use super::flags::{flag_present, flag_value, flag_values_all};
 
 // ── Tests ─────────────────────────────────────────────────────────────
 

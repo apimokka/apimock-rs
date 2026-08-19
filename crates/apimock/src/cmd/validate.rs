@@ -34,33 +34,21 @@
 //! release so a caller can migrate and verify before 6.0.0 removes
 //! `--json`.
 
-use apimock_config::{ConfigError, Severity, Workspace, WorkspaceError};
+use apimock_config::{Severity, Workspace, WorkspaceError};
 
-use crate::cmd::envelope::{self, ErrorKind};
+use crate::cmd::envelope::{self, ErrorKind, Format};
 
-/// Map a `Workspace::load` failure to one of RFC 053's error kinds,
-/// rather than labelling every load failure `config_unreadable`
-/// regardless of cause. `ConfigError` is exhaustively matched
-/// (not `#[non_exhaustive]` — RFC 052 §Unresolved 2) deliberately: a
-/// future variant added here fails to compile until it's given a
-/// considered `ErrorKind`, rather than silently falling through to
-/// whatever the last arm happened to be.
+/// Map a `Workspace::load` failure to one of RFC 053's error kinds.
+/// `WorkspaceError` adds one variant (`InvalidRoot`) on top of the
+/// `ConfigError` `envelope::kind_for_config_error` already maps — that
+/// shared mapping does the rest, since `get` (RFC 055) loads a plain
+/// `Config` and needs the exact same judgement without `Workspace`'s
+/// extra `InvalidRoot` case.
 fn error_kind_for_load_failure(e: &WorkspaceError) -> ErrorKind {
     match e {
         WorkspaceError::InvalidRoot { .. } => ErrorKind::ConfigUnreadable,
-        WorkspaceError::Config(ConfigError::ConfigRead { .. }) => ErrorKind::ConfigUnreadable,
-        WorkspaceError::Config(ConfigError::PathResolve { .. }) => ErrorKind::ConfigUnreadable,
-        WorkspaceError::Config(ConfigError::ConfigParse { .. }) => ErrorKind::ConfigInvalid,
-        WorkspaceError::Config(ConfigError::Validation) => ErrorKind::ConfigInvalid,
-        WorkspaceError::Config(ConfigError::RuleSet(_)) => ErrorKind::ConfigInvalid,
+        WorkspaceError::Config(inner) => envelope::kind_for_config_error(inner),
     }
-}
-
-/// `--format`'s value.
-#[derive(PartialEq, Eq)]
-pub enum Format {
-    Text,
-    Json,
 }
 
 /// Flags parsed from the `apimock validate` command line.
@@ -84,11 +72,11 @@ const JSON_DEPRECATION_WARNING: &str = "apimock validate: --json is deprecated a
 
 impl ValidateArgs {
     pub fn parse(args: &[String]) -> Result<Self, String> {
-        let config_path = super::match_test::flag_value(args, CONFIG_NAMES)
+        let config_path = super::flags::flag_value(args, CONFIG_NAMES)
             .ok_or_else(|| "missing required flag --config / -c".to_owned())?;
 
         let json = args.iter().any(|a| a == JSON_FLAG);
-        let format_raw = super::match_test::flag_value(args, &[FORMAT_FLAG]);
+        let format_raw = super::flags::flag_value(args, &[FORMAT_FLAG]);
 
         // RFC 054: "--json --format json together is a usage error, not
         // a silent precedence rule." Read broadly — any `--format`

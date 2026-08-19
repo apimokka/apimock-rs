@@ -145,13 +145,17 @@ impl RuleSet {
         Ok(ret)
     }
 
-    /// find rule matching request and return its respond content
+    /// Find the rule matching `parsed_request` and return its 0-based
+    /// index alongside its respond content. The index is RFC 055's
+    /// addition (`apimock get --why` needs to name which rule decided
+    /// the answer); every selection branch below already computes it
+    /// while filtering, so carrying it out costs nothing.
     pub fn find_matched(
         &self,
         parsed_request: &ParsedRequest,
         strategy: Option<&Strategy>,
         rule_set_idx: usize,
-    ) -> Option<Respond> {
+    ) -> Option<(usize, Respond)> {
         match self.prefix.as_ref() {
             Some(prefix)
                 if prefix.url_path_prefix.is_some()
@@ -177,7 +181,7 @@ impl RuleSet {
             Strategy::FirstMatch => {
                 for (rule_idx, rule) in self.rules.iter().enumerate() {
                     if rule.when.is_match(parsed_request, rule_idx, rule_set_idx) {
-                        return Some(rule.respond.clone());
+                        return Some((rule_idx, rule.respond.clone()));
                     }
                 }
                 None
@@ -185,12 +189,11 @@ impl RuleSet {
 
             Strategy::UniformRandom { seed } => {
                 // Collect all matching rules, then pick uniformly at random.
-                let matches: Vec<&Rule> = self
+                let matches: Vec<(usize, &Rule)> = self
                     .rules
                     .iter()
                     .enumerate()
                     .filter(|(idx, r)| r.when.is_match(parsed_request, *idx, rule_set_idx))
-                    .map(|(_, r)| r)
                     .collect();
 
                 if matches.is_empty() {
@@ -198,78 +201,82 @@ impl RuleSet {
                 }
                 let mut rng = crate::strategy::make_rng(*seed);
                 let idx = rng.next_index(matches.len());
-                Some(matches[idx].respond.clone())
+                let (rule_idx, rule) = matches[idx];
+                Some((rule_idx, rule.respond.clone()))
             }
 
             Strategy::WeightedRandom { seed } => {
                 // Collect matching rules with their effective weights.
-                let candidates: Vec<(&Rule, u32)> = self
+                let candidates: Vec<(usize, &Rule, u32)> = self
                     .rules
                     .iter()
                     .enumerate()
                     .filter(|(idx, r)| r.when.is_match(parsed_request, *idx, rule_set_idx))
-                    .map(|(_, r)| (r, r.weight.unwrap_or(1)))
-                    .filter(|(_, w)| *w > 0)
+                    .map(|(idx, r)| (idx, r, r.weight.unwrap_or(1)))
+                    .filter(|(_, _, w)| *w > 0)
                     .collect();
 
                 if candidates.is_empty() {
                     return None;
                 }
 
-                let total: u32 = candidates.iter().map(|(_, w)| w).sum();
+                let total: u32 = candidates.iter().map(|(_, _, w)| w).sum();
                 let mut rng = crate::strategy::make_rng(*seed);
                 let pick = (rng.next() % total as u64) as u32;
                 let mut acc = 0u32;
-                for (rule, weight) in &candidates {
+                for (rule_idx, rule, weight) in &candidates {
                     acc += weight;
                     if pick < acc {
-                        return Some(rule.respond.clone());
+                        return Some((*rule_idx, rule.respond.clone()));
                     }
                 }
                 // Fallback (rounding edge): return last candidate.
-                candidates.last().map(|(r, _)| r.respond.clone())
+                candidates
+                    .last()
+                    .map(|(rule_idx, r, _)| (*rule_idx, r.respond.clone()))
             }
 
             Strategy::Priority { tiebreaker } => {
                 // Collect matching rules with their priority.
-                let matches: Vec<(&Rule, i32)> = self
+                let matches: Vec<(usize, &Rule, i32)> = self
                     .rules
                     .iter()
                     .enumerate()
                     .filter(|(idx, r)| r.when.is_match(parsed_request, *idx, rule_set_idx))
-                    .map(|(_, r)| (r, r.priority.unwrap_or(0)))
+                    .map(|(idx, r)| (idx, r, r.priority.unwrap_or(0)))
                     .collect();
 
                 if matches.is_empty() {
                     return None;
                 }
 
-                let max_priority = matches.iter().map(|(_, p)| *p).max().unwrap();
-                let top: Vec<&Rule> = matches
+                let max_priority = matches.iter().map(|(_, _, p)| *p).max().unwrap();
+                let top: Vec<(usize, &Rule)> = matches
                     .into_iter()
-                    .filter(|(_, p)| *p == max_priority)
-                    .map(|(r, _)| r)
+                    .filter(|(_, _, p)| *p == max_priority)
+                    .map(|(idx, r, _)| (idx, r))
                     .collect();
 
                 match tiebreaker {
-                    crate::strategy::PriorityTiebreaker::FirstMatch => {
-                        top.into_iter().next().map(|r| r.respond.clone())
-                    }
+                    crate::strategy::PriorityTiebreaker::FirstMatch => top
+                        .into_iter()
+                        .next()
+                        .map(|(idx, r)| (idx, r.respond.clone())),
                     crate::strategy::PriorityTiebreaker::UniformRandom => {
                         let mut rng = crate::strategy::make_rng(None);
                         let idx = rng.next_index(top.len());
-                        Some(top[idx].respond.clone())
+                        let (rule_idx, rule) = top[idx];
+                        Some((rule_idx, rule.respond.clone()))
                     }
                 }
             }
 
             Strategy::RoundRobin => {
-                let matches: Vec<&Rule> = self
+                let matches: Vec<(usize, &Rule)> = self
                     .rules
                     .iter()
                     .enumerate()
                     .filter(|(idx, r)| r.when.is_match(parsed_request, *idx, rule_set_idx))
-                    .map(|(_, r)| r)
                     .collect();
 
                 if matches.is_empty() {
@@ -281,7 +288,8 @@ impl RuleSet {
                 // on concurrent requests is acceptable).
                 let idx = self.round_robin_counter.fetch_add(1, Ordering::Relaxed) % matches.len();
 
-                Some(matches[idx].respond.clone())
+                let (rule_idx, rule) = matches[idx];
+                Some((rule_idx, rule.respond.clone()))
             }
         }
     }
@@ -397,13 +405,14 @@ mod tests {
         let req = get_req("/api");
         let strategy = Strategy::RoundRobin;
 
-        let r0 = rs.find_matched(&req, Some(&strategy), 0).expect("match 0");
-        let r1 = rs.find_matched(&req, Some(&strategy), 0).expect("match 1");
-        let r2 = rs.find_matched(&req, Some(&strategy), 0).expect("match 2");
+        let (idx0, r0) = rs.find_matched(&req, Some(&strategy), 0).expect("match 0");
+        let (idx1, r1) = rs.find_matched(&req, Some(&strategy), 0).expect("match 1");
+        let (idx2, r2) = rs.find_matched(&req, Some(&strategy), 0).expect("match 2");
 
         assert_eq!(r0.text.as_deref(), Some("response_0"));
         assert_eq!(r1.text.as_deref(), Some("response_1"));
         assert_eq!(r2.text.as_deref(), Some("response_0"), "cycle back");
+        assert_eq!((idx0, idx1, idx2), (0, 1, 0));
     }
 
     #[test]
@@ -416,6 +425,7 @@ mod tests {
             .map(|_| {
                 rs.find_matched(&req, Some(&strategy), 0)
                     .unwrap()
+                    .1
                     .text
                     .clone()
                     .unwrap()
@@ -445,10 +455,11 @@ mod tests {
         assert!(miss.is_none(), "non-matching path should miss");
 
         // Counter at 0 still — first hit returns response_0.
-        let hit = rs
+        let (hit_idx, hit) = rs
             .find_matched(&get_req("/api"), Some(&strategy), 0)
             .expect("should match");
         assert_eq!(hit.text.as_deref(), Some("response_0"));
+        assert_eq!(hit_idx, 0);
     }
 
     #[test]
@@ -458,8 +469,9 @@ mod tests {
         let strategy = Strategy::RoundRobin;
 
         for _ in 0..5 {
-            let r = rs.find_matched(&req, Some(&strategy), 0).expect("match");
+            let (idx, r) = rs.find_matched(&req, Some(&strategy), 0).expect("match");
             assert_eq!(r.text.as_deref(), Some("response_0"));
+            assert_eq!(idx, 0);
         }
     }
 }
