@@ -27,6 +27,7 @@ depends-on, and the rest of the planned portfolio.
 | 053 | [The v6 CLI contract](./proposed/053-v6-cli-contract.md) |
 | 055 | [`apimock get`: what will this request return?](./proposed/055-get-command.md) |
 | 056 | [Preserve what people wrote: `toml_edit` for the save path](./proposed/056-toml-edit-migration.md) |
+| 057 | [`apimock set`: make the server answer X under condition Y](./proposed/057-set-command.md) |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
@@ -91,7 +92,7 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 
 ## Adding a new RFC
 
-1. Pick the next free number — **057+**. Numbers 039–043 are reserved
+1. Pick the next free number — **058+**. Numbers 039–043 are reserved
    by [ROADMAP.md](../ROADMAP.md) for the planned M3 RFCs; 048 (the v6
    umbrella) is still open. Create `rfcs/proposed/NNN-slug.md`.
 2. On shipping, move to `done/`, update Status field, update this index.
