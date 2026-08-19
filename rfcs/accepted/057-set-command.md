@@ -1,7 +1,8 @@
 # RFC 057 — `apimock set`: make the server answer X under condition Y
 
 **Status.** **Accepted** — approved by the project owner 2026-08-19.
-**Not yet implemented**; the implementation handoff follows.
+**Not yet implemented.** [Handed off](../handoffs/057-set-command/implementation-handoff.md)
+2026-08-19, with its three open questions decided.
 **Tracks.** v6. [RFC 048](./048-v6-cli-interface-concept.md) § 11 item 5
 — the write half, and the last of the umbrella's portfolio.
 **Touches.** `crates/apimock/src/cmd/` (a new command), and whatever

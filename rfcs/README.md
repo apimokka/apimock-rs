@@ -42,7 +42,7 @@ which rather than leaving a reader to assume.
 | 053 | [The v6 CLI contract](./accepted/053-v6-cli-contract.md) | contract; completed by 057 |
 | 055 | [`apimock get`: what will this request return?](./accepted/055-get-command.md) | merged to `main` |
 | 056 | [Preserve what people wrote: `toml_edit` for the save path](./accepted/056-toml-edit-migration.md) | merged to `main` |
-| 057 | [`apimock set`: make the server answer X under condition Y](./accepted/057-set-command.md) | **not started** |
+| 057 | [`apimock set`: make the server answer X under condition Y](./accepted/057-set-command.md) | handed off; not started |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
