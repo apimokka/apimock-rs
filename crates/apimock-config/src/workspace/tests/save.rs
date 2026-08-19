@@ -623,3 +623,203 @@ fn snapshot_script_routes_present_when_middlewares_configured() {
     assert_eq!(snap.routes.script_routes[0].source_file, "noop.rhai");
     assert_eq!(snap.routes.script_routes[0].display_name, "noop.rhai");
 }
+
+// -----------------------------------------------------------------
+// RFC 058 — `respond_dir` no longer grows on every save. Each test
+// forces a *real* save (adding a rule, so the rendered output
+// genuinely differs from baseline) rather than a no-edit save, since
+// a no-op save never wrote the file at all, before or after this RFC
+// — the bug only ever showed up on an edit that was already going to
+// touch the file.
+// -----------------------------------------------------------------
+
+fn workspace_with_prefix(prefix_toml: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let rs_toml = format!(
+        "{}[[rules]]\nwhen.request.url_path = \"/x\"\nrespond = {{ text = \"ok\" }}\n",
+        prefix_toml
+    );
+    let rs_path = dir.path().join("apimock-rule-set.toml");
+    std::fs::write(&rs_path, rs_toml).unwrap();
+    let root_toml =
+        "[service]\nrule_sets = [\"apimock-rule-set.toml\"]\nfallback_respond_dir = \".\"\n";
+    let root_path = dir.path().join("apimock.toml");
+    std::fs::write(&root_path, root_toml).unwrap();
+    (dir, root_path)
+}
+
+fn add_a_rule(ws: &mut Workspace, path: &str) {
+    let parent = ws.rule_set_id_at(0).expect("rule set 0 exists");
+    ws.apply(EditCommand::AddRule {
+        parent,
+        rule: crate::view::RulePayload {
+            url_path: Some(path.to_owned()),
+            url_path_op: None,
+            method: None,
+            priority: None,
+            headers: None,
+            body: None,
+            respond: crate::view::RespondPayload {
+                text: Some("ok".to_owned()),
+                ..Default::default()
+            },
+        },
+    })
+    .expect("apply");
+}
+
+fn respond_dir_line(rule_set_toml: &str) -> Option<&str> {
+    rule_set_toml
+        .lines()
+        .find(|l| l.trim_start().starts_with("respond_dir"))
+}
+
+#[test]
+fn respond_dir_is_a_fixed_point_across_repeated_real_saves() {
+    let (_dir, root) = workspace_with_prefix("[prefix]\nrespond_dir = \".\"\n\n");
+    let rs_path = root.parent().unwrap().join("apimock-rule-set.toml");
+    let mut ws = Workspace::load(root).expect("load");
+
+    for i in 0..3 {
+        add_a_rule(&mut ws, &format!("/added-{i}"));
+        let save = ws.save().expect("save");
+        assert!(
+            !save.changed_files.is_empty(),
+            "each round must be a real save, not a no-op — round {i}"
+        );
+        let text = std::fs::read_to_string(&rs_path).unwrap();
+        assert_eq!(
+            respond_dir_line(&text),
+            Some("respond_dir = \".\""),
+            "respond_dir must not grow after round {i}:\n{text}"
+        );
+    }
+}
+
+#[test]
+fn no_prefix_section_stays_absent_after_a_real_save() {
+    let (_dir, root) = workspace_with_prefix("");
+    let rs_path = root.parent().unwrap().join("apimock-rule-set.toml");
+    let mut ws = Workspace::load(root).expect("load");
+
+    add_a_rule(&mut ws, "/new");
+    let save = ws.save().expect("save");
+    assert!(!save.changed_files.is_empty());
+
+    let text = std::fs::read_to_string(&rs_path).unwrap();
+    assert!(
+        !text.contains("[prefix]"),
+        "a rule set that never had [prefix] must not gain one from a save:\n{text}"
+    );
+}
+
+#[test]
+fn respond_dir_responses_round_trips_unchanged_across_a_real_save() {
+    let (dir, root) = workspace_with_prefix("[prefix]\nrespond_dir = \"responses\"\n\n");
+    std::fs::create_dir(dir.path().join("responses")).unwrap();
+    let rs_path = root.parent().unwrap().join("apimock-rule-set.toml");
+    let mut ws = Workspace::load(root).expect("load");
+
+    add_a_rule(&mut ws, "/new");
+    ws.save().expect("save");
+
+    let text = std::fs::read_to_string(&rs_path).unwrap();
+    assert_eq!(respond_dir_line(&text), Some("respond_dir = \"responses\""));
+}
+
+#[test]
+fn respond_dir_dotted_relative_path_never_collapses() {
+    let (dir, root) = workspace_with_prefix("[prefix]\nrespond_dir = \"./responses\"\n\n");
+    std::fs::create_dir(dir.path().join("responses")).unwrap();
+    let rs_path = root.parent().unwrap().join("apimock-rule-set.toml");
+    let mut ws = Workspace::load(root).expect("load");
+
+    add_a_rule(&mut ws, "/new");
+    ws.save().expect("save");
+
+    let text = std::fs::read_to_string(&rs_path).unwrap();
+    assert_eq!(
+        respond_dir_line(&text),
+        Some("respond_dir = \"./responses\""),
+        "a real path must never be touched by the pure-dot collapse:\n{text}"
+    );
+}
+
+#[test]
+fn a_previously_grown_respond_dir_collapses_on_the_next_real_save() {
+    let (_dir, root) = workspace_with_prefix("[prefix]\nrespond_dir = \"././.\"\n\n");
+    let rs_path = root.parent().unwrap().join("apimock-rule-set.toml");
+    let mut ws = Workspace::load(root).expect("load");
+
+    add_a_rule(&mut ws, "/new");
+    ws.save().expect("save");
+
+    let text = std::fs::read_to_string(&rs_path).unwrap();
+    assert_eq!(
+        respond_dir_line(&text),
+        Some("respond_dir = \".\""),
+        "a purely-./-segments value must collapse to '.' the next time it's saved:\n{text}"
+    );
+}
+
+#[test]
+fn saving_an_unrelated_file_does_not_touch_a_still_grown_respond_dir() {
+    // The narrow repair must never be a standalone rewrite — it rides
+    // along with a save the user already asked for, and only for the
+    // file that save actually touches.
+    let (dir, root) = workspace_with_prefix("[prefix]\nrespond_dir = \"././.\"\n\n");
+    let rs_path = root.parent().unwrap().join("apimock-rule-set.toml");
+    let before = std::fs::read_to_string(&rs_path).unwrap();
+
+    let mut ws = Workspace::load(root).expect("load");
+    // Touch the *root* config, not the rule set — forces a real save
+    // that must leave apimock-rule-set.toml completely alone.
+    ws.apply(EditCommand::UpdateRootSetting {
+        key: crate::view::RootSettingKey::ListenerPort,
+        value: EditValue::Integer(9191),
+    })
+    .expect("apply");
+    let save = ws.save().expect("save");
+    assert!(
+        save.changed_files
+            .iter()
+            .all(|p| p.file_name().unwrap() != "apimock-rule-set.toml"),
+        "only the root config should have changed: {:?}",
+        save.changed_files
+    );
+
+    let after = std::fs::read_to_string(&rs_path).unwrap();
+    assert_eq!(
+        before, after,
+        "a save that never touches this file must leave it byte-identical, \
+         grown respond_dir and all — the repair is not a standalone rewrite"
+    );
+    let _ = dir;
+}
+
+#[test]
+fn a_hand_written_rule_set_with_a_prefix_section_survives_a_real_save() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::create_dir(dir.path().join("responses")).unwrap();
+    let rs_toml = "# a person's own comment above their prefix\n[prefix]\nrespond_dir = \"responses\"\n\n[[rules]]\nwhen.request.url_path = \"/x\"\nrespond = { text = \"ok\" }\n";
+    let rs_path = dir.path().join("apimock-rule-set.toml");
+    std::fs::write(&rs_path, rs_toml).unwrap();
+    let root_toml =
+        "[service]\nrule_sets = [\"apimock-rule-set.toml\"]\nfallback_respond_dir = \".\"\n";
+    let root_path = dir.path().join("apimock.toml");
+    std::fs::write(&root_path, root_toml).unwrap();
+
+    let mut ws = Workspace::load(root_path).expect("load");
+    add_a_rule(&mut ws, "/new");
+    ws.save().expect("save");
+
+    let after = std::fs::read_to_string(&rs_path).unwrap();
+    assert!(
+        after.contains("# a person's own comment above their prefix"),
+        "RFC 056's comment-preservation guarantee, re-proved with a [prefix] section present:\n{after}"
+    );
+    assert_eq!(
+        respond_dir_line(&after),
+        Some("respond_dir = \"responses\"")
+    );
+}

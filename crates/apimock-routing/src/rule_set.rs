@@ -37,6 +37,24 @@ fn default_counter() -> Arc<AtomicUsize> {
     Arc::new(AtomicUsize::new(0))
 }
 
+/// `true` when `value`, interpreted as a path, is made up of nothing
+/// but current-directory (`.`) components — `.`, `./.`, `././.`, and so
+/// on, all provably the same directory. RFC 058's narrow repair for a
+/// `respond_dir` grown by the pre-fix bug.
+///
+/// `Path::components()` already collapses any number of redundant `./`
+/// segments into a single `CurDir` component (confirmed empirically:
+/// `Path::new("././.").components()` yields exactly one `CurDir`), so
+/// this is a direct, platform-correct check — no manual splitting on
+/// `/` (which would be wrong on Windows) or `\` (which would be wrong
+/// everywhere else) needed.
+fn is_purely_current_dir(value: &str) -> bool {
+    !value.is_empty()
+        && Path::new(value)
+            .components()
+            .all(|c| matches!(c, std::path::Component::CurDir))
+}
+
 #[derive(Clone, Deserialize, Debug)]
 pub struct RuleSet {
     pub prefix: Option<Prefix>,
@@ -53,6 +71,13 @@ pub struct RuleSet {
     /// Per-rule-set round-robin counter. Shared across clones via `Arc`.
     #[serde(skip, default = "default_counter")]
     pub round_robin_counter: Arc<AtomicUsize>,
+    /// The response directory `Respond::file_path` resolves against,
+    /// computed once by `RuleSet::new` (RFC 058). Never deserialised,
+    /// never written back to `prefix.respond_dir_prefix` — see
+    /// `dir_prefix()` and `Prefix`'s own doc comment for why this is a
+    /// separate field rather than the old overwrite-in-place scheme.
+    #[serde(skip)]
+    pub resolved_respond_dir: String,
 }
 
 impl RuleSet {
@@ -90,24 +115,48 @@ impl RuleSet {
                 source: e,
             })?;
 
-        // - prefix: fill in defaults and normalize
-        let mut prefix = ret.prefix.clone().unwrap_or_default();
+        // - prefix (RFC 058): normalize what was authored, in place —
+        //   never manufacture a `[prefix]` section that wasn't there.
+        //   `ret.prefix` stays exactly `None` if the file never had one
+        //   (Goal 2); a `Some` one keeps only what it already had.
+        if let Some(prefix) = ret.prefix.as_mut() {
+            // normalize `url_path` so later matching doesn't have to deal
+            // with leading/trailing slash variations
+            prefix.url_path_prefix = prefix
+                .url_path_prefix
+                .as_deref()
+                .map(|p| normalize_url_path(p, None));
 
-        // normalize `url_path` so later matching doesn't have to deal with
-        // leading/trailing slash variations
-        prefix.url_path_prefix = prefix
-            .url_path_prefix
-            .as_deref()
-            .map(|p| normalize_url_path(p, None));
+            // Narrow repair (RFC 058 Unresolved 2): a `respond_dir` that
+            // is purely `./`-segments (`./.`, `././.`, …) is provably
+            // the same directory as `.` — collapse it. This is how a
+            // file already grown by the pre-fix bug heals, one save at
+            // a time; an authored path like `responses` or
+            // `./responses` is never touched, since it isn't purely
+            // current-dir segments.
+            if let Some(dir) = prefix.respond_dir_prefix.as_deref()
+                && is_purely_current_dir(dir)
+            {
+                prefix.respond_dir_prefix = Some(".".to_owned());
+            }
+        }
 
-        // respond_dir prefix: default to "." and anchor it under the
-        // config-file directory so relative paths in rule sets are
-        // relative to the rule-set file, not the working directory
-        let respond_dir_prefix = prefix.respond_dir_prefix.as_deref().unwrap_or(".");
-
-        let respond_dir_prefix =
-            Path::new(current_dir_to_config_dir_relative_path).join(respond_dir_prefix);
-        let respond_dir_prefix = respond_dir_prefix.to_str().ok_or_else(|| {
+        // - resolved_respond_dir: always computed, regardless of whether
+        //   `[prefix]` was authored — "." (the config-relative directory)
+        //   is the correct resolution for "no respond_dir was written",
+        //   the same default `unwrap_or(".")` always meant. This is the
+        //   field the matcher reads (`dir_prefix()`); it is never written
+        //   back into `prefix.respond_dir_prefix`, which is the fix
+        //   itself — see `Prefix`'s own doc comment for the mechanism
+        //   this replaces.
+        let authored_respond_dir = ret
+            .prefix
+            .as_ref()
+            .and_then(|p| p.respond_dir_prefix.as_deref())
+            .unwrap_or(".");
+        let resolved_respond_dir =
+            Path::new(current_dir_to_config_dir_relative_path).join(authored_respond_dir);
+        let resolved_respond_dir = resolved_respond_dir.to_str().ok_or_else(|| {
             RoutingError::RuleSetRead {
                 path: path.to_path_buf(),
                 // We synthesize an io::Error here only because the variant
@@ -118,14 +167,12 @@ impl RuleSet {
                     std::io::ErrorKind::InvalidData,
                     format!(
                         "respond_dir path contains non-UTF-8 bytes: {}",
-                        respond_dir_prefix.to_string_lossy()
+                        resolved_respond_dir.to_string_lossy()
                     ),
                 ),
             }
         })?;
-
-        prefix.respond_dir_prefix = Some(respond_dir_prefix.to_owned());
-        ret.prefix = Some(prefix);
+        ret.resolved_respond_dir = resolved_respond_dir.to_owned();
 
         // - rules: compute any derived fields (normalized URL path with
         //   prefix already applied, resolved status code, etc.) so the
@@ -299,13 +346,17 @@ impl RuleSet {
         true
     }
 
-    /// dir_prefix as string possibly as empty
+    /// The response directory, resolved against the process's CWD, that
+    /// `Respond::file_path` is served relative to. Always populated by
+    /// `RuleSet::new` — "." (the rule-set file's own directory) when no
+    /// `respond_dir` was ever authored, the joined path otherwise.
+    ///
+    /// Deliberately reads `resolved_respond_dir`, not
+    /// `prefix.respond_dir_prefix` (RFC 058) — that field holds only
+    /// what the user wrote (or is absent entirely), so it cannot answer
+    /// "where does the matcher actually look" on its own.
     pub fn dir_prefix(&self) -> String {
-        self.prefix
-            .clone()
-            .unwrap_or_default()
-            .respond_dir_prefix
-            .unwrap_or_default()
+        self.resolved_respond_dir.clone()
     }
 }
 
@@ -396,6 +447,7 @@ mod tests {
             strategy: None,
             file_path: String::new(),
             round_robin_counter: Arc::new(AtomicUsize::new(0)),
+            resolved_respond_dir: ".".to_owned(),
         }
     }
 
@@ -473,5 +525,150 @@ mod tests {
             assert_eq!(r.text.as_deref(), Some("response_0"));
             assert_eq!(idx, 0);
         }
+    }
+
+    // -----------------------------------------------------------------
+    // RFC 058 — `respond_dir_prefix` holds only what was authored;
+    // `resolved_respond_dir` (never persisted) is what the matcher uses.
+    // -----------------------------------------------------------------
+
+    fn write_rule_set(dir: &std::path::Path, content: &str) -> String {
+        let path = dir.join("rules.toml");
+        std::fs::write(&path, content).unwrap();
+        path.to_str().unwrap().to_owned()
+    }
+
+    #[test]
+    fn is_purely_current_dir_matches_only_dot_segments() {
+        assert!(is_purely_current_dir("."));
+        assert!(is_purely_current_dir("./."));
+        assert!(is_purely_current_dir("././."));
+        assert!(is_purely_current_dir("./././."));
+        assert!(!is_purely_current_dir("./responses"));
+        assert!(!is_purely_current_dir("responses"));
+        assert!(!is_purely_current_dir(""));
+    }
+
+    #[test]
+    fn authored_respond_dir_is_not_overwritten_by_the_resolved_value() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_rule_set(
+            dir.path(),
+            "[prefix]\nrespond_dir = \"responses\"\n\n[[rules]]\nwhen.request.url_path = \"/x\"\nrespond = { text = \"ok\" }\n",
+        );
+        let rs = RuleSet::new(&path, ".", 0).expect("load");
+
+        assert_eq!(
+            rs.prefix.as_ref().unwrap().respond_dir_prefix.as_deref(),
+            Some("responses"),
+            "the authored value must survive RuleSet::new unchanged"
+        );
+        assert_ne!(
+            rs.dir_prefix(),
+            "responses",
+            "dir_prefix() must be the resolved value, not the authored one"
+        );
+        assert!(
+            rs.dir_prefix().ends_with("responses"),
+            "the resolved value must still be anchored on the authored one: {}",
+            rs.dir_prefix()
+        );
+    }
+
+    #[test]
+    fn no_prefix_section_stays_none_after_new() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_rule_set(
+            dir.path(),
+            "[[rules]]\nwhen.request.url_path = \"/x\"\nrespond = { text = \"ok\" }\n",
+        );
+        let rs = RuleSet::new(&path, ".", 0).expect("load");
+
+        assert!(
+            rs.prefix.is_none(),
+            "a rule set with no [prefix] section must not gain one from RuleSet::new (Goal 2)"
+        );
+        assert_eq!(
+            rs.dir_prefix(),
+            "./.",
+            "dir_prefix() must still resolve sensibly with no [prefix] at all — \
+             \"./.\"  because Path::join doesn't normalise \".\".join(\".\"), same \
+             as it always did for the never-authored case"
+        );
+    }
+
+    #[test]
+    fn pure_dot_respond_dir_collapses_to_a_single_dot() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_rule_set(
+            dir.path(),
+            "[prefix]\nrespond_dir = \"././.\"\n\n[[rules]]\nwhen.request.url_path = \"/x\"\nrespond = { text = \"ok\" }\n",
+        );
+        let rs = RuleSet::new(&path, ".", 0).expect("load");
+
+        assert_eq!(
+            rs.prefix.as_ref().unwrap().respond_dir_prefix.as_deref(),
+            Some("."),
+            "a purely-./-segments respond_dir must collapse to a single '.'"
+        );
+    }
+
+    #[test]
+    fn non_dot_respond_dir_is_never_collapsed() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_rule_set(
+            dir.path(),
+            "[prefix]\nrespond_dir = \"./responses\"\n\n[[rules]]\nwhen.request.url_path = \"/x\"\nrespond = { text = \"ok\" }\n",
+        );
+        let rs = RuleSet::new(&path, ".", 0).expect("load");
+
+        assert_eq!(
+            rs.prefix.as_ref().unwrap().respond_dir_prefix.as_deref(),
+            Some("./responses"),
+            "a respond_dir with a real path component must never be touched by the collapse"
+        );
+    }
+
+    #[test]
+    fn prefix_validate_checks_the_resolved_directory_not_the_authored_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let responses = dir.path().join("responses");
+        std::fs::create_dir(&responses).unwrap();
+
+        // `current_dir_to_config_dir_relative_path` must anchor at the
+        // tempdir itself, not "." (which would resolve relative to
+        // whatever directory `cargo test` actually runs from) — the
+        // resolution this whole RFC is about only means anything
+        // relative to *some* real base directory.
+        let base = dir.path().to_str().unwrap();
+
+        let ok_path = write_rule_set(
+            dir.path(),
+            "[prefix]\nrespond_dir = \"responses\"\n\n[[rules]]\nwhen.request.url_path = \"/x\"\nrespond = { text = \"ok\" }\n",
+        );
+        let ok = RuleSet::new(&ok_path, base, 0).expect("load");
+        assert!(
+            ok.prefix
+                .as_ref()
+                .unwrap()
+                .validate(ok.dir_prefix().as_str(), 0),
+            "an existing resolved directory must validate"
+        );
+
+        let missing_dir_path = dir.path().join("missing_rules.toml");
+        std::fs::write(
+            &missing_dir_path,
+            "[prefix]\nrespond_dir = \"does-not-exist\"\n\n[[rules]]\nwhen.request.url_path = \"/x\"\nrespond = { text = \"ok\" }\n",
+        )
+        .unwrap();
+        let missing = RuleSet::new(missing_dir_path.to_str().unwrap(), base, 0).expect("load");
+        assert!(
+            !missing
+                .prefix
+                .as_ref()
+                .unwrap()
+                .validate(missing.dir_prefix().as_str(), 0),
+            "a resolved directory that doesn't exist on disk must fail validation, same as before RFC 058"
+        );
     }
 }

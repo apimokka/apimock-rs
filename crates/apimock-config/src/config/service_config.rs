@@ -71,7 +71,11 @@ impl ServiceConfig {
                 .enumerate()
                 .all(|(rule_set_idx, rule_set)| {
                     let prefix_validate = rule_set.prefix.is_none()
-                        || rule_set.prefix.as_ref().unwrap().validate(rule_set_idx);
+                        || rule_set
+                            .prefix
+                            .as_ref()
+                            .unwrap()
+                            .validate(rule_set.dir_prefix().as_str(), rule_set_idx);
 
                     let default_validate =
                         rule_set.default.is_none() || rule_set.default.as_ref().unwrap().validate();

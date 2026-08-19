@@ -102,6 +102,63 @@ rather than guessed at. If the GUI turns out to construct one of the
 three that didn't get a constructor, that's an additive addition on top
 of this shape, not a redesign.
 
+## Library: `Prefix` is now `#[non_exhaustive]`, and `respond_dir` stopped growing
+
+**Done, on `main`, ahead of 6.0.0's eventual release** (RFC 058) — like
+the five-struct change above, this is live from this point on, not a
+preview.
+
+**The bug.** `apimock_routing::rule_set::prefix::Prefix::respond_dir_prefix`
+resolved the directory `Respond::file_path` is served from, then wrote
+that resolved value back into the same field it read the user's own
+`respond_dir = "…"` from. Since that field is also what got persisted
+back to the rule-set TOML, a load-then-save cycle resolved the
+already-resolved value again — `respond_dir` grew by one `./` segment
+on every save, without bound (`"./."` → `"././."` → `"./././."` → …).
+It shipped in 5.19.0; any tool that loads a workspace and saves it —
+`apimock set`, and the GUI once it lands on this contract — triggered
+it. Values already grown by it are semantically unchanged (`./././.`
+and `.` are the same directory), so nothing using them was ever
+actually wrong, just increasingly cluttered on disk.
+
+**The fix.** `respond_dir_prefix` now holds only what a person actually
+wrote in `[prefix]` — untouched by loading, and absent entirely
+(no `[prefix]` manufactured) when the file never had one. The resolved
+directory the matcher needs lives in a new field,
+`RuleSet::resolved_respond_dir` — read it via `RuleSet::dir_prefix()`,
+unchanged in shape from before this fix, if you were calling that
+already.
+
+**A file already grown by the bug heals itself, gradually.** The next
+time a rule set whose `respond_dir` is purely `./`-segments (`"./."`,
+`"././."`, …) is saved for any other reason, that value collapses to
+`"."` as part of the same write — not a standalone rewrite of files
+nobody asked to change. An authored path like `respond_dir = "responses"`
+or `"./responses"` is never touched by this, only a value that is
+provably nothing but the current directory repeated. If you have a rule
+set that predates this fix and haven't triggered a save on it since, its
+`respond_dir` may still read as several `./`s stacked up; that's inert
+and can be left alone, cleaned up by hand, or left for the next `set`/GUI
+save to normalise on its own.
+
+**`Prefix` gained `#[non_exhaustive]`** in the same change (it's `pub`,
+though not re-exported from `apimock_routing`'s crate root) — construct
+one via `Deserialize` (TOML parsing), the only way anything in this
+workspace ever did; a struct literal against `Prefix` now only compiles
+from inside `apimock-routing` itself.
+
+**`Prefix::validate` also changed signature**, in the same fix and for
+the same reason: it used to read the resolved directory off `self`
+(`pub fn validate(&self, rule_set_idx: usize) -> bool`), which only
+worked because that was the field this bug overwrote with the resolved
+value. Once `respond_dir_prefix` stopped holding the resolved form,
+`validate` had nowhere left to read it from, so it now takes that
+directory as a parameter instead:
+`pub fn validate(&self, resolved_respond_dir: &str, rule_set_idx: usize) -> bool`.
+A public-API break for the same reason as the field itself — call it
+with `rule_set.dir_prefix()` for the first argument, the accessor that
+already existed for this.
+
 ## Library: `TraceConfig`, `ParsedRequest`, and `RequestSummary` already had new fields, before `#[non_exhaustive]`
 
 For the historical record — the reason RFC 052 exists at all. RFC 040

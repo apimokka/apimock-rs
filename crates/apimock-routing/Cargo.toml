@@ -22,3 +22,9 @@ serde                       = { workspace = true }
 serde_json                  = { workspace = true }
 toml                        = { workspace = true }
 thiserror                   = { workspace = true }
+
+[dev-dependencies]
+# RFC 058's `RuleSet::new` tests load real files from a temp directory —
+# the on-disk read is part of what's under test (`fs::read_to_string`
+# inside `RuleSet::new` itself), not something worth mocking around.
+tempfile                    = { workspace = true }
