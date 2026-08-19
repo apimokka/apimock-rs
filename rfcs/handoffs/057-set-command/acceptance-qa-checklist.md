@@ -2,6 +2,8 @@
 
 **Governing RFC.** [RFC 057](../../accepted/057-set-command.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
+**Contract.** Restated in the handoff's § 3 — you do not need RFC 053
+in hand to work through section F.
 
 Every box needs evidence in the review-request package — captured
 output, not an assertion that it passes.
@@ -45,7 +47,7 @@ output, not an assertion that it passes.
 - [ ] A rule set with comments and non-canonical formatting survives a
       `set`. Show the file before and after.
 - [ ] Conflict: modify a file between load and save, run `set`, receive
-      RFC 053 kind `conflict` — **and no file modified**.
+      kind `conflict` — **and no file modified**.
 - [ ] An unreadable file yields kind `io`, distinct from `conflict`.
 - [ ] A failed `set` changes nothing at all, not "mostly nothing".
 
@@ -58,7 +60,7 @@ output, not an assertion that it passes.
 - [ ] No command in this cut renumbers an existing rule or rule set —
       the property the addressing contract depends on.
 
-## F. Contract conformance (RFC 053)
+## F. Contract conformance (handoff § 3)
 
 - [ ] `--format json` emits the envelope: an object, with `schema`,
       `apimock`, and **exactly one** of `result` / `error`. Asserted on
@@ -66,8 +68,8 @@ output, not an assertion that it passes.
 - [ ] `apimock` is the running binary's version.
 - [ ] `--format text` is readable by a person and is the default for a
       TTY.
-- [ ] Errors carry a `kind` from RFC 053's taxonomy, with `conflict` and
-      `io` distinguished.
+- [ ] Errors carry a `kind` from the closed set in the handoff's § 3,
+      with `conflict` and `io` distinguished.
 - [ ] Diagnostics go to stderr; stdout carries only the result.
 
 ## G. Regression and gates

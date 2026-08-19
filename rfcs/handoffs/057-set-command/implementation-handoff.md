@@ -1,7 +1,7 @@
 # Implementation Handoff — RFC 057, `apimock set`
 
 **Governing RFC.** [RFC 057](../../accepted/057-set-command.md)
-**Contract.** [RFC 053](../../accepted/053-v6-cli-contract.md) — the envelope
+**Contract.** [RFC 053](../../accepted/053-v6-cli-contract.md) — **restated in full in § 3**, so this package is self-contained
 **Write path.** [RFC 056](../../accepted/056-toml-edit-migration.md) — already merged
 **Umbrella.** [RFC 048](../../accepted/048-v6-cli-interface-concept.md) § 11 item 5 — the last of the portfolio
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
@@ -160,7 +160,59 @@ to expose is a **resolution function and an address renderer**, not the
 enum: enough to turn (path, index) into a node and back, and no more.
 Keep the returned type `#[non_exhaustive]` per RFC 052.
 
-## 3. Scope
+## 3. The contract, restated — so this package stands alone
+
+RFC 053 is the authority and lives at
+`rfcs/accepted/053-v6-cli-contract.md`. Everything you need to build
+`set` is copied here, because this handoff is given to you on its own.
+**If the two ever disagree, RFC 053 wins — say so rather than following
+this section.**
+
+### The envelope
+
+```json
+{ "schema": 1, "apimock": "6.0.0", "result": { … } }
+{ "schema": 1, "apimock": "6.0.0", "error": { "kind": "…", "message": "…", "detail": { … } } }
+```
+
+- An **object, never a bare array**. A collection goes *inside* `result`.
+- `schema` is an integer, so a consumer can branch on it.
+- `apimock` is the running binary's version.
+- **Exactly one** of `result` / `error`.
+
+`crates/apimock/src/cmd/envelope.rs` already exists and already produces
+this — RFC 054 built it and `get` reuses it. **Use it; do not write a
+second one.**
+
+### `error.kind` — a closed set
+
+| `kind` | Meaning | Exit |
+|---|---|---|
+| `usage` | Bad invocation — unknown option, missing value | 2 |
+| `config_invalid` | Configuration read but not valid | 1 |
+| `config_unreadable` | Configuration missing or unreadable | 1 |
+| `io` | Filesystem failure that is not the config | 1 |
+| `conflict` | State changed underneath — **`set` only** | 1 |
+| `internal` | A bug in apimock | 1 |
+
+`set` is the command `conflict` was reserved for. Map
+`SaveError::Conflict` to `conflict` and `SaveError::Read` to `io` — the
+library distinguishes them precisely so the CLI can, and collapsing them
+throws away the distinction a caller needs to decide whether retrying
+helps.
+
+### Exit codes
+
+`0` success, `2` usage error, `1` everything else. **`error.kind` is not
+encoded into the exit code** — the taxonomy lives in the payload, where
+it can evolve; the exit code only says *whether* it failed.
+
+### Output streams
+
+Diagnostics to stderr; stdout carries only the result. A parser reading
+stdout must never see a warning.
+
+## 4. Scope
 
 **In:** a new `crates/apimock/src/cmd/set.rs`; the minimal
 `apimock-config` accessors from § 2 Unresolved 3; `rule_set_file` added
@@ -176,7 +228,7 @@ to `get`'s `matched` block (§ 1.2); the W7 CI script; documentation.
   server.
 - Re-deriving all-or-nothing write semantics. RFC 056 has it. Use it.
 
-## 4. Evidence required
+## 5. Evidence required
 
 - **The W7 script from RFC 057 runs green in CI**, every exit code
   asserted. If it is awkward to write, say so — the RFC states that as
@@ -199,7 +251,7 @@ to `get`'s `matched` block (§ 1.2); the W7 CI script; documentation.
   `cargo fmt --all --check`, `cargo clippy --workspace --all-targets
   --all-features -- -D warnings`.
 
-## 5. Escalation
+## 6. Escalation
 
 Per project convention, blocking issues and design questions go in a
 `.git-exclude/review-request/` package rather than only in chat.
