@@ -1,6 +1,11 @@
 # RFC 053 — The v6 CLI contract
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-17.
+First realised by [RFC 054](../done/054-deprecation-release.md) in 5.19.0 and
+extended by [RFC 055](./055-get-command.md); it stays in `accepted/` until
+`set` ([RFC 057](../proposed/057-set-command.md)) completes the surface it
+specifies.
+
 **Tracks.** v6 product direction. [RFC 048](./048-v6-cli-interface-concept.md)
 § 11 item 3 — the contract that `get` and `set` are then built against.
 **Touches.** `crates/apimock/src/args.rs` and `cmd/`, documentation.

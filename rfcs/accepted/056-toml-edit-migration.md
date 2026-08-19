@@ -1,6 +1,8 @@
 # RFC 056 — Preserve what people wrote: `toml_edit` for the save path
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-19.
+Implemented and merged to `main`; awaiting the 6.0.0 release.
+
 **Tracks.** v6. [RFC 048](./048-v6-cli-interface-concept.md) § 8 and
 § 11 item 1 — the prerequisite that makes `set`'s central claim true.
 **Touches.** `crates/apimock-config/src/toml_writer.rs`, and — see § 2 —

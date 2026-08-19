@@ -1,6 +1,8 @@
 # RFC 051 — Redact credential headers in verbose request logging
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-17.
+Implemented and merged to `main`; awaiting the 6.0.0 release.
+
 **Tracks.** Security. The second place request headers are emitted
 verbatim — and, on reachability, the more exposed of the two.
 **Touches.** `crates/apimock-server/src/parsed_request.rs`

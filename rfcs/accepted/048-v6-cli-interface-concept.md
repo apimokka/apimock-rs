@@ -1,9 +1,11 @@
 # RFC 048 — v6 concept: the CLI as a first-class interface
 
-**Status.** Proposed — concept accepted by the project owner 2026-08-17;
-this document records the design. **Umbrella RFC**: it decides shape and
+**Status.** **Accepted** — concept accepted by the project owner 2026-08-17;
+this document records the design. It stays in `accepted/` until the RFCs it
+governs have all shipped. **Umbrella RFC**: it decides shape and
 constraints, and spawns the RFCs that implement them. It ships no code
 itself, in the manner of RFC 034.
+
 **Tracks.** Product direction. v6 makes configuration and inspection
 available *through the command line* to callers who are not sitting at a
 terminal — principally AI CLI agents and CI — without weakening the
@@ -525,7 +527,7 @@ Indicative, to be numbered when written.
 | 3 | [**RFC 053**](./053-v6-cli-contract.md) — the contract: invocation, schemas, error taxonomy, exit codes | § 3. Drafted 2026-08-17 |
 | 3b | **Threat model refinement** — settle T2 (data vs code) before `set` is designed | § 9, blocks RFC 5 |
 | 4 | [**RFC 055**](./055-get-command.md) — `get`, W1/W2/W3, with provenance | § 2, § 4. Drafted 2026-08-17 |
-| 5 | [**RFC 057**](./057-set-command.md) — `set`, W4/W6, preview, transaction boundary | § 2. Drafted 2026-08-17 |
+| 5 | [**RFC 057**](../proposed/057-set-command.md) — `set`, W4/W6, preview, transaction boundary | § 2. Drafted 2026-08-17 |
 | 6 | **Enumerate v6's breaking changes** — the list, not the designs | § 7.1, **blocks the final 5.x** |
 | 7 | Deprecation warnings in 5.x, on stderr, with a named removal version | § 7.1, ships in v5 |
 | 8 | Migration guide and the loud-failure requirement | § 7 |

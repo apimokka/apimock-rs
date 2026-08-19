@@ -7,33 +7,47 @@ Lifecycle and folder conventions: [RFC 000](./done/000-rfc-lifecycle-policy.md).
 ```
 rfcs/
   README.md       ← this file
-  proposed/       ← open for review
-  done/           ← implemented; historical record
+  proposed/       ← written, under review; not yet approved
+  accepted/       ← owner approved; implementer may start, or has
+                    finished but the work has not been released
+  done/           ← released; historical record
   archive/        ← withdrawn or superseded
 ```
 
 ## Proposed
+
+Written and under review. **Not approved** — nothing here may be
+implemented yet.
 
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
 | ID  | Title |
 |-----|-------|
-| 040 | [Trace channel: redaction, and non-JSON body capture](./proposed/040-trace-capture-and-redaction.md) |
-| 048 | [v6 concept: the CLI as a first-class interface](./proposed/048-v6-cli-interface-concept.md) — umbrella |
-| 050 | [Should non-JSON request bodies be captured at all?](./proposed/050-non-json-body-capture-decision.md) — decision RFC |
-| 051 | [Redact credential headers in verbose request logging](./proposed/051-verbose-log-header-redaction.md) |
-| 052 | [`#[non_exhaustive]` on the public types that keep growing](./proposed/052-non-exhaustive-public-types.md) |
-| 053 | [The v6 CLI contract](./proposed/053-v6-cli-contract.md) |
-| 055 | [`apimock get`: what will this request return?](./proposed/055-get-command.md) |
-| 056 | [Preserve what people wrote: `toml_edit` for the save path](./proposed/056-toml-edit-migration.md) |
 | 057 | [`apimock set`: make the server answer X under condition Y](./proposed/057-set-command.md) |
+
+## Accepted
+
+Approved by the project owner. Everything below is **implemented and
+merged to `main`**, awaiting the 6.0.0 release that will move it to
+`done/`.
+
+| ID  | Title |
+|-----|-------|
+| 040 | [Trace channel: redaction, and non-JSON body capture](./accepted/040-trace-capture-and-redaction.md) |
+| 048 | [v6 concept: the CLI as a first-class interface](./accepted/048-v6-cli-interface-concept.md) — umbrella |
+| 050 | [Should non-JSON request bodies be captured at all?](./accepted/050-non-json-body-capture-decision.md) — decision RFC |
+| 051 | [Redact credential headers in verbose request logging](./accepted/051-verbose-log-header-redaction.md) |
+| 052 | [`#[non_exhaustive]` on the public types that keep growing](./accepted/052-non-exhaustive-public-types.md) |
+| 053 | [The v6 CLI contract](./accepted/053-v6-cli-contract.md) |
+| 055 | [`apimock get`: what will this request return?](./accepted/055-get-command.md) |
+| 056 | [Preserve what people wrote: `toml_edit` for the save path](./accepted/056-toml-edit-migration.md) |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
 separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 
-## Done (Implemented)
+## Done (Released)
 
 | ID  | Title | Shipped |
 |-----|-------|---------|

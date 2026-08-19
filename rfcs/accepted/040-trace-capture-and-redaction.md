@@ -1,6 +1,8 @@
 # RFC 040 — Trace channel: header redaction
 
-**Status.** Proposed — approved by the project owner 2026-08-17.
+**Status.** **Accepted** — approved by the project owner 2026-08-17.
+Implemented and merged to `main`; awaiting the 6.0.0 release.
+
 **Amended 2026-08-17, during implementation:** goal 3 (non-JSON body
 capture) is **removed from this RFC** — it could not be built inside the
 scope this RFC set. See § Amendment.

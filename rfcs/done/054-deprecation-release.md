@@ -8,7 +8,7 @@ behaviour still works.
 **Touches.** `crates/apimock/src/cmd/validate.rs`, `args/constant.rs`,
 documentation, and the migration guide. **Cut from `5.18.0` on a
 short-lived branch**, not from `main` (RFC 048 § 7.2).
-**Depends on.** [RFC 053](./053-v6-cli-contract.md) — the envelope this
+**Depends on.** [RFC 053](../accepted/053-v6-cli-contract.md) — the envelope this
 release lets people adopt early, and § 7's enumeration.
 
 ## Summary

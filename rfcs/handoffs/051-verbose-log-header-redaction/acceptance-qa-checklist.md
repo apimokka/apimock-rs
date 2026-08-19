@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 051
 
-**Governing RFC.** [RFC 051](../../proposed/051-verbose-log-header-redaction.md)
+**Governing RFC.** [RFC 051](../../accepted/051-verbose-log-header-redaction.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---

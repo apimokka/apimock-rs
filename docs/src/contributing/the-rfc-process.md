@@ -9,9 +9,18 @@ authority on it.
 
 ## The short version
 
-- `rfcs/proposed/` — open for review.
-- `rfcs/done/` — implemented; the historical record.
+- `rfcs/proposed/` — written and under review; not yet approved.
+- `rfcs/accepted/` — approved by the project owner. Implementation may
+  start, or may already be finished and merged, but the work has not
+  been released yet.
+- `rfcs/done/` — released; the historical record.
 - `rfcs/archive/` — withdrawn or superseded.
+
+The `accepted/` step exists because approving a design and shipping it
+are separate events here, performed by different people. Without a
+folder for the gap between them, approved-but-unreleased RFCs sat in
+`proposed/` with a `Status` claiming they still awaited approval — the
+exact folder/field disagreement described next.
 
 **The folder is the source of truth for an RFC's state**, not the
 `Status` field written inside the file. The field is kept consistent

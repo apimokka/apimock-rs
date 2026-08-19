@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 040
 
-**Governing RFC.** [RFC 040](../../proposed/040-trace-capture-and-redaction.md)
+**Governing RFC.** [RFC 040](../../accepted/040-trace-capture-and-redaction.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---

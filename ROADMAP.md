@@ -90,7 +90,7 @@ once that window is agreed.
   it.
 
   **Amended 2026-08-17:** v6's *concept* is now accepted
-  ([RFC 048](./rfcs/proposed/048-v6-cli-interface-concept.md)), and the
+  ([RFC 048](./rfcs/accepted/048-v6-cli-interface-concept.md)), and the
   transition is no longer out of scope — because the owner decided a
   deprecation window ships in a 5.x release first. That makes part of
   v6's design a prerequisite for finishing v5. See § Closing v5, opening
@@ -259,10 +259,10 @@ first release cut through it.**
 | RFC | Title | Pri | Depends on | State |
 |---|---|---|---|---|
 | 039 | `cargo public-api` additive-only enforcement | P1 | 031 | Planned |
-| 040 | [Trace channel: header redaction](./rfcs/proposed/040-trace-capture-and-redaction.md) | P1 | — | Implemented, awaiting release. **Goal 3 removed** — see 050 |
-| 050 | [Should non-JSON bodies be captured at all?](./rfcs/proposed/050-non-json-body-capture-decision.md) | P2 | 040 | Decision RFC, drafted 2026-08-17 |
-| 051 | [Redact credential headers in verbose logging](./rfcs/proposed/051-verbose-log-header-redaction.md) | **P1** | 040 | Drafted 2026-08-17 — security. Attempted **without new public fields** so it can ship in a true minor |
-| 052 | [`#[non_exhaustive]` on public types](./rfcs/proposed/052-non-exhaustive-public-types.md) | P1 | — | **Decision approved 2026-08-17.** Breaking; ships at the v6 boundary |
+| 040 | [Trace channel: header redaction](./rfcs/accepted/040-trace-capture-and-redaction.md) | P1 | — | **Accepted** 2026-08-17 — implemented on `main`, awaiting 6.0.0. **Goal 3 removed** — see 050 |
+| 050 | [Should non-JSON bodies be captured at all?](./rfcs/accepted/050-non-json-body-capture-decision.md) | P2 | 040 | **Accepted** — decided 2026-08-17, answer (2), presence only. Implemented on `main`, awaiting 6.0.0 |
+| 051 | [Redact credential headers in verbose logging](./rfcs/accepted/051-verbose-log-header-redaction.md) | **P1** | 040 | **Accepted** 2026-08-17 — security. Implemented on `main`, awaiting 6.0.0. Was attempted **without new public fields** so it could ship in a true minor; it did not make 5.19.0, so it now ships with the rest |
+| 052 | [`#[non_exhaustive]` on public types](./rfcs/accepted/052-non-exhaustive-public-types.md) | P1 | — | **Accepted** — decision approved 2026-08-17. Implemented on `main`; breaking, ships at the v6 boundary |
 | 041 | Shrink large error variants (`result_large_err`) | P2 | — | **Deferred to 6.0.0** — breaking; see below |
 | 042 | ~~`sync_from_disk` incremental reconciliation~~ → **rescoped, and much smaller** | P2 | — | **G1 answered 2026-08-17.** The owner rejects both automatic behaviour change *and* continuous watching, so no filesystem watcher and no `notify` dependency. Detection is a boot-time file list plus an existence/mtime poll; the response is to **ask the user**, not to act. That removes RFC 042's premise — it existed to make reconciliation *incremental* because wholesale reload was assumed too costly to do often, and a reload gated on explicit confirmation does not happen often. RFC 024 already covers part of the remainder |
 | 043 | Module split: `workspace/edit.rs`, `server/trace.rs` | P2 | — | Planned |
@@ -338,7 +338,7 @@ deliberately kept its number** — it is already referenced externally by
 ## Closing v5, opening v6
 
 **Added 2026-08-17.** v6's concept is accepted and recorded in
-[RFC 048](./rfcs/proposed/048-v6-cli-interface-concept.md): the CLI
+[RFC 048](./rfcs/accepted/048-v6-cli-interface-concept.md): the CLI
 becomes an interface in its own right, with `get` and `set` families
 aimed principally at AI CLI agents and CI.
 
@@ -474,7 +474,7 @@ starts immediately.
 | R-05 | ~~CI tracks Rust `stable` while `Cargo.toml` pins MSRV 1.91.0~~ | — | — | **Closed 2026-08-12.** RFC 031's `msrv` job exists and reads the pin from `Cargo.toml` rather than hard-coding it (`.github/workflows/ci.yaml:106`) | architect |
 | R-06 | Scope creep from docs work — rewriting docs surfaces genuine feature gaps | M2 expands into feature work | Medium | Feature gaps discovered during M2 become new RFCs for a later milestone; they do not join M2 | architect |
 | R-08 | `crates-io-publish` has never executed successfully — v5.16.0's crates were published by hand | A first-run failure blocks a release mid-flight, after npm has already published | Medium | v5.17.0 is its first real run and is treated as unproven; crates.io's "require trusted publishing" toggle stays off until it goes green (`RELEASING.md`) | architect |
-| R-09 | **Public structs in the trace/request path are not `#[non_exhaustive]`, so adding a field is a breaking change** — `TraceConfig`, `RequestSummary` (`apimock-server::trace`), `ParsedRequest` (`apimock-routing`, re-exported at `lib.rs:43`). RFC 040 already added three fields to `TraceConfig`; that break is unreleased on `main`. RFCs 050 and 051 would add more | A minor release ships a breaking API change, unnoticed | **High — already happened once** | **Decided 2026-08-17: mark them `#[non_exhaustive]` — one deliberate break, then immunity. See [RFC 052](./rfcs/proposed/052-non-exhaustive-public-types.md).** Spans RFCs 040/050/051, so decided once rather than per-RFC. Exactly the class **RFC 039**'s additive-only gate exists to catch, and 039 is not built. Note `apimock-config`'s `view.rs` types *are* `#[non_exhaustive]` with a comment explaining why — so this is drift in applying a known idiom, not unawareness of it. `LogConfig` / `VerboseConfig` are exposed the same way | owner + architect |
+| R-09 | **Public structs in the trace/request path are not `#[non_exhaustive]`, so adding a field is a breaking change** — `TraceConfig`, `RequestSummary` (`apimock-server::trace`), `ParsedRequest` (`apimock-routing`, re-exported at `lib.rs:43`). RFC 040 already added three fields to `TraceConfig`; that break is unreleased on `main`. RFCs 050 and 051 would add more | A minor release ships a breaking API change, unnoticed | **High — already happened once** | **Decided 2026-08-17: mark them `#[non_exhaustive]` — one deliberate break, then immunity. See [RFC 052](./rfcs/accepted/052-non-exhaustive-public-types.md).** Spans RFCs 040/050/051, so decided once rather than per-RFC. Exactly the class **RFC 039**'s additive-only gate exists to catch, and 039 is not built. Note `apimock-config`'s `view.rs` types *are* `#[non_exhaustive]` with a comment explaining why — so this is drift in applying a known idiom, not unawareness of it. `LogConfig` / `VerboseConfig` are exposed the same way | owner + architect |
 | R-07 | No load/performance evidence backs the README's k6 claim | Cannot verify a public claim | Low | Out of scope for this roadmap; revisit only if a regression is suspected | unassigned |
 
 ---

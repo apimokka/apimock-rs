@@ -1,11 +1,13 @@
 # RFC 050 — Should non-JSON request bodies be captured at all?
 
-**Status.** **Decided 2026-08-17 — answer (2), presence only.** Approved
+**Status.** **Accepted** — **decided 2026-08-17, answer (2), presence only.**
+Implemented and merged to `main`; awaiting the 6.0.0 release. Approved
 by the project owner, who also confirmed the GUI wants body metadata
 (Unresolved 3). **This is a decision
 RFC.** It asks a question and recommends an answer; it does not specify
 an implementation, because the implementation is only worth designing if
 the answer is yes.
+
 **Tracks.** Security, and RFC 023's Unresolved 1 — reopened by
 [RFC 040](./040-trace-capture-and-redaction.md)'s amendment.
 **Touches.** Nothing, if the answer is no. If yes:

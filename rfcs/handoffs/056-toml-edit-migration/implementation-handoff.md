@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 056, `toml_edit` for the save path
 
-**Governing RFC.** [RFC 056](../../proposed/056-toml-edit-migration.md)
+**Governing RFC.** [RFC 056](../../accepted/056-toml-edit-migration.md)
 **Milestone.** 6.0.0 — RFC 048 § 11 item 1. **Blocks `set`.**
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 

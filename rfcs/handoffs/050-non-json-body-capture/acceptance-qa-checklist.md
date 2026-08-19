@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 050
 
-**Governing RFC.** [RFC 050](../../proposed/050-non-json-body-capture-decision.md)
+**Governing RFC.** [RFC 050](../../accepted/050-non-json-body-capture-decision.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---

@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 052, `#[non_exhaustive]` on public types
 
-**Governing RFC.** [RFC 052](../../proposed/052-non-exhaustive-public-types.md)
+**Governing RFC.** [RFC 052](../../accepted/052-non-exhaustive-public-types.md)
 **Milestone.** 6.0.0. **A breaking change, deliberately.**
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 

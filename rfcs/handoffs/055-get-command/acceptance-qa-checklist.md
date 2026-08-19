@@ -1,7 +1,7 @@
 # Acceptance / QA Checklist — RFC 055
 
-**Governing RFC.** [RFC 055](../../proposed/055-get-command.md)
-**Contract.** [RFC 053](../../proposed/053-v6-cli-contract.md)
+**Governing RFC.** [RFC 055](../../accepted/055-get-command.md)
+**Contract.** [RFC 053](../../accepted/053-v6-cli-contract.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---

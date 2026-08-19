@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 040, trace redaction and non-JSON body capture
 
-**Governing RFC.** [RFC 040](../../proposed/040-trace-capture-and-redaction.md)
+**Governing RFC.** [RFC 040](../../accepted/040-trace-capture-and-redaction.md)
 **Milestone.** M3 — P1, targeting **v5.19.0**
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 

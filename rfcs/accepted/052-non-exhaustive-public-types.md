@@ -1,7 +1,9 @@
 # RFC 052 — `#[non_exhaustive]` on the public types that keep growing
 
-**Status.** Proposed — **decision approved by the project owner
-2026-08-17**; this document records it and scopes the work.
+**Status.** **Accepted** — **decision approved by the project owner
+2026-08-17**; this document records it and scopes the work. Implemented
+and merged to `main`; awaiting the 6.0.0 release.
+
 **Tracks.** API stability. Five public structs assert that their field
 set is final. It is not, and three RFCs this month have proved it.
 **Touches.** `apimock-server` (`TraceConfig`, `RequestSummary`),

@@ -1,7 +1,7 @@
 # Implementation Handoff — RFC 049, the CLI front door
 
 **Governing RFC.** [RFC 049](../../done/049-cli-front-door.md)
-**Umbrella.** [RFC 048](../../proposed/048-v6-cli-interface-concept.md) § 6
+**Umbrella.** [RFC 048](../../accepted/048-v6-cli-interface-concept.md) § 6
 **Milestone.** Closing v5 — **blocks the deprecation release**
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 

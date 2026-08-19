@@ -1,7 +1,7 @@
 # Implementation Handoff — RFC 055, `apimock get`
 
-**Governing RFC.** [RFC 055](../../proposed/055-get-command.md)
-**Contract.** [RFC 053](../../proposed/053-v6-cli-contract.md)
+**Governing RFC.** [RFC 055](../../accepted/055-get-command.md)
+**Contract.** [RFC 053](../../accepted/053-v6-cli-contract.md)
 **Milestone.** 6.0.0 — RFC 048 § 11 item 4
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 
