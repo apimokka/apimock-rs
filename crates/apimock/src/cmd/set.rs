@@ -245,12 +245,12 @@ impl SetRuleArgs {
     }
 
     fn respond_payload(&self) -> RespondPayload {
-        RespondPayload {
-            file_path: self.file_path.clone(),
-            text: self.respond_text(),
-            status: self.status,
-            delay_milliseconds: self.delay_ms,
-        }
+        let mut payload = RespondPayload::default();
+        payload.file_path = self.file_path.clone();
+        payload.text = self.respond_text();
+        payload.status = self.status;
+        payload.delay_milliseconds = self.delay_ms;
+        payload
     }
 
     fn respond_fields_given(&self) -> bool {
@@ -264,10 +264,10 @@ impl SetRuleArgs {
     fn header_payloads(&self) -> Vec<HeaderConditionPayload> {
         self.headers
             .iter()
-            .map(|(name, value)| HeaderConditionPayload {
-                name: name.clone(),
-                op: HeaderOp::Equal,
-                value: Some(value.clone()),
+            .map(|(name, value)| {
+                let mut condition = HeaderConditionPayload::new(name.clone(), HeaderOp::Equal);
+                condition.value = Some(value.clone());
+                condition
             })
             .collect()
     }
@@ -520,19 +520,15 @@ fn apply_add(
     args: &SetRuleArgs,
 ) -> Result<(), Failure> {
     let headers = args.header_payloads();
-    let rule = RulePayload {
-        url_path: args.path.clone(),
-        url_path_op: None,
-        method: args.method.clone(),
-        priority: None,
-        headers: if headers.is_empty() {
-            None
-        } else {
-            Some(headers)
-        },
-        body: None,
-        respond: args.respond_payload(),
+    let mut rule = RulePayload::default();
+    rule.url_path = args.path.clone();
+    rule.method = args.method.clone();
+    rule.headers = if headers.is_empty() {
+        None
+    } else {
+        Some(headers)
     };
+    rule.respond = args.respond_payload();
     ws.apply(EditCommand::AddRule { parent, rule })
         .map(|_| ())
         .map_err(|e| (envelope::kind_for_apply_error(&e), e.to_string()))
@@ -571,22 +567,18 @@ fn apply_update(
             args.respond_payload()
         } else {
             let current = &ws.config().service.rule_sets[rs_idx].rules[rule_index].respond;
-            RespondPayload {
-                file_path: current.file_path.clone(),
-                text: current.text.clone(),
-                status: current.status,
-                delay_milliseconds: current.delay_response_milliseconds,
-            }
+            let mut payload = RespondPayload::default();
+            payload.file_path = current.file_path.clone();
+            payload.text = current.text.clone();
+            payload.status = current.status;
+            payload.delay_milliseconds = current.delay_response_milliseconds;
+            payload
         };
-        let rule = RulePayload {
-            url_path: args.path.clone(),
-            url_path_op: None,
-            method: args.method.clone(),
-            priority: None,
-            headers: None, // preserve — AddHeaderCondition below layers on top, doesn't replace
-            body: None,
-            respond,
-        };
+        let mut rule = RulePayload::default();
+        rule.url_path = args.path.clone();
+        rule.method = args.method.clone();
+        // headers: left None — preserve; AddHeaderCondition below layers on top, doesn't replace
+        rule.respond = respond;
         ws.apply(EditCommand::UpdateRule { id: rule_id, rule })
             .map_err(|e| (envelope::kind_for_apply_error(&e), e.to_string()))?;
     } else if changes_respond {

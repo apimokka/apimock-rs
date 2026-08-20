@@ -35,6 +35,7 @@ pub mod service_config;
 /// Top-level application configuration, corresponding one-to-one with
 /// `apimock.toml`.
 #[derive(Clone, Deserialize)]
+#[non_exhaustive]
 pub struct Config {
     /// Where this config was loaded from. Kept so we can resolve relative
     /// paths (rule sets, middlewares, respond dirs) against the config
@@ -58,10 +59,6 @@ impl Config {
     /// Middleware paths are *recorded* on the returned Config but not
     /// compiled here — the server crate performs compilation. See the
     /// module docstring for why.
-    // clippy: ConfigError is a public error type (RFC 030 §6 escalation
-    // trigger); boxing its large variant would change that type's shape.
-    // See ESCALATION-002 in the RFC 030 review-request package.
-    #[allow(clippy::result_large_err)]
     pub fn new(
         config_file_path: Option<&String>,
         fallback_respond_dir_path: Option<&String>,
@@ -84,10 +81,6 @@ impl Config {
     /// Load + parse the TOML file. Returns `Config::default()` when no
     /// path is provided (this is the zero-config "just serve a folder"
     /// path).
-    // clippy: ConfigError is a public error type (RFC 030 §6 escalation
-    // trigger); boxing its large variant would change that type's shape.
-    // See ESCALATION-002 in the RFC 030 review-request package.
-    #[allow(clippy::result_large_err)]
     fn init(config_file_path: Option<&String>) -> ConfigResult<Self> {
         let Some(config_file_path) = config_file_path else {
             return Ok(Config::default());
@@ -106,7 +99,7 @@ impl Config {
             toml::from_str(&toml_string).map_err(|e| ConfigError::ConfigParse {
                 path: path.to_path_buf(),
                 canonical: path.canonicalize().ok(),
-                source: e,
+                source: Box::new(e),
             })?;
         config.file_path = Some(config_file_path.to_owned());
 
@@ -114,10 +107,6 @@ impl Config {
     }
 
     /// Load every rule-set file listed in `service.rule_sets`.
-    // clippy: ConfigError is a public error type (RFC 030 §6 escalation
-    // trigger); boxing its large variant would change that type's shape.
-    // See ESCALATION-002 in the RFC 030 review-request package.
-    #[allow(clippy::result_large_err)]
     fn set_rule_sets(&mut self) -> ConfigResult<()> {
         let relative_dir_path = self.current_dir_to_parent_dir_relative_path()?;
 
@@ -155,10 +144,6 @@ impl Config {
 
     /// Resolve the fallback respond dir against the config file's parent
     /// directory. See the module doc for why we don't resolve against CWD.
-    // clippy: ConfigError is a public error type (RFC 030 §6 escalation
-    // trigger); boxing its large variant would change that type's shape.
-    // See ESCALATION-002 in the RFC 030 review-request package.
-    #[allow(clippy::result_large_err)]
     pub fn compute_fallback_respond_dir(
         &mut self,
         fallback_respond_dir_path: Option<&String>,
@@ -242,10 +227,6 @@ impl Config {
     }
 
     /// Relative path from CWD to the parent dir of the config file.
-    // clippy: ConfigError is a public error type (RFC 030 §6 escalation
-    // trigger); boxing its large variant would change that type's shape.
-    // See ESCALATION-002 in the RFC 030 review-request package.
-    #[allow(clippy::result_large_err)]
     pub fn current_dir_to_parent_dir_relative_path(&self) -> ConfigResult<String> {
         let Some(file_path) = self.file_path.as_ref() else {
             return Ok(String::from("."));

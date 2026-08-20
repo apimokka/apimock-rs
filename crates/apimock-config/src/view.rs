@@ -43,6 +43,7 @@ use apimock_routing::view::RouteCatalogSnapshot;
 /// which matches spec §10 "Workspace はメモリ上に独立インスタンスを持つ".
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
+#[non_exhaustive]
 pub struct NodeId(pub Uuid);
 
 impl NodeId {
@@ -106,6 +107,7 @@ pub struct ConfigFileView {
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
+#[non_exhaustive]
 pub enum ConfigFileKind {
     Root,
     RuleSet,
@@ -138,6 +140,7 @@ pub struct ConfigNodeView {
 /// What shape of value a node holds. The variants are what the
 /// spec-defined `EditCommand` variants act on.
 #[derive(Clone, Copy, Debug, Serialize)]
+#[non_exhaustive]
 pub enum NodeKind {
     /// Root config node — listener / log / service fields.
     RootSetting,
@@ -161,6 +164,7 @@ pub enum NodeKind {
 /// Keeping the validation result stapled to the node the GUI is about
 /// to render avoids a second lookup step in every render frame.
 #[derive(Clone, Debug, Default, Serialize)]
+#[non_exhaustive]
 pub struct NodeValidation {
     /// Convenience flag — true iff `issues` is empty.
     pub ok: bool,
@@ -178,9 +182,19 @@ impl NodeValidation {
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
 pub struct ValidationIssue {
     pub severity: Severity,
     pub message: String,
+}
+
+impl ValidationIssue {
+    pub fn new(severity: Severity, message: impl Into<String>) -> Self {
+        Self {
+            severity,
+            message: message.into(),
+        }
+    }
 }
 
 /// Structured edit command applied via `Workspace::apply`.
@@ -280,9 +294,16 @@ pub enum EditCommand {
 /// GUI code can target granular edit commands without reading index
 /// positions.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub struct ConditionWithId<V> {
     pub id: NodeId,
     pub view: V,
+}
+
+impl<V> ConditionWithId<V> {
+    pub fn new(id: NodeId, view: V) -> Self {
+        Self { id, view }
+    }
 }
 ///
 /// # Preservation of unspecified fields (5.5.0 guarantee)
@@ -307,6 +328,7 @@ pub struct ConditionWithId<V> {
 /// preserves the existing rule's conditions; each `Some(_)` replaces
 /// them wholesale (an empty `Vec` clears them).
 #[derive(Clone, Debug, Default)]
+#[non_exhaustive]
 pub struct RulePayload {
     pub url_path: Option<String>,
     /// URL path match operator (RFC 001). `None` defaults to `Equal`.
@@ -329,6 +351,7 @@ pub struct RulePayload {
 /// `apimock-config` to decouple the GUI-facing payload type from
 /// routing-internal types.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum UrlPathOp {
     Equal,
     StartsWith,
@@ -350,7 +373,20 @@ pub enum UrlPathOp {
 // ── RFC 002 — Header and body condition payloads ──────────────────────
 
 /// One header condition in a [`RulePayload`].
+///
+/// # `#[non_exhaustive]` (RFC 041)
+///
+/// ```compile_fail
+/// use apimock_config::{HeaderConditionPayload, HeaderOp};
+///
+/// let _ = HeaderConditionPayload {
+///     name: todo!(),
+///     op: HeaderOp::Equal,
+///     value: todo!(),
+/// };
+/// ```
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub struct HeaderConditionPayload {
     /// Header name (case-insensitive at match time).
     pub name: String,
@@ -359,8 +395,21 @@ pub struct HeaderConditionPayload {
     pub value: Option<String>,
 }
 
+impl HeaderConditionPayload {
+    /// `value` starts unset — required for all operators except
+    /// `Exists` / `Absent`; set it afterwards where needed.
+    pub fn new(name: impl Into<String>, op: HeaderOp) -> Self {
+        Self {
+            name: name.into(),
+            op,
+            value: None,
+        }
+    }
+}
+
 /// Operator for a header condition.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum HeaderOp {
     Equal,
     Contains,
@@ -381,6 +430,7 @@ pub enum HeaderOp {
 
 /// One body condition in a [`RulePayload`].
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub struct BodyConditionPayload {
     /// Currently only `Json`.
     pub kind: BodyConditionKind,
@@ -391,14 +441,32 @@ pub struct BodyConditionPayload {
     pub value: serde_json::Value,
 }
 
+impl BodyConditionPayload {
+    pub fn new(
+        kind: BodyConditionKind,
+        path: impl Into<String>,
+        op: BodyOp,
+        value: serde_json::Value,
+    ) -> Self {
+        Self {
+            kind,
+            path: path.into(),
+            op,
+            value,
+        }
+    }
+}
+
 /// Body condition kind — currently only JSON.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum BodyConditionKind {
     Json,
 }
 
 /// Operator for a body condition (RFC 002 / RFC 008 / RFC 021 / RFC 022).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum BodyOp {
     // string-style
     Equal,
@@ -441,6 +509,7 @@ pub enum BodyOp {
 /// `file_path` / `text` / `status` should be populated. Validation
 /// catches cases that violate this.
 #[derive(Clone, Debug, Default)]
+#[non_exhaustive]
 pub struct RespondPayload {
     pub file_path: Option<String>,
     pub text: Option<String>,
@@ -535,13 +604,25 @@ pub struct SaveResult {
 
 /// One summary row in a `SaveResult::diff_summary`.
 #[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
 pub struct DiffItem {
     pub kind: DiffKind,
     pub target: NodeId,
     pub summary: String,
 }
 
+impl DiffItem {
+    pub fn new(kind: DiffKind, target: NodeId, summary: impl Into<String>) -> Self {
+        Self {
+            kind,
+            target,
+            summary: summary.into(),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Serialize)]
+#[non_exhaustive]
 pub enum DiffKind {
     Added,
     Updated,
@@ -558,6 +639,7 @@ pub enum DiffKind {
 
 /// Workspace-wide validation result. Mirrors spec §4.6.
 #[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
 pub struct ValidationReport {
     pub diagnostics: Vec<Diagnostic>,
     pub is_valid: bool,
@@ -572,8 +654,18 @@ impl ValidationReport {
     }
 }
 
+/// `ValidationReport::ok()` is also the meaningful empty state: "no
+/// diagnostics gathered yet", the state a caller building one from
+/// outside the crate starts from before assigning its own fields.
+impl Default for ValidationReport {
+    fn default() -> Self {
+        Self::ok()
+    }
+}
+
 /// Human-readable notice about the workspace.
 #[derive(Clone, Debug, Serialize)]
+#[non_exhaustive]
 pub struct Diagnostic {
     /// Target node, if any. `None` means "workspace-wide".
     pub node_id: Option<NodeId>,
@@ -585,7 +677,21 @@ pub struct Diagnostic {
     pub message: String,
 }
 
+impl Diagnostic {
+    /// `node_id` and `file` start unset — assign them afterwards for a
+    /// diagnostic scoped to a node or a file.
+    pub fn new(severity: Severity, message: impl Into<String>) -> Self {
+        Self {
+            node_id: None,
+            file: None,
+            severity,
+            message: message.into(),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Serialize)]
+#[non_exhaustive]
 pub enum Severity {
     Error,
     Warning,
@@ -614,6 +720,7 @@ pub enum Severity {
 /// The hint is advisory — the server does not auto-restart. The GUI
 /// surfaces it to the user.
 #[derive(Clone, Copy, Debug, Default, Serialize)]
+#[non_exhaustive]
 pub struct ReloadHint {
     /// Server can re-read config without rebinding the listener.
     pub requires_reload: bool,

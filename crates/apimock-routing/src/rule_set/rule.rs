@@ -16,7 +16,14 @@ use when::{
 
 type ConditionKey = String;
 
+/// `#[non_exhaustive]` (RFC 041): a `Rule` with no `when`/`respond`
+/// content isn't a meaningful default the way an empty `Respond` is
+/// (see that type's own doc comment), so this gets a constructor
+/// instead of `Default`: `Rule::new(when, respond)`, then assign
+/// `weight`/`priority` if needed — both fields stay public and
+/// assignable.
 #[derive(Clone, Deserialize, Debug)]
+#[non_exhaustive]
 pub struct Rule {
     pub when: When,
     pub respond: Respond,
@@ -31,6 +38,17 @@ pub struct Rule {
 }
 
 impl Rule {
+    /// Build a `Rule` from its two required parts. `weight`/`priority`
+    /// start `None`; assign them afterward if needed — both are `pub`.
+    pub fn new(when: When, respond: Respond) -> Self {
+        Self {
+            when,
+            respond,
+            weight: None,
+            priority: None,
+        }
+    }
+
     /// Pre-compute derived fields that don't change per request.
     ///
     /// # Why this is a separate pass

@@ -81,6 +81,7 @@ impl ServerControl {
 
 /// What the server is doing right now.
 #[derive(Clone, Copy, Debug, Serialize)]
+#[non_exhaustive]
 pub enum ServerState {
     /// The listener is being brought up.
     Starting,
@@ -103,6 +104,7 @@ pub enum ServerState {
 /// matching on the server's own code paths. The `From` impls below
 /// bridge the two.
 #[derive(Clone, Copy, Debug, Serialize)]
+#[non_exhaustive]
 pub enum ReloadHint {
     /// No reload required.
     None,

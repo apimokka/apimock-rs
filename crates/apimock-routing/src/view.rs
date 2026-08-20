@@ -296,6 +296,7 @@ pub struct RouteValidationIssue {
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
+#[non_exhaustive]
 pub enum ValidationSeverity {
     Error,
     Warning,
@@ -343,6 +344,7 @@ pub struct FileNodeView {
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
+#[non_exhaustive]
 pub enum FileNodeKind {
     File,
     Directory,

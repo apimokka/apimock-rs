@@ -77,11 +77,9 @@ fn server() -> &'static BenchServer {
 
         let (port, fallback_dir, config_path) = rt.block_on(async { prepare_fixtures().await });
 
-        let env_args = EnvArgs {
-            config_file_path: Some(config_path.to_string_lossy().into_owned()),
-            port: Some(port),
-            fallback_respond_dir_path: None,
-        };
+        let mut env_args = EnvArgs::empty();
+        env_args.config_file_path = Some(config_path.to_string_lossy().into_owned());
+        env_args.port = Some(port);
 
         rt.spawn(async move {
             let app = App::new(&env_args, None, false)

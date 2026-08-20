@@ -28,6 +28,7 @@ mod util;
 use super::constant::{PRINT_DELIMITER, SERVICE_DEFAULT_FALLBACK_RESPOND_DIR};
 
 #[derive(Clone, Deserialize)]
+#[non_exhaustive]
 pub struct ServiceConfig {
     /// How multiple matching rules in a set are resolved. Currently
     /// `first_match` is the only recognised value.

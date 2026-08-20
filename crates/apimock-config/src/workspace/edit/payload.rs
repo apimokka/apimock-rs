@@ -103,12 +103,11 @@ pub(super) fn build_rule_from_payload(
         body,
     };
 
-    let rule = Rule {
-        when: When { request },
-        respond: build_respond_from_payload(payload.respond),
-        weight: None,
-        priority: payload.priority, // RFC 027: surface from payload
-    };
+    let mut rule = Rule::new(
+        When { request },
+        build_respond_from_payload(payload.respond),
+    );
+    rule.priority = payload.priority; // RFC 027: surface from payload
 
     Ok(rule.compute_derived_fields(rule_set, rule_set.rules.len(), rs_idx))
 }
@@ -248,15 +247,13 @@ fn value_to_string(v: &serde_json::Value) -> String {
 pub(super) fn build_respond_from_payload(
     payload: crate::view::RespondPayload,
 ) -> apimock_routing::Respond {
-    apimock_routing::Respond {
-        file_path: payload.file_path,
-        csv_records_key: None,
-        text: payload.text,
-        status: payload.status,
-        status_code: None, // derived later
-        headers: None,
-        delay_response_milliseconds: payload.delay_milliseconds,
-    }
+    let mut respond = apimock_routing::Respond::default();
+    respond.file_path = payload.file_path;
+    respond.text = payload.text;
+    respond.status = payload.status;
+    // status_code: left None — derived later.
+    respond.delay_response_milliseconds = payload.delay_milliseconds;
+    respond
 }
 
 pub(super) fn value_as_string(value: &EditValue) -> Result<String, ApplyError> {

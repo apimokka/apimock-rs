@@ -76,10 +76,15 @@ pub enum Format {
 /// was read but is syntactically or semantically invalid is
 /// `config_invalid`.
 ///
-/// `ConfigError` is matched exhaustively deliberately (it is not
-/// `#[non_exhaustive]` — RFC 052 § Unresolved 2): a future variant
-/// fails to compile here until it's given a considered `ErrorKind`,
-/// rather than silently falling into whichever arm came last.
+/// `ConfigError` is `#[non_exhaustive]` (RFC 041), so this can no
+/// longer force a considered `ErrorKind` for a future variant at
+/// compile time the way it could when the type was exhaustive — a new
+/// `ConfigError` variant now falls into the wildcard arm below as
+/// `Internal` until this match is revisited by hand. This is
+/// independent of `ConfigError::kind()` (also added by RFC 041): that
+/// accessor describes *library* failures; this function is RFC 053's
+/// CLI contract. Deliberately not delegating one to the other — see
+/// `apimock_config::error`'s module doc for why.
 pub fn kind_for_config_error(e: &apimock_config::ConfigError) -> ErrorKind {
     use apimock_config::ConfigError;
     match e {
@@ -88,6 +93,7 @@ pub fn kind_for_config_error(e: &apimock_config::ConfigError) -> ErrorKind {
         ConfigError::ConfigParse { .. } => ErrorKind::ConfigInvalid,
         ConfigError::Validation => ErrorKind::ConfigInvalid,
         ConfigError::RuleSet(_) => ErrorKind::ConfigInvalid,
+        _ => ErrorKind::Internal,
     }
 }
 
@@ -104,6 +110,7 @@ pub fn kind_for_workspace_error(e: &apimock_config::WorkspaceError) -> ErrorKind
     match e {
         WorkspaceError::InvalidRoot { .. } => ErrorKind::ConfigUnreadable,
         WorkspaceError::Config(inner) => kind_for_config_error(inner),
+        _ => ErrorKind::Internal,
     }
 }
 
@@ -121,16 +128,18 @@ pub fn kind_for_apply_error(_e: &apimock_config::ApplyError) -> ErrorKind {
 /// first producer); `Read`/`Write` are filesystem failures ahead of or
 /// during the write, mapped to `io`; `Serialize`/`Inconsistent` are
 /// this crate's own bugs, not the caller's mistake, mapped to
-/// `internal`. `SaveError` is `#[non_exhaustive]`-free today, so a
-/// future variant fails to compile here rather than silently landing
-/// in whichever arm came last — same discipline `kind_for_config_error`
-/// already applies.
+/// `internal`. `SaveError` is `#[non_exhaustive]` (RFC 041), so a new
+/// variant now falls into the wildcard arm as `Internal` rather than
+/// failing to compile — this function stays hand-maintained and
+/// separate from `SaveError::kind()`, the same way `kind_for_config_error`
+/// stays separate from `ConfigError::kind()`.
 pub fn kind_for_save_error(e: &apimock_config::SaveError) -> ErrorKind {
     use apimock_config::SaveError;
     match e {
         SaveError::Conflict { .. } => ErrorKind::Conflict,
         SaveError::Read { .. } | SaveError::Write { .. } => ErrorKind::Io,
         SaveError::Serialize { .. } | SaveError::Inconsistent { .. } => ErrorKind::Internal,
+        _ => ErrorKind::Internal,
     }
 }
 

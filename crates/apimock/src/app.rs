@@ -18,6 +18,7 @@ use crate::args::EnvArgs;
 use crate::logger::init_logger;
 
 /// The application — config loaded, logger installed, server ready to start.
+#[non_exhaustive]
 pub struct App {
     pub server: Server,
 }

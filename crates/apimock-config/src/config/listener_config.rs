@@ -7,6 +7,7 @@ pub mod tls_config;
 
 /// verbose logs
 #[derive(Clone, Deserialize)]
+#[non_exhaustive]
 pub struct ListenerConfig {
     pub ip_address: String,
     pub port: u16,

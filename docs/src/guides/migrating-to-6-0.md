@@ -177,23 +177,128 @@ needed updating for this reason alone, independent of the
 `#[non_exhaustive]` change above. This is exactly the class of break
 `#[non_exhaustive]` now exists to prevent recurring.
 
-## Library: error enums may be reshaped
+## Library: error variants are boxed, and `#[non_exhaustive]` now covers the whole public API
 
-**Deferred to 6.0.0, not yet designed** — this is RFC 041, which this
-page cannot give you specifics for, because RFC 041 itself is deferred
-pending that design work. `ConfigError`, `WorkspaceError`, and related
-error types are not `#[non_exhaustive]` today (unlike the five structs
-above, this is a known, explicitly separate question — see RFC 052's
-own Unresolved questions), so a caller matching on one of these
-exhaustively is in the same position struct-literal construction is: it
-compiles today and may not after 6.0.0.
+**Done, on `main`, ahead of 6.0.0's eventual release** (RFC 041) — like
+the changes above, this is live from this point on, not a preview. It
+closes the gap this section used to describe as deferred.
 
-**Honest gap:** we don't yet know whether RFC 041 will add
-`#[non_exhaustive]` alone, restructure the variants, or both. If you
-match exhaustively on `apimock_config::ConfigError` or
-`apimock_config::WorkspaceError` today, treat that as a code path worth
-revisiting when RFC 041 is written, not something this page can tell you
-how to fix yet.
+**The boxing break.** `ConfigError::ConfigParse.source` and
+`RoutingError::RuleSetParse.source` change from `toml::de::Error` (88
+bytes — the sole cause of every `clippy::result_large_err` suppression
+either crate carried) to `Box<toml::de::Error>` (8 bytes).
+`Display` output and `Error::source()` are unchanged — `#[source]`
+still reaches through the box — so this is a representation change,
+not a behavioural one. If you destructure either variant and bind
+`source` by value expecting `toml::de::Error`, you now get
+`Box<toml::de::Error>`; dereference it (`*source`) to get the inner
+value back, or call methods through the box as before (`Deref`
+transparently forwards).
+
+**The `#[non_exhaustive]` sweep now covers the whole re-exported public
+API**, not just the five structs from earlier this page. RFC 052 said
+"this is the change that stops the pattern" of a field or variant
+addition silently being a breaking change; RFC 041 is that change. The
+method: every type named in a `pub use` at each of the four crates'
+`lib.rs`, minus what RFC 052 and RFC 058 already covered, minus structs
+with no public fields (nothing outside the crate could ever construct
+those by literal anyway, so the attribute buys nothing) — roughly 43
+types. Two consequences, same as the five-struct change above:
+
+- An exhaustive `match` on any of these types, from outside its
+  defining crate, now needs a wildcard arm.
+- Struct-literal construction (even naming every field) stops
+  compiling from outside the defining crate. The six error enums are
+  an exception worth calling out explicitly: `#[non_exhaustive]` on an
+  `enum` restricts *matching*, not *building its existing variants* —
+  a struct-like error variant with every field public stays
+  constructible with ordinary `EnumName::Variant { .. }` syntax across
+  the crate boundary. Only the *struct* types below lose literal
+  construction outright.
+
+**What replaces a struct literal, for the payload and CLI-argument
+types that had real cross-crate construction sites:**
+
+- **`HeaderConditionPayload::new(name, op) -> Self`** and
+  **`BodyConditionPayload::new(kind, path, op, value) -> Self`** — the
+  RFC's own required cases: both types lacked `Default` before this
+  change (a `value` field with no meaningful empty state), so they
+  needed one built from the fields that actually matter; `value` on
+  `HeaderConditionPayload` starts unset (`None`) since it's only
+  required for some operators, assign it afterwards.
+- **`RulePayload`, `RespondPayload`, `NodeValidation`** already
+  derived `Default`; nothing new to build — `Default::default()` then
+  assign the fields you need, the same pattern as `TraceConfig` above.
+- **`ValidationIssue::new(severity, message)`**,
+  **`Diagnostic::new(severity, message)`** (its `node_id`/`file`
+  start unset — assign them for a diagnostic scoped to a node or
+  file), **`DiffItem::new(kind, target, summary)`**, and
+  **`ConditionWithId::new(id, view)`** — none of these had a
+  meaningful "empty" state (every field matters), so each got a
+  constructor instead of `Default`.
+- **`ValidationReport`** did have a meaningful default — its existing
+  `ValidationReport::ok()` *is* that state (no diagnostics, valid) —
+  so it also gained `impl Default` that calls `ok()`, letting it join
+  the `Default::default()`-then-assign pattern too.
+- **`EnvArgs::empty() -> Self`** (every field `None`) — not called
+  `new` or `default` because both names were already taken: `EnvArgs`
+  has a pre-existing, unrelated `pub fn default() -> AppResult<Option<Self>>`
+  that parses `env::args()` and is fallible, kept under
+  `#[allow(clippy::should_implement_trait)]` since renaming it would
+  itself be a breaking change.
+- Everything else in the sweep — `Config`, `ListenerConfig`,
+  `ServiceConfig`, `NodeId`, `ReloadHint` (both the `apimock-config`
+  struct and the `apimock-server` enum form), `MiddlewareHandler`,
+  `Server`, `App`, and every fieldless-variant enum (`Severity`,
+  `BodyOp`, `HeaderOp`, `UrlPathOp`, `NodeKind`, `ConfigFileKind`,
+  `DiffKind`, `BodyConditionKind`, `ServerState`) — either already had
+  a working constructor (`Default`, or a `new`/`compile` that was
+  already the only way anything in this workspace built one) or, for
+  the fieldless enums, needed nothing at all: unit variants are always
+  constructible by name regardless of `#[non_exhaustive]`. `AppState`
+  gained `AppState::new(config, middlewares, tracer)` since it had
+  neither before.
+
+**One class of type got the attribute and deliberately no
+constructor: library-produced view and result types** —
+`ServerHandle`, `ApplyResult`, `SaveResult`, `ConfigFileView`,
+`ConfigNodeView`, `RuleSetView`, `RuleView`, `HeaderConditionView`,
+`BodyConditionView`, `UrlPathView`, `RouteMatchView`, `MatchedRule`,
+`MatchConsidered`, `RouteValidationIssue`, `FileTreeView`,
+`FileNodeView`, `ScriptRouteView`. Nothing in this workspace builds one
+of these by hand — every one comes back *from* a call
+(`Workspace::apply`, `Workspace::save`, `Workspace::snapshot`, a route
+match, …), never gets constructed to go *into* one. If a test you own
+built one of these with a struct literal to fake a return value, that
+stops compiling; there is no `Default`/`new()` replacement, by design
+— adding constructors nobody calls in production just to satisfy a
+test would be the wrong fix. Drive the real call that produces the
+value instead (run the `Workspace` operation, or the route match, and
+assert on what it returns), or hold onto a value the library already
+handed you rather than reconstructing one.
+
+**The six error enums also gain `kind()`.** Since `#[non_exhaustive]`
+forces every downstream `match` to carry a wildcard arm, a caller with
+no other way to branch on failure class would otherwise fall back to
+matching on `Display` text — worse than before. Each of `ConfigError`,
+`WorkspaceError`, `ApplyError`, `SaveError`, `RoutingError`, and
+`ServerError` gains a `.kind()` method returning its own
+`#[non_exhaustive]` `*Kind` enum, one kind per variant:
+
+```rust
+match err.kind() {
+    ConfigErrorKind::Parse => { /* … */ }
+    ConfigErrorKind::RuleSet => { /* … */ }
+    _ => { /* … */ }
+}
+```
+
+This is a **separate taxonomy from `apimock::cmd::envelope::ErrorKind`**
+(the CLI's published, schema-versioned contract) — the two are not
+fused, and neither delegates to the other. `WorkspaceErrorKind` in
+particular does not delegate to `ConfigErrorKind` even though
+`WorkspaceError::Config` wraps a `ConfigError`: match on `source()` if
+you need the inner detail.
 
 ## What isn't changing
 

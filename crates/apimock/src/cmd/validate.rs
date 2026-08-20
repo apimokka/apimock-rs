@@ -209,6 +209,10 @@ pub fn run(args: &[String]) -> i32 {
                 Severity::Error => "[ERROR]",
                 Severity::Warning => "[WARNING]",
                 Severity::Info => "[INFO]",
+                // `Severity` is `#[non_exhaustive]` (RFC 041) — a future
+                // variant prints under the most conservative existing tag
+                // rather than failing to compile or panicking.
+                _ => "[ERROR]",
             };
             let location = d
                 .file

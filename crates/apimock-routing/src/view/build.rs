@@ -316,7 +316,11 @@ pub const BUILTIN_EXCLUDES: &[&str] = &[
 ///
 /// The defaults are intentionally conservative: they hide the noise
 /// without requiring any configuration for the common case.
+/// `#[non_exhaustive]` (RFC 041): has `impl Default` below — construct
+/// with `FileTreeFilter::default()` then assign, or `..Default::default()`
+/// in a functional-update expression from inside this crate.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub struct FileTreeFilter {
     /// When `false`, entries whose name starts with `.` are excluded.
     pub show_hidden: bool,

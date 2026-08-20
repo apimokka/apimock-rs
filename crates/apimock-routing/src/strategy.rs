@@ -13,6 +13,7 @@ use serde::Deserialize;
 /// - [`Priority`] — group by priority, apply a tiebreaker within the group.
 #[derive(Clone, Deserialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum Strategy {
     /// Walk rules in order; return the first that matches. Default.
     #[default]

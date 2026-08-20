@@ -282,11 +282,8 @@ async fn main() {
 
     let config_path_string = config_path.to_string_lossy().into_owned();
     server_rt.spawn(async move {
-        let env_args = EnvArgs {
-            config_file_path: Some(config_path_string),
-            port: None,
-            fallback_respond_dir_path: None,
-        };
+        let mut env_args = EnvArgs::empty();
+        env_args.config_file_path = Some(config_path_string);
         let app = App::new(&env_args, None, false)
             .await
             .expect("App::new for load sampler");

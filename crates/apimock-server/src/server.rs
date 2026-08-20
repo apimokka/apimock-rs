@@ -50,6 +50,7 @@ use crate::trace::{Outcome, RequestSummary, TraceEmitter};
 
 /// Shared state cloned into each per-request task.
 #[derive(Clone)]
+#[non_exhaustive]
 pub struct AppState {
     pub config: Config,
     pub middlewares: LoadedMiddlewares,
@@ -57,7 +58,18 @@ pub struct AppState {
     pub tracer: TraceEmitter,
 }
 
+impl AppState {
+    pub fn new(config: Config, middlewares: LoadedMiddlewares, tracer: TraceEmitter) -> Self {
+        Self {
+            config,
+            middlewares,
+            tracer,
+        }
+    }
+}
+
 /// HTTP(S) server.
+#[non_exhaustive]
 pub struct Server {
     pub app_state: AppState,
     pub http_addr: Option<SocketAddr>,
@@ -292,10 +304,6 @@ impl Server {
 }
 
 /// Resolve an `ip:port` string into a single `SocketAddr`.
-// clippy: ServerError is a public error type (RFC 030 §6 escalation
-// trigger); boxing its large variant would change that type's shape.
-// See ESCALATION-002 in the RFC 030 review-request package.
-#[allow(clippy::result_large_err)]
 fn resolve_listener(addr_str: Option<&str>) -> ServerResult<Option<SocketAddr>> {
     let Some(addr_str) = addr_str else {
         return Ok(None);

@@ -55,7 +55,11 @@ fn is_purely_current_dir(value: &str) -> bool {
             .all(|c| matches!(c, std::path::Component::CurDir))
 }
 
+/// `#[non_exhaustive]` (RFC 041): the only public constructor is
+/// [`RuleSet::new`] (loads from a TOML file); nothing outside this
+/// crate builds one by literal today.
 #[derive(Clone, Deserialize, Debug)]
+#[non_exhaustive]
 pub struct RuleSet {
     pub prefix: Option<Prefix>,
     pub default: Option<DefaultRespond>,
@@ -90,12 +94,6 @@ impl RuleSet {
     /// frequently during development, those panics were a common papercut.
     /// Now any failure becomes an `RoutingError::RuleSetRead` / `::RuleSetParse`
     /// that the caller can surface cleanly.
-    // clippy: RoutingError::RuleSetParse is a public error type (RoutingResult
-    // is part of this crate's stable surface); boxing its large variant would
-    // change that type's shape, which RFC 030 §6 requires escalating rather
-    // than fixing inline. See ESCALATION-002 in the RFC 030 review-request
-    // package for the design request this raises.
-    #[allow(clippy::result_large_err)]
     pub fn new(
         rule_set_file_path: &str,
         current_dir_to_config_dir_relative_path: &str,
@@ -112,7 +110,7 @@ impl RuleSet {
             toml::from_str(&toml_string).map_err(|e| RoutingError::RuleSetParse {
                 path: path.to_path_buf(),
                 canonical: path.canonicalize().ok(),
-                source: e,
+                source: Box::new(e),
             })?;
 
         // - prefix (RFC 058): normalize what was authored, in place —

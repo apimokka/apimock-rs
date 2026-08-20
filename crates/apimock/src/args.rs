@@ -17,6 +17,7 @@ use anyhow::{Result as AppResult, bail};
 /// and reproduced between machines. The three CLI flags exist only for
 /// quick ad-hoc overrides that don't warrant editing the config file.
 #[derive(Clone)]
+#[non_exhaustive]
 pub struct EnvArgs {
     /// path to the config TOML file (usually `./apimock.toml`)
     pub config_file_path: Option<String>,
@@ -27,6 +28,22 @@ pub struct EnvArgs {
 }
 
 impl EnvArgs {
+    /// Every field unset.
+    ///
+    /// Distinct from [`EnvArgs::default`] below, which parses
+    /// `env::args()` and is fallible — this is the plain constructor
+    /// `#[non_exhaustive]` requires now that struct-literal construction
+    /// is unavailable from outside the crate. Named `empty` rather than
+    /// `new` or `default` because both those names are already taken by
+    /// unrelated methods on this type.
+    pub fn empty() -> Self {
+        Self {
+            config_file_path: None,
+            port: None,
+            fallback_respond_dir_path: None,
+        }
+    }
+
     /// Parse `env::args()` and apply defaults.
     ///
     /// Returns:

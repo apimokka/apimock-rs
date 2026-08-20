@@ -61,12 +61,12 @@ impl FileTreeViewConfig {
     ///
     /// [`FileTreeFilter`]: apimock_routing::view::build::FileTreeFilter
     pub fn to_filter(&self) -> apimock_routing::view::build::FileTreeFilter {
-        apimock_routing::view::build::FileTreeFilter {
-            show_hidden: self.show_hidden,
-            builtin_excludes: self.builtin_excludes,
-            extra_excludes: self.extra_excludes.clone(),
-            include: self.include.clone(),
-            respect_gitignore: self.respect_gitignore,
-        }
+        let mut filter = apimock_routing::view::build::FileTreeFilter::default();
+        filter.show_hidden = self.show_hidden;
+        filter.builtin_excludes = self.builtin_excludes;
+        filter.extra_excludes = self.extra_excludes.clone();
+        filter.include = self.include.clone();
+        filter.respect_gitignore = self.respect_gitignore;
+        filter
     }
 }

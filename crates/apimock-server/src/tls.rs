@@ -28,10 +28,6 @@ use crate::error::{ServerError, ServerResult, TlsKind};
 // ── PEM loaders (unchanged from pre-5.11) ───────────────────────────────
 
 /// Load TLS/SSL certificates (leaf + any intermediates) from a PEM file.
-// clippy: ServerError is a public error type (RFC 030 §6 escalation
-// trigger); boxing its large variant would change that type's shape.
-// See ESCALATION-002 in the RFC 030 review-request package.
-#[allow(clippy::result_large_err)]
 pub fn load_certs(file_path: &str) -> ServerResult<Vec<CertificateDer<'static>>> {
     let path = PathBuf::from(file_path);
     let iter = CertificateDer::pem_file_iter(file_path).map_err(|e| ServerError::TlsLoad {
@@ -62,10 +58,6 @@ pub fn load_certs(file_path: &str) -> ServerResult<Vec<CertificateDer<'static>>>
 }
 
 /// Load a TLS/SSL private key from a PEM file.
-// clippy: ServerError is a public error type (RFC 030 §6 escalation
-// trigger); boxing its large variant would change that type's shape.
-// See ESCALATION-002 in the RFC 030 review-request package.
-#[allow(clippy::result_large_err)]
 pub fn load_private_key(file_path: &str) -> ServerResult<PrivateKeyDer<'static>> {
     PrivateKeyDer::from_pem_file(file_path).map_err(|e| ServerError::TlsLoad {
         kind: TlsKind::PrivateKey,

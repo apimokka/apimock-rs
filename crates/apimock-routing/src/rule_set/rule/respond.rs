@@ -15,7 +15,13 @@ use serde::Deserialize;
 
 use std::{collections::HashMap, path::Path};
 
-#[derive(Clone, Deserialize, Debug)]
+/// `#[non_exhaustive]` (RFC 041): every field is `Option`, so an empty
+/// `Respond` — matching nothing until at least one is set — is a
+/// meaningful `Default`, unlike `Rule` (see its own doc comment).
+/// Construct with `Respond::default()` then assign, e.g.
+/// `let mut r = Respond::default(); r.text = Some("ok".into());`.
+#[derive(Clone, Default, Deserialize, Debug)]
+#[non_exhaustive]
 pub struct Respond {
     pub file_path: Option<String>,
     pub csv_records_key: Option<String>,
