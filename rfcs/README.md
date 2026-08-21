@@ -22,7 +22,10 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-*(None open.)*
+| ID  | Title |
+|-----|-------|
+| 059 | [CLI contract conformance: enforce it across every command](./proposed/059-cli-contract-conformance.md) — **blocking for 6.0.0** |
+| 060 | [Property-test the config write path](./proposed/060-write-path-property-testing.md) |
 
 ## Accepted
 
