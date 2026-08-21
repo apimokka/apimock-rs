@@ -1,6 +1,9 @@
 # RFC 060 — Property-test the config write path
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Not yet implemented.**
+[Handed off](../handoffs/060-write-path-property-testing/implementation-handoff.md) 2026-08-20,
+with its open questions decided.
 **Tracks.** Release quality; data integrity. Recommended before 6.0.0.
 **Touches.** `crates/apimock-config/src/workspace/tests/` — new
 property tests. No production code, unless a property finds a bug.

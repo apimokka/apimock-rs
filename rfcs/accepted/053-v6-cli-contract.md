@@ -168,11 +168,23 @@ it is a breaking change and gets the same treatment as any other.
 | `kind` | Meaning | Exit |
 |---|---|---|
 | `usage` | Bad invocation — unknown option, missing value | 2 |
-| `config_invalid` | Configuration read but not valid | 1 |
-| `config_unreadable` | Configuration missing or unreadable | 1 |
+| `config_invalid` | Configuration read but not valid | 2 |
+| `config_unreadable` | Configuration missing or unreadable | 2 |
 | `io` | Filesystem failure that is not the config | 1 |
 | `conflict` | State changed underneath — `set` only, see § 6 | 1 |
 | `internal` | A bug in apimock | 1 |
+
+**Amended 2026-08-20.** `config_invalid` and `config_unreadable` were
+originally listed as exit `1`. Every command has always exited `2` for
+both — verified against the built binary while auditing 6.0.0 readiness.
+The table was the younger artifact and the wrong one: exit `2` for *"I
+could not proceed with what you gave me"* is consistent with the usage
+class, and re-coding every command to match a table nobody had
+implemented would have broken CI jobs for a distinction of no practical
+value. The `kind` strings themselves were already correct.
+
+Found because [RFC 059](./059-cli-contract-conformance.md) cannot write
+a conformance suite against a contract that disagrees with the code.
 
 New kinds may be added — that is an additive change under § 2's rule, and
 consumers must treat an unrecognised `kind` as a generic failure rather

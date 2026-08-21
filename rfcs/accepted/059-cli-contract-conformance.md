@@ -1,6 +1,9 @@
 # RFC 059 — CLI contract conformance: enforce it across every command, not per command
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Not yet implemented.**
+[Handed off](../handoffs/059-cli-contract-conformance/implementation-handoff.md) 2026-08-20,
+with its open questions decided. Blocking for 6.0.0.
 **Tracks.** v6 CLI contract; release quality. **Blocking for 6.0.0** in
 my view — see § Motivation.
 **Touches.** `crates/apimock/src/args.rs` and each `cmd/*.rs`'s argument

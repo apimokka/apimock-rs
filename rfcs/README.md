@@ -22,10 +22,7 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-| ID  | Title |
-|-----|-------|
-| 059 | [CLI contract conformance: enforce it across every command](./proposed/059-cli-contract-conformance.md) — **blocking for 6.0.0** |
-| 060 | [Property-test the config write path](./proposed/060-write-path-property-testing.md) |
+*(None open.)*
 
 ## Accepted
 
@@ -51,6 +48,8 @@ which rather than leaving a reader to assume.
 | 056 | [Preserve what people wrote: `toml_edit` for the save path](./accepted/056-toml-edit-migration.md) | merged to `main` |
 | 057 | [`apimock set`: make the server answer X under condition Y](./accepted/057-set-command.md) | merged to `main` |
 | 058 | [`respond_dir` grows on every save](./accepted/058-respond-dir-prefix-persistence.md) — **released defect, R-10** | merged to `main` |
+| 059 | [CLI contract conformance across every command](./accepted/059-cli-contract-conformance.md) | handed off; **blocking 6.0.0** |
+| 060 | [Property-test the config write path](./accepted/060-write-path-property-testing.md) | handed off |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
