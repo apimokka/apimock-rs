@@ -1,8 +1,9 @@
-use std::{path::Path, process::Command};
+use std::path::Path;
 
 use hyper::StatusCode;
 use serde_json::json;
 use util::{
+    cli::bin,
     http::{test_request::TestRequest, test_response::response_body_str},
     test_setup::TestSetup,
 };
@@ -14,10 +15,6 @@ mod util;
 /// case for RFC 049's `--version` / `--help` evidence requirement.
 fn normal_workspace_dir() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/config/default")
-}
-
-fn bin() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_apimock"))
 }
 
 #[tokio::test]

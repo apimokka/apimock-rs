@@ -3,6 +3,8 @@
 // inner attribute above suppresses unused warns for pub fns
 // as test mods are compiled separately in rust and therefore the compiler doesn’t consider external calls
 
+#[path = "util/cli.rs"]
+pub mod cli;
 #[path = "constant.rs"]
 pub mod constant;
 #[path = "util/file.rs"]

@@ -143,6 +143,24 @@ pub fn kind_for_save_error(e: &apimock_config::SaveError) -> ErrorKind {
     }
 }
 
+/// Map a `RuleSet::new` failure to one of RFC 053's error kinds.
+/// `match-test` loads its rule-set file directly via `apimock_routing`,
+/// not through `apimock_config::Config`/`Workspace` the way `get`,
+/// `validate` and `set` do — so it has no `ConfigError` to reuse
+/// `kind_for_config_error` on. The judgement is the same one that
+/// function already makes for `ConfigError::RuleSet(_)` (RFC 053 treats
+/// a rule-set problem as a config-shaped failure): file genuinely
+/// missing/unreadable is `config_unreadable`; read but invalid TOML is
+/// `config_invalid`.
+pub fn kind_for_routing_error(e: &apimock_routing::RoutingError) -> ErrorKind {
+    use apimock_routing::RoutingError;
+    match e {
+        RoutingError::RuleSetRead { .. } => ErrorKind::ConfigUnreadable,
+        RoutingError::RuleSetParse { .. } => ErrorKind::ConfigInvalid,
+        _ => ErrorKind::Internal,
+    }
+}
+
 /// Build a success envelope: `{ "schema": 1, "apimock": "<version>",
 /// "result": <result> }`. `result` is a plain JSON value rather than a
 /// generic `T: Serialize`, since every caller already has one

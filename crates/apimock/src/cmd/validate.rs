@@ -52,6 +52,16 @@ const STRICT_FLAG: &str = "--strict";
 const QUIET_FLAG: &str = "--quiet";
 const JSON_FLAG: &str = "--json";
 const FORMAT_FLAG: &str = "--format";
+/// Flags that take no value — every other known flag does.
+const NO_VALUE_FLAG_NAMES: &[&str] = &[STRICT_FLAG, QUIET_FLAG, JSON_FLAG];
+
+fn known_flag_names() -> Vec<&'static str> {
+    CONFIG_NAMES
+        .iter()
+        .copied()
+        .chain([STRICT_FLAG, QUIET_FLAG, JSON_FLAG, FORMAT_FLAG])
+        .collect()
+}
 
 /// Printed once to stderr whenever `--json` is used, per RFC 054 § "The
 /// warning text".
@@ -119,17 +129,28 @@ fn diagnostics_json(report: &apimock_config::ValidationReport) -> serde_json::Va
     serde_json::Value::Array(items)
 }
 
+const USAGE: &str = "Usage: apimock validate --config <apimock.toml> [--strict] [--quiet] [--json] [--format text|json]";
+
+fn usage_error(message: &str) -> i32 {
+    eprintln!("apimock validate: {}", message);
+    eprintln!("{}", USAGE);
+    2
+}
+
 /// Run validation and print results. Returns the process exit code.
 pub fn run(args: &[String]) -> i32 {
+    // RFC 059: rejected before `ValidateArgs::parse` — a typo'd flag
+    // (`--strct`) must never be silently absorbed the way it previously
+    // was, since `ValidateArgs::parse` only ever *looked for* its known
+    // flags and had no path that noticed an unrecognised one.
+    if let Err(e) =
+        super::flags::reject_unknown_flags(args, &known_flag_names(), NO_VALUE_FLAG_NAMES)
+    {
+        return usage_error(&e);
+    }
     let parsed = match ValidateArgs::parse(args) {
         Ok(a) => a,
-        Err(e) => {
-            eprintln!("apimock validate: {}", e);
-            eprintln!(
-                "Usage: apimock validate --config <apimock.toml> [--strict] [--quiet] [--json] [--format text|json]"
-            );
-            return 2;
-        }
+        Err(e) => return usage_error(&e),
     };
     let is_envelope = parsed.format == Some(Format::Json);
 

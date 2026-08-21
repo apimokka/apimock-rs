@@ -11,7 +11,8 @@
 //!   [--header "Content-Type: application/json"] \
 //!   [--body '{"action":"create"}'] \
 //!   [--body-file request.json] \
-//!   [--quiet]
+//!   [--quiet] \
+//!   [--format text|json]
 //! ```
 //!
 //! # Exit codes
@@ -20,15 +21,25 @@
 //! |------|---------|
 //! | 0 | At least one rule matched (or the specified rule matched) |
 //! | 1 | No rule matched |
-//! | 2 | Error (file not found, invalid JSON, etc.) |
+//! | 2 | Error (unrecognised flag, file not found, invalid JSON, etc.) |
+//!
+//! # `--format json` (RFC 059)
+//!
+//! `match-test` was the one command outside RFC 053's envelope — no
+//! `--format` support at all, so an agent driving it had to scrape text.
+//! Added additively: text stays the default and is byte-identical to
+//! before; `--format json` emits the same `{schema, apimock, result}` /
+//! `{schema, apimock, error}` envelope `get` and `validate` already do,
+//! via the same `envelope` helper.
 
-use std::process;
-
-use anyhow::{Context, Result as AppResult};
+use anyhow::Context;
 use hyper::Request as HyperRequest;
 
 use apimock_routing::parsed_request::ParsedRequest;
 use apimock_routing::rule_set::RuleSet;
+
+use super::envelope::{self, ErrorKind, Format};
+use super::flags::reject_unknown_flags;
 
 // ── CLI flag names ────────────────────────────────────────────────────
 
@@ -40,25 +51,107 @@ const HEADER_NAMES: &[&str] = &["--header", "-H"];
 const BODY_NAMES: &[&str] = &["--body", "-b"];
 const BODY_FILE_NAMES: &[&str] = &["--body-file"];
 const QUIET_NAMES: &[&str] = &["--quiet", "-q"];
+const FORMAT_FLAG: &str = "--format";
+/// Flags that take no value — every other known flag does.
+const NO_VALUE_FLAG_NAMES: &[&str] = QUIET_NAMES;
+
+fn known_flag_names() -> Vec<&'static str> {
+    [
+        RULE_SET_NAMES,
+        RULE_NAMES,
+        PATH_NAMES,
+        METHOD_NAMES,
+        HEADER_NAMES,
+        BODY_NAMES,
+        BODY_FILE_NAMES,
+        QUIET_NAMES,
+    ]
+    .into_iter()
+    .flatten()
+    .copied()
+    .chain([FORMAT_FLAG])
+    .collect()
+}
 
 // ── Entry point ───────────────────────────────────────────────────────
 
+const USAGE: &str = "Usage: apimock match-test --rule-set <path> [--rule <n>] [--path <url_path>] [--method <METHOD>] [--header \"Name: value\"]... [--body <json>|--body-file <path>] [--quiet] [--format text|json]";
+
+fn usage_error(message: &str) -> i32 {
+    eprintln!("apimock match-test: {}", message);
+    eprintln!("{}", USAGE);
+    2
+}
+
+/// A failure after `--format` is known: enveloped under `--format json`,
+/// plain text to stderr otherwise — the same split `get`/`validate` use
+/// once their own parsing has succeeded far enough to know which.
+fn fail(is_envelope: bool, kind: ErrorKind, message: String) -> i32 {
+    if is_envelope {
+        print_envelope(&envelope::err(kind, message));
+    } else {
+        eprintln!("apimock match-test: {}", message);
+    }
+    2
+}
+
 /// Run `match-test` from the raw argument slice that follows the
-/// `match-test` token (i.e. `env::args()[2..]`).
-///
-/// Calls `process::exit` on completion; only propagates an error if
-/// argument parsing or I/O itself fails before we can begin matching.
-pub fn run(raw_args: &[String]) -> AppResult<()> {
-    let args = MatchTestArgs::parse(raw_args)?;
+/// `match-test` token (i.e. `env::args()[2..]`). Returns the process
+/// exit code — matches `get`/`validate`/`set`'s own convention, so the
+/// caller in `args.rs` treats all four commands identically.
+pub fn run(raw_args: &[String]) -> i32 {
+    // RFC 059: rejected before `MatchTestArgs::parse` — mirrors
+    // `get`/`validate`. Previously nothing here noticed an unrecognised
+    // flag at all: `--bogus` reached `MatchTestArgs::parse`, matched
+    // none of the known names, and was silently ignored — the missing
+    // `--rule-set` in the RFC's own repro then failed for an unrelated
+    // reason, propagated as `anyhow::Error` all the way to `main`,
+    // surfacing as a generic exit 1 rather than a `usage` exit 2.
+    if let Err(e) = reject_unknown_flags(raw_args, &known_flag_names(), NO_VALUE_FLAG_NAMES) {
+        return usage_error(&e);
+    }
+    let args = match MatchTestArgs::parse(raw_args) {
+        Ok(a) => a,
+        Err(e) => return usage_error(&format!("{}", e)),
+    };
+    let format = args.format.unwrap_or(Format::Text);
+    let is_envelope = format == Format::Json;
 
-    let rule_set = RuleSet::new(&args.rule_set, "", 0)
-        .with_context(|| format!("failed to load rule set: {}", args.rule_set))?;
+    let rule_set = match RuleSet::new(&args.rule_set, "", 0) {
+        Ok(rs) => rs,
+        Err(e) => {
+            return fail(
+                is_envelope,
+                envelope::kind_for_routing_error(&e),
+                format!("failed to load rule set {}: {}", args.rule_set, e),
+            );
+        }
+    };
 
-    let body_json = args.body_json()?;
-    let parsed = build_parsed_request(&args, body_json)?;
+    if let Err(message) = check_rule_index_in_range(&rule_set, args.rule_index) {
+        return fail(is_envelope, ErrorKind::Usage, message);
+    }
 
-    let code = run_match(&rule_set, &parsed, args.rule_index, args.quiet);
-    process::exit(code);
+    let body_json = match args.body_json() {
+        Ok(b) => b,
+        Err(e) => return fail(is_envelope, ErrorKind::Usage, format!("{}", e)),
+    };
+    let parsed = match build_parsed_request(&args, body_json) {
+        Ok(p) => p,
+        Err(e) => return fail(is_envelope, ErrorKind::Usage, format!("{}", e)),
+    };
+
+    let outcome = compute_outcome(&rule_set, &parsed, args.rule_index);
+
+    if is_envelope {
+        print_envelope(&envelope::ok(result_json(
+            &args, &outcome, &rule_set, &parsed,
+        )));
+    } else if !args.quiet {
+        print_text_outcome(&outcome, &rule_set, &parsed);
+    }
+
+    if outcome.first_match.is_some() { 0 } else { 1 }
 }
 
 // ── Argument model ────────────────────────────────────────────────────
@@ -73,10 +166,11 @@ struct MatchTestArgs {
     body: Option<String>,
     body_file: Option<String>,
     quiet: bool,
+    format: Option<Format>,
 }
 
 impl MatchTestArgs {
-    fn parse(args: &[String]) -> AppResult<Self> {
+    fn parse(args: &[String]) -> anyhow::Result<Self> {
         let rule_set = flag_value(args, RULE_SET_NAMES)
             .ok_or_else(|| anyhow::anyhow!("--rule-set <path> is required"))?;
 
@@ -111,6 +205,18 @@ impl MatchTestArgs {
         let body_file = flag_value(args, BODY_FILE_NAMES);
         let quiet = flag_present(args, QUIET_NAMES);
 
+        let format = match flag_value(args, &[FORMAT_FLAG]).as_deref() {
+            None => None,
+            Some("text") => Some(Format::Text),
+            Some("json") => Some(Format::Json),
+            Some(other) => {
+                anyhow::bail!(
+                    "invalid value for --format: '{}' (expected 'text' or 'json')",
+                    other
+                );
+            }
+        };
+
         Ok(Self {
             rule_set,
             rule_index,
@@ -120,10 +226,11 @@ impl MatchTestArgs {
             body,
             body_file,
             quiet,
+            format,
         })
     }
 
-    fn body_json(&self) -> AppResult<Option<serde_json::Value>> {
+    fn body_json(&self) -> anyhow::Result<Option<serde_json::Value>> {
         if let Some(s) = &self.body {
             let v: serde_json::Value = serde_json::from_str(s)
                 .with_context(|| format!("--body is not valid JSON: {}", s))?;
@@ -145,7 +252,7 @@ impl MatchTestArgs {
 fn build_parsed_request(
     args: &MatchTestArgs,
     body_json: Option<serde_json::Value>,
-) -> AppResult<ParsedRequest> {
+) -> anyhow::Result<ParsedRequest> {
     let mut builder = HyperRequest::builder()
         .method(args.method.as_str())
         .uri(&args.path);
@@ -169,47 +276,111 @@ fn build_parsed_request(
 
 // ── Match runner ──────────────────────────────────────────────────────
 
-/// Returns the process exit code: 0 = match, 1 = no match, 2 = error.
-fn run_match(
+/// One rule's outcome, in the order it was checked.
+struct RuleOutcome {
+    idx: usize,
+    matched: bool,
+}
+
+/// The full result of checking a request against a rule set — computed
+/// once, then either printed as text or serialised to JSON. `run`
+/// already validated `rule_index` is in range before calling this, same
+/// as the check `run_match` used to make inline.
+struct MatchOutcome {
+    rules: Vec<RuleOutcome>,
+    first_match: Option<usize>,
+}
+
+/// `rule_index` (if given) must name a real rule — checked ahead of
+/// `compute_outcome`, which indexes `rule_set.rules` directly and
+/// assumes a valid index rather than re-checking it.
+fn check_rule_index_in_range(rule_set: &RuleSet, rule_index: Option<usize>) -> Result<(), String> {
+    if let Some(idx) = rule_index
+        && idx >= rule_set.rules.len()
+    {
+        return Err(format!(
+            "rule #{} does not exist (rule set has {} rules)",
+            idx + 1,
+            rule_set.rules.len()
+        ));
+    }
+    Ok(())
+}
+
+fn compute_outcome(
     rule_set: &RuleSet,
     parsed: &ParsedRequest,
     rule_index: Option<usize>,
-    quiet: bool,
-) -> i32 {
+) -> MatchOutcome {
     let rules_to_check: Vec<(usize, &apimock_routing::rule_set::rule::Rule)> = match rule_index {
-        Some(idx) if idx >= rule_set.rules.len() => {
-            eprintln!(
-                "error: rule #{} does not exist (rule set has {} rules)",
-                idx + 1,
-                rule_set.rules.len()
-            );
-            return 2;
-        }
         Some(idx) => vec![(idx, &rule_set.rules[idx])],
         None => rule_set.rules.iter().enumerate().collect(),
     };
 
     let mut first_match: Option<usize> = None;
-
+    let mut rules = Vec::with_capacity(rules_to_check.len());
     for (idx, rule) in &rules_to_check {
         let matched = rule.when.is_match(parsed, *idx, 0);
         if matched && first_match.is_none() {
             first_match = Some(*idx);
         }
-        if !quiet {
-            print_rule_result(*idx, rule, parsed, matched, first_match == Some(*idx));
-        }
+        rules.push(RuleOutcome { idx: *idx, matched });
     }
 
-    if !quiet {
-        println!();
-        match first_match {
-            Some(w) => println!("Result: MATCH (rule #{})", w + 1),
-            None => println!("Result: NO MATCH"),
-        }
+    MatchOutcome { rules, first_match }
+}
+
+/// Byte-identical to `run_match`'s own printing before RFC 059 split
+/// computing the outcome from printing it.
+fn print_text_outcome(outcome: &MatchOutcome, rule_set: &RuleSet, parsed: &ParsedRequest) {
+    for r in &outcome.rules {
+        let rule = &rule_set.rules[r.idx];
+        let is_winner = outcome.first_match == Some(r.idx);
+        print_rule_result(r.idx, rule, parsed, r.matched, is_winner);
     }
 
-    if first_match.is_some() { 0 } else { 1 }
+    println!();
+    match outcome.first_match {
+        Some(w) => println!("Result: MATCH (rule #{})", w + 1),
+        None => println!("Result: NO MATCH"),
+    }
+}
+
+fn result_json(
+    args: &MatchTestArgs,
+    outcome: &MatchOutcome,
+    rule_set: &RuleSet,
+    parsed: &ParsedRequest,
+) -> serde_json::Value {
+    let rules: Vec<serde_json::Value> = outcome
+        .rules
+        .iter()
+        .map(|r| {
+            let rule = &rule_set.rules[r.idx];
+            let conditions = super::rule_check::evaluate_rule(rule, parsed);
+            serde_json::json!({
+                "rule_index": r.idx,
+                "matched": r.matched,
+                "conditions": conditions.iter().map(|c| serde_json::json!({
+                    "name": c.name,
+                    "expectation": c.expectation,
+                    "actual": c.actual,
+                    "matched": c.matched,
+                })).collect::<Vec<_>>(),
+            })
+        })
+        .collect();
+
+    serde_json::json!({
+        "request": { "method": args.method, "path": args.path },
+        "rules": rules,
+        "matched": outcome.first_match.is_some(),
+        "match_rule_index": outcome.first_match,
+    })
+}
+
+fn print_envelope(v: &serde_json::Value) {
+    println!("{}", serde_json::to_string_pretty(v).unwrap_or_default());
 }
 
 // ── Per-rule output ───────────────────────────────────────────────────
@@ -279,14 +450,16 @@ mod tests {
     fn match_simple_path() {
         let rs =
             make_rule_set("[[rules]]\nwhen.request.url_path = \"/api\"\nrespond.text = \"ok\"\n");
-        assert_eq!(run_match(&rs, &req("/api", "GET", None), None, true), 0);
+        let outcome = compute_outcome(&rs, &req("/api", "GET", None), None);
+        assert!(outcome.first_match.is_some());
     }
 
     #[test]
     fn no_match_wrong_path() {
         let rs =
             make_rule_set("[[rules]]\nwhen.request.url_path = \"/api\"\nrespond.text = \"ok\"\n");
-        assert_eq!(run_match(&rs, &req("/other", "GET", None), None, true), 1);
+        let outcome = compute_outcome(&rs, &req("/other", "GET", None), None);
+        assert!(outcome.first_match.is_none());
     }
 
     #[test]
@@ -296,14 +469,24 @@ mod tests {
             "[[rules]]\nwhen.request.url_path = \"/b\"\nrespond.text = \"b\"\n",
         );
         let rs = make_rule_set(toml);
-        assert_eq!(run_match(&rs, &req("/b", "GET", None), Some(1), true), 0);
-        assert_eq!(run_match(&rs, &req("/a", "GET", None), Some(1), true), 1);
+        assert!(
+            compute_outcome(&rs, &req("/b", "GET", None), Some(1))
+                .first_match
+                .is_some()
+        );
+        assert!(
+            compute_outcome(&rs, &req("/a", "GET", None), Some(1))
+                .first_match
+                .is_none()
+        );
     }
 
     #[test]
-    fn out_of_range_rule_index_returns_2() {
+    fn out_of_range_rule_index_is_rejected() {
         let rs = make_rule_set("[[rules]]\nwhen.request.url_path = \"/a\"\nrespond.text = \"a\"\n");
-        assert_eq!(run_match(&rs, &req("/a", "GET", None), Some(99), true), 2);
+        assert!(check_rule_index_in_range(&rs, Some(99)).is_err());
+        assert!(check_rule_index_in_range(&rs, Some(0)).is_ok());
+        assert!(check_rule_index_in_range(&rs, None).is_ok());
     }
 
     #[test]
@@ -351,14 +534,16 @@ mod tests {
             "respond.text = \"ok\"\n",
         ));
         let body = serde_json::json!({"action": "create"});
-        assert_eq!(
-            run_match(&rs, &req("/api", "POST", Some(body)), None, true),
-            0
+        assert!(
+            compute_outcome(&rs, &req("/api", "POST", Some(body)), None)
+                .first_match
+                .is_some()
         );
         let bad = serde_json::json!({"action": "delete"});
-        assert_eq!(
-            run_match(&rs, &req("/api", "POST", Some(bad)), None, true),
-            1
+        assert!(
+            compute_outcome(&rs, &req("/api", "POST", Some(bad)), None)
+                .first_match
+                .is_none()
         );
     }
 }

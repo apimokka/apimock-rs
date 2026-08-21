@@ -3,11 +3,13 @@
 //! `--why`'s near-miss explanation, the middleware disclosure, and the
 //! `--format json` envelope's shape and provenance.
 
-use std::process::Command;
+#[path = "util.rs"]
+mod util;
 
-fn bin() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_apimock"))
-}
+// RFC 059: shared harness (`util::cli`, backing `cli_conformance.rs`'s
+// cross-command table too) — this file used to define its own `bin()`
+// and build+capture output inline per test.
+use util::cli::{bin, run, run_json};
 
 fn workspace_with_two_rules() -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -57,9 +59,9 @@ fn workspace_with_middleware() -> tempfile::TempDir {
 #[test]
 fn returns_the_matched_rules_body_and_status() {
     let dir = workspace_with_two_rules();
-    let output = bin()
-        .current_dir(dir.path())
-        .args([
+    let (code, v) = run_json(
+        dir.path(),
+        &[
             "get",
             "/orders",
             "-m",
@@ -68,14 +70,10 @@ fn returns_the_matched_rules_body_and_status() {
             r#"{"customer":{"tier":"gold"}}"#,
             "--format",
             "json",
-        ])
-        .output()
-        .expect("failed to run apimock get");
+        ],
+    );
 
-    assert_eq!(output.status.code(), Some(0));
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let v: serde_json::Value =
-        serde_json::from_str(&stdout).unwrap_or_else(|e| panic!("{e}\nstdout:\n{stdout}"));
+    assert_eq!(code, 0);
     assert_eq!(v["result"]["response"]["status"], 200);
     assert_eq!(v["result"]["response"]["body"], "VIP customer order");
     assert_eq!(v["result"]["matched"]["rule_set_index"], 0);
@@ -91,16 +89,12 @@ fn returns_the_matched_rules_body_and_status() {
 #[test]
 fn matched_carries_rule_set_file_alongside_the_index() {
     let dir = workspace_with_two_rules();
-    let output = bin()
-        .current_dir(dir.path())
-        .args(["get", "/orders", "-m", "POST", "--format", "json"])
-        .output()
-        .expect("failed to run apimock get");
+    let (code, v) = run_json(
+        dir.path(),
+        &["get", "/orders", "-m", "POST", "--format", "json"],
+    );
 
-    assert_eq!(output.status.code(), Some(0));
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let v: serde_json::Value =
-        serde_json::from_str(&stdout).unwrap_or_else(|e| panic!("{e}\nstdout:\n{stdout}"));
+    assert_eq!(code, 0);
     // The second rule (no body condition) matches when there's no body.
     assert_eq!(v["result"]["matched"]["rule_index"], 1);
     assert_eq!(v["result"]["matched"]["rule_set_file"], "./rules.toml");
@@ -111,9 +105,9 @@ fn matched_carries_rule_set_file_alongside_the_index() {
 #[test]
 fn why_text_names_the_failing_condition_for_a_near_miss() {
     let dir = workspace_with_two_rules();
-    let output = bin()
-        .current_dir(dir.path())
-        .args([
+    let (code, stdout) = run(
+        dir.path(),
+        &[
             "get",
             "/orders",
             "-m",
@@ -121,12 +115,10 @@ fn why_text_names_the_failing_condition_for_a_near_miss() {
             "-b",
             r#"{"customer":{"tier":"silver"}}"#,
             "--why",
-        ])
-        .output()
-        .expect("failed to run apimock get");
+        ],
+    );
 
-    assert_eq!(output.status.code(), Some(0));
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(code, 0);
     // Rule #1 fails on exactly the body condition; rule #2 (no body
     // condition) is the one that actually answers.
     assert!(
@@ -143,9 +135,9 @@ fn why_text_names_the_failing_condition_for_a_near_miss() {
 #[test]
 fn why_json_structures_rule_set_rule_and_conditions() {
     let dir = workspace_with_two_rules();
-    let output = bin()
-        .current_dir(dir.path())
-        .args([
+    let (_code, v) = run_json(
+        dir.path(),
+        &[
             "get",
             "/orders",
             "-m",
@@ -154,13 +146,9 @@ fn why_json_structures_rule_set_rule_and_conditions() {
             r#"{"customer":{"tier":"silver"}}"#,
             "--format",
             "json",
-        ])
-        .output()
-        .expect("failed to run apimock get");
+        ],
+    );
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let v: serde_json::Value =
-        serde_json::from_str(&stdout).unwrap_or_else(|e| panic!("{e}\nstdout:\n{stdout}"));
     // --why defaults on in JSON (RFC 055 § 2 Q3) with no --why flag passed.
     let rule0 = &v["result"]["why"]["rule_sets"][0]["rules"][0];
     assert_eq!(rule0["rule_index"], 0);
@@ -179,25 +167,16 @@ fn why_json_structures_rule_set_rule_and_conditions() {
 #[test]
 fn why_defaults_off_in_text_and_on_in_json() {
     let dir = workspace_with_two_rules();
-    let text_output = bin()
-        .current_dir(dir.path())
-        .args(["get", "/orders", "-m", "POST"])
-        .output()
-        .expect("failed to run apimock get");
-    let json_output = bin()
-        .current_dir(dir.path())
-        .args(["get", "/orders", "-m", "POST", "--format", "json"])
-        .output()
-        .expect("failed to run apimock get");
+    let (_code, text_stdout) = run(dir.path(), &["get", "/orders", "-m", "POST"]);
+    let (_code, v) = run_json(
+        dir.path(),
+        &["get", "/orders", "-m", "POST", "--format", "json"],
+    );
 
-    let text_stdout = String::from_utf8_lossy(&text_output.stdout);
     assert!(
         !text_stdout.contains("-- Why --"),
         "text stdout:\n{text_stdout}"
     );
-
-    let json_stdout = String::from_utf8_lossy(&json_output.stdout);
-    let v: serde_json::Value = serde_json::from_str(&json_stdout).unwrap();
     assert!(v["result"].get("why").is_some(), "v was: {v}");
 }
 
@@ -207,13 +186,8 @@ fn why_defaults_off_in_text_and_on_in_json() {
 fn middleware_configured_is_disclosed_in_text_and_json() {
     let dir = workspace_with_middleware();
 
-    let text_output = bin()
-        .current_dir(dir.path())
-        .args(["get", "/x"])
-        .output()
-        .expect("failed to run apimock get");
-    assert_eq!(text_output.status.code(), Some(0));
-    let text_stdout = String::from_utf8_lossy(&text_output.stdout);
+    let (code, text_stdout) = run(dir.path(), &["get", "/x"]);
+    assert_eq!(code, 0);
     assert!(
         text_stdout.contains("middleware") && text_stdout.contains("NOT simulated"),
         "stdout:\n{text_stdout}"
@@ -224,13 +198,7 @@ fn middleware_configured_is_disclosed_in_text_and_json() {
         "stdout:\n{text_stdout}"
     );
 
-    let json_output = bin()
-        .current_dir(dir.path())
-        .args(["get", "/x", "--format", "json"])
-        .output()
-        .expect("failed to run apimock get");
-    let json_stdout = String::from_utf8_lossy(&json_output.stdout);
-    let v: serde_json::Value = serde_json::from_str(&json_stdout).unwrap();
+    let (_code, v) = run_json(dir.path(), &["get", "/x", "--format", "json"]);
     assert_eq!(v["result"]["middleware"]["configured"], 1);
     assert_eq!(v["result"]["middleware"]["simulated"], false);
 }
@@ -238,13 +206,10 @@ fn middleware_configured_is_disclosed_in_text_and_json() {
 #[test]
 fn no_middleware_configured_omits_the_field_entirely() {
     let dir = workspace_with_two_rules();
-    let output = bin()
-        .current_dir(dir.path())
-        .args(["get", "/orders", "-m", "POST", "--format", "json"])
-        .output()
-        .expect("failed to run apimock get");
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let v: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    let (_code, v) = run_json(
+        dir.path(),
+        &["get", "/orders", "-m", "POST", "--format", "json"],
+    );
     assert!(v["result"].get("middleware").is_none(), "v was: {v}");
 }
 
@@ -253,15 +218,11 @@ fn no_middleware_configured_omits_the_field_entirely() {
 #[test]
 fn format_json_emits_a_valid_envelope_with_absolute_provenance() {
     let dir = workspace_with_two_rules();
-    let output = bin()
-        .current_dir(dir.path())
-        .args(["get", "/orders", "-m", "POST", "--format", "json"])
-        .output()
-        .expect("failed to run apimock get");
+    let (_code, v) = run_json(
+        dir.path(),
+        &["get", "/orders", "-m", "POST", "--format", "json"],
+    );
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let v: serde_json::Value =
-        serde_json::from_str(&stdout).unwrap_or_else(|e| panic!("{e}\nstdout:\n{stdout}"));
     assert!(v.is_object());
     assert_eq!(v["schema"], 1);
     assert!(v["apimock"].is_string());

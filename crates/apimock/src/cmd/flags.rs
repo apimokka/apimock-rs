@@ -30,6 +30,46 @@ pub(super) fn flag_present(args: &[String], names: &[&str]) -> bool {
     args.iter().any(|a| names.iter().any(|n| a == n))
 }
 
+/// RFC 059: an unrecognised flag must be a `usage` error (exit 2) with a
+/// near-match suggestion, for every command that takes flags — not just
+/// `set`, which already had this check (kept as its own copy; it predates
+/// this one and there was no reason to touch working code to consolidate
+/// it). `get`, `validate` and `match-test` share this one instead of each
+/// growing its own private copy a fourth, fifth and sixth time.
+///
+/// `known` is every flag name (all aliases) this command recognises;
+/// `no_value` is the subset that takes no value, so this never disagrees
+/// with how the command's own parser decides whether the next token is a
+/// value or the start of the next flag.
+pub(super) fn reject_unknown_flags(
+    args: &[String],
+    known: &[&str],
+    no_value: &[&str],
+) -> Result<(), String> {
+    let mut skip_next = false;
+    for (i, arg) in args.iter().enumerate() {
+        if skip_next {
+            skip_next = false;
+            continue;
+        }
+        if known.contains(&arg.as_str()) {
+            if !no_value.contains(&arg.as_str()) {
+                skip_next = args.get(i + 1).is_some_and(|next| !next.starts_with('-'));
+            }
+            continue;
+        }
+        if arg.starts_with('-') {
+            return Err(match crate::args::near_match(arg, known) {
+                Some(suggestion) => {
+                    format!("unknown option '{}'; did you mean '{}'?", arg, suggestion)
+                }
+                None => format!("unrecognized argument '{}'", arg),
+            });
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

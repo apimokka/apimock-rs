@@ -31,7 +31,7 @@ use apimock_server::server::handle_options;
 use apimock_server::types::CollectedResponse;
 
 use super::envelope::{self, Format};
-use super::flags::{flag_present, flag_value, flag_values_all};
+use super::flags::{flag_present, flag_value, flag_values_all, reject_unknown_flags};
 use super::rule_check::{ConditionCheck, evaluate_rule};
 
 const CONFIG_NAMES: &[&str] = &["--config", "-c"];
@@ -42,6 +42,23 @@ const BODY_FILE_NAMES: &[&str] = &["--body-file"];
 const WHY_FLAG: &str = "--why";
 const FORMAT_FLAG: &str = "--format";
 const DEFAULT_CONFIG_FILE_PATH: &str = "./apimock.toml";
+/// Flags that take no value — every other known flag does.
+const NO_VALUE_FLAG_NAMES: &[&str] = &[WHY_FLAG];
+
+fn known_flag_names() -> Vec<&'static str> {
+    [
+        CONFIG_NAMES,
+        METHOD_NAMES,
+        HEADER_NAMES,
+        BODY_NAMES,
+        BODY_FILE_NAMES,
+    ]
+    .into_iter()
+    .flatten()
+    .copied()
+    .chain([WHY_FLAG, FORMAT_FLAG])
+    .collect()
+}
 
 // ── Argument model ──────────────────────────────────────────────────────
 
@@ -166,16 +183,24 @@ fn positional_path(args: &[String]) -> Option<String> {
 
 // ── Entry point ───────────────────────────────────────────────────────
 
+const USAGE: &str = "Usage: apimock get <path> [-c <config>] [-m <METHOD>] [-H \"Name: value\"]... [-b <json>|--body-file <p>] [--why] [--format text|json]";
+
+fn usage_error(message: &str) -> i32 {
+    eprintln!("apimock get: {}", message);
+    eprintln!("{}", USAGE);
+    2
+}
+
 pub fn run(raw_args: &[String]) -> i32 {
+    // RFC 059: rejected before `GetArgs::parse` even runs, same as
+    // `set` — an unrecognised flag is a `usage` error, not something a
+    // positional-argument scan should ever be asked to silently absorb.
+    if let Err(e) = reject_unknown_flags(raw_args, &known_flag_names(), NO_VALUE_FLAG_NAMES) {
+        return usage_error(&e);
+    }
     let args = match GetArgs::parse(raw_args) {
         Ok(a) => a,
-        Err(e) => {
-            eprintln!("apimock get: {}", e);
-            eprintln!(
-                "Usage: apimock get <path> [-c <config>] [-m <METHOD>] [-H \"Name: value\"]... [-b <json>|--body-file <p>] [--why] [--format text|json]"
-            );
-            return 2;
-        }
+        Err(e) => return usage_error(&e),
     };
     let format = args.format.unwrap_or(Format::Text);
     let is_envelope = format == Format::Json;

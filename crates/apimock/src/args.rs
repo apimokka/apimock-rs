@@ -85,8 +85,7 @@ impl EnvArgs {
 
         // `apimock match-test …` — dry-run rule matching.
         if raw.get(1).map(String::as_str) == Some("match-test") {
-            crate::cmd::match_test::run(&raw[2..])?;
-            return Ok(None);
+            std::process::exit(crate::cmd::match_test::run(&raw[2..]));
         }
 
         // `apimock validate …` — validate config without starting the server.

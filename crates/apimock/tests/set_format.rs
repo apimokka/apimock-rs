@@ -5,49 +5,15 @@
 //! handoff calls out — no UUID ever reaches `set`'s output, on any
 //! path including every error kind.
 
-use std::process::Command;
+#[path = "util.rs"]
+mod util;
 
-fn bin() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_apimock"))
-}
-
-fn run(dir: &std::path::Path, args: &[&str]) -> (i32, String) {
-    let output = bin()
-        .current_dir(dir)
-        .args(args)
-        .output()
-        .unwrap_or_else(|e| panic!("failed to run apimock {:?}: {}", args, e));
-    (
-        output.status.code().unwrap_or(-1),
-        String::from_utf8_lossy(&output.stdout).into_owned(),
-    )
-}
-
-fn run_json(dir: &std::path::Path, args: &[&str]) -> (i32, serde_json::Value) {
-    let (code, stdout) = run(dir, args);
-    let json = serde_json::from_str(&stdout).unwrap_or_else(|e| {
-        panic!("stdout wasn't valid JSON: {e}\nargs: {args:?}\nstdout:\n{stdout}")
-    });
-    (code, json)
-}
-
-/// Argument-parsing failures print plain text to stderr regardless of
-/// `--format` — the same convention `get`/`validate` already use for
-/// their own pre-parse-level errors (format isn't reliably known yet
-/// at that point). Used for `set`'s own guards that run before
-/// `SetRuleArgs`/`--format` are available: unknown-flag rejection and
-/// "nothing to change/respond with".
-fn run_stderr(dir: &std::path::Path, args: &[&str]) -> (i32, String) {
-    let output = bin()
-        .current_dir(dir)
-        .args(args)
-        .output()
-        .unwrap_or_else(|e| panic!("failed to run apimock {:?}: {}", args, e));
-    (
-        output.status.code().unwrap_or(-1),
-        String::from_utf8_lossy(&output.stderr).into_owned(),
-    )
-}
+// RFC 059: `bin`/`run`/`run_json`/`run_stderr` used to be defined here —
+// this file's own copy was the one the other three duplicated. Now a
+// shared harness (`util::cli`, backing `cli_conformance.rs`'s
+// cross-command table too); brought into scope under their original
+// names so every call site below is unchanged.
+use util::cli::{run, run_json, run_stderr};
 
 fn workspace_with_middleware(dir: &std::path::Path) {
     std::fs::write(
