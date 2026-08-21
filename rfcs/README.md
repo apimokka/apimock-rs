@@ -22,7 +22,10 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-*(None open.)*
+| ID  | Title |
+|-----|-------|
+| 061 | [Test on the platforms we ship](./proposed/061-cross-platform-ci.md) — **blocking for 6.0.0** |
+| 062 | [The v6 threat model, refreshed for a CLI that writes](./proposed/062-v6-threat-model.md) — **blocking for 6.0.0** |
 
 ## Accepted
 
