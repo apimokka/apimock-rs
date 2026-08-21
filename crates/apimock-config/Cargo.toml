@@ -40,3 +40,6 @@ tempfile                    = { workspace = true }
 
 [dev-dependencies]
 tempfile                    = { workspace = true }
+# RFC 060 — property-tests the write path (Workspace::save). Dev-only:
+# nothing changes for anyone installing apimock.
+proptest                    = { workspace = true }

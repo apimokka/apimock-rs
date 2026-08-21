@@ -84,6 +84,11 @@ serde_json                  = "1"
 thiserror                   = "2"
 anyhow                      = "1"
 tempfile                    = "3"
+# Dev-dependency only (RFC 060) — property-tests apimock-config's write
+# path (Workspace::save). Shrinking on structured data is why this one
+# and not quickcheck: a minimal reproducing config is the deliverable,
+# not just "some input failed."
+proptest                    = "1"
 
 # Workspace-wide build profiles. Profile sections only take effect when
 # specified in the root Cargo.toml of a workspace, regardless of which
