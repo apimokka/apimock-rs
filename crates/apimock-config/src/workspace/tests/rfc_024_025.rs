@@ -92,6 +92,115 @@ fn has_external_changes_false_after_sync() {
     );
 }
 
+// ── RFC 042: sync_from_disk's doc comment, pinned by a test instead of
+// left as prose — every NodeId is reassigned by a sync, and a parse
+// error during sync leaves the workspace fully usable. ──────────────
+
+#[test]
+fn node_ids_change_across_sync_from_disk() {
+    use crate::view::NodeKind;
+
+    let (dir, root) = make_workspace();
+    let mut ws = Workspace::load(root).unwrap();
+
+    let id_before = ws
+        .snapshot()
+        .files
+        .iter()
+        .flat_map(|f| f.nodes.iter())
+        .find(|n| matches!(n.kind, NodeKind::Rule))
+        .map(|n| n.id)
+        .expect("a rule node exists");
+
+    // An external edit that doesn't touch the rule's own position —
+    // exactly the case where a caller relying on the old (false) doc
+    // comment would most plausibly expect the id to survive.
+    let rs_path = dir.path().join("apimock-rule-set.toml");
+    let mut f = std::fs::OpenOptions::new()
+        .append(true)
+        .open(&rs_path)
+        .unwrap();
+    writeln!(f, "# an external, position-preserving comment").unwrap();
+    drop(f);
+
+    ws.sync_from_disk().unwrap();
+
+    let id_after = ws
+        .snapshot()
+        .files
+        .iter()
+        .flat_map(|f| f.nodes.iter())
+        .find(|n| matches!(n.kind, NodeKind::Rule))
+        .map(|n| n.id)
+        .expect("the same rule still exists after sync");
+
+    assert_ne!(
+        id_before, id_after,
+        "sync_from_disk is documented (RFC 042) to reassign every NodeId, \
+         even for an address that didn't move — this pins that documented \
+         behaviour so it can't quietly regress back into being a false claim"
+    );
+}
+
+#[test]
+fn a_parse_error_during_sync_leaves_the_workspace_fully_usable() {
+    let (dir, root) = make_workspace();
+    let mut ws = Workspace::load(root.clone()).unwrap();
+
+    let rule_count_before = ws
+        .snapshot()
+        .routes
+        .rule_sets
+        .iter()
+        .map(|rs| rs.rules.len())
+        .sum::<usize>();
+
+    // Corrupt the rule-set file externally.
+    let rs_path = dir.path().join("apimock-rule-set.toml");
+    std::fs::write(&rs_path, "this is not valid toml = = =").unwrap();
+
+    let sync_result = ws.sync_from_disk();
+    assert!(
+        sync_result.is_err(),
+        "a parse error during sync must be returned, not swallowed"
+    );
+
+    // The workspace must still be fully queryable, with its pre-sync
+    // state intact — not partially mutated, not poisoned.
+    let snap = ws.snapshot();
+    let rule_count_after = snap
+        .routes
+        .rule_sets
+        .iter()
+        .map(|rs| rs.rules.len())
+        .sum::<usize>();
+    assert_eq!(
+        rule_count_before, rule_count_after,
+        "a failed sync must leave the workspace exactly as it was"
+    );
+
+    // And a later, successful sync still works.
+    std::fs::write(
+        &rs_path,
+        concat!(
+            "[[rules]]\n",
+            "when.request.url_path = \"/after-repair\"\n",
+            "respond = { text = \"ok\" }\n",
+        ),
+    )
+    .unwrap();
+    ws.sync_from_disk()
+        .expect("a subsequent, valid sync must succeed");
+    let repaired_count: usize = ws
+        .snapshot()
+        .routes
+        .rule_sets
+        .iter()
+        .map(|rs| rs.rules.len())
+        .sum();
+    assert_eq!(repaired_count, 1);
+}
+
 // ── RFC 025: per-rule-set strategy ───────────────────────────────────
 
 #[test]

@@ -253,9 +253,26 @@ impl Workspace {
 
     /// Reload all config files from disk, replacing the in-memory model.
     ///
-    /// NodeIds for unchanged addresses (same rule-set path, same rule
-    /// index) are preserved across the reload. NodeIds for addresses that
-    /// no longer exist are dropped; new addresses get fresh IDs.
+    /// # Every `NodeId` is reassigned (RFC 042)
+    ///
+    /// A sync is a fresh [`load`](Self::load): the old `IdIndex` is
+    /// discarded and a new one is seeded from scratch, so **every**
+    /// `NodeId` changes, whether or not the address it names actually
+    /// did. This previously stated the opposite — that IDs for
+    /// unchanged addresses survived — which was never true; `*self =
+    /// fresh` here has always replaced the whole workspace, ID index
+    /// included. RFC 042 corrects the claim rather than building the
+    /// preservation it described, because `NodeAddress` is positional
+    /// (`Rule { rule_set: usize, rule: usize }`) and an external edit —
+    /// the one case this method exists for — is exactly the case where
+    /// positions shift, making "preserve by address" reassign identity
+    /// onto the wrong rule as often as it would help.
+    ///
+    /// **After a sync, re-read the tree — do not reuse a `NodeId` held
+    /// from before the call.** A GUI calling this is already
+    /// re-rendering (it just observed [`has_external_changes`](Self::has_external_changes)
+    /// return `true`), so re-querying every ID from the new
+    /// [`snapshot`](Self::snapshot) costs nothing extra.
     ///
     /// On parse error, the workspace is left unchanged and the error is
     /// returned. The GUI can surface the error and retry.
@@ -285,8 +302,12 @@ impl Workspace {
     /// address_to_id mapping where addresses still exist and only
     /// mints new IDs for genuinely new addresses.
     ///
-    /// For Step 1 there's nothing to preserve: load is a from-scratch
-    /// operation. Step 2 will call a more careful `reseed_after_edit`.
+    /// Called from `load()`, there's nothing to preserve: loading is a
+    /// from-scratch operation, and `sync_from_disk` (a fresh `load()`
+    /// under the hood) reassigns every `NodeId` for exactly that reason —
+    /// see its own doc comment (RFC 042). There is no `reseed_after_edit`
+    /// function; an earlier version of this comment referred to one that
+    /// was never built.
     fn seed_ids(&mut self) {
         // Root is always present.
         self.ids.insert(NodeAddress::Root);
