@@ -583,3 +583,171 @@ fn updating_only_the_when_clause_preserves_the_existing_respond() {
     assert_eq!(code, 0, "the config must still load after the update: {v}");
     assert_eq!(v["result"]["summary"]["errors"], 0);
 }
+
+// ── RFC 062: `--rule-set` confined to the config's own directory tree ──
+
+fn workspace_with_empty_rule_sets(dir: &std::path::Path) {
+    std::fs::write(
+        dir.join("apimock.toml"),
+        "[service]\nrule_sets = []\nfallback_respond_dir = \".\"\n",
+    )
+    .unwrap();
+}
+
+#[test]
+fn rule_set_outside_the_tree_by_relative_path_is_refused_and_writes_nothing() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let workdir = dir.path().join("workdir");
+    std::fs::create_dir(&workdir).unwrap();
+    workspace_with_empty_rule_sets(&workdir);
+    let config_before = std::fs::read_to_string(workdir.join("apimock.toml")).unwrap();
+
+    let (code, stderr) = run_stderr(
+        &workdir,
+        &[
+            "set",
+            "rule",
+            "--rule-set",
+            "../escaped.toml",
+            "--path",
+            "/x",
+            "--status",
+            "200",
+            "--text",
+            "hi",
+        ],
+    );
+    assert_eq!(code, 2, "{stderr}");
+    assert!(
+        stderr.contains("resolves outside the config directory"),
+        "{stderr}"
+    );
+    assert!(
+        !dir.path().join("escaped.toml").exists(),
+        "nothing must be written outside the tree"
+    );
+    let config_after = std::fs::read_to_string(workdir.join("apimock.toml")).unwrap();
+    assert_eq!(
+        config_before, config_after,
+        "nothing new must be written inside the tree either"
+    );
+    assert_eq!(
+        std::fs::read_dir(&workdir).unwrap().count(),
+        1,
+        "no new file must appear inside the tree"
+    );
+}
+
+#[test]
+fn rule_set_outside_the_tree_by_absolute_path_is_refused_and_writes_nothing() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    workspace_with_empty_rule_sets(dir.path());
+    let outside = tempfile::tempdir().expect("second tempdir, standing in for 'outside'");
+    let target = outside.path().join("abs-escape.toml");
+
+    let (code, stderr) = run_stderr(
+        dir.path(),
+        &[
+            "set",
+            "rule",
+            "--rule-set",
+            target.to_str().unwrap(),
+            "--path",
+            "/x",
+            "--status",
+            "200",
+            "--text",
+            "hi",
+        ],
+    );
+    assert_eq!(code, 2, "{stderr}");
+    assert!(
+        stderr.contains("resolves outside the config directory"),
+        "{stderr}"
+    );
+    assert!(!target.exists(), "nothing must be written outside the tree");
+}
+
+#[test]
+fn allow_outside_permits_a_rule_set_outside_the_tree() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let workdir = dir.path().join("workdir");
+    std::fs::create_dir(&workdir).unwrap();
+    workspace_with_empty_rule_sets(&workdir);
+
+    let (code, v) = run_json(
+        &workdir,
+        &[
+            "set",
+            "rule",
+            "--rule-set",
+            "../escaped.toml",
+            "--allow-outside",
+            "--path",
+            "/x",
+            "--status",
+            "200",
+            "--text",
+            "hi",
+            "--format",
+            "json",
+        ],
+    );
+    assert_eq!(code, 0, "{v}");
+    assert!(
+        dir.path().join("escaped.toml").exists(),
+        "--allow-outside must permit the write it names"
+    );
+}
+
+#[test]
+fn an_existing_non_rule_set_toml_in_the_tree_is_still_refused_and_unchanged() {
+    // RFC 062 § 2's third probe, re-asserted after the change: this is
+    // unrelated to confinement (the target is inside the tree) — it's
+    // the pre-existing "doesn't parse as a rule set" refusal, and it
+    // must behave exactly as before.
+    let dir = tempfile::tempdir().expect("tempdir");
+    workspace_with_empty_rule_sets(dir.path());
+    let not_a_rule_set = "not = \"a rule set\"\n";
+    std::fs::write(dir.path().join("not-a-ruleset.toml"), not_a_rule_set).unwrap();
+
+    let (code, stderr) = run_stderr(
+        dir.path(),
+        &[
+            "set",
+            "rule",
+            "--rule-set",
+            "not-a-ruleset.toml",
+            "--path",
+            "/x",
+            "--status",
+            "200",
+            "--text",
+            "hi",
+        ],
+    );
+    assert_eq!(code, 2, "{stderr}");
+    let after = std::fs::read_to_string(dir.path().join("not-a-ruleset.toml")).unwrap();
+    assert_eq!(
+        not_a_rule_set, after,
+        "a target that doesn't parse as a rule set must be left untouched"
+    );
+}
+
+#[test]
+fn bootstrapping_in_a_fresh_empty_directory_still_works_under_confinement() {
+    // The regression the handoff flags as most likely to bite: a naive
+    // confinement check that requires the target to already exist would
+    // break `set`'s own bootstrap-on-first-use behaviour.
+    let dir = tempfile::tempdir().expect("tempdir");
+
+    let (code, v) = run_json(
+        dir.path(),
+        &[
+            "set", "rule", "--path", "/x", "--status", "200", "--text", "hi", "--format", "json",
+        ],
+    );
+    assert_eq!(code, 0, "{v}");
+    assert!(dir.path().join("apimock.toml").exists());
+    assert!(dir.path().join("apimock-rule-set.toml").exists());
+}

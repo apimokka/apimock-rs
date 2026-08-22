@@ -37,6 +37,7 @@
     - [Body path syntax](./reference/body-path-syntax.md)
     - [CLI reference](./reference/cli-reference.md)
     - [Response headers](./reference/response-headers.md)
+    - [Threat model](./reference/threat-model.md)
 
 ---
 

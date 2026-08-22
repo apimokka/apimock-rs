@@ -269,7 +269,7 @@ for conditions whose text-format output never showed it historically
 apimock set rule [-c <config>] [--rule-set <path>] [--rule <n>] \
   [--path <url_path>] [--method <METHOD>] [-H "Name: value"]... \
   [--status <code>] [--json <value> | --text <value>] [--file <path>] \
-  [--delay <ms>] [--dry-run] [--format text|json]
+  [--delay <ms>] [--dry-run] [--format text|json] [--allow-outside]
 ```
 
 Adds a rule (the default), or changes an existing one when `--rule` is
@@ -303,12 +303,24 @@ by `get` can be passed to `--rule-set`/`--rule` unmodified.
 | `--dry-run` | Show what would change, without writing anything |
 | `--format text` | Default. Human-readable |
 | `--format json` | The [RFC 053 response envelope](#the-response-envelope---format-json) |
+| `--allow-outside` | Permit `--rule-set` to resolve outside the config directory. See below |
 
 **`--rule`'s index is 0-based**, matching `get`'s JSON contract rather
 than its 1-based text display — the machine-readable convention, since
 that is the one meant to compose. Addressing a rule set by a path not
 in `service.rule_sets` when `--rule` is also given, or an out-of-range
 rule index, is a `usage` error — not a panic, and not a silent no-op.
+
+**`--rule-set` is confined to the config's own directory tree by
+default** (RFC 062) — a path that canonicalises outside it (`../elsewhere.toml`,
+an absolute path elsewhere) is a `usage` error, exit 2, and nothing is
+written, including a bootstrap file. `--allow-outside` opts out for the
+cases where it's actually wanted — a person at a shell pointing at a
+shared rule-set file elsewhere is not a mistake the same way an
+AI agent composing an unreviewed path is. This confinement is CLI-layer
+only; `apimock-config`'s library API (and so the GUI, once it exists)
+does not inherit it. See the [threat model](./threat-model.md) for the
+full reasoning.
 
 **A file changed on disk since it was loaded is refused, not
 overwritten** (RFC 056) —

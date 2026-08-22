@@ -74,11 +74,16 @@ const FILE_NAMES: &[&str] = &["--file"];
 const DELAY_NAMES: &[&str] = &["--delay"];
 const DRY_RUN_FLAG: &str = "--dry-run";
 const FORMAT_FLAG: &str = "--format";
+/// RFC 062: opts out of confining `--rule-set` to the root config's own
+/// directory tree. Named for what it does, not what it's for — see
+/// `crate::cmd::set`'s module doc and `docs/src/reference/threat-model.md`
+/// for why the default confines at all.
+const ALLOW_OUTSIDE_FLAG: &str = "--allow-outside";
 /// Flags that take no value — every other known flag does. Used both
 /// to parse (`SetRuleArgs::parse` never has to guess) and to reject
 /// unknown input (`reject_unknown_flags` needs to know which flag
 /// consumes the token after it).
-const NO_VALUE_FLAG_NAMES: &[&str] = &[DRY_RUN_FLAG];
+const NO_VALUE_FLAG_NAMES: &[&str] = &[DRY_RUN_FLAG, ALLOW_OUTSIDE_FLAG];
 
 fn known_flag_names() -> Vec<&'static str> {
     [
@@ -97,7 +102,7 @@ fn known_flag_names() -> Vec<&'static str> {
     .into_iter()
     .flatten()
     .copied()
-    .chain([DRY_RUN_FLAG, FORMAT_FLAG])
+    .chain([DRY_RUN_FLAG, FORMAT_FLAG, ALLOW_OUTSIDE_FLAG])
     .collect()
 }
 
@@ -161,6 +166,7 @@ struct SetRuleArgs {
     delay_ms: Option<u32>,
     dry_run: bool,
     format: Option<Format>,
+    allow_outside: bool,
 }
 
 impl SetRuleArgs {
@@ -209,6 +215,7 @@ impl SetRuleArgs {
             })
             .transpose()?;
         let dry_run = flag_present(args, &[DRY_RUN_FLAG]);
+        let allow_outside = flag_present(args, &[ALLOW_OUTSIDE_FLAG]);
 
         let format_raw = flag_value(args, &[FORMAT_FLAG]);
         let format = match format_raw.as_deref() {
@@ -237,6 +244,7 @@ impl SetRuleArgs {
             delay_ms,
             dry_run,
             format,
+            allow_outside,
         })
     }
 
@@ -306,7 +314,7 @@ impl SetRuleArgs {
 const USAGE: &str = "Usage: apimock set rule [-c <config>] [--rule-set <path>] [--rule <index>] \
  [--path <url_path>] [--method <METHOD>] [-H \"Name: value\"]... \
  [--status <code>] [--json <value>|--text <value>] [--file <path>] \
- [--delay <ms>] [--dry-run] [--format text|json]";
+ [--delay <ms>] [--dry-run] [--format text|json] [--allow-outside]";
 
 fn usage_error(message: &str) -> i32 {
     eprintln!("apimock set rule: {}", message);
@@ -347,11 +355,89 @@ pub fn run(raw_args: &[String]) -> i32 {
     run_inner(&args, is_envelope)
 }
 
+/// RFC 062: the directory a caller-supplied write target resolves
+/// into, for confinement purposes — canonicalised where the target
+/// already exists, and canonicalised-*parent* where it doesn't, since
+/// `set` legitimately creates rule-set files that don't exist yet
+/// (bootstrapping) and a check that required existence would break
+/// that. Errors are the caller's to map to an `ErrorKind` — a failure
+/// here is almost always the parent directory not existing either,
+/// which is a real (if different) problem, not silently "confined".
+fn write_target_dir(path: &Path) -> std::io::Result<PathBuf> {
+    if path.exists() {
+        let canonical = path.canonicalize()?;
+        Ok(if canonical.is_dir() {
+            canonical
+        } else {
+            canonical
+                .parent()
+                .map(Path::to_path_buf)
+                .unwrap_or(canonical)
+        })
+    } else {
+        let parent = path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."));
+        parent.canonicalize()
+    }
+}
+
+/// RFC 062 Option A: `target` is confined to `root`'s own directory
+/// tree — `root` itself, or any descendant of it.
+fn is_confined(target_dir: &Path, root_dir: &Path) -> bool {
+    target_dir.starts_with(root_dir)
+}
+
 fn run_inner(args: &SetRuleArgs, is_envelope: bool) -> i32 {
     let config_path = args
         .config_path
         .clone()
         .unwrap_or_else(|| DEFAULT_CONFIG_FILE_PATH.to_owned());
+
+    // RFC 062: confinement is checked *before anything is written* —
+    // including the config-bootstrap write just below — so a
+    // `--rule-set` that resolves outside the config's directory tree
+    // never causes even a starter `apimock.toml` to be created. Derived
+    // independently of `Workspace`/`ws.config()` on purpose: those
+    // require a *loaded* config, and loading may itself require the
+    // bootstrap write this check has to happen ahead of. The config's
+    // own directory is just `config_path`'s parent, which needs no load
+    // to compute.
+    let rule_set_path = args
+        .rule_set
+        .clone()
+        .unwrap_or_else(|| DEFAULT_RULE_SET_FILE_PATH.to_owned())
+        .trim_start_matches("./")
+        .to_owned();
+    if !args.allow_outside {
+        let config_dir = Path::new(&config_path)
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."));
+        let candidate = config_dir.join(&rule_set_path);
+        match (write_target_dir(config_dir), write_target_dir(&candidate)) {
+            (Ok(config_dir), Ok(target_dir)) if !is_confined(&target_dir, &config_dir) => {
+                return fail(
+                    is_envelope,
+                    ErrorKind::Usage,
+                    format!(
+                        "--rule-set `{}` resolves outside the config directory; \
+                         pass --allow-outside to permit this",
+                        rule_set_path
+                    ),
+                );
+            }
+            (Err(e), _) | (_, Err(e)) => {
+                return fail(
+                    is_envelope,
+                    ErrorKind::Io,
+                    format!("failed to resolve --rule-set path: {}", e),
+                );
+            }
+            _ => {}
+        }
+    }
 
     if !Path::new(&config_path).exists() {
         // REVIEW-001 § 4: `--dry-run` is a safety affordance — a
@@ -394,20 +480,15 @@ fn run_inner(args: &SetRuleArgs, is_envelope: bool) -> i32 {
         }
     };
 
-    // Bare, no `./` prefix: this is the value that ends up written into
-    // `service.rule_sets = [...]` (via `AddRuleSet`'s `path` field),
-    // matching how every other producer of that array writes it
-    // (`--init`'s wizard, a GUI's own `AddRuleSet`). `cmd_add_rule_set`
-    // joins it against the config's directory itself; joining it here
-    // too (below) with an already-`./`-prefixed string would double up
-    // to `././...` — harmless to load, but needless noise in every
-    // preview/diff row this command prints.
-    let rule_set_path = args
-        .rule_set
-        .clone()
-        .unwrap_or_else(|| DEFAULT_RULE_SET_FILE_PATH.to_owned())
-        .trim_start_matches("./")
-        .to_owned();
+    // `rule_set_path` (bare, no `./` prefix) was already computed above
+    // for the confinement check — this is the same value that ends up
+    // written into `service.rule_sets = [...]` (via `AddRuleSet`'s
+    // `path` field), matching how every other producer of that array
+    // writes it (`--init`'s wizard, a GUI's own `AddRuleSet`).
+    // `cmd_add_rule_set` joins it against the config's directory itself;
+    // joining it here too (below) with an already-`./`-prefixed string
+    // would double up to `././...` — harmless to load, but needless
+    // noise in every preview/diff row this command prints.
     let relative_dir = match ws.config().current_dir_to_parent_dir_relative_path() {
         Ok(d) => d,
         Err(e) => {

@@ -109,6 +109,21 @@ fn set_unknown_flag_is_usage_with_near_match() {
     );
 }
 
+/// RFC 062's `--allow-outside` opt-out is a known flag `set` recognises,
+/// same as every other one above — a typo of it gets the same
+/// near-match treatment, proving it's part of the vocabulary this
+/// table's mechanism actually covers, not a flag bolted on beside it.
+#[test]
+fn set_allow_outside_typo_is_usage_with_near_match() {
+    let dir = valid_workspace();
+    let (code, stderr) = run_stderr(dir.path(), &["set", "rule", "--allow-outsid"]);
+    assert_eq!(code, 2);
+    assert!(
+        stderr.contains("did you mean '--allow-outside'?"),
+        "stderr:\n{stderr}"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Scenario: known flag, missing value → usage, exit 2
 // ═══════════════════════════════════════════════════════════════════
