@@ -27,6 +27,7 @@ use apimock_routing::ParsedRequest;
 use apimock_routing::util::http::normalize_url_path;
 use apimock_server::dyn_route::dyn_route_content;
 use apimock_server::respond_response::respond_response;
+use apimock_server::response::confine::canonical_dir;
 use apimock_server::server::handle_options;
 use apimock_server::types::CollectedResponse;
 
@@ -372,11 +373,13 @@ fn dispatch(config: &Config, parsed_request: &ParsedRequest) -> DispatchOutcome 
                 .default
                 .as_ref()
                 .and_then(|d| d.delay_response_milliseconds);
+            let confine_to = canonical_dir(dir_prefix.as_str());
             let response = tokio_run(respond_response(
                 &respond,
                 dir_prefix.as_str(),
                 parsed_request,
                 rule_set_default_delay_ms,
+                confine_to.as_deref(),
             ))
             .expect("respond_response only fails on a headers-construction bug");
             return DispatchOutcome {
@@ -391,10 +394,12 @@ fn dispatch(config: &Config, parsed_request: &ParsedRequest) -> DispatchOutcome 
         }
     }
 
+    let confine_to = canonical_dir(config.service.fallback_respond_dir.as_str());
     let response = tokio_run(dyn_route_content(
         parsed_request.url_path.as_str(),
         config.service.fallback_respond_dir.as_str(),
         &parsed_request.component_parts.headers,
+        confine_to.as_deref(),
     ))
     .expect("dyn_route_content only fails on a headers-construction bug");
     DispatchOutcome {

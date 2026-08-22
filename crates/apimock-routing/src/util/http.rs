@@ -33,5 +33,58 @@ pub fn normalize_url_path(url_path: &str, url_path_prefix: Option<&str>) -> Stri
     // previous one matched.
     let trimmed = merged.strip_suffix('/').unwrap_or(merged.as_str());
     let trimmed = trimmed.strip_prefix('/').unwrap_or(trimmed);
-    format!("/{}", trimmed)
+
+    // Defence in depth against a raw `..` segment (RFC 063): this is
+    // not the confinement fix itself — the serve-time canonicalise
+    // check is — but it closes the ordinary case before a path even
+    // reaches file resolution. A bare token removal rather than a full
+    // dot-segment resolution (RFC 3986 §5.2): `..` never counts as
+    // legitimate in a rule's own `url_path` either, so dropping it
+    // outright, without collapsing whatever segment preceded it, is
+    // sufficient here and simpler than a real resolver.
+    let stripped: Vec<&str> = trimmed.split('/').filter(|seg| *seg != "..").collect();
+    format!("/{}", stripped.join("/"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_url_path;
+
+    #[test]
+    fn ordinary_paths_are_unaffected() {
+        assert_eq!(normalize_url_path("/api/v1", None), "/api/v1");
+        assert_eq!(normalize_url_path("api/v1", None), "/api/v1");
+        assert_eq!(normalize_url_path("/api/v1/", None), "/api/v1");
+    }
+
+    #[test]
+    fn a_leading_dot_dot_segment_is_stripped() {
+        assert_eq!(normalize_url_path("/../outside.txt", None), "/outside.txt");
+    }
+
+    #[test]
+    fn repeated_leading_dot_dot_segments_are_all_stripped() {
+        assert_eq!(
+            normalize_url_path("/../../outside.txt", None),
+            "/outside.txt"
+        );
+    }
+
+    #[test]
+    fn a_mid_path_dot_dot_segment_is_stripped() {
+        assert_eq!(normalize_url_path("/foo/../bar", None), "/foo/bar");
+    }
+
+    #[test]
+    fn a_bare_dot_dot_normalises_to_root() {
+        assert_eq!(normalize_url_path("/..", None), "/");
+    }
+
+    #[test]
+    fn a_prefix_is_still_applied_alongside_stripping() {
+        assert_eq!(
+            normalize_url_path("/../outside.txt", Some("/api")),
+            "/api/outside.txt"
+        );
+    }
 }

@@ -3,12 +3,14 @@ use hyper::HeaderMap;
 use serde_json::{Map, Value};
 use tokio::task;
 
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, path::Path};
 
 use crate::{
     constant::CSV_RECORDS_DEFAULT_KEY,
     json_path_util::resolve_with_json_compatible_extensions,
-    response::{error_response::not_found_response, json_response::json_response},
+    response::{
+        confine::confine, error_response::not_found_response, json_response::json_response,
+    },
     response_handler::ResponseHandler,
     types::BoxBody,
 };
@@ -28,6 +30,11 @@ pub struct FileResponse {
     binary_content: Option<Vec<u8>>,
     custom_headers: Option<HashMap<String, Option<String>>>,
     request_headers: HeaderMap,
+    /// The directory `file_path` must resolve inside, already
+    /// canonicalised by the caller. `None` means it couldn't be (the
+    /// directory doesn't exist) — every candidate is then refused,
+    /// never served unchecked.
+    confine_to: Option<std::path::PathBuf>,
 }
 
 impl FileResponse {
@@ -36,6 +43,7 @@ impl FileResponse {
         file_path: &str,
         custom_headers: Option<&HashMap<String, Option<String>>>,
         request_headers: &HeaderMap,
+        confine_to: Option<&Path>,
     ) -> Self {
         FileResponse {
             file_path: file_path.to_owned(),
@@ -44,6 +52,7 @@ impl FileResponse {
             binary_content: None,
             custom_headers: custom_headers.cloned(),
             request_headers: request_headers.clone(),
+            confine_to: confine_to.map(Path::to_path_buf),
         }
     }
 
@@ -53,8 +62,9 @@ impl FileResponse {
         custom_headers: Option<&HashMap<String, Option<String>>>,
         csv_records_key: Option<String>,
         request_headers: &HeaderMap,
+        confine_to: Option<&Path>,
     ) -> Self {
-        let mut ret = FileResponse::new(file_path, custom_headers, request_headers);
+        let mut ret = FileResponse::new(file_path, custom_headers, request_headers, confine_to);
         ret.csv_records_key = csv_records_key;
         ret
     }
@@ -71,6 +81,28 @@ impl FileResponse {
                     style("file not found").red(),
                     self.file_path
                 );
+                return not_found_response(&self.request_headers);
+            }
+        };
+
+        // Confine the resolved candidate to the directory it was meant
+        // to come from. This runs after extension/`index.*` resolution
+        // above, so it also catches a path that only escapes at that
+        // stage (e.g. a symlinked `index.html`), not only one that
+        // arrived already outside.
+        let file_path = match confine(file_path.as_str(), self.confine_to.as_deref()) {
+            Some(canonical) => match canonical.to_str() {
+                Some(x) => x.to_owned(),
+                None => {
+                    log::error!(
+                        "{} to get str from canonicalized file path:\n{}",
+                        style("failed").red(),
+                        file_path
+                    );
+                    return not_found_response(&self.request_headers);
+                }
+            },
+            None => {
                 return not_found_response(&self.request_headers);
             }
         };

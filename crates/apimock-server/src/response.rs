@@ -1,3 +1,4 @@
+pub mod confine;
 pub mod error_response;
 pub mod file_response;
 pub mod json_response;

@@ -31,6 +31,7 @@ use tokio::sync::Mutex;
 use tokio_rustls::TlsAcceptor;
 
 use std::net::{SocketAddr, ToSocketAddrs};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::{
@@ -39,7 +40,7 @@ use crate::{
     middleware::LoadedMiddlewares,
     parsed_request::{capture_in_log_with_trace_config, parsed_request_from},
     respond_response::respond_response,
-    response::error_response::internal_server_error_response,
+    response::{confine::canonical_dir, error_response::internal_server_error_response},
     response_handler::default_response_headers,
     tls::{build_server_config_reloadable, load_certs, load_private_key},
     types::BoxBody,
@@ -56,14 +57,30 @@ pub struct AppState {
     pub middlewares: LoadedMiddlewares,
     /// Live match-trace channel. Shared across all request handler tasks.
     pub tracer: TraceEmitter,
+    /// `config.service.fallback_respond_dir`, canonicalised once here
+    /// rather than per request — only the per-request candidate needs
+    /// fresh canonicalisation. `None` if the directory doesn't exist.
+    canonical_fallback_respond_dir: Option<PathBuf>,
+    /// Parallel to `config.service.rule_sets`, same reasoning.
+    canonical_rule_set_respond_dirs: Vec<Option<PathBuf>>,
 }
 
 impl AppState {
     pub fn new(config: Config, middlewares: LoadedMiddlewares, tracer: TraceEmitter) -> Self {
+        let canonical_fallback_respond_dir =
+            canonical_dir(config.service.fallback_respond_dir.as_str());
+        let canonical_rule_set_respond_dirs = config
+            .service
+            .rule_sets
+            .iter()
+            .map(|rule_set| canonical_dir(rule_set.dir_prefix().as_str()))
+            .collect();
         Self {
             config,
             middlewares,
             tracer,
+            canonical_fallback_respond_dir,
+            canonical_rule_set_respond_dirs,
         }
     }
 }
@@ -107,11 +124,7 @@ impl Server {
         Ok(Server {
             http_addr,
             https_addr,
-            app_state: AppState {
-                config,
-                middlewares,
-                tracer: TraceEmitter::new(),
-            },
+            app_state: AppState::new(config, middlewares, TraceEmitter::new()),
         })
     }
 
@@ -351,6 +364,8 @@ pub async fn service(
     let config = shared_app_state.config;
     let middlewares = shared_app_state.middlewares;
     let tracer = shared_app_state.tracer;
+    let canonical_fallback_respond_dir = shared_app_state.canonical_fallback_respond_dir;
+    let canonical_rule_set_respond_dirs = shared_app_state.canonical_rule_set_respond_dirs;
 
     let received_at_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -368,7 +383,13 @@ pub async fn service(
         return response;
     }
 
-    if let Some(response) = rule_set_response(&config, &parsed_request).await {
+    if let Some(response) = rule_set_response(
+        &config,
+        &parsed_request,
+        canonical_rule_set_respond_dirs.as_slice(),
+    )
+    .await
+    {
         // Emit trace event on match.
         if tracer.has_subscribers() {
             let headers = parsed_request
@@ -399,6 +420,7 @@ pub async fn service(
         parsed_request.url_path.as_str(),
         config.service.fallback_respond_dir.as_str(),
         &request_headers,
+        canonical_fallback_respond_dir.as_deref(),
     )
     .await
 }
@@ -425,9 +447,13 @@ async fn middleware_response(
 }
 
 /// Dispatch through the configured rule sets.
+///
+/// `canonical_rule_set_respond_dirs` is parallel to
+/// `config.service.rule_sets` — see `AppState::new`.
 async fn rule_set_response(
     config: &Config,
     parsed_request: &ParsedRequest,
+    canonical_rule_set_respond_dirs: &[Option<PathBuf>],
 ) -> Option<Result<hyper::Response<BoxBody>, hyper::http::Error>> {
     for (rule_set_idx, rule_set) in config.service.rule_sets.iter().enumerate() {
         if let Some((_rule_idx, respond)) = rule_set.find_matched(
@@ -440,12 +466,16 @@ async fn rule_set_response(
                 .default
                 .as_ref()
                 .and_then(|default| default.delay_response_milliseconds);
+            let confine_to = canonical_rule_set_respond_dirs
+                .get(rule_set_idx)
+                .and_then(|dir| dir.as_deref());
             return Some(
                 respond_response(
                     &respond,
                     dir_prefix.as_str(),
                     parsed_request,
                     rule_set_default_delay_ms,
+                    confine_to,
                 )
                 .await,
             );

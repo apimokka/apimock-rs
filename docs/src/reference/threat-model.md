@@ -50,7 +50,10 @@ listed in `service.rule_sets`, every file listed in
 `service.middlewares` (`.rhai` scripts, compiled once at startup — no
 file-watch or hot-reload), and TLS certificate/key files when
 configured. All are read from paths an operator put in their own config
-file.
+file. A file actually *served* in response to a request — whether found
+via the dyn-route fallback, a rule's `respond.file_path`, or a path a
+Rhai middleware returns — is confined to the directory it was resolved
+against; see T3, below.
 
 **What the CLI writes.** `apimock set` creates or rewrites the root
 config and a rule-set file, in place, preserving comments and key order
@@ -180,6 +183,48 @@ of 6.0.0: enforced.** RFC 048 required this without specifying a
 mechanism; RFC 062's confinement (above) is that mechanism, for `set`'s
 one caller-supplied write target.
 
+**T3 — path traversal through the serve path (the read side) — status
+as of 6.0.0: enforced.** Complementary to T1, and the gap this page
+itself flagged when it first shipped (RFC 062) — now closed (RFC 063).
+A resolved file is served only if it stays within the directory it was
+resolved against, at every site that can produce one: the dyn-route
+fallback (a request-derived path), a rule's `respond.file_path`, and a
+path a Rhai middleware script returns (both operator-authored). Each
+checks by canonicalising the resolved candidate and confirming it
+remains inside the canonicalised base directory for that site — the
+fallback respond dir, the rule set's own respond dir, or the middleware
+script's own directory, respectively. A violation is a bare 404,
+indistinguishable from an ordinary not-found, so a prober learns
+nothing about whether the target exists.
+
+Unlike T1, **this has no opt-out.** RFC 062 gave `set --rule-set` an
+escape hatch because a caller naming an outside path is asking for it
+and is the only one exposed; the serve path is reachable by anything
+that can send a request, so no config toggle turns it off. If files
+genuinely live elsewhere, point `respond_dir` at them directly —
+explicit, per rule set, already supported.
+
+Unlike T1, **this is not CLI-layer only.** It's enforced inside
+`apimock-server` itself — the running server, and `apimock get` (RFC
+055), which calls the exact same dispatch functions the server does, so
+neither can answer differently than the other for the same request. The
+asymmetry the previous version of this page flagged — write path
+confined, read path open — no longer exists.
+
+As defence in depth, `normalize_url_path` also strips a `..` segment
+from the request path before it reaches file resolution at all — this
+closes the ordinary case earlier, but it is not the fix: it cannot help
+`respond.file_path` or a Rhai-returned path (neither is built from a
+URL), and a symlink escaping the base is caught only by
+canonicalise-and-compare. Two independent controls, deliberately: the
+RFC's own framing was "neither alone is the fix."
+
+Per-request cost: the base directory is canonicalised once, when the
+server starts (or `apimock get` runs) — not per request. The only
+per-request work is canonicalising the resolved candidate, measured at
+under a microsecond on a warm filesystem cache, immaterial next to the
+network I/O already in every request.
+
 **Other threats RFC 048 named, current status:**
 
 - **Indirect prompt injection reaching `set` through an AI agent** isn't
@@ -196,20 +241,3 @@ one caller-supplied write target.
 - **Supply chain of new dependencies** — covered by the existing
   `cargo audit` / lockfile CI gates (RFC 033), no new mechanism needed
   per dependency.
-
-## An open surface found while writing this page
-
-**`respond.file_path` (and the equivalent in Rhai middleware responses
-and the dyn-route fallback) has no path-traversal protection at serve
-time.** The server resolves a rule's configured `file_path` by joining
-it onto the rule set's response directory and checking only that the
-result exists — no canonicalisation, no check that the resolved path
-stays under that directory. A rule set whose `file_path` is
-`../../../etc/passwd`-shaped is served as authored. This is not reachable
-from an HTTP request (`file_path` values are static, operator-authored
-configuration, not built from request input anywhere in the code paths
-that resolve them) — but it is a real gap in a config file's own
-capability, distinct from and not addressed by the write-path
-confinement this RFC adds. `set --file <path>` (see above) is exactly
-how such a value would get into a config today. Reported, not fixed,
-here — see the review package for this RFC.

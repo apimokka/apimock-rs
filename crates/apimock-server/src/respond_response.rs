@@ -48,6 +48,7 @@ pub async fn respond_response(
     dir_prefix: &str,
     parsed_request: &ParsedRequest,
     rule_set_default_delay_ms: Option<u32>,
+    confine_to: Option<&Path>,
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     if let Some(delay_ms) = respond
         .delay_response_milliseconds
@@ -79,6 +80,7 @@ pub async fn respond_response(
             respond.headers.as_ref(),
             respond.csv_records_key.clone(),
             request_headers,
+            confine_to,
         )
         .file_content_response()
         .await;

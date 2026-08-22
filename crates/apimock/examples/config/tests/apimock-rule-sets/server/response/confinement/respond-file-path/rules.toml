@@ -1,0 +1,10 @@
+[prefix]
+respond_dir = "responses"
+
+[[rules]]
+when.request.url_path = "outside"
+respond = { file_path = "../outside.txt" }
+
+[[rules]]
+when.request.url_path = "inside"
+respond = { file_path = "inside.json" }
