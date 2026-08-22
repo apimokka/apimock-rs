@@ -2,11 +2,15 @@ use hyper::HeaderMap;
 use rhai::{AST, Dynamic, Engine, Map, Scope, serde::to_dynamic};
 use serde_json::Value;
 
-use std::{path::Path, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use crate::{
     error::{ServerError, ServerResult},
     middleware::middleware_response::MiddlewareResponse,
+    response::confine::canonical_dir,
     types::BoxBody,
 };
 
@@ -29,6 +33,11 @@ pub struct MiddlewareHandler {
     pub engine: Arc<Engine>,
     pub file_path: String,
     pub ast: AST,
+    /// The middleware script's own directory, canonicalised once here
+    /// at compile time. A file path the script returns is confined to
+    /// this directory the same way a rule's `respond.file_path` is
+    /// confined to `respond_dir` — see [`MiddlewareResponse::file_response`].
+    pub confine_to: Option<PathBuf>,
 }
 
 impl MiddlewareHandler {
@@ -61,10 +70,16 @@ impl MiddlewareHandler {
                     reason: e.to_string(),
                 })?;
 
+        let confine_to = path
+            .parent()
+            .and_then(|p| p.to_str())
+            .and_then(canonical_dir);
+
         Ok(MiddlewareHandler {
             engine: Arc::new(engine),
             file_path: file_path.to_owned(),
             ast,
+            confine_to,
         })
     }
 
@@ -128,7 +143,11 @@ impl MiddlewareHandler {
         if !rhai_response.is_string() && !rhai_response.is_map() {
             return None;
         }
-        let middleware_response = MiddlewareResponse::new(self.file_path.as_str(), request_headers);
+        let middleware_response = MiddlewareResponse::new(
+            self.file_path.as_str(),
+            request_headers,
+            self.confine_to.as_deref(),
+        );
 
         // string is treated as file path
         if let Some(x) = rhai_response.clone().try_cast::<String>() {

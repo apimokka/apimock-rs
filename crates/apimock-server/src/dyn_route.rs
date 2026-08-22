@@ -32,6 +32,7 @@ pub async fn dyn_route_content(
     url_path: &str,
     fallback_respond_dir: &str,
     request_headers: &HeaderMap,
+    confine_to: Option<&Path>,
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     let request_path =
         Path::new(fallback_respond_dir).join(url_path.strip_prefix("/").unwrap_or_default());
@@ -136,7 +137,67 @@ pub async fn dyn_route_content(
     };
 
     let file_path = found.to_str().unwrap_or_default();
-    FileResponse::new(file_path, None, request_headers)
+    FileResponse::new(file_path, None, request_headers, confine_to)
         .file_content_response()
         .await
+}
+
+#[cfg(test)]
+mod tests {
+    use hyper::HeaderMap;
+
+    use crate::response::confine::canonical_dir;
+
+    use super::dyn_route_content;
+
+    /// RFC 063: this calls `dyn_route_content` directly with a `url_path`
+    /// that still carries `..` — bypassing `normalize_url_path`, the
+    /// other, independent defence (applied earlier, at request-parse
+    /// time). Confirms confinement alone, without that first layer,
+    /// still refuses the escape.
+    #[tokio::test]
+    async fn a_raw_dot_dot_is_refused_even_without_url_normalisation_first() {
+        let outer = tempfile::tempdir().unwrap();
+        let respond_dir = outer.path().join("respond_dir");
+        std::fs::create_dir(&respond_dir).unwrap();
+        std::fs::write(outer.path().join("outside.txt"), "SECRET-OUTSIDE-CONTENT").unwrap();
+
+        let confine_to = canonical_dir(respond_dir.to_str().unwrap());
+        assert!(confine_to.is_some(), "fixture directory must canonicalise");
+
+        let response = dyn_route_content(
+            "/../outside.txt",
+            respond_dir.to_str().unwrap(),
+            &HeaderMap::new(),
+            confine_to.as_deref(),
+        )
+        .await
+        .expect("dyn_route_content must not fail to build a response");
+
+        assert_eq!(response.status(), hyper::StatusCode::NOT_FOUND);
+    }
+
+    /// `confine_to: None` means "the base directory couldn't be
+    /// canonicalised at load time" (e.g. it doesn't exist), which must
+    /// fail closed — refuse everything — rather than skip the check.
+    /// Distinct from the pre-fix behaviour, which had no `confine_to`
+    /// parameter to be `None` in the first place; that comparison is
+    /// made by re-running this file's tests against the pre-fix source
+    /// (reported alongside this evidence), not by this test.
+    #[tokio::test]
+    async fn a_base_that_failed_to_canonicalise_refuses_every_candidate() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("hello.json"), "{}").unwrap();
+
+        let response = dyn_route_content(
+            "/hello.json",
+            dir.path().to_str().unwrap(),
+            &HeaderMap::new(),
+            None,
+        )
+        .await
+        .expect("dyn_route_content must not fail to build a response");
+
+        assert_eq!(response.status(), hyper::StatusCode::NOT_FOUND);
+    }
 }

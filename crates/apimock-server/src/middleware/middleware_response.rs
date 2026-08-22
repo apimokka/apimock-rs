@@ -1,6 +1,6 @@
 use hyper::HeaderMap;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{
     response::{self, error_response::internal_server_error_response, file_response::FileResponse},
@@ -10,13 +10,17 @@ use crate::{
 pub struct MiddlewareResponse {
     pub file_path: String,
     pub request_headers: HeaderMap,
+    /// The middleware script's own directory, already canonicalised —
+    /// see `MiddlewareHandler::confine_to`.
+    pub confine_to: Option<PathBuf>,
 }
 
 impl MiddlewareResponse {
-    pub fn new(file_path: &str, request_headers: &HeaderMap) -> Self {
+    pub fn new(file_path: &str, request_headers: &HeaderMap, confine_to: Option<&Path>) -> Self {
         MiddlewareResponse {
             file_path: file_path.to_owned(),
             request_headers: request_headers.to_owned(),
+            confine_to: confine_to.map(Path::to_path_buf),
         }
     }
 
@@ -60,9 +64,14 @@ impl MiddlewareResponse {
         };
 
         Some(
-            FileResponse::new(file_path.as_str(), None, &self.request_headers)
-                .file_content_response()
-                .await,
+            FileResponse::new(
+                file_path.as_str(),
+                None,
+                &self.request_headers,
+                self.confine_to.as_deref(),
+            )
+            .file_content_response()
+            .await,
         )
     }
 

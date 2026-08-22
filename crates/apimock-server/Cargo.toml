@@ -29,3 +29,9 @@ json5                       = { workspace = true }
 csv                         = { workspace = true }
 rhai                        = { workspace = true }
 thiserror                   = { workspace = true }
+
+[dev-dependencies]
+# The confinement regression tests write real files to disk (including
+# a symlink) and check they're refused when they resolve outside a
+# directory — the on-disk resolution is what's under test.
+tempfile                    = { workspace = true }

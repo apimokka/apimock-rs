@@ -1,0 +1,3 @@
+[service]
+rule_sets = ["rules.toml"]
+fallback_respond_dir = "."

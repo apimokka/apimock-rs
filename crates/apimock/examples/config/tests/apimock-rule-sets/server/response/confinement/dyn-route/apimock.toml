@@ -1,0 +1,2 @@
+[service]
+fallback_respond_dir = "serve"
