@@ -219,6 +219,22 @@ URL), and a symlink escaping the base is caught only by
 canonicalise-and-compare. Two independent controls, deliberately: the
 RFC's own framing was "neither alone is the fix."
 
+**This was a vulnerability in released versions, not only a v6
+hardening.** Before the fix, the dyn-route fallback joined a
+request-derived path onto the response directory and checked only that
+the result existed, so a request carrying an un-normalised `..` segment
+could read a file outside it. Affected: **5.0.0 through 5.19.0**. Fixed
+in **5.19.1** and **6.0.0**, released together with
+[<!-- GHSA-ID -->](<!-- advisory URL -->). If you are on the 5.x line,
+5.19.1 is the fix — you do not need to move to 6.0.0 for it.
+
+Practical exposure was bounded: apimock binds `127.0.0.1` by default, so
+it was not reachable off-host unless the listener had been pointed
+elsewhere, and it required a client that does not normalise `..` before
+sending (browsers and most proxies and HTTP libraries do). Bounded is
+not the same as absent, which is why it was fixed rather than
+documented.
+
 Per-request cost: the base directory is canonicalised once, when the
 server starts (or `apimock get` runs) — not per request. The only
 per-request work is canonicalising the resolved candidate, measured at
