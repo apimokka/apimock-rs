@@ -31,8 +31,11 @@ rhai                        = { workspace = true }
 thiserror                   = { workspace = true }
 
 [dev-dependencies]
-# RFC 063's confinement tests create real directories and symlinks and
-# check that a resolved path escaping its base is refused — the on-disk
-# resolution is what's under test, so a real temporary directory is the
-# point rather than something to mock around.
+# RFC 061: the TLS reload tests write real cert/key PEM files to disk —
+# the on-disk reload is part of what's under test, not something worth
+# mocking around. A hardcoded "/tmp/..." path is Unix-only; tempfile
+# gives a real, writable, per-test directory on every platform.
+# RFC 063's confinement tests build on the same reasoning: they create
+# real directories and symlinks and check that a resolved path escaping
+# its base is refused — again, the on-disk resolution is the point.
 tempfile                    = { workspace = true }
