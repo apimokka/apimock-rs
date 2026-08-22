@@ -586,8 +586,12 @@ mod tests {
             rs.prefix.is_none(),
             "a rule set with no [prefix] section must not gain one from RuleSet::new (Goal 2)"
         );
+        // RFC 061: dir_prefix() is built from a `Path` join and rendered
+        // with the platform's own separator (`.\.` on Windows, `./.`
+        // elsewhere) — normalise before comparing rather than hardcoding
+        // one platform's separator.
         assert_eq!(
-            rs.dir_prefix(),
+            rs.dir_prefix().replace('\\', "/"),
             "./.",
             "dir_prefix() must still resolve sensibly with no [prefix] at all — \
              \"./.\"  because Path::join doesn't normalise \".\".join(\".\"), same \
