@@ -136,18 +136,33 @@ async fn dyn_data_dir_image_svg() {
     );
 
     let body_str = response_body_bytes(response).await;
+    // RFC 061: `image.svg` is a text fixture, checked out with CRLF on
+    // Windows (`core.autocrlf`'s default there) and LF everywhere else
+    // — the same reality `html.rs`'s own `NEW_LINE` constant already
+    // accounts for. This literal has many line breaks rather than
+    // `html.rs`'s one, so building the Windows variant from the LF one
+    // reads better than duplicating the whole fixture with `\r\n` baked
+    // in by hand.
+    // Rust's backslash-newline string continuation trims leading
+    // whitespace on the continued line, so a literal leading space
+    // must be spelled `\x20` rather than left as raw source indentation.
+    let expected_lf = "<?xml version=\"1.0\" standalone=\"no\"?>\n\
+<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 20010904//EN\"\n\
+\x20\"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n\
+<svg version=\"1.0\" xmlns=\"http://www.w3.org/2000/svg\"\n\
+\x20width=\"32.000000pt\" height=\"32.000000pt\" viewBox=\"0 0 32.000000 32.000000\"\n\
+\x20preserveAspectRatio=\"xMidYMid meet\">\n\
+<g transform=\"translate(0.000000,32.000000) scale(0.100000,-0.100000)\"\n\
+fill=\"#000000\" stroke=\"none\">\n\
+</g>\n\
+</svg>\n";
+    let expected = if cfg!(windows) {
+        expected_lf.replace('\n', "\r\n")
+    } else {
+        expected_lf.to_owned()
+    };
     assert_eq!(
         String::from_utf8(body_str.as_ref().to_vec()).unwrap(),
-        r##"<?xml version="1.0" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
- "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
-<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
- width="32.000000pt" height="32.000000pt" viewBox="0 0 32.000000 32.000000"
- preserveAspectRatio="xMidYMid meet">
-<g transform="translate(0.000000,32.000000) scale(0.100000,-0.100000)"
-fill="#000000" stroke="none">
-</g>
-</svg>
-"##
+        expected
     );
 }
