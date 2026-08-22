@@ -97,7 +97,15 @@ fn matched_carries_rule_set_file_alongside_the_index() {
     assert_eq!(code, 0);
     // The second rule (no body condition) matches when there's no body.
     assert_eq!(v["result"]["matched"]["rule_index"], 1);
-    assert_eq!(v["result"]["matched"]["rule_set_file"], "./rules.toml");
+    // RFC 061: `rule_set_file` is built from a `Path` join and rendered
+    // with the platform's own separator (`.\rules.toml` on Windows,
+    // `./rules.toml` elsewhere) — apimock's own output is correct for
+    // its platform; only this literal was Unix-specific. Normalise
+    // before comparing rather than hardcoding one platform's separator.
+    let rule_set_file = v["result"]["matched"]["rule_set_file"]
+        .as_str()
+        .expect("rule_set_file is a string");
+    assert_eq!(rule_set_file.replace('\\', "/"), "./rules.toml");
 }
 
 // ── `--why`: names the deciding rule; a near-miss names the failing condition ──
