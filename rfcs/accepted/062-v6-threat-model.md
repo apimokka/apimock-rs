@@ -1,6 +1,9 @@
 # RFC 062 — The v6 threat model, refreshed for a CLI that writes
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Not yet implemented.**
+[Handed off](../handoffs/062-v6-threat-model/implementation-handoff.md) 2026-08-20,
+with its open questions decided. Blocking for 6.0.0 as a decision.
 **Tracks.** Security. Requested by the owner when the v6 concept was
 settled; never done. **Blocking for 6.0.0** as a *decision*, not because
 a live hole is known.
