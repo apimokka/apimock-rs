@@ -1,0 +1,12 @@
+# RFC 061: normalise line endings to LF everywhere, on every platform.
+#
+# Without this, GitHub's windows-latest runners check text files out
+# with CRLF (their default core.autocrlf=true), while the repository's
+# own content -- and every Rust string literal comparing against it --
+# is LF. RFC 056 and RFC 060 both assert byte-identical file content,
+# and fixture files served or compared verbatim (e.g. crates/apimock/
+# examples/config/tests/**) break the same way test-side: not because
+# apimock behaves differently on Windows, but because the bytes it's
+# handed differ before it ever runs. `eol=lf` makes checkout the same
+# on every platform instead of special-casing every affected test.
+* text=auto eol=lf
