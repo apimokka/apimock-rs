@@ -234,8 +234,11 @@ AwEHoUQDQgAEE6OeOJt2JPuJDZXBV0fES+a7Rlaq2aIc72pze6FIiGF86aH8GDQS\n\
 
     #[test]
     fn reloadable_resolver_init_and_reload_bad_path_keeps_old_cert() {
-        let cert_path = "/tmp/apimock_test_cert.pem";
-        let key_path = "/tmp/apimock_test_key.pem";
+        let dir = tempfile::tempdir().unwrap();
+        let cert_path = dir.path().join("apimock_test_cert.pem");
+        let key_path = dir.path().join("apimock_test_key.pem");
+        let cert_path = cert_path.to_str().unwrap();
+        let key_path = key_path.to_str().unwrap();
         write_pem_file(cert_path, TEST_CERT_PEM);
         write_pem_file(key_path, TEST_KEY_PEM);
 
@@ -254,8 +257,11 @@ AwEHoUQDQgAEE6OeOJt2JPuJDZXBV0fES+a7Rlaq2aIc72pze6FIiGF86aH8GDQS\n\
 
     #[test]
     fn reloadable_resolver_reload_from_same_files_succeeds() {
-        let cert_path = "/tmp/apimock_test_cert2.pem";
-        let key_path = "/tmp/apimock_test_key2.pem";
+        let dir = tempfile::tempdir().unwrap();
+        let cert_path = dir.path().join("apimock_test_cert2.pem");
+        let key_path = dir.path().join("apimock_test_key2.pem");
+        let cert_path = cert_path.to_str().unwrap();
+        let key_path = key_path.to_str().unwrap();
         write_pem_file(cert_path, TEST_CERT_PEM);
         write_pem_file(key_path, TEST_KEY_PEM);
 
@@ -274,8 +280,11 @@ AwEHoUQDQgAEE6OeOJt2JPuJDZXBV0fES+a7Rlaq2aIc72pze6FIiGF86aH8GDQS\n\
 
     #[test]
     fn build_server_config_reloadable_returns_resolver() {
-        let cert_path = "/tmp/apimock_test_cert3.pem";
-        let key_path = "/tmp/apimock_test_key3.pem";
+        let dir = tempfile::tempdir().unwrap();
+        let cert_path = dir.path().join("apimock_test_cert3.pem");
+        let key_path = dir.path().join("apimock_test_key3.pem");
+        let cert_path = cert_path.to_str().unwrap();
+        let key_path = key_path.to_str().unwrap();
         write_pem_file(cert_path, TEST_CERT_PEM);
         write_pem_file(key_path, TEST_KEY_PEM);
 

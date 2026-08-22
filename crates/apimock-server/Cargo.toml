@@ -29,3 +29,10 @@ json5                       = { workspace = true }
 csv                         = { workspace = true }
 rhai                        = { workspace = true }
 thiserror                   = { workspace = true }
+
+[dev-dependencies]
+# RFC 061: the TLS reload tests write real cert/key PEM files to disk —
+# the on-disk reload is part of what's under test, not something worth
+# mocking around. A hardcoded "/tmp/..." path is Unix-only; tempfile
+# gives a real, writable, per-test directory on every platform.
+tempfile                    = { workspace = true }
