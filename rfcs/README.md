@@ -22,7 +22,9 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-*(None open.)*
+| ID  | Title |
+|-----|-------|
+| 063 | [Confine the serve path](./proposed/063-serve-path-confinement.md) — **remotely reachable traversal; blocking, and affects released versions** |
 
 ## Accepted
 
