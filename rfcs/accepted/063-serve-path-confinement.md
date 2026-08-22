@@ -1,6 +1,11 @@
 # RFC 063 — Confine the serve path: a remotely reachable traversal, and a config capability
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — approved by the project owner 2026-08-20,
+together with all three § Disclosure decisions: **yes** to a 5.19.1
+backport, **yes** to a published advisory, **yes** 6.0.0 waits.
+**EMBARGOED — this file and its handoff must not reach the public
+remote until the advisory is published.** Kept on the local branch
+`sec-rfc063`.
 **Tracks.** Security. **Blocking for 6.0.0**, and it raises a question
 about **released versions** — see § Disclosure.
 **Touches.** `crates/apimock-server/src/dyn_route.rs`,
