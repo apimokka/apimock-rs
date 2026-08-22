@@ -87,7 +87,14 @@ jobs:
 
   test:
     if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
+    strategy:
+      # RFC 061: one platform failing must not cancel the others and
+      # hide whether they pass -- the same reason RFC 047 needed this
+      # for its own matrix.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
