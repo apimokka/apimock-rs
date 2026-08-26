@@ -48,10 +48,15 @@ async fn ipv4_localhost_bound_another_loopback_request() {
         .try_send()
         .await;
 
+    // `is_connect()`/`is_timeout()` rather than a bare `is_err()`: the
+    // property under test is "nothing is listening there", not merely
+    // "something went wrong somewhere in the exchange" — a connection
+    // that was established and then failed for an unrelated reason
+    // must not count as a pass.
+    let err = result.expect_err("expected the connection to be refused or time out");
     assert!(
-        result.is_err(),
-        "expected the connection to be refused or time out, but the server answered with {:?}",
-        result.map(|response| response.status())
+        err.is_connect() || err.is_timeout(),
+        "expected a connect-refused or timeout error, got: {err:?}"
     );
 }
 
