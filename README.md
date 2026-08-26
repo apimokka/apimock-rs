@@ -6,7 +6,7 @@
 
 [![Rust Documentation](https://docs.rs/apimock/badge.svg?version=latest)](https://docs.rs/apimock)
 [![Dependency Status](https://deps.rs/crate/apimock/latest/status.svg)](https://deps.rs/crate/apimock)
-[![Releases Workflow](https://github.com/apimokka/apimock-rs/actions/workflows/release-executable.yaml/badge.svg)](https://github.com/apimokka/apimock-rs/actions/workflows/release-executable.yaml)
+[![Releases Workflow](https://github.com/apimokka/apimock-rs/actions/workflows/release-publish.yaml/badge.svg)](https://github.com/apimokka/apimock-rs/actions/workflows/release-publish.yaml)
 [![App Docs Workflow](https://github.com/apimokka/apimock-rs/actions/workflows/docs.yaml/badge.svg)](https://github.com/apimokka/apimock-rs/actions/workflows/docs.yaml)
 
 ![logo](docs/src/assets/logo.png)

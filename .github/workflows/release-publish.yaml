@@ -1,4 +1,23 @@
-name: Executable
+name: Release
+
+# The 4.x line's release workflow: it **builds** the platform binaries,
+# attaches them to the Release, and **publishes** to npm and crates.io —
+# all in one run, which is why the npm jobs can use `download-artifact`
+# rather than pulling archives back off the Release the way the 5.x/6.x
+# line has to.
+#
+# **The filename is load-bearing.** Trusted-publishing records on npm and
+# crates.io bind to repository + workflow *filename*, per package. This
+# file is called `release-publish.yaml` to match the 5.x/6.x line's
+# publish workflow, so a single record per package covers both lines and
+# nothing has to be repointed per release. It was `release-executable.yaml`
+# until 2026-08-26; that mismatch is what blocked the 4.8.1 security
+# release on both registries. Renaming this file breaks 4.x publishing.
+#
+# `name:` says "Release", not "Release publish", deliberately — RFC 044
+# rejected letting a workflow's name drift from what it actually does,
+# and this one builds as well as publishes. The filename is constrained
+# by the registries; the display name is not, so it stays accurate.
 
 on:
   release:
@@ -234,12 +253,13 @@ jobs:
   # via `crates-io-auth-action` — the same mechanism the 5.x line uses in
   # release-publish.yaml. No stored secret, no token window.
   #
-  # REQUIRES a crates.io Trusted Publishing record on the `apimock`
-  # crate: repository `apimokka/apimock-rs`, workflow
-  # `release-executable.yaml`. The 5.x record points at
-  # `release-publish.yaml` and does NOT cover this file — publisher
-  # records bind to a workflow filename, which is exactly what caused
-  # the v5.16.0 npm E404.
+  # Publisher records bind to repository + workflow **filename**, per
+  # package/crate. This file is named `release-publish.yaml` — matching
+  # the 5.x/6.x line's publish workflow — precisely so one record per
+  # package covers both lines and nothing has to be repointed per
+  # release. Renaming this file breaks publishing on the 4.x line; that
+  # mismatch is what caused the v5.16.0 npm E404 and cost three
+  # releases before it was understood. See RELEASING.md.
   #
   # `cargo publish`, not `--workspace`: v4 is a single crate.
   crates-io-publish:
