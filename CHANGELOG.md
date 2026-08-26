@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.1] - 2026-08-20
+
+**Security release.** Fixes a path-traversal issue in the file-serving
+path. See the security advisory linked from the release notes.
+
+### Security
+
+- **Resolved file paths are now confined to the directory they were
+  resolved against.** The file-serving fallback built a path from the
+  request URL and joined it onto the configured response directory,
+  checking only that the result existed — never that it stayed inside
+  that directory. A request carrying an un-normalised `..` segment could
+  therefore read files outside it.
+
+  The same missing check applied to a rule's `respond.file_path` and to
+  a path returned by a Rhai middleware script. Both are
+  operator-authored rather than request-derived, so neither was
+  reachable by a client, but both could reference locations outside the
+  response directory.
+
+  Every resolved path is now canonicalised and checked against the
+  canonicalised base directory for its site, enforced at a single point
+  so every caller inherits it. Anything outside is refused with a bare
+  `404`, indistinguishable from an ordinary not-found. As a second,
+  independent control, `..` segments are stripped from the request path
+  before file resolution.
+
+  Affected: 4.0.0 through 5.19.0. Also fixed in 5.19.1. **v4 remains
+  supported — there is no requirement to change major version.**
+
 ## [4.8.0] - 2026-04-23
 
 4.8.0 focuses on making the project approachable on first contact and on
