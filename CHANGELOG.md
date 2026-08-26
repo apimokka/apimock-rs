@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.2] - 2026-08-26
+
+**Release-process fixes. No functional change** — the binary and library
+are byte-for-byte what 4.8.1 shipped.
+
+### Fixed
+
+- **The 4.x line can publish independently of 5.x/6.x again.** Trusted
+  publishing records on npm and crates.io bind to a repository *and a
+  workflow filename*. This line published from `release-executable.yaml`
+  while the records name `release-publish.yaml`, so only one line could
+  publish at a time and the records had to be repointed by hand for each
+  4.x release — which is exactly what blocked 4.8.1, on both registries.
+  The workflow is renamed to `release-publish.yaml`, so one record per
+  package now covers both lines.
+
+- **`version.sh` no longer corrupts `Cargo.lock`.** It ran `cargo fetch`
+  to refresh the lockfile. Any cargo command that rewrites this lockfile
+  re-resolves it, which on this line consolidates two `rand` entries into
+  one and removes 43 lines — after which the test suite no longer
+  compiles. The script now edits this package's own version line
+  directly and verifies that nothing else changed. This bit the 4.8.1
+  release and was corrected by hand at the time.
+
 ## [4.8.1] - 2026-08-20
 
 **Security release.** Fixes a path-traversal issue in the file-serving

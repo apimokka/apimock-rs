@@ -120,8 +120,47 @@ if [ "$UPDATE_MODE" -eq 1 ]; then
     done
 
     # Cargo.lock の更新（dry-run でない場合のみ）
-    if [ "$DRY_RUN" -eq 0 ]; then
-        cargo fetch >/dev/null 2>&1
-        [ -f "Cargo.lock" ] && git add Cargo.lock
+    #
+    # Edit this package's own version line directly. Do NOT invoke cargo
+    # to refresh the lockfile.
+    #
+    # `cargo fetch` was used here until 2026-08-26. Any cargo command
+    # that rewrites this lockfile re-resolves it, and on this branch that
+    # consolidates two `rand` entries (0.9.4 and 0.10.1) down to one,
+    # taking `rand_core 0.10.1`, `chacha20` and `cpufeatures` with it —
+    # 43 lines removed. The test suite then fails to compile against the
+    # surviving `rand`, because it is written for the other one.
+    #
+    # The committed lockfile is the working configuration; cargo's
+    # re-resolution is what breaks it. It bit the 4.8.1 release and would
+    # have shipped a version whose tests do not build.
+    #
+    # Verified below rather than assumed: the only permitted change is
+    # this package's version line.
+    if [ "$DRY_RUN" -eq 0 ] && [ -f "Cargo.lock" ]; then
+        LOCK_BEFORE=$(grep -c '' Cargo.lock)
+
+        awk -v new="$NEW_VERSION" '
+            /^\[\[package\]\]$/       { inpkg = 1; ours = 0 }
+            inpkg && /^name = "apimock"$/ { ours = 1 }
+            ours && /^version = / && !done_ours {
+                print "version = \"" new "\""; done_ours = 1; next
+            }
+            { print }
+        ' Cargo.lock > Cargo.lock.tmp && mv Cargo.lock.tmp Cargo.lock
+
+        LOCK_AFTER=$(grep -c '' Cargo.lock)
+        if [ "$LOCK_BEFORE" -ne "$LOCK_AFTER" ]; then
+            printf 'Error: Cargo.lock changed line count (%s -> %s); expected only a version edit.\n' \
+                "$LOCK_BEFORE" "$LOCK_AFTER" >&2
+            exit 1
+        fi
+        if ! grep -q "^version = \"$NEW_VERSION\"$" Cargo.lock; then
+            printf 'Error: Cargo.lock was not updated to %s.\n' "$NEW_VERSION" >&2
+            exit 1
+        fi
+        printf '  updated Cargo.lock (version line only) -> %s\n' "$NEW_VERSION"
+
+        git add Cargo.lock
     fi
 fi
