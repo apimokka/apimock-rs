@@ -223,10 +223,17 @@ RFC's own framing was "neither alone is the fix."
 hardening.** Before the fix, the dyn-route fallback joined a
 request-derived path onto the response directory and checked only that
 the result existed, so a request carrying an un-normalised `..` segment
-could read a file outside it. Affected: **5.0.0 through 5.19.0**. Fixed
-in **5.19.1** and **6.0.0**, released together with
-[<!-- GHSA-ID -->](<!-- advisory URL -->). If you are on the 5.x line,
-5.19.1 is the fix — you do not need to move to 6.0.0 for it.
+could read a file outside it.
+
+**Affected: 4.0.0 through 5.19.0** — both supported lines, confirmed by
+exploit at 4.8.0 and on current code. **Fixed in 4.8.1, 5.19.1 and
+6.0.0**, published with
+[GHSA-72g6-wgrg-vhm7](https://github.com/apimokka/apimock-rs/security/advisories/GHSA-72g6-wgrg-vhm7).
+
+**Whichever line you are on, the patch release for that line is the
+fix** — there is no requirement to change major version. On 4.x the npm
+release carries the `v4x` dist-tag (`npm install apimock-rs@v4x`), since
+`latest` tracks the newest line.
 
 Practical exposure was bounded: apimock binds `127.0.0.1` by default, so
 it was not reachable off-host unless the listener had been pointed
