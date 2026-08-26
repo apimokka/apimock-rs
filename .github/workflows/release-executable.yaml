@@ -204,3 +204,50 @@ jobs:
           # dist-tag rather than claiming `latest`. Install with
           # `npm install apimock-rs@v4`.
           npm publish --tag v4
+
+  # crates.io publish for the v4 line.
+  #
+  # v4 originally had no crates.io job at all — that half of a v4 release
+  # was done by hand. That stopped working once *"Require trusted
+  # publishing for all new versions"* was enabled on the `apimock` crate:
+  # a token-authenticated `cargo publish` now returns
+  #
+  #   403 Forbidden: New versions of this crate can only be published
+  #   using Trusted Publishing
+  #
+  # The tempting workaround is to switch that requirement off, publish,
+  # and switch it back on (RELEASING.md documents it). This job is the
+  # better answer: it keeps the requirement on permanently and satisfies
+  # it, exchanging this workflow's OIDC identity for a short-lived token
+  # via `crates-io-auth-action` — the same mechanism the 5.x line uses in
+  # release-publish.yaml. No stored secret, no token window.
+  #
+  # REQUIRES a crates.io Trusted Publishing record on the `apimock`
+  # crate: repository `apimokka/apimock-rs`, workflow
+  # `release-executable.yaml`. The 5.x record points at
+  # `release-publish.yaml` and does NOT cover this file — publisher
+  # records bind to a workflow filename, which is exactly what caused
+  # the v5.16.0 npm E404.
+  #
+  # `cargo publish`, not `--workspace`: v4 is a single crate.
+  crates-io-publish:
+    runs-on: ubuntu-latest
+    needs: npm-core-publish
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Authenticate with crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        # --locked: this release's Cargo.lock was hand-corrected after
+        # version.sh's refresh pruned `rand` and broke the test build.
+        # Publish it as committed rather than re-resolving.
+        run: cargo publish --locked
