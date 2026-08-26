@@ -168,14 +168,20 @@ jobs:
         run: |
           npm install --package-lock-only
           npm ci
-          # `--tag v4`: npm refuses to move the `latest` dist-tag backwards,
-          # and 5.19.1 is already published. Without this, publishing any
+          # `--tag v4x`: npm refuses to move the `latest` dist-tag backwards,
+          # and 5.19.1 is already published. Without a tag, publishing any
           # 4.x version fails with "Cannot implicitly apply the 'latest'
           # tag because previously published version ... is higher".
           # v4 is a live, supported line alongside v5/v6, so it gets its own
           # dist-tag rather than claiming `latest`. Install with
-          # `npm install apimock-rs@v4`.
-          npm publish --tag v4
+          # `npm install apimock-rs@v4x`.
+          #
+          # `v4x`, not `v4`: npm rejects a dist-tag that parses as a semver
+          # range, and `v4` is one (`>=4.0.0 <5.0.0-0`) — it fails with
+          # "Tag name must not be a valid SemVer range: v4". `v4x` is not a
+          # range. Avoided `legacy`/`lts`: v4 is supported, and neither
+          # word should imply a policy this project has not stated.
+          npm publish --tag v4x
 
   npm-core-publish:
     runs-on: ubuntu-latest
@@ -196,14 +202,20 @@ jobs:
           cp -f ../README.md .
           npm install --package-lock-only --ignore-scripts
           npm ci --ignore-scripts
-          # `--tag v4`: npm refuses to move the `latest` dist-tag backwards,
-          # and 5.19.1 is already published. Without this, publishing any
+          # `--tag v4x`: npm refuses to move the `latest` dist-tag backwards,
+          # and 5.19.1 is already published. Without a tag, publishing any
           # 4.x version fails with "Cannot implicitly apply the 'latest'
           # tag because previously published version ... is higher".
           # v4 is a live, supported line alongside v5/v6, so it gets its own
           # dist-tag rather than claiming `latest`. Install with
-          # `npm install apimock-rs@v4`.
-          npm publish --tag v4
+          # `npm install apimock-rs@v4x`.
+          #
+          # `v4x`, not `v4`: npm rejects a dist-tag that parses as a semver
+          # range, and `v4` is one (`>=4.0.0 <5.0.0-0`) — it fails with
+          # "Tag name must not be a valid SemVer range: v4". `v4x` is not a
+          # range. Avoided `legacy`/`lts`: v4 is supported, and neither
+          # word should imply a policy this project has not stated.
+          npm publish --tag v4x
 
   # crates.io publish for the v4 line.
   #
