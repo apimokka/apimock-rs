@@ -2,7 +2,10 @@
 
 **Governing RFC.** [RFC 063](../../accepted/063-serve-path-confinement.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
-**Milestone.** 6.0.0 **and** a 5.19.1 backport — two tracks, § 5.
+**Milestone.** 6.0.0, a 5.19.1 backport, **and a 4.8.1 backport** —
+three tracks. Tracks A and B are in § 5; **Track C has its own
+document**: [`track-c-v4-backport.md`](./track-c-v4-backport.md).
+v4 is a live, supported line, not legacy.
 
 > ## 🔒 EMBARGOED — read before anything else
 >
