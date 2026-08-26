@@ -3,7 +3,10 @@ use hyper::HeaderMap;
 use std::path::Path;
 
 use crate::core::server::{
-    response::{self, error_response::internal_server_error_response, file_response::FileResponse},
+    response::{
+        self, confine::canonical_dir, error_response::internal_server_error_response,
+        file_response::FileResponse,
+    },
     types::BoxBody,
 };
 
@@ -25,11 +28,11 @@ impl MiddlewareResponse {
         &self,
         rhai_response_file_path: &str,
     ) -> Option<Result<hyper::Response<BoxBody>, hyper::http::Error>> {
+        let middleware_dir_path = Path::new(self.file_path.as_str()).parent();
+
         let file_path = if Path::new(rhai_response_file_path).is_absolute() {
             rhai_response_file_path.to_owned()
         } else {
-            let middleware_dir_path = Path::new(self.file_path.as_str()).parent();
-
             let joined_file_path = match middleware_dir_path {
                 Some(x) => x.join(rhai_response_file_path),
                 None => {
@@ -59,10 +62,23 @@ impl MiddlewareResponse {
             }
         };
 
+        // RFC 063: confine to the middleware script's own directory,
+        // whether the script's returned path was relative (joined
+        // above) or absolute — an absolute path outside this directory
+        // is refused the same as an escaping relative one.
+        let confine_to = middleware_dir_path
+            .and_then(|p| p.to_str())
+            .and_then(canonical_dir);
+
         Some(
-            FileResponse::new(file_path.as_str(), None, &self.request_headers)
-                .file_content_response()
-                .await,
+            FileResponse::new(
+                file_path.as_str(),
+                None,
+                &self.request_headers,
+                confine_to.as_deref(),
+            )
+            .file_content_response()
+            .await,
         )
     }
 

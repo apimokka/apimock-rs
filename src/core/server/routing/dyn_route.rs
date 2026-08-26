@@ -6,6 +6,7 @@ use std::{fs, path::Path};
 use crate::core::{
     server::{
         response::{
+            confine::canonical_dir,
             error_response::{internal_server_error_response, not_found_response},
             file_response::FileResponse,
         },
@@ -136,8 +137,15 @@ pub async fn dyn_route_content(
         return not_found_response(request_headers);
     };
 
+    // RFC 063: confined per request rather than cached — this line is
+    // the entirety of the "canonicalise once at load" optimisation
+    // Tracks A/B applied, left out here because a security patch on a
+    // live line should be reviewable against its tag in one sitting.
+    // Cost measured and reported alongside this patch's evidence.
+    let confine_to = canonical_dir(fallback_respond_dir);
+
     let file_path = found.to_str().unwrap_or_default();
-    FileResponse::new(file_path, None, request_headers)
+    FileResponse::new(file_path, None, request_headers, confine_to.as_deref())
         .file_content_response()
         .await
 }

@@ -11,6 +11,7 @@ use crate::core::{
     server::{
         parsed_request::ParsedRequest,
         response::{
+            confine::canonical_dir,
             error_response::internal_server_error_response,
             file_response::FileResponse,
             status_code_response::{status_code_response, status_code_response_with_message},
@@ -75,11 +76,16 @@ impl Respond {
                 );
             };
 
+            // RFC 063: confined per request — see dyn_route.rs's own
+            // note on why this doesn't cache the canonicalised base.
+            let confine_to = canonical_dir(dir_prefix);
+
             return FileResponse::new_with_csv_records_jsonpath(
                 full_file_path.as_str(),
                 self.headers.as_ref(),
                 self.csv_records_key.clone(),
                 request_headers,
+                confine_to.as_deref(),
             )
             .file_content_response()
             .await;

@@ -15,6 +15,12 @@ pub mod root_config_dir {
 
     pub const ERROR_RESPONSE: &str = "apimock-rule-sets/server/response/error_response";
     pub const FILE_RESPONSE: &str = "apimock-rule-sets/server/response/file_response";
+    pub const CONFINEMENT_DYN_ROUTE: &str =
+        "apimock-rule-sets/server/response/confinement/dyn-route";
+    pub const CONFINEMENT_RESPOND_FILE_PATH: &str =
+        "apimock-rule-sets/server/response/confinement/respond-file-path";
+    pub const CONFINEMENT_MIDDLEWARE: &str =
+        "apimock-rule-sets/server/response/confinement/middleware";
     pub const RULE_SET_PREFIX: &str = "apimock-rule-sets/server/routing/rule_set/prefix";
     pub const RULE_WHEN_REQUEST_URL_PATH: &str =
         "apimock-rule-sets/server/routing/rule_set/rule/when/request/url_path";
