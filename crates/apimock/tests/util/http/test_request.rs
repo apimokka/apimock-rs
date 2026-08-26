@@ -4,6 +4,8 @@ use hyper::{
 };
 use reqwest::{Client, Response};
 
+use std::time::Duration;
+
 const LOCALHOST: &str = "127.0.0.1";
 
 pub struct TestRequest {
@@ -14,6 +16,7 @@ pub struct TestRequest {
     pub headers: Option<HeaderMap<HeaderValue>>,
     pub body: Option<String>,
     pub https: bool,
+    pub connect_timeout: Option<Duration>,
 }
 
 impl TestRequest {
@@ -27,6 +30,7 @@ impl TestRequest {
             headers: None,
             body: None,
             https: false,
+            connect_timeout: None,
         }
     }
 
@@ -39,6 +43,15 @@ impl TestRequest {
     /// default with server host
     pub fn with_host(mut self, host: &str) -> Self {
         self.host = host.to_owned();
+        self
+    }
+
+    /// bound the TCP connect phase — for a request expected to hang
+    /// rather than fail immediately (e.g. an unbound loopback alias on
+    /// a BSD network stack), so the test fails fast instead of waiting
+    /// out the OS's own connect timeout.
+    pub fn with_connect_timeout(mut self, timeout: Duration) -> Self {
+        self.connect_timeout = Some(timeout);
         self
     }
 
@@ -75,6 +88,14 @@ impl TestRequest {
 
     /// send request to get http(s) response from mock server
     pub async fn send(&self) -> Response {
+        self.try_send().await.expect("failed to get https response")
+    }
+
+    /// like `send`, but returns the connection/request error instead of
+    /// panicking on one — for a test that expects the connection itself
+    /// to fail (refused or timed out) and wants to say which, rather
+    /// than treat any failure as an unexpected panic.
+    pub async fn try_send(&self) -> reqwest::Result<Response> {
         let protocol = if self.https { "https" } else { "http" };
         let socket_addrs = format!("{}:{}", self.host, self.port);
         let url_str = format!("{}://{}{}", protocol, socket_addrs, self.url_path);
@@ -105,15 +126,15 @@ impl TestRequest {
         if self.https {
             client_builder = client_builder.danger_accept_invalid_certs(true);
         }
+        if let Some(connect_timeout) = self.connect_timeout {
+            client_builder = client_builder.connect_timeout(connect_timeout);
+        }
         let client = client_builder.build().expect("failed to build client");
 
         let mut request_builder = client.request(http_method, url).headers(headers);
         if let Some(body) = self.body.clone() {
             request_builder = request_builder.body(body);
         }
-        request_builder
-            .send()
-            .await
-            .expect("failed to get https response")
+        request_builder.send().await
     }
 }

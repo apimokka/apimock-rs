@@ -1,7 +1,7 @@
 use hyper::StatusCode;
 use local_ip_address::list_afinet_netifas;
 
-use std::net::IpAddr;
+use std::{net::IpAddr, time::Duration};
 
 use crate::{
     constant::root_config_dir::listener::{
@@ -29,14 +29,30 @@ async fn ipv4_localhost_bound_same_loopback_request() {
     assert_eq!(body_str.as_str(), "{\"hello\":\"index\"}");
 }
 
+/// The property under test is that the server does not answer a request
+/// on a loopback address it wasn't told to bind — not the specific way
+/// the connection fails to reach it. On Linux, `127.0.0.0/8` is
+/// auto-bound to loopback, so an unconfigured alias like `127.0.0.2`
+/// refuses the connection immediately. macOS's BSD network stack does
+/// not extend that auto-binding, so the same connection attempt hangs
+/// instead of refusing — both outcomes satisfy the property, so both
+/// are accepted; only an actual response would be a failure. A short
+/// connect timeout bounds the macOS case rather than leaving it to the
+/// OS's own (tens-of-seconds) connect timeout.
 #[tokio::test]
-#[should_panic = "ConnectionRefused"]
 async fn ipv4_localhost_bound_another_loopback_request() {
     let port = ipv4_localhost_listener_setup().await;
-    let _ = TestRequest::default("/", port)
+    let result = TestRequest::default("/", port)
         .with_host("127.0.0.2")
-        .send()
+        .with_connect_timeout(Duration::from_secs(3))
+        .try_send()
         .await;
+
+    assert!(
+        result.is_err(),
+        "expected the connection to be refused or time out, but the server answered with {:?}",
+        result.map(|response| response.status())
+    );
 }
 
 #[tokio::test]
