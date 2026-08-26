@@ -54,7 +54,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "apimock"
-version = "5.19.0"
+version = "5.19.1"
 dependencies = [
  "anyhow",
  "apimock-config",
@@ -75,7 +75,7 @@ dependencies = [
 
 [[package]]
 name = "apimock-config"
-version = "5.19.0"
+version = "5.19.1"
 dependencies = [
  "apimock-routing",
  "console",
@@ -91,7 +91,7 @@ dependencies = [
 
 [[package]]
 name = "apimock-routing"
-version = "5.19.0"
+version = "5.19.1"
 dependencies = [
  "console",
  "globset",
@@ -108,7 +108,7 @@ dependencies = [
 
 [[package]]
 name = "apimock-server"
-version = "5.19.0"
+version = "5.19.1"
 dependencies = [
  "apimock-config",
  "apimock-routing",
