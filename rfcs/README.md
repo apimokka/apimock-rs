@@ -24,7 +24,7 @@ depends-on, and the rest of the planned portfolio.
 
 | ID  | Title |
 |-----|-------|
-| 063 | [Confine the serve path](./proposed/063-serve-path-confinement.md) — **remotely reachable traversal; blocking, and affects released versions** |
+| 063 | [Confine the serve path](./accepted/063-serve-path-confinement.md) — **remotely reachable traversal; blocking, and affects released versions** |
 
 ## Accepted
 
