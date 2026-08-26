@@ -22,9 +22,7 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-| ID  | Title |
-|-----|-------|
-| 063 | [Confine the serve path](./accepted/063-serve-path-confinement.md) — **remotely reachable traversal; blocking, and affects released versions** |
+*(None open.)*
 
 ## Accepted
 
@@ -54,6 +52,8 @@ which rather than leaving a reader to assume.
 | 060 | [Property-test the config write path](./accepted/060-write-path-property-testing.md) | handed off |
 | 061 | [Test on the platforms we ship](./accepted/061-cross-platform-ci.md) | handed off; **blocking 6.0.0** |
 | 062 | [The v6 threat model, refreshed](./accepted/062-v6-threat-model.md) | handed off; **blocking 6.0.0** |
+| 063 | [Confine the serve path](./accepted/063-serve-path-confinement.md) | merged to `main`; **fixed in 4.8.1 / 5.19.1**, [GHSA-72g6-wgrg-vhm7](https://github.com/apimokka/apimock-rs/security/advisories/GHSA-72g6-wgrg-vhm7) |
+| 064 | [Finish the CLI front door](./accepted/064-cli-front-door-completion.md) | handed off; **blocking 6.0.0** |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
