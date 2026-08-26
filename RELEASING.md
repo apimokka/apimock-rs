@@ -193,6 +193,52 @@ authorised.
 manual `cargo publish`** — that switch is what makes the old advice
 wrong.
 
+## Publisher records bind to a workflow *filename* — check this first
+
+**This has blocked three releases.** v5.16.0's npm E404, and both
+registries again during the 4.8.1 security release. It presents as a
+permissions error and reads like a credentials problem, which is why it
+costs an hour every time.
+
+A trusted publisher record on npm or crates.io binds **repository +
+workflow filename**, recorded **per package/crate**. A workflow with a
+different filename is a different publisher, however similar its
+contents.
+
+| Line | Publish workflow | Covered by the records? |
+|---|---|---|
+| 5.x / 6.x | `release-publish.yaml` | Yes — this is what the records name |
+| 4.x | `release-executable.yaml` | **No** — v4 publishes from its own build workflow |
+
+The 4.8.1 release needed the records temporarily repointed at
+`release-executable.yaml`, then reverted. **While repointed, the 5.x/6.x
+line cannot publish**, and vice versa. Only one line can publish at a
+time under this arrangement.
+
+### How to recognise it
+
+- **npm:** `404 The requested resource '<pkg>@<version>' could not be
+  found or you do not have permission to access it` — on a package that
+  plainly exists. A 404 on publish means permission, not absence.
+- **crates.io:** `403 Forbidden: New versions of this crate can only be
+  published using Trusted Publishing`.
+
+Neither message names the workflow, which is the whole difficulty.
+
+**A misleading near-miss:** npm's *"Cannot implicitly apply the `latest`
+tag because previously published version X is higher"* fires **before**
+authentication — it only reads public metadata. Getting that error does
+**not** prove the publisher record is correct; fix the tag and the real
+permissions error appears next.
+
+### The permanent fix, not yet done
+
+Give the 4.x line a publish workflow named `release-publish.yaml` too,
+so one record per package covers both lines and nothing needs
+repointing. Whether that works depends on whether the records pin a
+**ref** as well as a filename — if they do, a branch-scoped record is
+needed instead. Check the record's fields before doing the rename.
+
 ## Trusted publishing binds to the workflow *filename*
 
 Both registries identify the publisher as a **repository plus a workflow
