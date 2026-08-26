@@ -193,6 +193,42 @@ authorised.
 manual `cargo publish`** — that switch is what makes the old advice
 wrong.
 
+## Releasing an older line: three "latest" pointers to override
+
+When a newer line already exists, **every mechanism that tracks "the
+newest thing" will try to point at the release you are cutting**, and
+each has to be overridden separately. Cutting 4.8.1 and 4.8.2 after
+5.19.1 hit all three.
+
+| Pointer | Default | Override |
+|---|---|---|
+| npm `latest` dist-tag | moves to the published version | `npm publish --tag v4x` |
+| GitHub Release "Latest" badge | `make_latest=true` | `gh release create … --latest=false` |
+| crates.io | none — resolves by semver requirement | nothing to do |
+
+**npm refuses outright**, which is the friendly case: publishing 4.x
+without `--tag` fails with *"Cannot implicitly apply the `latest` tag
+because previously published version 5.19.1 is higher"*. You cannot get
+it wrong silently.
+
+**GitHub does it silently**, which is the one that bites. `gh release
+create` marks the new release "Latest" with no warning, so the
+repository's front page and the *"Download the latest release"* links in
+`README.md` and the docs start pointing at the older line. It was missed
+on both 4.8.1 and 4.8.2 and corrected by hand afterwards.
+
+The dist-tag must not be a valid semver range: `v4` is rejected
+(*"Tag name must not be a valid SemVer range"*) because it parses as
+`>=4.0.0 <5.0.0-0`. `v4x` is what the 4.x line uses.
+
+### Checklist when cutting any 4.x release
+
+1. `gh release create <tag> --latest=false …`
+2. Confirm afterwards: `gh api /repos/apimokka/apimock-rs/releases/latest --jq .tag_name`
+   must still report the newest 5.x/6.x tag.
+3. Confirm npm: `npm view apimock-rs dist-tags` — `latest` on the newest
+   line, `v4x` on 4.x.
+
 ## Publisher records bind to a workflow *filename* — check this first
 
 **This has blocked three releases.** v5.16.0's npm E404, and both
