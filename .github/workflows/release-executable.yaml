@@ -168,7 +168,14 @@ jobs:
         run: |
           npm install --package-lock-only
           npm ci
-          npm publish
+          # `--tag v4`: npm refuses to move the `latest` dist-tag backwards,
+          # and 5.19.1 is already published. Without this, publishing any
+          # 4.x version fails with "Cannot implicitly apply the 'latest'
+          # tag because previously published version ... is higher".
+          # v4 is a live, supported line alongside v5/v6, so it gets its own
+          # dist-tag rather than claiming `latest`. Install with
+          # `npm install apimock-rs@v4`.
+          npm publish --tag v4
 
   npm-core-publish:
     runs-on: ubuntu-latest
@@ -189,4 +196,11 @@ jobs:
           cp -f ../README.md .
           npm install --package-lock-only --ignore-scripts
           npm ci --ignore-scripts
-          npm publish
+          # `--tag v4`: npm refuses to move the `latest` dist-tag backwards,
+          # and 5.19.1 is already published. Without this, publishing any
+          # 4.x version fails with "Cannot implicitly apply the 'latest'
+          # tag because previously published version ... is higher".
+          # v4 is a live, supported line alongside v5/v6, so it gets its own
+          # dist-tag rather than claiming `latest`. Install with
+          # `npm install apimock-rs@v4`.
+          npm publish --tag v4
