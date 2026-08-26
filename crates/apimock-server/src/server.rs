@@ -98,6 +98,12 @@ impl Server {
     /// `config.service.middlewares_file_paths`. Compilation happens here
     /// (not in the config crate) because the compiled artefact is a
     /// runtime object — see the server-level module docstring.
+    // clippy: newly flagged by a stricter `result_large_err` than the one
+    // 5.19.0 shipped green against — the 5.19.0 tag itself fails today's
+    // clippy identically, so this is toolchain drift, not a change here.
+    // Suppressed rather than boxed: boxing reshapes a public error type and
+    // belongs in a major release (RFC 041), not a security patch.
+    #[allow(clippy::result_large_err)]
     pub async fn new(config: Config) -> ServerResult<Self> {
         let http_addr = resolve_listener(config.listener_http_addr().as_deref())?;
         let https_addr = resolve_listener(config.listener_https_addr().as_deref())?;
@@ -147,6 +153,12 @@ impl Server {
     /// same listener to [`Server::serve_http`]. Because it's the same
     /// listener throughout, there is no window between "port known" and
     /// "port held" for another process to take it.
+    // clippy: newly flagged by a stricter `result_large_err` than the one
+    // 5.19.0 shipped green against — the 5.19.0 tag itself fails today's
+    // clippy identically, so this is toolchain drift, not a change here.
+    // Suppressed rather than boxed: boxing reshapes a public error type and
+    // belongs in a major release (RFC 041), not a security patch.
+    #[allow(clippy::result_large_err)]
     pub async fn bind_http(&self) -> ServerResult<Option<TcpListener>> {
         let Some(addr) = self.http_addr else {
             return Ok(None);
@@ -215,6 +227,12 @@ impl Server {
     /// Every failure this used to swallow via `log::error!` + early
     /// return - missing TLS config, unreadable cert/key, a TLS config
     /// that fails to build, or the bind itself - now surfaces as `Err`.
+    // clippy: newly flagged by a stricter `result_large_err` than the one
+    // 5.19.0 shipped green against — the 5.19.0 tag itself fails today's
+    // clippy identically, so this is toolchain drift, not a change here.
+    // Suppressed rather than boxed: boxing reshapes a public error type and
+    // belongs in a major release (RFC 041), not a security patch.
+    #[allow(clippy::result_large_err)]
     pub async fn bind_https(&self) -> ServerResult<Option<(TcpListener, TlsAcceptor)>> {
         let Some(addr) = self.https_addr else {
             return Ok(None);

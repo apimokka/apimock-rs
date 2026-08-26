@@ -31,6 +31,9 @@ impl App {
     ///   log output to the embedding process.
     /// - `includes_ansi_codes`: whether forwarded logs should retain ANSI
     ///   colour escapes. Ignored without the `spawn` feature.
+    // clippy: see the note in apimock-server/src/server.rs — stricter
+    // `result_large_err` than 5.19.0 shipped against; toolchain drift.
+    #[allow(clippy::result_large_err)]
     pub async fn new(
         env_args: &EnvArgs,
         spawn_tx: Option<Sender<String>>,

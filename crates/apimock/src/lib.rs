@@ -55,6 +55,9 @@ use tokio::sync::mpsc::Sender;
 /// - `includes_ansi_codes`: if `true`, forwarded log lines retain ANSI
 ///   colour escapes.
 #[cfg(feature = "spawn")]
+// clippy: see the note in apimock-server/src/server.rs — stricter
+// `result_large_err` than 5.19.0 shipped against; toolchain drift.
+#[allow(clippy::result_large_err)]
 pub async fn new(
     env_args: &EnvArgs,
     spawn_tx: Sender<String>,
