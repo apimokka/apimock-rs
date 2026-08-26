@@ -29,3 +29,10 @@ json5                       = { workspace = true }
 csv                         = { workspace = true }
 rhai                        = { workspace = true }
 thiserror                   = { workspace = true }
+
+[dev-dependencies]
+# RFC 063's confinement tests create real directories and symlinks and
+# check that a resolved path escaping its base is refused — the on-disk
+# resolution is what's under test, so a real temporary directory is the
+# point rather than something to mock around.
+tempfile                    = { workspace = true }
