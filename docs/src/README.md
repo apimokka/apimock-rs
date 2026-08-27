@@ -21,6 +21,10 @@ A developer-friendly, featherlight and functional HTTP(S) mock server built in R
 - Developers who want to quickly mock APIs without heavy setup.
 - Beginners who benefit from minimal configuration.
 - Advanced users needing logic-based response behavior.
+- Agents (and scripts) driving apimock non-interactively: checking what
+  a request would return with [`get`](guides/check-what-a-request-returns.md),
+  writing a rule with [`set`](guides/add-or-change-a-rule.md), and
+  reading `--format json` output instead of parsing human text.
 
 ### Quick Start
 

@@ -30,10 +30,11 @@ async fn validate_passes_on_a_clean_config() {
 /// README is checked against the real binary instead, the same way
 /// `match-test` is below.
 ///
-/// `--config ./apimock.toml`, not the bare filename: a bare relative
-/// `--config` fails to resolve even though the file exists (see
-/// ESCALATION-003 in the RFC 036 review package) - not a mistake to
-/// repeat here.
+/// `--config ./apimock.toml`, matching the README verbatim — RFC 064
+/// fixed the bare-relative-path bug this `./` once worked around
+/// (ESCALATION-003 in the RFC 036 review package), so a bare
+/// `--config apimock.toml` would work here too; this form is kept only
+/// because it's what the README shows.
 #[tokio::test]
 async fn validate_json_flag_emits_diagnostics_array() {
     let output = Command::new(env!("CARGO_BIN_EXE_apimock"))

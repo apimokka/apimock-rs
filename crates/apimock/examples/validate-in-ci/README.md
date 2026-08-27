@@ -39,11 +39,6 @@ problem fails validation by failing to *load* (exit `2`), before
 the [CLI reference](../../../../docs/src/reference/cli-reference.md#apimock-validate)
 for the detail.
 
-**Note the `./`.** `--config apimock.toml` (no `./`) currently fails
-to resolve the path even though the file is right there - a real quirk
-in the current release, not a typo in this README. `apimock` with no
-flags at all, and `match-test --rule-set` below, are both unaffected.
-
 ## `apimock match-test`
 
 Builds a synthetic request from CLI flags and checks it against a rule

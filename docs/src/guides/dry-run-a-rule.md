@@ -36,10 +36,9 @@ Result: NO MATCH
 ```
 
 Exit codes: `0` matched, `1` no rule matched, `2` an argument or input
-error. Unlike `apimock validate`, a bare relative `--rule-set` path
-works fine here — this command doesn't hit the path-resolution issue
-noted on the [CLI reference](../reference/cli-reference.md#apimock-match-test)
-page.
+error. A bare relative `--rule-set` path (no `./` prefix) resolves the
+same as one prefixed with `./` — true of every flag on every
+subcommand and the root parser alike (RFC 064).
 
 Full flag list on the [CLI reference](../reference/cli-reference.md#apimock-match-test).
 A worked, verified example (also covering

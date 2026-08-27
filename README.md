@@ -153,6 +153,15 @@ segments index arrays. It resembles JSONPath but isn't one; a
 dry-run a rule match, without starting a server — useful in CI. See
 the [docs](https://apimokka.github.io/apimock-rs/).
 
+**`apimock get` and `apimock set`** let an agent — or a script — drive
+the mock server without a human at a keyboard: `get <path>` answers
+what a request would return, and `set rule` adds or changes a rule,
+both from the command line, both with a `--format json` output an
+agent can parse. See
+[Check what a request returns](https://apimokka.github.io/apimock-rs/guides/check-what-a-request-returns.html)
+and
+[Add or change a rule](https://apimokka.github.io/apimock-rs/guides/add-or-change-a-rule.html).
+
 ---
 
 ### 📖 Documentation - guides and references

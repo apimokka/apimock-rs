@@ -23,6 +23,8 @@
     - [Reload TLS certificates without restart](./guides/reload-tls-certificates-without-restart.md)
     - [Script with Rhai middleware](./guides/script-with-rhai-middleware.md)
     - [Filter the served file tree](./guides/filter-the-served-file-tree.md)
+    - [Add or change a rule](./guides/add-or-change-a-rule.md)
+    - [Check what a request returns](./guides/check-what-a-request-returns.md)
     - [Validate config in CI](./guides/validate-config-in-ci.md)
     - [Dry-run a rule](./guides/dry-run-a-rule.md)
     - [Watch matches live](./guides/watch-matches-live.md)

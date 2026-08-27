@@ -147,7 +147,7 @@ references — and reports diagnostics, without binding a port.
 
 | Flag | Meaning |
 |---|---|
-| `--config`, `-c <path>` | Required. The root config to validate. **Prefix a bare relative path with `./`** — unlike the top-level `-c` above, `validate` parses its own `--config` separately and a bare filename (no directory separator) currently fails to resolve even though the file exists; `--config ./apimock.toml` works, `--config apimock.toml` does not |
+| `--config`, `-c <path>` | Required. The root config to validate. A bare relative path resolves the same as one prefixed with `./` — `-c apimock.toml` and `-c ./apimock.toml` are equivalent (RFC 064; previously `validate` parsed this flag separately from every other command and didn't get the fix) |
 | `--strict` | Documented to treat warnings as failures (exit `1`). **Not reachable today** — see the note below the exit-codes table |
 | `--quiet` | Suppress non-error output |
 | `--json` | **Deprecated, removed in 6.0.0.** Emits the same bare diagnostics array 5.18.0 and earlier did, byte-identical — an existing parser reading stdout is unaffected. Using it prints a one-line warning to stderr, once, naming `--format json` as the replacement |

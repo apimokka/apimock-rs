@@ -14,6 +14,8 @@ Task-indexed — each page stands on its own. New here? Start at
 - [Reload TLS certificates without restart](./reload-tls-certificates-without-restart.md)
 - [Script with Rhai middleware](./script-with-rhai-middleware.md)
 - [Filter the served file tree](./filter-the-served-file-tree.md)
+- [Add or change a rule](./add-or-change-a-rule.md)
+- [Check what a request returns](./check-what-a-request-returns.md)
 - [Validate config in CI](./validate-config-in-ci.md)
 - [Dry-run a rule](./dry-run-a-rule.md)
 - [Watch matches live](./watch-matches-live.md)

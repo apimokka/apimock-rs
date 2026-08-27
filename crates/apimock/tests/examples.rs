@@ -5,6 +5,8 @@
 #[path = "examples/common.rs"]
 mod common;
 
+#[path = "examples/agent_bootstrap.rs"]
+mod agent_bootstrap;
 #[path = "examples/default.rs"]
 mod default;
 #[path = "examples/match_headers_and_body.rs"]

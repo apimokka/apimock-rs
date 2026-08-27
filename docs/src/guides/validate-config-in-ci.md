@@ -11,9 +11,8 @@ $ echo $?
 0
 ```
 
-**Use `./apimock.toml`, not a bare `apimock.toml`** — a relative
-`--config` path with no directory separator currently fails to
-resolve even though the file exists. See the
+A bare relative `--config apimock.toml` (no `./` prefix) resolves the
+same way — see the
 [CLI reference](../reference/cli-reference.md#running-the-server) for
 this and every other flag.
 

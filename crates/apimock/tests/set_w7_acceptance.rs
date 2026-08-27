@@ -27,11 +27,16 @@
 //! The RFC's own script also runs `apimock validate` bare, with no
 //! `-c`. `validate` has no default-config-path convenience (unlike
 //! `get`/`set`) and requires an explicit `--config`/`-c` — confirmed by
-//! running it. Its value also needs the `./` prefix: `validate`'s own
-//! `-c` doesn't get RFC 049's bare-relative-path normalisation, a
-//! pre-existing, already-documented gap (RFC 055's review package § 6).
-//! Neither of these is `set`'s to fix; the corrected script below uses
-//! `validate -c ./apimock.toml`.
+//! running it. This is `validate`'s to fix, not `set`'s; the corrected
+//! script below uses `validate -c ./apimock.toml`.
+//!
+//! (An earlier version of this comment also called out `-c`'s bare
+//! relative form as unresolved for `validate` specifically — RFC 064
+//! fixed that path-resolution bug at the shared layer, covering every
+//! subcommand and the root parser at once, so `validate -c apimock.toml`
+//! now works exactly as well as the `./`-prefixed form used here. The
+//! `./` prefix stays in this script anyway, since the *missing default*
+//! above is still real and the two are easy to conflate.)
 //!
 //! RFC 057 § "The acceptance test" says explicitly: "The exact flag
 //! spellings are this RFC's to settle; the shape is the commitment."

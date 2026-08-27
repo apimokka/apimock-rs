@@ -20,10 +20,17 @@ useful for `204`, or any response where the status is the whole
 answer. `respond = { text = "...", status = N }` pairs a status with a
 message body. Either way, `status` accepts any HTTP status code.
 
-**Custom headers on a status response are unreliable** — see
-[Response headers](../reference/response-headers.md#custom-headers-via-respondheaders--uneven-support)
-before relying on `respond.headers` alongside `status`; in particular,
-a `3xx` redirect's `Location` header currently can't be set this way.
+`respond.headers` is honoured uniformly alongside `status` — including
+a `3xx` redirect's `Location` header:
+
+```toml
+[[rules]]
+when.request.url_path = "/moved"
+respond = { status = 301, headers = { "Location" = "https://example.com" } }
+```
+
+See [Response headers](../reference/response-headers.md) for the full
+default set every response also carries.
 
 A worked, verified example covering the common REST-error range (400,
 401, 403, 404, 429, 500) plus a bare `204`:
