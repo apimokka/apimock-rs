@@ -1,28 +1,29 @@
 # Migrating to 6.0.0
 
-This is a preview, written from 5.19.0, of what 6.0.0 is expected to
-break — so that meeting a deprecation warning in this release gives you
-the whole picture at once rather than one line at a time. It covers two
-different kinds of break:
+Everything on this page has shipped, in 6.0.0. It covers two different
+kinds of break:
 
-- **CLI changes**, which 5.19.0 already warns about at the point you hit
-  them (see below).
-- **Library changes**, which cannot be warned about at all — there's no
-  mechanism for a Rust compiler warning to say "this will be a breaking
-  change in a future major version" the way a CLI can print to stderr.
-  If you depend on `apimock-server`, `apimock-config`, or
-  `apimock-routing` directly (rather than only running the `apimock`
-  binary), this section is the only warning you get before 6.0.0.
+- **CLI changes.** 5.19.0 warned about the one that could be warned
+  about (`validate --json`); the rest are described here.
+- **Library changes**, which could not be warned about at all — there is
+  no mechanism for a Rust compiler warning to say "this will be a
+  breaking change in a future major version" the way a CLI can print to
+  stderr. If you depend on `apimock-server`, `apimock-config` or
+  `apimock-routing` directly, rather than only running the `apimock`
+  binary, this page is your only notice.
 
-None of this has shipped yet. 6.0.0's timing is the project owner's
-decision alone (see the [roadmap](https://github.com/apimokka/apimock-rs/blob/main/ROADMAP.md)),
-and the RFCs this page describes may still change before then. This page
-will be revised alongside them; treat it as the best information
-available today, not a frozen spec.
+**If you are on 5.19.x**, the CLI sections are the ones to read first:
+each names the invocation that changed and what to write instead. **If
+you depend on the crates**, read the library sections — those are the
+breaks a compiler error will surprise you with rather than a message.
+
+Written from 5.19.0 as a preview and revised at the 6.0.0 release, so
+what you are reading describes the released behaviour rather than an
+expectation of it.
 
 ## CLI: `apimock validate --json` is removed
 
-**Done, on `main`, ahead of 6.0.0's eventual release.** Covered in
+**Shipped in 6.0.0.** Covered in
 depth in the [CLI reference](../reference/cli-reference.md#apimock-validate)
 and the [validate-in-CI guide](./validate-config-in-ci.md); summarised
 here because it's the one break you can act on immediately.
@@ -57,7 +58,7 @@ next section.
 
 ## CLI: an unknown subcommand is now a usage error
 
-**Done, on `main`, ahead of 6.0.0's eventual release.** A bare word in
+**Shipped in 6.0.0.** A bare word in
 the subcommand position that isn't `serve`, `get`, `set`, `match-test`
 or `validate` used to silently start a server — `apimock banana`, a
 typo like `apimock gte`, ran a mock server until killed, with nothing
@@ -86,7 +87,7 @@ before this check ever runs.
 
 ## CLI: `apimock serve` is now real
 
-**Done, on `main`, ahead of 6.0.0's eventual release.** RFC 053
+**Shipped in 6.0.0.** RFC 053
 specified `apimock serve` as the explicit spelling of bare `apimock`
 from the start; it was never built until now.
 
@@ -142,7 +143,7 @@ apimock now says so at load time rather than per request.
 
 ## Library: five public structs are now `#[non_exhaustive]`
 
-**Done, on `main`, ahead of 6.0.0's eventual release** (RFC 052) — this
+**Shipped in 6.0.0** (RFC 052) — this
 is the one item on this page that has already shipped rather than being
 a preview, because `main` is the 6.0.0 line and the break is real from
 this point on for anyone building against it.
@@ -204,7 +205,7 @@ of this shape, not a redesign.
 
 ## Library: `Prefix` is now `#[non_exhaustive]`, and `respond_dir` stopped growing
 
-**Done, on `main`, ahead of 6.0.0's eventual release** (RFC 058) — like
+**Shipped in 6.0.0** (RFC 058) — like
 the five-struct change above, this is live from this point on, not a
 preview.
 
@@ -279,7 +280,7 @@ needed updating for this reason alone, independent of the
 
 ## Library: error variants are boxed, and `#[non_exhaustive]` now covers the whole public API
 
-**Done, on `main`, ahead of 6.0.0's eventual release** (RFC 041) — like
+**Shipped in 6.0.0** (RFC 041) — like
 the changes above, this is live from this point on, not a preview. It
 closes the gap this section used to describe as deferred.
 

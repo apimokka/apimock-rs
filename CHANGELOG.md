@@ -5,6 +5,91 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0] - 2026-08-28
+
+**A CLI you can drive from a script.** 5.x had one way in: start a
+server and make requests against it. 6.0.0 adds two commands that answer
+questions *without* a server — `get` ("what would you return for this
+request?") and `set` ("add or change a rule, and write it to disk") —
+and gives every command a machine-readable output shape, a closed error
+taxonomy, and exit codes that mean the same thing everywhere.
+
+The intended reader of that surface is as much a program as a person.
+Where 5.x would silently do something different when it did not
+understand you, 6.0.0 says so and exits `2`.
+
+**Migrating:** [`docs/src/guides/migrating-to-6-0.md`](https://apimokka.github.io/apimock-rs/guides/migrating-to-6-0.html)
+covers every break below, including the library-side ones that no
+runtime warning could have told you about.
+
+### Added
+
+- **`apimock get <path>`** — what the server would return for a request:
+  status, headers, body, and which rule answered. No server, no port.
+  `--why` explains why the rules that did *not* match did not.
+- **`apimock set rule`** — add or change a rule and write it to disk,
+  preserving the file's comments and formatting. `--dry-run` previews.
+  Neither the config nor the rule set needs to exist first.
+- **`apimock serve`** — an explicit spelling of the server. Bare
+  `apimock` remains exactly equivalent and is unchanged.
+- **`respond.json`** — a rule body declared as JSON, served as
+  `application/json`. A rule now names *what kind* of body it serves:
+  exactly one of `file_path`, `text` or `json`, with content-type
+  derived from that choice.
+- **`--format json`** on `get`, `set`, `validate` and `match-test` — one
+  response envelope (`schema`, `apimock`, and exactly one of
+  `result`/`error`), with a closed set of `error.kind` values.
+- **`--flag=value`** accepted everywhere alongside `--flag value`, so a
+  value may begin with `-` — a markdown bullet, a YAML `---`, a diff
+  hunk. Previously no such value could be expressed at all.
+- **Guides** for `get` and `set`, an **`agent-bootstrap` example**, and
+  the CLI reference documenting the contract normatively.
+
+### Changed
+
+- **An unknown subcommand is a usage error.** `apimock gte /x` (a typo)
+  used to start a server and run until killed. It now exits `2` and
+  suggests `get`.
+- **A known flag given no value is a usage error.** It used to be
+  silently ignored, so `set rule … -c` wrote to a config the caller
+  never named, and `--format` fell back to text for a caller that asked
+  for JSON.
+- **A bare relative `--config apimock.toml` resolves**, the same as
+  `./apimock.toml`, on every command.
+- **An explicit `respond.headers.content-type` always wins**, on every
+  body source. Previously a `.json` file's declared content-type was
+  silently overwritten.
+- **A malformed JSON response file fails to load** rather than loading
+  and returning `500` on every request. A config that could never serve
+  that rule now says so at startup.
+- **Library:** `TraceConfig`, `RequestSummary`, `ParsedRequest`,
+  `LogConfig`, `VerboseConfig` and `Prefix` are `#[non_exhaustive]`;
+  error variants are boxed. Constructors are provided where a struct
+  literal was the only way in. See the migration guide.
+
+### Removed
+
+- **`apimock validate --json`**, deprecated in 5.19.0. Using it exits
+  `2` with a message naming `--format json`, rather than silently
+  changing what a script parses.
+
+### Fixed
+
+- **`set --json` served `text/plain`.** The body was correct and the
+  header was not — nothing looked broken until a client called `.json()`.
+- **`respond_dir` grew a `./` prefix** on each repeated save.
+- **Error responses no longer contain filesystem paths.** A `500` used
+  to echo the server's absolute path, and its username with it.
+
+### Security
+
+- **Path traversal in the file-serving fallback**
+  ([GHSA-72g6-wgrg-vhm7](https://github.com/apimokka/apimock-rs/security/advisories/GHSA-72g6-wgrg-vhm7)).
+  A request could read files outside the served directory. Fixed in
+  4.8.1 and 5.19.1; 6.0.0 includes the fix.
+- **`apimock set` confines its writes** to the config's own directory
+  tree. `--allow-outside` opts out explicitly.
+
 ## [5.19.0] - 2026-08-17
 
 **The last v5 release.** It warns about what 6.0.0 changes, and ships
