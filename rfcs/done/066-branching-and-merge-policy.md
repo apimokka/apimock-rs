@@ -161,26 +161,46 @@ so an implementer meets it where their task ends.
 
 ## 6. The architect's own commits
 
-Adopted with this RFC. The asymmetry § 1 leaves open is that I commit
-RFCs, handoffs and ROADMAP changes to `main` directly, reviewed by
-no one.
+**Direct to `main`.** RFCs, handoffs, ROADMAP entries, review records,
+index updates — all of it.
 
-- **Direct to `main`:** documents nobody implements against — RFC
-  drafts, ROADMAP entries, review records, index updates.
-- **On a branch, shown to the owner before the dev team is told to
-  start:** anything the dev team will build from — a Developer Handoff
-  and its acceptance checklist.
+> ### Amendment 1 — 2026-08-28: handoffs go to `main`, not a branch
+>
+> This section originally required a Developer Handoff to sit on a
+> branch and be shown to the owner before the dev team was told to
+> start. **That was wrong and is withdrawn**, on the owner's
+> observation: no one works concurrently here — the dev team and I
+> alternate, coordinated by the owner — so branch isolation solves a
+> problem this project does not have.
+>
+> It also actively failed. The owner went looking for
+> `rfcs/handoffs/post-6-0-0-release-process/implementation-handoff.md`
+> and **found nothing**, because it was on a branch. A rule meant to get
+> a handoff read before work starts had made it invisible instead.
+>
+> **What I was actually trying to fix**, and what does fix it: three
+> handoffs in the 064/065 series were wrong in ways that mattered — a
+> fourth parser I had not listed, an instruction that could not be built
+> as written, a path that did not exist, and later a worked example
+> (`gte` → `get`) that the edit-distance rule ruled out. The corrections
+> for those are already adopted and are about *content*, not location:
+>
+> - **Give the search, not the list.** Where a change has a findable
+>   signature, say "grep for X and fix every live occurrence" rather than
+>   naming three files. A list invites being treated as complete.
+> - **A worked example is a claim, and gets verified before it ships** —
+>   the same bar the dev team's packages are held to.
+>
+> Branch-versus-`main` was ceremony I mistook for a control. The owner
+> reviews a handoff by reading it, which works exactly as well on `main`
+> — and the thing that actually gets it read is **telling them the
+> path**, which § 1's reporting requirement already covers.
 
-Rationale: a handoff is a specification. Three times in the 064/065
-series the dev team found my handoff wrong in a way that mattered — a
-fourth private parser I had not listed, an instruction (`one function`)
-that could not be built as written, and a path that did not exist
-(`examples/` versus `crates/apimock/examples/`). Each was caught during
-implementation, which is late. A handoff read before the work starts is
-worth the same care as code.
-
-This does not apply to a self-review: I do not approve my own RFCs, and
-nothing here changes that the owner approves them.
+**§ 1 is unaffected.** The dev team keeps working on branches: theirs
+carry code, and the branch is what gets a CI run before merging — the
+**Green** precondition, which has caught real defects (a Windows-only
+test failure on RFC 065's first push). That is branch isolation earning
+its keep, which is precisely what my own document commits were not.
 
 ## Unresolved questions
 
