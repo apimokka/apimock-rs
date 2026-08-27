@@ -22,7 +22,9 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-*(None open.)*
+| ID  | Title |
+|-----|-------|
+| 065 | [The response body-source model](./proposed/065-response-body-source-model.md) — `--json` serves `text/plain`; **blocking 6.0.0** |
 
 ## Accepted
 
