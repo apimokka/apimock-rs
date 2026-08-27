@@ -391,7 +391,8 @@ the divergence that caused this.
 |---|---|
 | Split on which `=`? | **The first**, and only for tokens starting with `-`. Values legitimately contain `=` — `-H "Authorization: Basic YWJj=="` and `get "/a?x=1&y=2"` both work today and must keep working. Gating on the leading `-` keeps the positional URL path untouched |
 | Short flags too? | **Yes** — `-c=path` as well as `--config=path`. apimock has no clustered short flags, so there is no ambiguity, and teaching one form while rejecting the other sets a trap |
-| `--text=` with nothing after? | **An explicit empty value**, distinct from a dangling `--text` (a usage error). Precedent exists: `--text ""` works today, exit 0 |
+| `--text=` with nothing after? | **An explicit empty value** for *content* flags (`--text`, `--body`, `--json`), distinct from a dangling `--text` (a usage error). Precedent exists: `--text ""` works today, exit 0. **Corrected 2026-08-27 — see below: this originally said "explicit empty value" without qualification, which was under-specified.** |
+| `--config=` with nothing after? | **A usage error naming the flag**, exit 2. An empty value is meaningful for a content flag and meaningless for a **path-valued** one: `--config`/`-c`, `--rule-set`/`-r`, `--body-file`, `--file`, `-d`/`--dir`. Left unqualified, these produce errors naming an *empty path* — ``workspace root `` is not a valid apimock workspace`` — which is the "blames the file when the real problem is the value" shape this RFC exists to delete. `--status` already gets this right (*"--status must be a valid HTTP status code, got ''"*); match that form |
 | Repeatable flags? | `--header=A: 1 --header=B: 2` must work — `flag_values_all` gets the same treatment |
 
 ### Rejected alternatives
