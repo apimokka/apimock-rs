@@ -450,14 +450,14 @@ couldn't be loaded.
 ```
 apimock match-test --rule-set <path> [--rule <n>] [--path <url_path>] \
   [--method <METHOD>] [--header "Name: value"]... \
-  [--body <json> | --body-file <path>] [--quiet]
+  [--body <json> | --body-file <path>] [--quiet] [--format text|json]
 ```
 
 Builds a synthetic request from the flags below and checks it against
-a rule set directly — no server, no network request. Prints a
-per-condition breakdown for every rule (or just the one named by
-`--rule`), then a final `Result: MATCH (rule #N)` or `Result: NO MATCH`
-line.
+a rule set directly — no server, no network request. In text (the
+default), prints a per-condition breakdown for every rule (or just the
+one named by `--rule`), then a final `Result: MATCH (rule #N)` or
+`Result: NO MATCH` line.
 
 | Flag | Meaning |
 |---|---|
@@ -468,7 +468,18 @@ line.
 | `--header`, `-H "Name: value"` | Add a header; repeatable |
 | `--body`, `-b <json>` | The synthetic request's JSON body, inline |
 | `--body-file <path>` | The synthetic request's JSON body, from a file |
-| `--quiet`, `-q` | Suppress the per-condition breakdown, print only the result |
+| `--quiet`, `-q` | Suppress the per-condition breakdown, print only the result (text only — has no effect under `--format json`, which never prints the breakdown either way) |
+| `--format text` | Default. The breakdown described above |
+| `--format json` | The [RFC 053 response envelope](#the-response-envelope---format-json) — `result.matched` (bool), `result.match_rule_index` (0-based, `null` if none), `result.request` (`method`, `path`), and `result.rules[]` — one entry per rule checked, each with `rule_index`, `matched`, and the same per-condition `name`/`expectation`/`actual`/`matched` detail the text breakdown prints |
+
+**Added in 6.0.0 (RFC 059) — the one command outside RFC 053's envelope
+until now**, so an agent driving it previously had to scrape the text
+breakdown. Additive only: text stays byte-identical to before, and
+**exit codes are unaffected by `--format`** — `0` matched, `1` no rule
+matched, `2` an argument or input error, the same under both formats.
+This is `match-test`'s own success/failure axis, deliberately different
+from [`get`'s](#apimock-get), which always exits `0` for a legitimate
+"no match" answer.
 
 Exit codes: `0` matched, `1` no rule matched, `2` an argument or input
 error (bad flag, file not found, invalid JSON body).

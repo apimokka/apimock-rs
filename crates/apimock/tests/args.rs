@@ -240,6 +240,89 @@ fn set_help_lists_allow_outside() {
     );
 }
 
+/// `match-test --format` (RFC 059) already worked but was undiscoverable
+/// — present in `match_test.rs`'s own `USAGE` constant, absent from this
+/// hand-maintained help text, the same shape of drift F-1 fixed for
+/// `set`/`--allow-outside`.
+#[test]
+fn match_test_help_lists_format() {
+    let output = bin()
+        .args(["match-test", "--help"])
+        .output()
+        .expect("failed to run apimock match-test --help");
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("--format text|json"),
+        "match-test --help should list --format text|json; stdout was:\n{stdout}"
+    );
+}
+
+/// Mechanical, not by eye (per this task's handoff § 3): every flag
+/// named in a subcommand's `USAGE` constant (the line a real usage
+/// error prints) must also appear somewhere in that subcommand's
+/// `--help` output. Catches the exact shape of drift this task and F-1
+/// both fixed, for all four subcommands at once, so it doesn't need a
+/// human to notice a fifth instance.
+#[test]
+fn every_usage_flag_appears_in_help() {
+    fn flag_tokens(text: &str) -> std::collections::BTreeSet<String> {
+        let mut out = std::collections::BTreeSet::new();
+        let bytes = text.as_bytes();
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] == b'-'
+                && (i == 0 || !(bytes[i - 1] as char).is_alphanumeric())
+                && i + 1 < bytes.len()
+                && (bytes[i + 1] == b'-' || (bytes[i + 1] as char).is_alphabetic())
+            {
+                let start = i;
+                let mut end = i + 1;
+                while end < bytes.len()
+                    && ((bytes[end] as char).is_alphanumeric() || bytes[end] == b'-')
+                {
+                    end += 1;
+                }
+                out.insert(text[start..end].to_owned());
+                i = end;
+            } else {
+                i += 1;
+            }
+        }
+        out
+    }
+
+    for sub in ["get", "set", "validate", "match-test"] {
+        let usage_output = bin()
+            .args([sub, "--this-flag-does-not-exist"])
+            .output()
+            .unwrap_or_else(|e| {
+                panic!("failed to run apimock {sub} --this-flag-does-not-exist: {e}")
+            });
+        let usage_stderr = String::from_utf8_lossy(&usage_output.stderr);
+        let usage_line = usage_stderr
+            .lines()
+            .find(|l| l.starts_with("Usage:"))
+            .unwrap_or_else(|| panic!("{sub}: no Usage: line in stderr:\n{usage_stderr}"));
+
+        let help_output = bin()
+            .args([sub, "--help"])
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run apimock {sub} --help: {e}"));
+        let help_stdout = String::from_utf8_lossy(&help_output.stdout);
+
+        let usage_flags = flag_tokens(usage_line);
+        let help_flags = flag_tokens(&help_stdout);
+        let missing: Vec<&String> = usage_flags.difference(&help_flags).collect();
+
+        assert!(
+            missing.is_empty(),
+            "{sub}: USAGE names {missing:?} but --help doesn't mention them\nUsage line: {usage_line}\nhelp stdout:\n{help_stdout}"
+        );
+    }
+}
+
 #[test]
 fn bare_relative_config_resolves_the_same_as_dot_slash_prefixed() {
     let dir = tempfile::tempdir().expect("failed to create temp dir");
