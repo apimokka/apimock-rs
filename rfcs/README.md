@@ -22,9 +22,7 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-| ID  | Title |
-|-----|-------|
-| 065 | [The response body-source model](./proposed/065-response-body-source-model.md) — `--json` serves `text/plain`; **blocking 6.0.0** |
+*(None open.)*
 
 ## Accepted
 
@@ -56,6 +54,7 @@ which rather than leaving a reader to assume.
 | 062 | [The v6 threat model, refreshed](./accepted/062-v6-threat-model.md) | handed off; **blocking 6.0.0** |
 | 063 | [Confine the serve path](./accepted/063-serve-path-confinement.md) | merged to `main`; **fixed in 4.8.1 / 5.19.1**, [GHSA-72g6-wgrg-vhm7](https://github.com/apimokka/apimock-rs/security/advisories/GHSA-72g6-wgrg-vhm7) |
 | 064 | [Finish the CLI front door](./accepted/064-cli-front-door-completion.md) | merged to `main` (`9f9a193`); **Amendment 1** (`--flag=value`) merged to `main` (`b62ab00`), CI green; **blocking 6.0.0** |
+| 065 | [The response body-source model](./accepted/065-response-body-source-model.md) | handed off; **blocking 6.0.0** |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not

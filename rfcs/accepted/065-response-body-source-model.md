@@ -1,6 +1,6 @@
 # RFC 065 — The response body-source model: say what you serve
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-08-27.
 **Tracks.** v6 response correctness. **Blocking for 6.0.0.**
 **Touches.** `crates/apimock-routing/src/rule_set/rule/respond.rs`,
 `crates/apimock-server/src/respond_response.rs`,
@@ -8,7 +8,7 @@
 `crates/apimock-config` (load-time validation),
 `crates/apimock/src/cmd/set.rs`, `docs/src/reference/rule-set-schema.md`.
 **Depends on.** [RFC 045](../done/045-configuration-accepted-but-ignored.md),
-[RFC 057](../accepted/057-set-command.md), [RFC 062](../accepted/062-v6-threat-model.md).
+[RFC 057](./057-set-command.md), [RFC 062](./062-v6-threat-model.md).
 
 ## Summary
 
@@ -286,14 +286,17 @@ against it.
 
 ## Unresolved questions
 
-1. **Should `text` with an explicit `application/json` content-type be
-   *warned* about at load?** It is legal and stays legal, and it is how
-   pre-6.0.0 `set --json` output looks. A warning would flag exactly the
-   configs the migration guide targets — but nothing currently
-   constructs a `Severity::Warning` at all (see
-   `docs/src/reference/cli-reference.md`, `--strict` has nothing to act
-   on). Raising this is entangled with making warnings exist. **Recommend
-   deferring**, and noting it in the migration guide instead.
+1. ~~**Should `text` with an explicit `application/json` content-type be
+   *warned* about at load?**~~ ✅ **Resolved 2026-08-27 — no warning;
+   the migration guide covers it.** Owner decision. Building a warning
+   would mean building the warning mechanism first: nothing in apimock
+   constructs a `Severity::Warning` today, which is why `--strict` has
+   nothing to act on (`docs/src/reference/cli-reference.md`). That is a
+   larger change than the case warrants, and it would fire on every
+   config an earlier `set --json` wrote — configs that are legal, still
+   work, and are exactly what the migration guide is for. The prose is
+   written and lives in the handoff, to land with the implementation
+   rather than describe a field `main` does not yet have.
 2. **Does `csv_records_key` become a fifth body source?** It currently
    modifies a `file_path` response rather than replacing it. Fitting it
    in is a non-goal here, but the model should not make it harder to fit
