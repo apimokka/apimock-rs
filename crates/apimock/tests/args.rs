@@ -218,6 +218,28 @@ fn match_test_and_validate_help_are_reachable_per_subcommand() {
     }
 }
 
+/// F-1 (pre-cut audit): `--allow-outside` (RFC 062's write-path
+/// confinement opt-out) is documented in the CLI reference but was
+/// missing from `set --help` — the first place a user or agent looks.
+#[test]
+fn set_help_lists_allow_outside() {
+    let output = bin()
+        .args(["set", "--help"])
+        .output()
+        .expect("failed to run apimock set --help");
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("--allow-outside"),
+        "set --help should list --allow-outside; stdout was:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("resolve outside the config directory"),
+        "set --help's --allow-outside wording should match the CLI reference; stdout was:\n{stdout}"
+    );
+}
+
 #[test]
 fn bare_relative_config_resolves_the_same_as_dot_slash_prefixed() {
     let dir = tempfile::tempdir().expect("failed to create temp dir");
@@ -427,25 +449,9 @@ fn unknown_subcommand_exits_2_and_starts_no_server() {
     // call would hang rather than return.
 }
 
-/// `serve` in particular: `docs/src/guides/migrating-to-6-0.md` used to
-/// claim bare `apimock` is "an alias for `apimock serve`" — there is no
-/// `serve` subcommand, and before this fix `apimock serve` "worked"
-/// only by falling through as a tolerated, ignored bare token.
-#[test]
-fn unknown_subcommand_serve_is_rejected_not_started() {
-    let output = bin()
-        .args(["serve"])
-        .output()
-        .expect("failed to run apimock");
-
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty(), "stdout was not empty");
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("unknown subcommand 'serve'"),
-        "stderr was: {stderr}"
-    );
-}
+// `serve` itself moved to its own section below (RFC 053: it is now
+// the explicit spelling of bare `apimock`, not an unknown subcommand —
+// superseding what this test used to assert).
 
 /// Near-match suggestions against the four real subcommands. `gte` (a
 /// two-letter transposition of `get`, itself only 3 characters) is
@@ -578,6 +584,215 @@ fn a_no_subcommand_invocation_still_starts_the_server() {
         started,
         "never saw the `Listening on` line - server likely didn't start; stderr: {}",
         String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+// ── RFC 053: `apimock serve` is the explicit spelling of bare
+// `apimock` — identical in every respect, never required ─────────────
+
+/// Spawns `apimock` with `args` in `dir`, waits (bounded) for the
+/// `Listening on` banner line on stdout, then kills it. Same
+/// spawn/poll/kill shape as
+/// `a_no_subcommand_invocation_still_starts_the_server` above, factored
+/// out here since this section runs it for both the bare and `serve`
+/// spellings repeatedly.
+fn spawn_and_wait_for_listening(args: &[&str], dir: &std::path::Path) -> bool {
+    let mut child = bin()
+        .current_dir(dir)
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap_or_else(|e| panic!("failed to spawn apimock {args:?}: {e}"));
+
+    let mut stdout = std::io::BufReader::new(child.stdout.take().expect("piped stdout"));
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        use std::io::BufRead;
+        let mut line = String::new();
+        loop {
+            line.clear();
+            if stdout.read_line(&mut line).unwrap_or(0) == 0 {
+                let _ = tx.send(false);
+                return;
+            }
+            if line.starts_with("Listening on") {
+                let _ = tx.send(true);
+                return;
+            }
+        }
+    });
+
+    let started = rx
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .unwrap_or(false);
+    let _ = child.kill();
+    let _ = child.wait();
+    started
+}
+
+/// § 1's table, row 1: `apimock serve` with no flags is identical to
+/// bare `apimock` — both start the zero-config server. `-p 0` on both
+/// sides so this can't collide with anything already bound to the
+/// default port.
+#[test]
+fn serve_with_no_flags_starts_the_zero_config_server_like_bare_apimock() {
+    let bare_dir = tempfile::tempdir().expect("failed to create temp dir");
+    let serve_dir = tempfile::tempdir().expect("failed to create temp dir");
+
+    assert!(
+        spawn_and_wait_for_listening(&["-p", "0"], bare_dir.path()),
+        "bare apimock -p 0 never started"
+    );
+    assert!(
+        spawn_and_wait_for_listening(&["serve", "-p", "0"], serve_dir.path()),
+        "apimock serve -p 0 never started"
+    );
+}
+
+/// § 1's table, row 2: `-c <path>` behaves identically with or without
+/// `serve` — both log the same `[config]` line for their own (distinct)
+/// config file and go on to listen.
+#[test]
+fn serve_with_config_flag_behaves_like_bare_apimock_with_config_flag() {
+    let bare_dir = tempfile::tempdir().expect("failed to create temp dir");
+    let serve_dir = tempfile::tempdir().expect("failed to create temp dir");
+    for dir in [&bare_dir, &serve_dir] {
+        std::fs::write(
+            dir.path().join("apimock.toml"),
+            "[service]\nfallback_respond_dir = \".\"\n",
+        )
+        .expect("failed to write config");
+    }
+
+    // `-p 0` alongside `-c`: `--port` overrides `listener.port` from the
+    // config regardless (per `EnvArgs`'s own doc comment), so this
+    // still proves `-c` was honoured (the `[config]` line) without
+    // depending on a fixed port.
+    assert!(
+        spawn_and_wait_for_listening(&["-c", "apimock.toml", "-p", "0"], bare_dir.path()),
+        "apimock -c apimock.toml -p 0 never started"
+    );
+    assert!(
+        spawn_and_wait_for_listening(
+            &["serve", "-c", "apimock.toml", "-p", "0"],
+            serve_dir.path()
+        ),
+        "apimock serve -c apimock.toml -p 0 never started"
+    );
+}
+
+/// § 1's table, row 3: `-d <dir>` behaves identically with or without
+/// `serve`.
+#[test]
+fn serve_with_dir_flag_behaves_like_bare_apimock_with_dir_flag() {
+    let bare_dir = tempfile::tempdir().expect("failed to create temp dir");
+    let serve_dir = tempfile::tempdir().expect("failed to create temp dir");
+
+    assert!(
+        spawn_and_wait_for_listening(&["-p", "0", "-d", "."], bare_dir.path()),
+        "apimock -p 0 -d . never started"
+    );
+    assert!(
+        spawn_and_wait_for_listening(&["serve", "-p", "0", "-d", "."], serve_dir.path()),
+        "apimock serve -p 0 -d . never started"
+    );
+}
+
+/// § 1's table, row 4: `--init [--yes] [--middleware]` writes the exact
+/// same files with or without `serve` — the one row in the table that
+/// doesn't bind a listener, so a plain `.output()` (no spawn/kill) is
+/// safe.
+#[test]
+fn serve_init_writes_the_same_files_as_bare_apimock_init() {
+    let bare_dir = tempfile::tempdir().expect("failed to create temp dir");
+    let serve_dir = tempfile::tempdir().expect("failed to create temp dir");
+
+    let bare = bin()
+        .current_dir(bare_dir.path())
+        .args(["--init", "--yes"])
+        .output()
+        .expect("failed to run apimock --init --yes");
+    let serve = bin()
+        .current_dir(serve_dir.path())
+        .args(["serve", "--init", "--yes"])
+        .output()
+        .expect("failed to run apimock serve --init --yes");
+
+    assert_eq!(bare.status.code(), serve.status.code());
+    assert_eq!(
+        std::fs::read_to_string(bare_dir.path().join("apimock.toml")).unwrap(),
+        std::fs::read_to_string(serve_dir.path().join("apimock.toml")).unwrap(),
+    );
+}
+
+/// § 1's table, row 5: `--help` / `--version` are the same with or
+/// without `serve` — byte-for-byte, not just "similar", per the
+/// handoff's "do not give `serve` its own help text" instruction.
+#[test]
+fn serve_help_and_version_are_byte_identical_to_the_root_command() {
+    for flag in ["--help", "--version"] {
+        let bare = bin()
+            .args([flag])
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run apimock {flag}: {e}"));
+        let serve = bin()
+            .args(["serve", flag])
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run apimock serve {flag}: {e}"));
+
+        assert_eq!(bare.status.code(), serve.status.code(), "{flag}");
+        assert_eq!(bare.stdout, serve.stdout, "{flag}: stdout differed");
+        assert_eq!(bare.stderr, serve.stderr, "{flag}: stderr differed");
+    }
+}
+
+/// A config that fails to load fails the same way whether reached via
+/// `serve` or bare `apimock` — the acceptance checklist's explicit
+/// second item, not just "does it start", but "does it fail the same
+/// way too".
+#[test]
+fn serve_with_a_config_that_fails_to_load_fails_the_same_way_as_bare_apimock() {
+    let bare_dir = tempfile::tempdir().expect("failed to create temp dir");
+    let serve_dir = tempfile::tempdir().expect("failed to create temp dir");
+    for dir in [&bare_dir, &serve_dir] {
+        std::fs::write(
+            dir.path().join("apimock.toml"),
+            "this is not [[[ valid toml",
+        )
+        .expect("failed to write broken config");
+    }
+
+    let bare = bin()
+        .current_dir(bare_dir.path())
+        .output()
+        .expect("failed to run apimock");
+    let serve = bin()
+        .current_dir(serve_dir.path())
+        .args(["serve"])
+        .output()
+        .expect("failed to run apimock serve");
+
+    assert_eq!(bare.status.code(), serve.status.code());
+    assert_eq!(bare.status.code(), Some(1));
+    assert_eq!(bare.stdout, serve.stdout);
+}
+
+/// `apimock serve` never appears as a rejected, unknown subcommand —
+/// distinct from `unknown_subcommand_exits_2_and_starts_no_server`
+/// (`banana`) above, which must still be rejected. `--allow-outside`
+/// (F-1) has no bearing here; kept to a minimal flag so this test is
+/// about dispatch, not `set`'s own parsing.
+#[test]
+fn serve_root_help_lists_it_as_a_subcommand() {
+    let output = bin()
+        .args(["--help"])
+        .output()
+        .expect("failed to run apimock");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("\n  serve"),
+        "root --help should list `serve` as a subcommand; stdout was:\n{stdout}"
     );
 }
 

@@ -52,19 +52,19 @@ invocations at a major version, not specific to this one flag.
 
 `match-test`'s text output is untouched — 6.0.0 *adds* `--format json`
 to it rather than reshaping what it prints. **Bare `apimock` keeps
-working — there is no `serve` subcommand to be an alias for.** It
-starts the zero-config server directly; nothing here changes that.
+working, and `apimock serve` is now its explicit spelling** — see the
+next section.
 
 ## CLI: an unknown subcommand is now a usage error
 
 **Done, on `main`, ahead of 6.0.0's eventual release.** A bare word in
-the subcommand position that isn't `get`, `set`, `match-test` or
-`validate` used to silently start a server — `apimock banana`, a typo
-like `apimock gte`, even `apimock serve` all ran a mock server until
-killed, with nothing on stderr to say the word wasn't recognised. Fixed
-the same way RFC 059 already fixed an unknown *flag*: exit `2`, stderr
-names the unknown subcommand, a near-match suggestion where the edit
-distance makes one plausible, **no server started**:
+the subcommand position that isn't `serve`, `get`, `set`, `match-test`
+or `validate` used to silently start a server — `apimock banana`, a
+typo like `apimock gte`, ran a mock server until killed, with nothing
+on stderr to say the word wasn't recognised. Fixed the same way RFC 059
+already fixed an unknown *flag*: exit `2`, stderr names the unknown
+subcommand, a near-match suggestion where the edit distance makes one
+plausible, **no server started**:
 
 ```sh
 $ apimock banana
@@ -80,7 +80,21 @@ $ echo $?
 
 A flag at the same position (`apimock -p 3001`, `apimock --init`) is
 unaffected — this only closes the bare-word case a flag typo there was
-already caught for.
+already caught for. **`apimock serve` is not caught by this fix** — see
+the next section: it's a real, intentional subcommand, recognised
+before this check ever runs.
+
+## CLI: `apimock serve` is now real
+
+**Done, on `main`, ahead of 6.0.0's eventual release.** RFC 053
+specified `apimock serve` as the explicit spelling of bare `apimock`
+from the start; it was never built until now.
+
+`apimock serve [flags]` is identical to bare `apimock [flags]` in every
+respect — same zero-config default, same `-c`/`-p`/`-d`, same `--init`,
+same `--help`/`--version`, same failure behaviour for a config that
+won't load. Bare `apimock` is not deprecated and is not going anywhere;
+`serve` is an addition, never a requirement.
 
 ## `respond.json`, and rules written by an earlier `apimock set --json`
 

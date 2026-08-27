@@ -33,8 +33,8 @@ stderr, exit code `2`, and no server is started — a typo used to start a
 server on a port nobody asked for; now it doesn't start anything.
 
 The same is true one position over: a bare word where a subcommand goes
-that is not `get`, `set`, `match-test` or `validate` is an error, not a
-silent invitation to start a server:
+that is not `serve`, `get`, `set`, `match-test` or `validate` is an
+error, not a silent invitation to start a server:
 
 ```
 $ apimock banana
@@ -46,8 +46,7 @@ apimock: unknown subcommand 'gett'; did you mean 'get'?
 Same exit code, same stream, same near-match treatment — this is
 specifically about the *subcommand* position (the first argument after
 `apimock`); a flag there (`apimock -p 3001`) is a flag attempt, not a
-subcommand attempt, and falls under the flag rule above instead. There
-is no `serve` subcommand — bare `apimock` starts the server directly.
+subcommand attempt, and falls under the flag rule above instead.
 
 ## `--flag=value`
 
@@ -128,15 +127,22 @@ different codes.
 ## Running the server
 
 ```
-apimock [-p <port>] [-d <dir>] [-c <config>] [--init [--yes] [--middleware]]
+apimock [serve] [-p <port>] [-d <dir>] [-c <config>] [--init [--yes] [--middleware]]
 ```
 
 | Flag | Result |
 |---|---|
 | *(no flags)* | Zero-config: serves `./` by URL path, port `3001` |
+| `serve` | The explicit spelling of the above (RFC 053) — identical to bare `apimock` with every flag below, never required |
 | `-p`, `--port <port>` | Listen on a custom port |
 | `-d <dir>` | Serve a custom fallback directory instead of `./` |
 | `-c`, `--config <path>` | Load a config file. A bare relative path resolves the same as one prefixed with `./` — `-c apimock.toml` and `-c ./apimock.toml` are equivalent |
+
+**`apimock serve`** is a spelling of the invocation above, not a
+separate command — `apimock serve -c apimock.toml` is exactly
+`apimock -c apimock.toml`, byte-for-byte, including `--help` and
+`--version`. It exists so a script or an agent can name what it's
+doing explicitly without bare `apimock` reading as accidental.
 
 ## `--init`
 
