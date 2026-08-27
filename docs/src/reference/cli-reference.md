@@ -139,7 +139,7 @@ falls back to the same defaults `--yes` would produce, even without
 ## `apimock validate`
 
 ```
-apimock validate --config <path> [--strict] [--quiet] [--json] [--format text|json]
+apimock validate --config <path> [--strict] [--quiet] [--format text|json]
 ```
 
 Loads the whole workspace — root config and every rule set it
@@ -150,16 +150,19 @@ references — and reports diagnostics, without binding a port.
 | `--config`, `-c <path>` | Required. The root config to validate. A bare relative path resolves the same as one prefixed with `./` — `-c apimock.toml` and `-c ./apimock.toml` are equivalent (RFC 064; previously `validate` parsed this flag separately from every other command and didn't get the fix) |
 | `--strict` | Documented to treat warnings as failures (exit `1`). **Not reachable today** — see the note below the exit-codes table |
 | `--quiet` | Suppress non-error output |
-| `--json` | **Deprecated, removed in 6.0.0.** Emits the same bare diagnostics array 5.18.0 and earlier did, byte-identical — an existing parser reading stdout is unaffected. Using it prints a one-line warning to stderr, once, naming `--format json` as the replacement |
 | `--format text` | Default. Today's plain-text summary — unchanged whether written explicitly or left implicit |
 | `--format json` | The [RFC 053 response envelope](#the-response-envelope---format-json): an object with `schema`, `apimock`, and exactly one of `result`/`error`, instead of a bare array |
 
-`--json` and `--format` may not be combined — that is a usage error,
-exit `2`, not a silent precedence rule between the two.
+**`--json` (the bare diagnostics array, deprecated in 5.19.0) was
+removed in 6.0.0.** Using it is now a usage error, exit `2`, naming
+`--format json` as the replacement — enveloped (`error.kind: "usage"`)
+if `--format json` was also given, plain stderr otherwise. See the
+[migration guide](../guides/migrating-to-6-0.md#cli-apimock-validate---json-is-removed)
+for the exact error text.
 
-Exit codes: `0` clean, `2` the config couldn't be loaded at all, or the
-invocation itself was invalid (e.g. `--json --format json` together, or
-`--format` given a value other than `text`/`json`).
+Exit codes: `0` clean, `2` the config couldn't be loaded at all, the
+invocation itself was invalid (`--json`, or `--format` given a value
+other than `text`/`json`), or a required flag was missing/dangling.
 
 **Exit `1` ("at least one error") is documented but not reachable
 today, and neither is `--strict`'s effect.** `Workspace::load` — which

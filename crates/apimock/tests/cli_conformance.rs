@@ -381,14 +381,15 @@ fn dangling_format_never_produces_text_output_with_exit_0() {
 // Scenario: mutually exclusive flags → usage, exit 2
 // ═══════════════════════════════════════════════════════════════════
 
-/// `validate --json --format json` is the one mutually-exclusive flag
-/// pair in this workspace today, already exercised end to end by
-/// `validate_format.rs::json_and_format_together_is_a_usage_error` — not
-/// duplicated here. `get`, `set` and `match-test` define no mutually
-/// exclusive flag pair (checked, not assumed): nothing to assert for
-/// them under this scenario. Stated explicitly, not omitted.
+/// No command in this workspace defines a mutually exclusive flag pair
+/// today (checked, not assumed) — `validate --json --format json` was
+/// the one example, but 6.0.0 removed `--json` outright, so that
+/// combination is now the removal error (enveloped, since `--format
+/// json` was also given), not a "cannot combine" message; see
+/// `validate_format.rs::json_flag_with_format_json_is_an_enveloped_removal_error`.
+/// Stated explicitly, not omitted.
 #[test]
-fn only_validate_has_a_mutually_exclusive_flag_pair() {}
+fn no_command_defines_a_mutually_exclusive_flag_pair() {}
 
 // ═══════════════════════════════════════════════════════════════════
 // Scenario: config missing → config_unreadable, exit 2

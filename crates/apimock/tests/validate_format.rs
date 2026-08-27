@@ -1,8 +1,9 @@
-//! RFC 054: `apimock validate --json` (deprecated, byte-identical) vs
+//! RFC 054 → 6.0.0: `apimock validate --json` (removed) vs
 //! `--format json` (RFC 053's envelope) vs `--format text` (today's
 //! default). Exercises the real compiled binary — the whole point under
 //! test is what actually reaches stdout/stderr, and those two streams
-//! have to be captured separately to prove `--json`'s promise.
+//! have to be captured separately to prove `--json`'s removal error
+//! stays off stdout.
 //!
 //! # Why there is no "loads cleanly, but reports diagnostics" fixture
 //!
@@ -69,10 +70,10 @@ fn structurally_invalid_config_dir() -> tempfile::TempDir {
     dir
 }
 
-// ── `--json` stays byte-identical, just gains a stderr warning ────────
+// ── `--json` is removed (RFC 054 → 6.0.0, RFC 048 § 7) ─────────────────
 
 #[test]
-fn json_flag_stdout_is_unaffected_by_the_warning() {
+fn json_flag_is_a_removal_error_stdout_stays_empty() {
     let dir = clean_config_dir();
     let with_json = bin()
         .current_dir(dir.path())
@@ -80,56 +81,70 @@ fn json_flag_stdout_is_unaffected_by_the_warning() {
         .output()
         .expect("failed to run apimock validate");
 
-    // Stdout must still be exactly what 5.18.0 produced: the array,
-    // then the same pass/fail banner every other invocation prints.
-    let stdout = String::from_utf8_lossy(&with_json.stdout);
-    assert_eq!(with_json.status.code(), Some(0));
-    assert!(stdout.contains("[]"), "stdout was:\n{stdout}");
+    assert_eq!(with_json.status.code(), Some(2));
     assert!(
-        stdout.contains("Validation passed (1 rules across 1 rule set(s))."),
-        "stdout was:\n{stdout}"
+        with_json.stdout.is_empty(),
+        "stdout was: {}",
+        String::from_utf8_lossy(&with_json.stdout)
     );
 
     let stderr = String::from_utf8_lossy(&with_json.stderr);
     assert!(
-        stderr.contains("--json is deprecated and will be removed in 6.0.0."),
+        stderr.contains("--json was removed in 6.0.0"),
         "stderr was:\n{stderr}"
     );
-    assert!(
-        stderr.contains("Use --format json"),
-        "stderr was:\n{stderr}"
-    );
-    // The whole promise: nothing about the warning leaks onto stdout.
-    assert!(
-        !stdout.contains("deprecated"),
-        "stdout was:\n{stdout} (warning text must never reach stdout)"
-    );
+    assert!(stderr.contains("--format json"), "stderr was:\n{stderr}");
 }
 
-/// Not "several diagnostics" (unreachable — see module doc comment):
-/// several *invocations*, proving "once" means once per run, not once
-/// per process, and that the warning survives a subsequent load
-/// failure rather than being skipped because something else went wrong.
+/// Unconditional: `--json`'s presence is fatal on its own, regardless of
+/// whether the rest of the invocation is otherwise valid — proven here
+/// against both a clean and a load-failing config, so the removal error
+/// isn't accidentally contingent on `Workspace::load` succeeding.
 #[test]
-fn json_flag_warning_appears_exactly_once_per_run_including_on_load_failure() {
-    for (dir, expected_exit) in [
-        (clean_config_dir(), 0),
-        (structurally_invalid_config_dir(), 2),
-    ] {
+fn json_flag_is_rejected_before_the_config_is_even_loaded() {
+    for dir in [clean_config_dir(), structurally_invalid_config_dir()] {
         let (code, stderr) = run_stderr(
             dir.path(),
             &["validate", "--config", "./apimock.toml", "--json"],
         );
 
-        assert_eq!(code, expected_exit);
-        let occurrences = stderr
-            .matches("is deprecated and will be removed in 6.0.0")
-            .count();
-        assert_eq!(
-            occurrences, 1,
-            "exit {expected_exit} case: stderr was:\n{stderr}"
+        assert_eq!(code, 2);
+        assert!(
+            stderr.contains("--json was removed in 6.0.0"),
+            "stderr was:\n{stderr}"
         );
     }
+}
+
+/// `--json` together with `--format json`: the removal error itself is
+/// enveloped (RFC 053, `error.kind: "usage"`), rather than plain text a
+/// caller who already asked for the envelope couldn't parse.
+#[test]
+fn json_flag_with_format_json_is_an_enveloped_removal_error() {
+    let dir = clean_config_dir();
+    let (code, v) = run_json(
+        dir.path(),
+        &[
+            "validate",
+            "--config",
+            "./apimock.toml",
+            "--json",
+            "--format",
+            "json",
+        ],
+    );
+
+    assert_eq!(code, 2);
+    assert!(v.get("error").is_some(), "v was: {v}");
+    assert!(v.get("result").is_none(), "v was: {v}");
+    assert_eq!(v["error"]["kind"], "usage");
+    assert!(
+        v["error"]["message"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("--format json"),
+        "v was: {v}"
+    );
 }
 
 // ── `--format json` — RFC 053's envelope ───────────────────────────────
@@ -146,7 +161,7 @@ fn format_json_emits_a_valid_envelope_on_a_clean_config() {
     assert_eq!(output.status.code(), Some(0));
     assert!(
         output.stderr.is_empty(),
-        "no --json, so no deprecation warning; stderr was: {}",
+        "no --json, so no removal error; stderr was: {}",
         String::from_utf8_lossy(&output.stderr)
     );
 
@@ -221,35 +236,11 @@ fn format_text_matches_the_implicit_default() {
 }
 
 // ── Usage errors ────────────────────────────────────────────────────────
-
-#[test]
-fn json_and_format_together_is_a_usage_error() {
-    let dir = clean_config_dir();
-    let output = bin()
-        .current_dir(dir.path())
-        .args([
-            "validate",
-            "--config",
-            "./apimock.toml",
-            "--json",
-            "--format",
-            "json",
-        ])
-        .output()
-        .expect("failed to run apimock validate");
-
-    assert_eq!(output.status.code(), Some(2));
-    assert!(
-        output.stdout.is_empty(),
-        "stdout was: {}",
-        String::from_utf8_lossy(&output.stdout)
-    );
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("--json and --format cannot be used together"),
-        "stderr was:\n{stderr}"
-    );
-}
+//
+// `--json` combined with `--format json` is covered above
+// (`json_flag_with_format_json_is_an_enveloped_removal_error`) — it's
+// the removal error, enveloped, not a separate "cannot combine" message;
+// `--json` alone is fatal regardless of what else is on the line.
 
 #[test]
 fn invalid_format_value_is_a_usage_error() {

@@ -26,7 +26,7 @@ async fn validate_passes_on_a_clean_config() {
 }
 
 /// `apimock::cmd::validate::run` (above) can't have its stdout
-/// captured in-process, so the `--json` shape documented in the
+/// captured in-process, so the `--format json` shape documented in the
 /// README is checked against the real binary instead, the same way
 /// `match-test` is below.
 ///
@@ -36,17 +36,45 @@ async fn validate_passes_on_a_clean_config() {
 /// `--config apimock.toml` would work here too; this form is kept only
 /// because it's what the README shows.
 #[tokio::test]
-async fn validate_json_flag_emits_diagnostics_array() {
+async fn validate_format_json_emits_the_envelope() {
+    let output = Command::new(env!("CARGO_BIN_EXE_apimock"))
+        .current_dir(example_dir())
+        .args(["validate", "--config", "./apimock.toml", "--format", "json"])
+        .output()
+        .expect("failed to run apimock validate");
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let v: serde_json::Value =
+        serde_json::from_str(&stdout).unwrap_or_else(|e| panic!("{e}\nstdout was:\n{stdout}"));
+    assert_eq!(v["schema"], 1);
+    assert_eq!(v["result"]["diagnostics"].as_array().unwrap().len(), 0);
+    assert_eq!(v["result"]["summary"]["rules"], 2);
+    assert_eq!(v["result"]["summary"]["rule_sets"], 1);
+}
+
+/// `--json` (RFC 054 → 6.0.0) is removed — the README's own
+/// documentation of that removal, checked against the real binary.
+#[tokio::test]
+async fn validate_json_flag_is_the_removal_error() {
     let output = Command::new(env!("CARGO_BIN_EXE_apimock"))
         .current_dir(example_dir())
         .args(["validate", "--config", "./apimock.toml", "--json"])
         .output()
         .expect("failed to run apimock validate");
 
-    assert_eq!(output.status.code(), Some(0));
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("[]"), "stdout was:\n{stdout}");
-    assert!(stdout.contains("Validation passed (2 rules across 1 rule set(s))."));
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        output.stdout.is_empty(),
+        "stdout was:\n{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("--json was removed in 6.0.0"),
+        "stderr was:\n{stderr}"
+    );
+    assert!(stderr.contains("--format json"), "stderr was:\n{stderr}");
 }
 
 #[tokio::test]

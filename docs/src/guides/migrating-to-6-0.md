@@ -22,18 +22,33 @@ available today, not a frozen spec.
 
 ## CLI: `apimock validate --json` is removed
 
-Covered in depth in the [CLI reference](../reference/cli-reference.md#apimock-validate)
+**Done, on `main`, ahead of 6.0.0's eventual release.** Covered in
+depth in the [CLI reference](../reference/cli-reference.md#apimock-validate)
 and the [validate-in-CI guide](./validate-config-in-ci.md); summarised
 here because it's the one break you can act on immediately.
 
-`--json` (a bare diagnostics array) is deprecated as of 5.19.0 and
-removed in 6.0.0. **`--format json` is available now**, in 5.19.0,
-carrying the response shape 6.0.0 keeps — so you can switch today and
-verify against a real binary before the old flag is gone. 6.0.0's
-removal of `--json` is expected to fail loudly with a machine-readable
-error naming `--format json`, rather than silently changing what a
-script parses — a general policy for breaking CLI invocations at a
-major version, not specific to this one flag.
+`--json` (a bare diagnostics array) was deprecated as of 5.19.0 and is
+now removed. `--format json`, available since 5.19.0, carries the
+response shape 6.0.0 keeps — switch to it and verify against a real
+binary. Using `--json` now fails loudly rather than silently changing
+what a script parses — exit `2`, a message naming `--format json` as
+the replacement:
+
+```sh
+$ apimock validate --config ./apimock.toml --json
+apimock validate: --json was removed in 6.0.0; use --format json instead, which emits the RFC 053 response envelope
+Usage: apimock validate --config <apimock.toml> [--strict] [--quiet] [--format text|json]
+$ echo $?
+2
+```
+
+If `--format json` was also given alongside `--json`, the same error
+comes back enveloped instead (RFC 053, `error.kind: "usage"`), rather
+than as the plain text above — the caller already asked for
+machine-readable output, so the error stays machine-readable too. This
+is the one place, across the whole 6.0.0 release, where a removed CLI
+flag fails this way (RFC 048 § 7) — the general policy for breaking CLI
+invocations at a major version, not specific to this one flag.
 
 No other CLI invocation that works today is expected to change.
 `match-test`'s text output is untouched — 6.0.0 *adds* `--format json`

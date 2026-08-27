@@ -23,16 +23,16 @@
 //! *design* (unchanged by RFC 054, per its Non-goals), not current
 //! reachability.
 //!
-//! # `--json` vs `--format` (RFC 054)
+//! # `--json` is removed (RFC 054 → 6.0.0)
 //!
-//! `--json` is deprecated but **byte-identical** to what it always
-//! emitted — a bare diagnostics array — so an existing parser is
-//! unaffected; using it prints a one-line deprecation warning to
-//! stderr. `--format json` is the replacement: RFC 053's envelope
-//! (`crate::cmd::envelope`), with room to grow beyond a diagnostics
-//! array without breaking anything reading it. Both shapes ship in this
-//! release so a caller can migrate and verify before 6.0.0 removes
-//! `--json`.
+//! `--json` (the bare diagnostics array RFC 054 deprecated in 5.19.0)
+//! is gone. Using it now fails loudly rather than being silently
+//! absorbed: exit 2, a message naming `--format json` as the
+//! replacement, on stderr by default or inside RFC 053's envelope
+//! (`error.kind: "usage"`) when `--format json` was also given — see
+//! `json_removed_error` below. This is the sole exercise, across the
+//! whole 6.0.0 release, of RFC 048 § 7's loud-failure requirement for a
+//! removed flag.
 
 use apimock_config::{Severity, Workspace};
 
@@ -43,13 +43,20 @@ pub struct ValidateArgs {
     pub config_path: String,
     pub strict: bool,
     pub quiet: bool,
-    pub json: bool,
     pub format: Option<Format>,
 }
 
 const CONFIG_NAMES: &[&str] = &["--config", "-c"];
 const STRICT_FLAG: &str = "--strict";
 const QUIET_FLAG: &str = "--quiet";
+/// Removed in 6.0.0 (RFC 054). Still listed in `known_flag_names()` /
+/// `NO_VALUE_FLAG_NAMES` below — not because it's accepted, but so
+/// `reject_unknown_flags` lets it through to `run()`'s own check
+/// instead of reporting it as an unrecognised argument. `--json` and
+/// `--format` are too far apart for `near_match` (RFC 059) to ever
+/// suggest one for the other, so the generic "unrecognized argument"
+/// path would never name the replacement — `run()`'s dedicated check
+/// does, unconditionally.
 const JSON_FLAG: &str = "--json";
 const FORMAT_FLAG: &str = "--format";
 /// Flags that take no value — every other known flag does.
@@ -63,9 +70,11 @@ fn known_flag_names() -> Vec<&'static str> {
         .collect()
 }
 
-/// Printed once to stderr whenever `--json` is used, per RFC 054 § "The
-/// warning text".
-const JSON_DEPRECATION_WARNING: &str = "apimock validate: --json is deprecated and will be removed in 6.0.0.\n  Use --format json, which emits the new response envelope.";
+/// `--json`'s removal error (RFC 054 → 6.0.0, RFC 048 § 7). Named after
+/// what it reports, not the flag itself — this command has no other
+/// removed flag today, but a second one later would want its own
+/// message, not a generically-named one this reads oddly for.
+const JSON_REMOVED_MESSAGE: &str = "--json was removed in 6.0.0; use --format json instead, which emits the RFC 053 response envelope";
 
 impl ValidateArgs {
     pub fn parse(args: &[String]) -> Result<Self, String> {
@@ -90,20 +99,12 @@ impl ValidateArgs {
             }
         };
 
-        let json = args.iter().any(|a| a == JSON_FLAG);
+        // `--json` never reaches this point: `run()` intercepts its mere
+        // presence, before parsing gets this far, with its own removal
+        // error — see `JSON_FLAG`'s doc comment. So there is no
+        // `--json`/`--format` conflict left to check here; `--format`
+        // is just parsed on its own.
         let format_raw = super::flags::flag_value(args, &[FORMAT_FLAG])?;
-
-        // RFC 054: "--json --format json together is a usage error, not
-        // a silent precedence rule." Read broadly — any `--format`
-        // value alongside `--json` is the same ambiguity (which one
-        // wins?), so both are rejected together rather than only the
-        // `json` value.
-        if json && format_raw.is_some() {
-            return Err(
-                "--json and --format cannot be used together; --format json is --json's replacement"
-                    .to_owned(),
-            );
-        }
 
         let format = match format_raw.as_deref() {
             None => None,
@@ -121,16 +122,16 @@ impl ValidateArgs {
             config_path,
             strict: args.iter().any(|a| a == STRICT_FLAG),
             quiet: args.iter().any(|a| a == QUIET_FLAG),
-            json,
             format,
         })
     }
 }
 
-/// Build the diagnostics array shape shared by `--json` and
-/// `--format json` — the content is identical between the two; only
-/// what wraps it differs (RFC 054 Non-goal: "changing validate's
-/// diagnostics... the content does not [change]").
+/// Build the `diagnostics` array carried inside `--format json`'s
+/// `result` (RFC 053). Once the same shape `--json` used to emit bare,
+/// before its 6.0.0 removal; kept as its own function since
+/// `envelope::ok` still wraps a plain `Value`, not this report type
+/// directly.
 fn diagnostics_json(report: &apimock_config::ValidationReport) -> serde_json::Value {
     let items: Vec<serde_json::Value> = report
         .diagnostics
@@ -147,12 +148,32 @@ fn diagnostics_json(report: &apimock_config::ValidationReport) -> serde_json::Va
     serde_json::Value::Array(items)
 }
 
-const USAGE: &str = "Usage: apimock validate --config <apimock.toml> [--strict] [--quiet] [--json] [--format text|json]";
+const USAGE: &str =
+    "Usage: apimock validate --config <apimock.toml> [--strict] [--quiet] [--format text|json]";
 
 fn usage_error(message: &str) -> i32 {
     eprintln!("apimock validate: {}", message);
     eprintln!("{}", USAGE);
     2
+}
+
+/// `--json`'s removal error. Enveloped (RFC 053, `error.kind: "usage"`)
+/// when the caller also asked for `--format json` — the one caller
+/// most likely to be parsing this programmatically still gets a
+/// machine-readable answer back, not a plain-text error it can't parse
+/// — plain stderr otherwise, matching every other usage error this
+/// command reports.
+fn json_removed_error(is_envelope: bool) -> i32 {
+    if is_envelope {
+        let envelope = envelope::err(envelope::ErrorKind::Usage, JSON_REMOVED_MESSAGE);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&envelope).unwrap_or_default()
+        );
+        2
+    } else {
+        usage_error(JSON_REMOVED_MESSAGE)
+    }
 }
 
 /// Run validation and print results. Returns the process exit code.
@@ -170,18 +191,27 @@ pub fn run(args: &[String]) -> i32 {
     ) {
         return usage_error(&e);
     }
+
+    // RFC 054 → 6.0.0: checked before `ValidateArgs::parse` even runs,
+    // and unconditionally — regardless of `--config`/`--format`/etc.
+    // being valid — so a caller still using `--json` learns that,
+    // specifically, rather than some other invocation problem. Whether
+    // to envelope the answer is read directly off the raw args (not
+    // `parsed.format`, since parsing never happens on this path).
+    if args.iter().any(|a| a == JSON_FLAG) {
+        let is_envelope = super::flags::flag_value(args, &[FORMAT_FLAG])
+            .ok()
+            .flatten()
+            .as_deref()
+            == Some("json");
+        return json_removed_error(is_envelope);
+    }
+
     let parsed = match ValidateArgs::parse(args) {
         Ok(a) => a,
         Err(e) => return usage_error(&e),
     };
     let is_envelope = parsed.format == Some(Format::Json);
-
-    // RFC 054: printed once, on stderr, regardless of --quiet or
-    // whether the config even loads — the warning is about the
-    // invocation, not the validation result.
-    if parsed.json {
-        eprintln!("{}", JSON_DEPRECATION_WARNING);
-    }
 
     let ws = match Workspace::load(parsed.config_path.clone().into()) {
         Ok(ws) => ws,
@@ -221,15 +251,7 @@ pub fn run(args: &[String]) -> i32 {
     let has_errors = error_count > 0;
     let has_warnings = warning_count > 0;
 
-    if parsed.json {
-        // Unchanged since 5.18.0: a bare diagnostics array, nothing else
-        // added around it — that byte-for-byte sameness is the whole
-        // point of keeping this flag working at all.
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&diagnostics_json(&report)).unwrap_or_default()
-        );
-    } else if is_envelope {
+    if is_envelope {
         // RFC 053's envelope, with room this bare array never had: a
         // `summary` alongside `diagnostics`, addable later without
         // moving `diagnostics` or changing its type.
@@ -315,7 +337,6 @@ mod tests {
         assert_eq!(a.config_path, "apimock.toml");
         assert!(!a.strict);
         assert!(!a.quiet);
-        assert!(!a.json);
     }
 
     #[test]
@@ -325,13 +346,11 @@ mod tests {
             "config.toml".to_owned(),
             "--strict".to_owned(),
             "--quiet".to_owned(),
-            "--json".to_owned(),
         ];
         let a = ValidateArgs::parse(&args).unwrap();
         assert_eq!(a.config_path, "config.toml");
         assert!(a.strict);
         assert!(a.quiet);
-        assert!(a.json);
     }
 
     #[test]
@@ -341,6 +360,26 @@ mod tests {
             "/nonexistent/apimock.toml".to_owned(),
             "--quiet".to_owned(),
         ];
+        assert_eq!(run(&args), 2);
+    }
+
+    // ── `--json` removal (RFC 054 → 6.0.0) ─────────────────────────────
+
+    #[test]
+    fn json_flag_is_a_removal_error_not_an_unrecognised_argument() {
+        let args: Vec<String> = vec![
+            "--config".to_owned(),
+            "apimock.toml".to_owned(),
+            "--json".to_owned(),
+        ];
+        assert_eq!(run(&args), 2);
+    }
+
+    #[test]
+    fn json_flag_is_rejected_even_with_no_config_given() {
+        // Unconditional: the caller learns about `--json` regardless of
+        // what else is wrong with the invocation.
+        let args: Vec<String> = vec!["--json".to_owned()];
         assert_eq!(run(&args), 2);
     }
 }

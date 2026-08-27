@@ -32,11 +32,13 @@ $ apimock validate --config ./apimock.toml --format json
 }
 ```
 
-**`--json` (the bare diagnostics array, no envelope) still works but is
-deprecated as of 5.19.0** and removed in 6.0.0 — it now also prints a
-one-line warning to stderr, so a CI log flags it without stdout
-changing underneath an existing parser. New CI steps should use
-`--format json`; see the
+**`--json` (the bare diagnostics array, no envelope) was removed in
+6.0.0.** Using it now fails with exit `2` and a message naming
+`--format json` as the replacement, instead of the array a script might
+still be parsing — see the
+[migration guide](./migrating-to-6-0.md#cli-apimock-validate---json-is-removed)
+for the exact error text. `--format json` is the one shape to build
+new CI steps against; see the
 [CLI reference](../reference/cli-reference.md#the-response-envelope---format-json)
 for the full envelope shape and `error.kind` values.
 

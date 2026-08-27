@@ -18,17 +18,30 @@ $ echo $?
 0
 ```
 
-`--json` emits the diagnostics array instead (empty here, since
-there's nothing to report). **Deprecated as of 5.19.0** — still works,
-byte-identical, but now prints a one-line warning to stderr; `--format
-json` (the [CLI reference](../../../../docs/src/reference/cli-reference.md#the-response-envelope---format-json))
-is the replacement for new CI steps:
+`--format json` (the [CLI reference](../../../../docs/src/reference/cli-reference.md#the-response-envelope---format-json))
+emits RFC 053's envelope instead — the diagnostics array (empty here,
+since there's nothing to report) wrapped with a `summary`:
 
 ```sh
-$ apimock validate --config ./apimock.toml --json
-[]
-Validation passed (2 rules across 1 rule set(s)).
+$ apimock validate --config ./apimock.toml --format json
+{
+  "apimock": "5.19.0",
+  "result": {
+    "diagnostics": [],
+    "summary": {
+      "errors": 0,
+      "rule_sets": 1,
+      "rules": 2,
+      "warnings": 0
+    }
+  },
+  "schema": 1
+}
 ```
+
+**`--json` (the older, bare diagnostics array) was removed in 6.0.0** —
+it now fails with exit `2` and a message naming `--format json` as the
+replacement, rather than silently changing what a script parses.
 
 Exit codes: `0` clean, `2` the config couldn't even be loaded. **Exit
 `1` and `--strict` are documented but not reachable through this
