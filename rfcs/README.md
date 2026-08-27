@@ -22,9 +22,7 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-| ID  | Title |
-|-----|-------|
-| 066 | [Branching and merge policy](./proposed/066-branching-and-merge-policy.md) — who may merge, and the release-line boundary |
+*(None open.)*
 
 ## Accepted
 
@@ -110,6 +108,7 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 045 | [Configuration accepted but ignored](./done/045-configuration-accepted-but-ignored.md) | v5.18.0 |
 | 049 | [The CLI front door](./done/049-cli-front-door.md) | v5.18.0 |
 | 054 | [The v5 deprecation release](./done/054-deprecation-release.md) | v5.19.0 |
+| 066 | [Branching and merge policy](./done/066-branching-and-merge-policy.md) — who may merge; the release line is not the dev team's to move | (policy) |
 
 ## Archive
 

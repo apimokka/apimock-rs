@@ -1,10 +1,15 @@
 # RFC 066 — Branching and merge policy: who moves code, and when
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Implemented — owner approved 2026-08-27, effective
+immediately. Filed in `done/` rather than `accepted/`, following
+[RFC 000](./000-rfc-lifecycle-policy.md)'s precedent: `done/` normally
+means "released with a version", and a process policy has no version —
+its adoption *is* its implementation, and this one must be in force
+before the 6.0.0 release it governs, not after it.
 **Tracks.** Cross-cutting process policy. Not tied to any feature.
 **Touches.** No code. Governs `.git-exclude/roles/`'s silence on
 version control, and mirrors to `.git-exclude/rules/` on approval, the
-way [RFC 000](../done/000-rfc-lifecycle-policy.md) does.
+way [RFC 000](./000-rfc-lifecycle-policy.md) does.
 
 ## Summary
 
@@ -154,13 +159,34 @@ so an implementer meets it where their task ends.
 | § 2 reads as distrust | It is not about capability. The publish path binds to filenames and publisher records that no agent can inspect — the constraint is on the *action*, not the actor. It binds me equally |
 | A policy nobody reads | Kept short; § 3 stated as rules rather than narrative; pointer added where the implementer's task ends |
 
+## 6. The architect's own commits
+
+Adopted with this RFC. The asymmetry § 1 leaves open is that I commit
+RFCs, handoffs and ROADMAP changes to `main` directly, reviewed by
+no one.
+
+- **Direct to `main`:** documents nobody implements against — RFC
+  drafts, ROADMAP entries, review records, index updates.
+- **On a branch, shown to the owner before the dev team is told to
+  start:** anything the dev team will build from — a Developer Handoff
+  and its acceptance checklist.
+
+Rationale: a handoff is a specification. Three times in the 064/065
+series the dev team found my handoff wrong in a way that mattered — a
+fourth private parser I had not listed, an instruction (`one function`)
+that could not be built as written, and a path that did not exist
+(`examples/` versus `crates/apimock/examples/`). Each was caught during
+implementation, which is late. A handoff read before the work starts is
+worth the same care as code.
+
+This does not apply to a self-review: I do not approve my own RFCs, and
+nothing here changes that the owner approves them.
+
 ## Unresolved questions
 
-1. **Should the architect merge its own RFC/documentation commits, or
-   route through review too?** Today I commit RFC and ROADMAP changes to
-   `main` directly, which § 1 does not cover. It has not caused a
-   problem, and a self-review is not a review — but the asymmetry should
-   be a decision, not an omission. **Recommend: keep direct commits for
-   documents no one implements against, and require a branch for
-   anything the dev team will build from** — a handoff they read is worth
-   the same care as code.
+1. ~~**Should the architect merge its own RFC/documentation commits, or
+   route through review too?**~~ ✅ **Resolved on acceptance
+   2026-08-27** — the recommendation stood inside the accepted document,
+   so it is adopted as § 6 below. Flagged here in plain sight rather
+   than assumed silently: if the owner meant only to accept § 1–§ 5 and
+   leave this open, say so and § 6 comes back out.
