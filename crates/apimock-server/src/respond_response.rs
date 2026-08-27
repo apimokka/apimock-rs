@@ -18,6 +18,7 @@ use crate::{
     response::{
         error_response::internal_server_error_response,
         file_response::FileResponse,
+        json_response::json_response,
         status_code_response::{status_code_response, status_code_response_with_message},
         text_response::text_response,
     },
@@ -26,12 +27,17 @@ use crate::{
 
 /// Produce the HTTP response for a matched `Respond` declaration.
 ///
-/// # Why the branches are ordered file → text → status → error
+/// # Why the branches are ordered file → text → json → status → error
 ///
-/// The fields are mutually specialised:
+/// The fields are mutually specialised (RFC 065: `file_path`, `text`
+/// and `json` are the three body sources, `Respond::validate` rejects
+/// more than one being set):
 /// - `file_path` serves a file (possibly with CSV→JSON conversion).
 /// - `text` + `status` yields a custom-status text response.
 /// - `text` alone yields a plain 200 text response.
+/// - `json` (+ an optional `status`) yields an `application/json`
+///   response, parsed with the same JSON5 parser `Respond::validate`
+///   already checked it against at load time.
 /// - `status` alone yields an empty body with that status.
 ///
 /// `Respond::validate` rejects nonsensical combinations at startup, so
@@ -101,6 +107,16 @@ pub async fn respond_response(
                 request_headers,
             ),
         };
+    }
+
+    if let Some(json_str) = respond.json.as_ref() {
+        return json_response(
+            json_str.as_str(),
+            respond.status_code.as_ref(),
+            respond.headers.as_ref(),
+            request_headers,
+            None,
+        );
     }
 
     if let Some(status_code) = respond.status_code.as_ref() {

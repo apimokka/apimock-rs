@@ -69,8 +69,8 @@ impl Config {
 
         ret.compute_fallback_respond_dir(fallback_respond_dir_path)?;
 
-        if !ret.validate() {
-            return Err(ConfigError::Validation);
+        if let Err(reason) = ret.validate() {
+            return Err(ConfigError::Validation { reason });
         }
 
         log::info!("{}", ret);
@@ -209,18 +209,17 @@ impl Config {
         Some(format!("{}:{}", listener.ip_address, port))
     }
 
-    /// Validate settings. Returns `false` when any subcomponent's
-    /// validator returned false — they log details at their own call
-    /// site so the user sees every problem in one pass.
-    fn validate(&self) -> bool {
+    /// Validate settings. Returns the first failure's reason (RFC 065 —
+    /// see `ServiceConfig::validate`'s own doc comment for why this
+    /// isn't a bare `bool` any more).
+    fn validate(&self) -> Result<(), String> {
         if let Some(listener) = self.listener.as_ref() {
             if !listener.validate() {
-                return false;
+                return Err("invalid listener configuration".to_owned());
             }
 
             if self.listener_http_addr().is_none() && self.listener_https_addr().is_none() {
-                log::error!("at least one listener (http or https) is required");
-                return false;
+                return Err("at least one listener (http or https) is required".to_owned());
             }
         }
         self.service.validate()

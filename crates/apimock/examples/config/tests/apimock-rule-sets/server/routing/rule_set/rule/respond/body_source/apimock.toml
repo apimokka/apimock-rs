@@ -1,0 +1,5 @@
+[service]
+rule_sets = [
+    "body_source.toml",
+]
+fallback_respond_dir = "."

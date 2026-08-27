@@ -50,25 +50,24 @@ Source: `handle_options` in `crates/apimock-server/src/server.rs`. See
 [Matching order and precedence](../how-it-works/matching-order-and-precedence.md)
 for where this sits in the overall request flow.
 
-## Custom headers via `respond.headers` — uneven support
+## Custom headers via `respond.headers`
 
-`respond.headers` is meant to add or override headers on a per-rule
-basis. Whether it actually applies depends on which other `respond`
-fields are set, and the exact behaviour differs by case:
+`respond.headers` adds or overrides headers on a per-rule basis,
+**uniformly** across every `respond` shape — `file_path` (JSON, JSON5,
+CSV, binary, or plain text), `text`, `json`, and `status`-only, with or
+without a custom status code. An explicit `content-type` in
+`respond.headers` always overrides whatever content-type the response
+would otherwise derive: from a file's extension, from `text`'s
+`text/plain; charset=utf-8` default, or from `json`'s
+`application/json` default.
 
-| `respond` shape | Custom headers applied? |
-|---|---|
-| `file_path` → JSON, JSON5, or CSV | Yes, except a custom `content-type` is still overwritten by the default afterward |
-| `file_path` → binary (non-UTF-8) | Yes, same `content-type` caveat |
-| `file_path` → plain text (`.txt`, `.html`, anything else UTF-8) | **No — every custom header is dropped, not only `content-type`** |
-| `text` alone (no `status`) | Yes, except a custom `content-type` is overwritten by the default afterward |
-| `text` + `status` | **No — every custom header is dropped** |
-| `status` alone | **No — every custom header is dropped** |
-
-In short: a non-`content-type` custom header only reliably survives on
-a `file_path` response to a JSON/JSON5/CSV/binary file, or on a
-`text`-only response. A custom `content-type` override doesn't survive
-anywhere. This is a product defect, not documented behaviour to design
-around — if you need a specific `content-type` today, its file
-extension deciding the served type (via `file_path`) is the only path
-that reliably sets it.
+This section used to carry a per-shape table of exceptions — several
+`respond` shapes silently dropped custom headers entirely (RFC 045),
+and every shape that *did* honour a custom `content-type` still had it
+overwritten by the derived default immediately afterward (RFC 065).
+Both are now fixed by routing every response-building call site
+through one shared step (`ResponseHandler::with_custom_headers`,
+applied only after the body — and its derived content-type — is
+already set), so there's no longer a shape-by-shape exception to list:
+if you set `respond.headers`, including `content-type`, it's honoured,
+on every shape.

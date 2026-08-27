@@ -427,6 +427,7 @@ mod tests {
                     text: Some(format!("response_{}", i)),
                     file_path: None,
                     csv_records_key: None,
+                    json: None,
                     status: None,
                     status_code: None,
                     headers: None,

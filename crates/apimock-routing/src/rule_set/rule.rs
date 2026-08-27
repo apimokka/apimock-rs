@@ -116,9 +116,23 @@ impl Rule {
         ret
     }
 
-    pub fn validate(&self, dir_prefix: &str, rule_idx: usize, rule_set_idx: usize) -> bool {
-        self.when.validate(rule_idx, rule_set_idx)
-            && self.respond.validate(dir_prefix, rule_idx, rule_set_idx)
+    /// See `Respond::validate` for why this returns `Result<(), String>`
+    /// rather than `bool` — the reason has to reach a caller that may
+    /// have no logger installed at all (RFC 065).
+    pub fn validate(
+        &self,
+        dir_prefix: &str,
+        rule_idx: usize,
+        rule_set_idx: usize,
+    ) -> Result<(), String> {
+        if !self.when.validate(rule_idx, rule_set_idx) {
+            return Err(format!(
+                "invalid `when` clause (rule #{} in rule set #{})",
+                rule_idx + 1,
+                rule_set_idx + 1
+            ));
+        }
+        self.respond.validate(dir_prefix, rule_idx, rule_set_idx)
     }
 }
 

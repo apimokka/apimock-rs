@@ -33,6 +33,8 @@ pub mod root_config_dir {
     pub const RULE_WHEN_REQUEST_RULE_OP: &str =
         "apimock-rule-sets/server/routing/rule_set/rule/when/request/rule_op";
     pub const RULE_RESPOND: &str = "apimock-rule-sets/server/routing/rule_set/rule/respond";
+    pub const RULE_RESPOND_BODY_SOURCE: &str =
+        "apimock-rule-sets/server/routing/rule_set/rule/respond/body_source";
     pub const MIDDLEWARE: &str = "apimock-middleware";
     pub const CONFIG_FREE_ENV: &str = "apimock-rule-sets/@extra-test-cases/config-free-env";
 }

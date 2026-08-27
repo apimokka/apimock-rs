@@ -65,52 +65,54 @@ impl ServiceConfig {
     /// fallback dir, every rule's respond.file_path, etc.). All that
     /// state is assembled by config loading. Routing has per-rule
     /// validators, which this method calls.
-    pub fn validate(&self) -> bool {
-        let rule_sets_validate =
-            self.rule_sets
-                .iter()
-                .enumerate()
-                .all(|(rule_set_idx, rule_set)| {
-                    let prefix_validate = rule_set.prefix.is_none()
-                        || rule_set
-                            .prefix
-                            .as_ref()
-                            .unwrap()
-                            .validate(rule_set.dir_prefix().as_str(), rule_set_idx);
+    ///
+    /// # Why `Result<(), String>` and not `bool`
+    ///
+    /// See `apimock_routing::Respond::validate`'s own doc comment (RFC
+    /// 065) — the short version: a `bool` failure reached
+    /// `apimock validate`/`get`/`set`/`match-test` as a bare
+    /// "configuration validation failed," since none of them install a
+    /// logger. Returning the first failure's own reason and threading
+    /// it up to `ConfigError::Validation { reason }` fixes that for
+    /// every validator here, not only the respond-side ones this RFC
+    /// actually touches — `prefix`/`default`/`guard`/`when` still only
+    /// log a *more* detailed reason at their own call site (out of this
+    /// RFC's scope to change), but the caller now gets *some* concrete
+    /// reason either way, instead of none.
+    pub fn validate(&self) -> Result<(), String> {
+        for (rule_set_idx, rule_set) in self.rule_sets.iter().enumerate() {
+            if let Some(prefix) = rule_set.prefix.as_ref()
+                && !prefix.validate(rule_set.dir_prefix().as_str(), rule_set_idx)
+            {
+                return Err(format!("invalid prefix (rule set #{})", rule_set_idx + 1));
+            }
 
-                    let default_validate =
-                        rule_set.default.is_none() || rule_set.default.as_ref().unwrap().validate();
+            if let Some(default) = rule_set.default.as_ref()
+                && !default.validate()
+            {
+                return Err(format!("invalid default (rule set #{})", rule_set_idx + 1));
+            }
 
-                    let guard_validate =
-                        rule_set.guard.is_none() || rule_set.guard.as_ref().unwrap().validate();
+            if let Some(guard) = rule_set.guard.as_ref()
+                && !guard.validate()
+            {
+                return Err(format!("invalid guard (rule set #{})", rule_set_idx + 1));
+            }
 
-                    let dir_prefix = rule_set.dir_prefix();
-                    let rules_validate =
-                        rule_set.rules.iter().enumerate().all(|(rule_idx, rule)| {
-                            rule.when.validate(rule_idx, rule_set_idx)
-                                && rule.respond.validate(
-                                    dir_prefix.as_str(),
-                                    rule_idx,
-                                    rule_set_idx,
-                                )
-                        });
-
-                    prefix_validate && default_validate && guard_validate && rules_validate
-                });
-        if !rule_sets_validate {
-            log::error!("something wrong in rule sets");
+            let dir_prefix = rule_set.dir_prefix();
+            for (rule_idx, rule) in rule_set.rules.iter().enumerate() {
+                rule.validate(dir_prefix.as_str(), rule_idx, rule_set_idx)?;
+            }
         }
 
-        let fallback_respond_dir_validate = Path::new(self.fallback_respond_dir.as_str()).exists();
-        if !fallback_respond_dir_validate {
-            log::error!(
-                "{} fallback_respond_dir: {}",
-                style("invalid").red(),
+        if !Path::new(self.fallback_respond_dir.as_str()).exists() {
+            return Err(format!(
+                "invalid fallback_respond_dir: {}",
                 self.fallback_respond_dir
-            );
+            ));
         }
 
-        rule_sets_validate && fallback_respond_dir_validate
+        Ok(())
     }
 }
 

@@ -91,7 +91,7 @@ pub fn kind_for_config_error(e: &apimock_config::ConfigError) -> ErrorKind {
         ConfigError::ConfigRead { .. } => ErrorKind::ConfigUnreadable,
         ConfigError::PathResolve { .. } => ErrorKind::ConfigUnreadable,
         ConfigError::ConfigParse { .. } => ErrorKind::ConfigInvalid,
-        ConfigError::Validation => ErrorKind::ConfigInvalid,
+        ConfigError::Validation { .. } => ErrorKind::ConfigInvalid,
         ConfigError::RuleSet(_) => ErrorKind::ConfigInvalid,
         _ => ErrorKind::Internal,
     }

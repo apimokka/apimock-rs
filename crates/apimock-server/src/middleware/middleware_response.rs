@@ -37,11 +37,12 @@ impl MiddlewareResponse {
             let joined_file_path = match middleware_dir_path {
                 Some(x) => x.join(rhai_response_file_path),
                 None => {
+                    log::error!(
+                        "failed to get middleware parent dir: {}",
+                        self.file_path.as_str(),
+                    );
                     return Some(internal_server_error_response(
-                        &format!(
-                            "failed to get middleware parent dir: {}",
-                            self.file_path.as_str(),
-                        ),
+                        "failed to resolve middleware response file",
                         &self.request_headers,
                     ));
                 }
@@ -50,13 +51,13 @@ impl MiddlewareResponse {
             match joined_file_path.to_str() {
                 Some(x) => x.to_owned(),
                 None => {
-                    let msg = format!(
+                    log::error!(
                         "middleware response file path is invalid: {}/{}",
                         self.file_path.as_str(),
                         rhai_response_file_path
                     );
                     return Some(internal_server_error_response(
-                        msg.as_str(),
+                        "middleware response file path is invalid",
                         &self.request_headers,
                     ));
                 }
@@ -83,8 +84,9 @@ impl MiddlewareResponse {
         Some(response::json_response::json_response(
             json_str,
             None,
+            None,
             &self.request_headers,
-            self.file_path.as_str(),
+            Some(self.file_path.as_str()),
         ))
     }
 

@@ -220,14 +220,16 @@ impl SetRuleArgs {
         })
     }
 
-    fn respond_text(&self) -> Option<String> {
-        self.json.clone().or_else(|| self.text.clone())
-    }
-
     fn respond_payload(&self) -> RespondPayload {
+        // RFC 065: `--json`/`--text` write to `respond.json`/
+        // `respond.text` respectively, never merged — `--json` used to
+        // write into `respond.text`, which is D1: the body was correct,
+        // the server derived `text/plain` for it regardless, since
+        // `respond.text` carries no memory of having come from `--json`.
         let mut payload = RespondPayload::default();
         payload.file_path = self.file_path.clone();
-        payload.text = self.respond_text();
+        payload.text = self.text.clone();
+        payload.json = self.json.clone();
         payload.status = self.status;
         payload.delay_milliseconds = self.delay_ms;
         payload
@@ -638,6 +640,7 @@ fn apply_update(
             let mut payload = RespondPayload::default();
             payload.file_path = current.file_path.clone();
             payload.text = current.text.clone();
+            payload.json = current.json.clone();
             payload.status = current.status;
             payload.delay_milliseconds = current.delay_response_milliseconds;
             payload

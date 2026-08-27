@@ -40,6 +40,50 @@ No other CLI invocation that works today is expected to change.
 to it rather than reshaping what it prints. Bare `apimock` keeps working
 as an alias for `apimock serve`.
 
+## `respond.json`, and rules written by an earlier `apimock set --json`
+
+`respond` now names what kind of body it serves. Alongside `file_path`
+and `text` there is **`json`**, and a rule that uses it is served as
+`application/json`:
+
+```toml
+[rules.respond]
+json = '{"id":1,"name":"ada"}'
+```
+
+A rule declares **exactly one** of `file_path`, `text` and `json`.
+Content-type is derived from that choice, and an explicit
+`respond.headers.content-type` still overrides it — on every one of
+them, which was not previously true for `.json` files (see
+[Response headers](../reference/response-headers.md)).
+
+**`text` is unchanged and stays `text/plain`,** including when its
+content happens to be JSON. That is deliberate: a body that looks like
+JSON is not a JSON body.
+
+**This matters if you used `apimock set --json` before 6.0.0.** It
+wrote `respond.text`, so those rules serve `text/plain; charset=utf-8`
+— the body is correct, the header is not, and a client calling
+`.json()` under a strict library may reject it. **Existing configs are
+not rewritten automatically**, because silently editing your config on
+load is more surprising than the problem it fixes. To fix a rule,
+either rename the field:
+
+```toml
+# before                        # after
+[rules.respond]                 [rules.respond]
+text = '{"id":1}'               json = '{"id":1}'
+```
+
+or re-run `apimock set --json` against it, which now writes `json`.
+
+**Also new:** a rule serving a `.json` file whose contents are not
+valid JSON now **fails `apimock validate` and fails to load**, instead
+of loading and returning `500` on every request. If a config that
+worked before now refuses to load, this is the likely reason — the
+error names the file and the position. Such a rule could never serve;
+apimock now says so at load time rather than per request.
+
 ## Library: five public structs are now `#[non_exhaustive]`
 
 **Done, on `main`, ahead of 6.0.0's eventual release** (RFC 052) — this

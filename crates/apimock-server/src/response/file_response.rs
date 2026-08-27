@@ -128,20 +128,29 @@ impl FileResponse {
                         self.binary_content = Some(content);
                         self.binary_content_type_response()
                     }
-                    Ok(Err(err)) => internal_server_error_response(
-                        &format!("{}: failed to read file - {}", self.file_path, err),
-                        &self.request_headers,
-                    ),
-                    Err(err) => internal_server_error_response(
-                        &format!("{}: async task failed - {}", self.file_path, err),
-                        &self.request_headers,
-                    ),
+                    Ok(Err(err)) => {
+                        log::error!("failed to read file ({}): {}", self.file_path, err);
+                        internal_server_error_response(
+                            "failed to read response file",
+                            &self.request_headers,
+                        )
+                    }
+                    Err(err) => {
+                        log::error!("async task failed ({}): {}", self.file_path, err);
+                        internal_server_error_response(
+                            "failed to read response file",
+                            &self.request_headers,
+                        )
+                    }
                 }
             }
-            Err(err) => internal_server_error_response(
-                &format!("{}: async task failed - {}", self.file_path, err),
-                &self.request_headers,
-            ),
+            Err(err) => {
+                log::error!("async task failed ({}): {}", self.file_path, err);
+                internal_server_error_response(
+                    "failed to read response file",
+                    &self.request_headers,
+                )
+            }
         }
     }
 
@@ -180,9 +189,10 @@ impl FileResponse {
         let json_str = self.text_content.clone().unwrap_or_default();
         json_response(
             json_str.as_str(),
+            None,
             self.custom_headers.as_ref(),
             &self.request_headers,
-            self.file_path.as_str(),
+            Some(self.file_path.as_str()),
         )
     }
 
@@ -196,8 +206,12 @@ impl FileResponse {
         let csv_headers = if let Ok(csv_headers) = rdr.headers() {
             csv_headers.clone()
         } else {
+            log::error!(
+                "failed to analyze csv headers ({})",
+                self.file_path.as_str()
+            );
             return internal_server_error_response(
-                &format!("{}: failed to analyze csv headers", self.file_path.as_str()),
+                "failed to analyze csv headers",
                 &self.request_headers,
             );
         };
@@ -228,43 +242,52 @@ impl FileResponse {
                 match body {
                     Ok(body) => json_response(
                         body.as_str(),
+                        None,
                         self.custom_headers.as_ref(),
                         &self.request_headers,
-                        self.file_path.as_str(),
+                        Some(self.file_path.as_str()),
                     ),
-                    Err(err) => internal_server_error_response(
-                        &format!(
-                            "{}: failed to convert csv records to json response - {}",
+                    Err(err) => {
+                        log::error!(
+                            "failed to convert csv records to json response ({}): {}",
                             self.file_path.as_str(),
                             err
-                        ),
-                        &self.request_headers,
-                    ),
+                        );
+                        internal_server_error_response(
+                            "failed to convert csv records to json response",
+                            &self.request_headers,
+                        )
+                    }
                 }
             }
-            Err(err) => internal_server_error_response(
-                &format!(
-                    "{}: failed to analyze csv records - {}",
+            Err(err) => {
+                log::error!(
+                    "failed to analyze csv records ({}): {}",
                     self.file_path.as_str(),
                     err
-                ),
-                &self.request_headers,
-            ),
+                );
+                internal_server_error_response(
+                    "failed to analyze csv records",
+                    &self.request_headers,
+                )
+            }
         }
     }
 
     /// binary file response
+    ///
+    /// `with_custom_headers` runs *after* `with_binary_body` (RFC 065)
+    /// — previously reversed, the same ordering bug as `json_response`
+    /// (D2): `with_binary_body` always sets a derived `content-type`,
+    /// so applying custom headers first let that overwrite an explicit
+    /// one every time, on every binary `file_path` response (`.png`,
+    /// `.pdf`, …).
     fn binary_content_type_response(&self) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
-        let mut response_handler = ResponseHandler::default();
-
-        if let Some(custom_headers) = self.custom_headers.clone() {
-            response_handler = response_handler.with_headers(custom_headers);
-        }
-
         let content = self.binary_content.clone().unwrap_or_default().to_owned();
         let content_type = binary_content_type(self.file_path.as_str());
-        response_handler
+        ResponseHandler::default()
             .with_binary_body(content, Some(content_type))
+            .with_custom_headers(self.custom_headers.as_ref())
             .into_response(&self.request_headers)
     }
 }

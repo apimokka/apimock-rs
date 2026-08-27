@@ -62,7 +62,7 @@ pub type ConfigResult<T> = Result<T, ConfigError>;
 ///         ConfigError::ConfigRead { .. } => "read",
 ///         ConfigError::ConfigParse { .. } => "parse",
 ///         ConfigError::PathResolve { .. } => "path",
-///         ConfigError::Validation => "validation",
+///         ConfigError::Validation { .. } => "validation",
 ///         ConfigError::RuleSet(_) => "rule_set",
 ///         // no `_` arm — exhaustive matches outside the crate must
 ///         // carry one once the enum is `#[non_exhaustive]`.
@@ -105,10 +105,14 @@ pub enum ConfigError {
         source: io::Error,
     },
 
-    /// Startup-time validation failed — each individual failure is
-    /// already logged at its call site.
-    #[error("configuration validation failed")]
-    Validation,
+    /// Startup-time validation failed. `reason` is the first failure
+    /// encountered (RFC 065) — previously a bare unit variant whose
+    /// only detail lived in a `log::error!` call at the failing
+    /// validator's own site, which never reached a caller with no
+    /// logger installed (`apimock validate`/`get`/`set`/`match-test`,
+    /// none of which do).
+    #[error("configuration validation failed: {reason}")]
+    Validation { reason: String },
 
     /// A rule-set file failed to load or parse. Wraps the routing
     /// crate's error type.
@@ -135,7 +139,7 @@ impl ConfigError {
             ConfigError::ConfigRead { .. } => ConfigErrorKind::Read,
             ConfigError::ConfigParse { .. } => ConfigErrorKind::Parse,
             ConfigError::PathResolve { .. } => ConfigErrorKind::PathResolve,
-            ConfigError::Validation => ConfigErrorKind::Validation,
+            ConfigError::Validation { .. } => ConfigErrorKind::Validation,
             ConfigError::RuleSet(_) => ConfigErrorKind::RuleSet,
         }
     }
@@ -377,7 +381,13 @@ mod tests {
             .kind(),
             ConfigErrorKind::PathResolve
         );
-        assert_eq!(ConfigError::Validation.kind(), ConfigErrorKind::Validation);
+        assert_eq!(
+            ConfigError::Validation {
+                reason: "x".to_owned()
+            }
+            .kind(),
+            ConfigErrorKind::Validation
+        );
         assert_eq!(
             ConfigError::RuleSet(apimock_routing::RoutingError::RuleSetRead {
                 path: PathBuf::from("x"),
@@ -391,7 +401,10 @@ mod tests {
     #[test]
     fn workspace_error_kind_matches_every_variant() {
         assert_eq!(
-            WorkspaceError::Config(ConfigError::Validation).kind(),
+            WorkspaceError::Config(ConfigError::Validation {
+                reason: "x".to_owned()
+            })
+            .kind(),
             WorkspaceErrorKind::Config
         );
         assert_eq!(

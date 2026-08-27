@@ -369,7 +369,7 @@ by `get` can be passed to `--rule-set`/`--rule` unmodified.
 | `--method <METHOD>` | The rule's method condition |
 | `--header`, `-H "Name: value"` | Add a header condition; repeatable. With `--rule`, layers onto the existing rule's conditions rather than replacing them |
 | `--status <code>` | The response status code |
-| `--json <value>` | The response body, as JSON (validated at parse time, stored as text) |
+| `--json <value>` | The response body, as JSON (validated at parse time). Writes `respond.json`, served as `application/json` (RFC 065) |
 | `--text <value>` | The response body, as plain text — mutually exclusive with `--json` |
 | `--file <path>` | The response body, served from a file |
 | `--delay <ms>` | Delay the response by this many milliseconds |

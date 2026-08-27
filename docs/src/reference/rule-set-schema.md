@@ -82,23 +82,36 @@ Every operator for `url_path`/`headers`/`body.json` is listed in the
 
 ### `respond`
 
-At least one of `file_path`, `text`, or `status` is required.
+At least one of `file_path`, `text`, `json`, or `status` is required.
 
 | Field | Meaning |
 |---|---|
 | `file_path` | Serve this file's content — extension decides JSON/JSON5/CSV/binary/text handling |
-| `text` | A literal response body (plain text unless combined with `status`, see caveats) |
+| `text` | A literal response body, always served as `text/plain; charset=utf-8` (unless overridden by `headers`) — including when its content happens to look like JSON. A body that looks like JSON is not a JSON body; use `json` for that |
+| `json` | A literal response body, declared as JSON — served as `application/json` (unless overridden by `headers`). Validated at load time: must parse, and loading fails otherwise (see below) |
 | `status` | The HTTP status code |
-| `headers` | Custom headers — support is uneven; see [Response headers](./response-headers.md) for exactly which combinations honour it |
+| `headers` | Custom headers, honoured uniformly on every shape above — see [Response headers](./response-headers.md) |
 | `delay_response_milliseconds` | Sleep this long before responding — works correctly at the per-rule level |
 | `csv_records_key` | For a CSV `file_path`, the dotted path under which the parsed rows are nested in the JSON response (default key: `records`) |
 
-Validity rules: `file_path` and `text` are mutually exclusive.
-`file_path` combined with `status` is rejected — status override is
-only available with `text`. `text` combined with `status` is allowed
-(a custom-status message body). `file_path` must resolve to a file
-that exists under the rule set's `respond_dir`/`prefix.respond_dir` —
-checked at startup, not per-request.
+**Content-type is derived from which field is set** — `file_path` from
+its extension, `text` always `text/plain; charset=utf-8`, `json`
+always `application/json` — and an explicit `headers.content-type`
+always overrides that default, on every one of the three.
+
+Validity rules: `file_path`, `text` and `json` are **mutually
+exclusive** — exactly one may be set. `file_path` combined with
+`status` is rejected — a custom status code is only available with
+`text` or `json`. `text`/`json` combined with `status` is allowed (a
+custom-status message body). `file_path` must resolve to a file that
+exists under the rule set's `respond_dir`/`prefix.respond_dir` — and
+if its extension is `.json`/`.json5`, its content must parse as JSON
+too. Both checks run at startup (`apimock validate`, and loading a
+config to run the server), not per-request: a rule that couldn't be
+served either way now fails to load, naming the file and the parse
+position, instead of loading and returning `500` on the first request
+that reached it. `json`'s own inline value is validated the same way,
+naming the rule.
 
 ### `priority` and `weight`
 

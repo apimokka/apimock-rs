@@ -412,6 +412,9 @@ fn respond_table(r: &Respond) -> Table {
     if let Some(text) = r.text.as_ref() {
         t.insert("text".to_owned(), Value::String(text.clone()));
     }
+    if let Some(json) = r.json.as_ref() {
+        t.insert("json".to_owned(), Value::String(json.clone()));
+    }
     if let Some(s) = r.status.as_ref() {
         t.insert("status".to_owned(), Value::Integer(i64::from(*s)));
     }

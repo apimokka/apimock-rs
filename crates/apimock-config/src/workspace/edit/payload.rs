@@ -250,6 +250,7 @@ pub(super) fn build_respond_from_payload(
     let mut respond = apimock_routing::Respond::default();
     respond.file_path = payload.file_path;
     respond.text = payload.text;
+    respond.json = payload.json;
     respond.status = payload.status;
     // status_code: left None — derived later.
     respond.delay_response_milliseconds = payload.delay_milliseconds;

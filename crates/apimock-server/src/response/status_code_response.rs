@@ -15,11 +15,10 @@ pub fn status_code_response(
     headers: Option<&HashMap<String, Option<String>>>,
     request_headers: &HeaderMap,
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
-    let mut response_handler = ResponseHandler::default().with_status(status_code);
-    if let Some(headers) = headers {
-        response_handler = response_handler.with_headers(headers.to_owned());
-    }
-    response_handler.into_response(request_headers)
+    ResponseHandler::default()
+        .with_status(status_code)
+        .with_custom_headers(headers)
+        .into_response(request_headers)
 }
 
 /// custom status code response with message in body
@@ -33,11 +32,9 @@ pub fn status_code_response_with_message(
     headers: Option<&HashMap<String, Option<String>>>,
     request_headers: &HeaderMap,
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
-    let mut response_handler = ResponseHandler::default()
+    ResponseHandler::default()
         .with_status(status_code)
-        .with_text(message, None);
-    if let Some(headers) = headers {
-        response_handler = response_handler.with_headers(headers.to_owned());
-    }
-    response_handler.into_response(request_headers)
+        .with_text(message, None)
+        .with_custom_headers(headers)
+        .into_response(request_headers)
 }

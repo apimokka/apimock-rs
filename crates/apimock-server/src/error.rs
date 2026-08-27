@@ -136,7 +136,10 @@ mod tests {
             ServerErrorKind::Io
         );
         assert_eq!(
-            ServerError::Config(apimock_config::ConfigError::Validation).kind(),
+            ServerError::Config(apimock_config::ConfigError::Validation {
+                reason: "x".to_owned()
+            })
+            .kind(),
             ServerErrorKind::Config
         );
     }

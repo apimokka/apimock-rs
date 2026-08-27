@@ -1,0 +1,43 @@
+[prefix]
+url_path = "/body-source/"
+respond_dir = "@body-source-dir"
+
+[[rules]]
+when.request.url_path = "/file-json-no-header"
+respond = { file_path = "data.json" }
+
+[[rules]]
+when.request.url_path = "/file-json-custom-header"
+respond = { file_path = "data.json", headers = { "content-type" = "application/vnd.custom+json" } }
+
+[[rules]]
+when.request.url_path = "/json-no-header"
+respond = { json = '{"id":1,"name":"ada"}' }
+
+[[rules]]
+when.request.url_path = "/json-custom-header"
+respond = { json = '{"id":1}', headers = { "content-type" = "application/vnd.custom+json" } }
+
+[[rules]]
+when.request.url_path = "/json-inverted-to-text"
+respond = { json = '{"id":1}', headers = { "content-type" = "text/plain" } }
+
+[[rules]]
+when.request.url_path = "/json-with-status"
+respond = { json = '{"error":"nope"}', status = 404 }
+
+[[rules]]
+when.request.url_path = "/text-looks-like-json"
+respond = { text = '{"id":1}' }
+
+[[rules]]
+when.request.url_path = "/file-binary-no-header"
+respond = { file_path = "image.png" }
+
+[[rules]]
+when.request.url_path = "/file-binary-custom-header"
+respond = { file_path = "image.png", headers = { "content-type" = "application/vnd.custom-binary" } }
+
+[[rules]]
+when.request.url_path = "/malformed-csv"
+respond = { file_path = "malformed.csv" }

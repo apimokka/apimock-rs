@@ -132,6 +132,36 @@ impl ResponseHandler {
         self
     }
 
+    /// Apply an operator's custom `respond.headers`, always **last** —
+    /// after whichever `with_text`/`with_json_body`/`with_binary_body`
+    /// call already set a default `content-type` (RFC 065's override
+    /// rule: an explicit `content-type` always wins over the derived
+    /// default, on every body source, uniformly).
+    ///
+    /// # Why one method instead of each call site's own `if let`
+    ///
+    /// Before this, every response-building function repeated
+    /// `if let Some(custom_headers) = custom_headers { response_handler
+    /// = response_handler.with_headers(custom_headers.to_owned()); }`
+    /// itself, and the two places that got the ordering wrong
+    /// (`json_response`, and `FileResponse`'s own binary-file path) each
+    /// silently let the derived content-type win instead — because
+    /// `self.headers` is a plain `HashMap`, whichever call happens last
+    /// wins for that key, and there was nothing forcing "last" to always
+    /// mean "the custom headers." Routing every call site through this
+    /// one method, called only after the body is set, makes that
+    /// ordering the only way to call it — not a convention that can
+    /// drift a third time.
+    pub fn with_custom_headers(
+        self,
+        custom_headers: Option<&HashMap<String, Option<String>>>,
+    ) -> Self {
+        match custom_headers {
+            Some(custom_headers) => self.with_headers(custom_headers.to_owned()),
+            None => self,
+        }
+    }
+
     /// add text to body
     pub fn with_text(mut self, text: impl Into<String>, content_type: Option<&str>) -> Self {
         let content_type = if let Some(content_type) = content_type {

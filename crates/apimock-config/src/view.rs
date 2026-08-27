@@ -505,14 +505,18 @@ pub enum BodyOp {
 
 /// Payload for `UpdateRespond`.
 ///
-/// The three fields are mutually specialised: exactly one of
-/// `file_path` / `text` / `status` should be populated. Validation
-/// catches cases that violate this.
+/// `file_path` / `text` / `json` are mutually specialised (RFC 065):
+/// exactly one should be populated. Validation catches cases that
+/// violate this.
 #[derive(Clone, Debug, Default)]
 #[non_exhaustive]
 pub struct RespondPayload {
     pub file_path: Option<String>,
     pub text: Option<String>,
+    /// The response body, declared as JSON (RFC 065) — served as
+    /// `application/json` rather than `text`'s `text/plain`. Mutually
+    /// exclusive with `file_path` and `text`.
+    pub json: Option<String>,
     pub status: Option<u16>,
     pub delay_milliseconds: Option<u32>,
 }

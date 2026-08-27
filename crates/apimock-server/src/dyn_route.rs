@@ -91,12 +91,25 @@ pub async fn dyn_route_content(
 
     let entries = match read_dir_result {
         Ok(Ok(v)) => v,
+        // Both `err` variants below carry `dir`'s own filesystem path
+        // (RFC 065 D4) — logged in full, server-side; the client only
+        // ever sees a generic message naming the problem, not the
+        // server's directory layout.
         Ok(Err(err)) => {
-            return internal_server_error_response(err.as_str(), request_headers);
+            log::error!("{}", err);
+            return internal_server_error_response(
+                "failed to read fallback directory",
+                request_headers,
+            );
         }
         Err(err) => {
+            log::error!(
+                "failed to get dir entries ({}): {}",
+                dir.to_string_lossy(),
+                err
+            );
             return internal_server_error_response(
-                &format!("failed to get dir entries (async handling: {})", err),
+                "failed to read fallback directory",
                 request_headers,
             );
         }

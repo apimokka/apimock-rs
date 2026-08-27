@@ -32,6 +32,11 @@ toml                        = { workspace = true }
 # path and diff.rs's canonical-comparison path — unchanged by this.
 toml_edit                   = { workspace = true }
 thiserror                   = { workspace = true }
+# RFC 065: `Workspace::validate`'s per-node diagnostics mirror
+# `apimock_routing::Respond::validate`'s JSON5 checks (inline `json`,
+# and a referenced `.json`/`.json5` file's content), so a GUI diagnostic
+# and a load-time failure never disagree about the same rule.
+json5                        = { workspace = true }
 uuid                        = { workspace = true }
 # `tempfile` provides `NamedTempFile::persist` for atomic file
 # replacement during `Workspace::save`. Same crate the dev-deps already
