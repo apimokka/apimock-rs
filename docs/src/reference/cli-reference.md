@@ -32,6 +32,23 @@ A near-match suggestion appears where one exists. The message goes to
 stderr, exit code `2`, and no server is started — a typo used to start a
 server on a port nobody asked for; now it doesn't start anything.
 
+The same is true one position over: a bare word where a subcommand goes
+that is not `get`, `set`, `match-test` or `validate` is an error, not a
+silent invitation to start a server:
+
+```
+$ apimock banana
+apimock: unknown subcommand 'banana'
+$ apimock gett
+apimock: unknown subcommand 'gett'; did you mean 'get'?
+```
+
+Same exit code, same stream, same near-match treatment — this is
+specifically about the *subcommand* position (the first argument after
+`apimock`); a flag there (`apimock -p 3001`) is a flag attempt, not a
+subcommand attempt, and falls under the flag rule above instead. There
+is no `serve` subcommand — bare `apimock` starts the server directly.
+
 ## `--flag=value`
 
 Every value-taking flag on every command accepts `--flag=value`

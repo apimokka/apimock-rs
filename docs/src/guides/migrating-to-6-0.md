@@ -50,10 +50,37 @@ is the one place, across the whole 6.0.0 release, where a removed CLI
 flag fails this way (RFC 048 § 7) — the general policy for breaking CLI
 invocations at a major version, not specific to this one flag.
 
-No other CLI invocation that works today is expected to change.
 `match-test`'s text output is untouched — 6.0.0 *adds* `--format json`
-to it rather than reshaping what it prints. Bare `apimock` keeps working
-as an alias for `apimock serve`.
+to it rather than reshaping what it prints. **Bare `apimock` keeps
+working — there is no `serve` subcommand to be an alias for.** It
+starts the zero-config server directly; nothing here changes that.
+
+## CLI: an unknown subcommand is now a usage error
+
+**Done, on `main`, ahead of 6.0.0's eventual release.** A bare word in
+the subcommand position that isn't `get`, `set`, `match-test` or
+`validate` used to silently start a server — `apimock banana`, a typo
+like `apimock gte`, even `apimock serve` all ran a mock server until
+killed, with nothing on stderr to say the word wasn't recognised. Fixed
+the same way RFC 059 already fixed an unknown *flag*: exit `2`, stderr
+names the unknown subcommand, a near-match suggestion where the edit
+distance makes one plausible, **no server started**:
+
+```sh
+$ apimock banana
+apimock: unknown subcommand 'banana'
+$ echo $?
+2
+
+$ apimock validat -c apimock.toml
+apimock: unknown subcommand 'validat'; did you mean 'validate'?
+$ echo $?
+2
+```
+
+A flag at the same position (`apimock -p 3001`, `apimock --init`) is
+unaffected — this only closes the bare-word case a flag typo there was
+already caught for.
 
 ## `respond.json`, and rules written by an earlier `apimock set --json`
 

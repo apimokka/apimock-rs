@@ -103,6 +103,18 @@ impl EnvArgs {
             std::process::exit(crate::cmd::set::run(&raw[2..]));
         }
 
+        // RFC 048 § 6 / RFC 059 / RFC 064: a bare word in the
+        // subcommand position that matched none of the four above is an
+        // unknown subcommand, not silent permission to start a server.
+        // Checked only for a token that does *not* start with `-` — one
+        // that does is a flag attempt at position 1, `-p`/`-c`/`--init`
+        // and friends, left for `reject_unknown_arguments` just below.
+        // `filter` also means bare `apimock` (no position 1 at all)
+        // never reaches this: zero-config still starts the server.
+        if let Some(candidate) = raw.get(1).filter(|a| !a.starts_with('-')) {
+            exit_unknown_subcommand(candidate);
+        }
+
         // RFC 049 Goal 1: anything left that looks like a flag and isn't
         // one of the top-level names above is unrecognised and must
         // error, not be silently discarded. Applied before `--init`
@@ -320,6 +332,30 @@ fn exit_usage_error(message: &str) -> ! {
     std::process::exit(2);
 }
 
+/// RFC 048 § 6 / RFC 059 / RFC 064: an unknown bare subcommand (`apimock
+/// banana`, a typo like `apimock validat`) is a usage error, not silent
+/// permission to start a server — the same "don't silently absorb
+/// unknown input" contract RFC 059 already gives unknown flags, closed
+/// here for the one shape it left open. Suggests a near match against
+/// the four real subcommands where the edit distance makes one
+/// plausible (`validat` → `validate`, `gett`/`st` → `get`/`set`), same
+/// shared `near_match` and threshold as every flag suggestion in this
+/// CLI — reused deliberately rather than given its own tuned threshold,
+/// so a subcommand typo and a flag typo are judged "close enough" the
+/// same way. One consequence measured, not assumed: `gte` (a two-letter
+/// transposition of `get`, itself only 3 characters) sits right at
+/// `near_match`'s threshold for its length and doesn't suggest — see
+/// the review package for this task.
+fn exit_unknown_subcommand(candidate: &str) -> ! {
+    match near_match(candidate, KNOWN_SUBCOMMAND_NAMES.as_ref()) {
+        Some(suggestion) => exit_usage_error(&format!(
+            "unknown subcommand '{}'; did you mean '{}'?",
+            candidate, suggestion
+        )),
+        None => exit_usage_error(&format!("unknown subcommand '{}'", candidate)),
+    }
+}
+
 /// RFC 049 Goal 1: after every known top-level flag name is accounted
 /// for, anything left that looks like a flag (starts with `-`) is
 /// unrecognised. Exits 2 naming the offender, with a near-match
@@ -339,10 +375,13 @@ fn exit_usage_error(message: &str) -> ! {
 /// `raw[0]` (the binary path) is skipped by starting the delegated
 /// scan at `raw[1..]`. A subcommand name at `raw[1]` never reaches this
 /// function at all — `EnvArgs::default` dispatches and exits for all
-/// four before this runs — and a bare word never triggers this
-/// function's error branch regardless (it only fires on a token
-/// starting with `-`, and `strict_bare_tokens` is `false` here), so no
-/// special case for subcommand names is needed.
+/// four before this runs, and `exit_unknown_subcommand` catches any
+/// other bare token there first (RFC 048 § 6 / RFC 059 / RFC 064). So
+/// `raw[1]` is always either a real subcommand or a `-`-prefixed flag
+/// by the time this function's scan reaches it — no special case for
+/// subcommand names is needed here; the leniency below
+/// (`strict_bare_tokens: false`) is about a *later* bare token, like
+/// `get`'s positional `<path>`, not position 1.
 ///
 /// The `"unknown option"` phrase (rather than `reject_unknown_flags`'s
 /// own default `"unrecognized argument"`) matches this function's

@@ -53,6 +53,12 @@ pub const NO_VALUE_TOP_LEVEL_OPTION_NAMES: [&str; 7] = [
     "-h",
 ];
 
+/// The four real subcommands, for the unknown-subcommand near-match
+/// suggestion (RFC 048 § 6 / RFC 059 / RFC 064). There is no `serve` —
+/// bare `apimock` starts the server directly, and adding one is out of
+/// this list's scope.
+pub const KNOWN_SUBCOMMAND_NAMES: [&str; 4] = ["match-test", "validate", "get", "set"];
+
 pub const DEFAULT_CONFIG_FILE_PATH: &str = "./apimock.toml";
 pub const DEFAULT_RULE_SET_FILE_PATH: &str = "./apimock-rule-set.toml";
 pub const DEFAULT_MIDDLEWARE_FILE_PATH: &str = "./apimock-middleware.rhai";

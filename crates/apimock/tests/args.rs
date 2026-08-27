@@ -403,6 +403,184 @@ fn config_flag_with_no_value_fails_the_same_way_as_before() {
     );
 }
 
+// ── RFC 048 § 6 / RFC 059 / RFC 064: an unknown bare subcommand must
+// not silently start a server ────────────────────────────────────────
+
+#[test]
+fn unknown_subcommand_exits_2_and_starts_no_server() {
+    let output = bin()
+        .args(["banana"])
+        .output()
+        .expect("failed to run apimock");
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty(), "stdout was not empty");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("unknown subcommand 'banana'"),
+        "stderr was: {stderr}"
+    );
+    assert!(!stderr.contains("did you mean"), "stderr was: {stderr}");
+    // As in `unknown_option_exits_2_on_stderr_and_starts_no_server`
+    // above: `.output()` waits for the process to exit on its own. A
+    // server that had (wrongly) started would never exit, and this
+    // call would hang rather than return.
+}
+
+/// `serve` in particular: `docs/src/guides/migrating-to-6-0.md` used to
+/// claim bare `apimock` is "an alias for `apimock serve`" — there is no
+/// `serve` subcommand, and before this fix `apimock serve` "worked"
+/// only by falling through as a tolerated, ignored bare token.
+#[test]
+fn unknown_subcommand_serve_is_rejected_not_started() {
+    let output = bin()
+        .args(["serve"])
+        .output()
+        .expect("failed to run apimock");
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty(), "stdout was not empty");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("unknown subcommand 'serve'"),
+        "stderr was: {stderr}"
+    );
+}
+
+/// Near-match suggestions against the four real subcommands. `gte` (a
+/// two-letter transposition of `get`, itself only 3 characters) is
+/// deliberately excluded here — measured against the shared
+/// `near_match`/threshold this reuses, its edit distance (2) exceeds
+/// the threshold (1) that length gets, so it names itself without a
+/// suggestion; see this task's review package for the arithmetic. Not
+/// a regression to fix here: `near_match` is shared with every flag
+/// suggestion in the CLI, and none of this task's scope is to retune it.
+#[test]
+fn unknown_subcommand_near_match_suggests_the_correction() {
+    for (typo, expected) in [
+        ("validat", "validate"),
+        ("gett", "get"),
+        ("st", "set"),
+        ("matchtest", "match-test"),
+    ] {
+        let output = bin()
+            .args([typo])
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run apimock {typo}: {e}"));
+
+        assert_eq!(output.status.code(), Some(2), "{typo}: {output:?}");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains(&format!(
+                "unknown subcommand '{typo}'; did you mean '{expected}'?"
+            )),
+            "{typo}: stderr was: {stderr}"
+        );
+    }
+}
+
+/// `gte` specifically: the shared `near_match` threshold does not
+/// suggest for it (see the test above's doc comment) — pinned here so
+/// a future change to `near_match`'s threshold that silently starts
+/// suggesting for it is a deliberate, noticed change, not a surprise.
+#[test]
+fn unknown_subcommand_gte_names_itself_without_a_suggestion() {
+    let output = bin().args(["gte"]).output().expect("failed to run apimock");
+
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("unknown subcommand 'gte'"), "{stderr}");
+    assert!(!stderr.contains("did you mean"), "stderr was: {stderr}");
+}
+
+/// A flag-shaped token at position 1 (`-p`, `--init`, …) must never be
+/// treated as an unknown-subcommand attempt — that's
+/// `reject_unknown_arguments`'s job, unaffected by this fix. Distinct
+/// from `unknown_option_exits_2_on_stderr_and_starts_no_server`, which
+/// covers a flag typo *elsewhere* in the line; this one is specifically
+/// about position 1.
+#[test]
+fn a_flag_shaped_token_at_position_one_is_not_treated_as_a_subcommand() {
+    let output = bin()
+        .args(["--bogus-flag-xyz"])
+        .output()
+        .expect("failed to run apimock");
+
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("unknown option '--bogus-flag-xyz'"),
+        "stderr was: {stderr} (should be `unknown option`, not `unknown subcommand`)"
+    );
+}
+
+/// A real, no-subcommand invocation still starts the zero-config
+/// server end to end (config resolution, listener bind, banner) —
+/// `raw.get(1)` here is `-p`, a flag, so it's the same "position 1
+/// isn't a bare word" path bare `apimock` (no position 1 at all) takes.
+/// `-p 0` rather than an unspecified/default port, so this can't
+/// collide with anything already bound to `3001` in the environment
+/// this test runs in.
+///
+/// The literal zero-argv case (`raw.len() == 1`, no position 1 at all)
+/// is not separately exercised at runtime: `raw.get(1)` is `None` in
+/// that case, `None.filter(...)` stays `None`, and the new check's `if
+/// let Some(...)` body simply never runs — true by inspection of
+/// `EnvArgs::default`, not something a fixed-port-3001 runtime test
+/// should risk flaking over. Every pre-existing zero-config test in
+/// this workspace (via `TestSetup`, none of which pass a subcommand
+/// either) continuing to pass unmodified is the regression coverage for
+/// "this dispatch shape didn't change."
+///
+/// Same spawn/poll/kill pattern as
+/// `bare_relative_config_resolves_the_same_as_dot_slash_prefixed`
+/// above: a real server never exits on its own, so `.output()` alone
+/// would hang.
+#[test]
+fn a_no_subcommand_invocation_still_starts_the_server() {
+    let dir = tempfile::tempdir().expect("failed to create temp dir");
+    // deliberately no apimock.toml: zero-config mode.
+
+    let mut child = bin()
+        .current_dir(dir.path())
+        .args(["-p", "0"])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap_or_else(|e| panic!("failed to spawn apimock: {e}"));
+
+    let mut stdout = std::io::BufReader::new(child.stdout.take().expect("piped stdout"));
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        use std::io::BufRead;
+        let mut line = String::new();
+        loop {
+            line.clear();
+            if stdout.read_line(&mut line).unwrap_or(0) == 0 {
+                let _ = tx.send(false);
+                return;
+            }
+            if line.starts_with("Listening on") {
+                let _ = tx.send(true);
+                return;
+            }
+        }
+    });
+
+    let started = rx
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .unwrap_or(false);
+
+    let _ = child.kill();
+    let output = child.wait_with_output().expect("failed to reap child");
+
+    assert!(
+        started,
+        "never saw the `Listening on` line - server likely didn't start; stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 #[tokio::test]
 async fn dir_flag_resolves_bare_and_dot_slash_identically() {
     // RFC 049 § 2 finding: `--dir` never shared `--config`'s resolution
