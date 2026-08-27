@@ -1,6 +1,6 @@
 # RFC 048 — v6 concept: the CLI as a first-class interface
 
-**Status.** **Accepted** — concept accepted by the project owner 2026-08-17;
+**Status.** Implemented (v6.0.0). Accepted — concept accepted by the project owner 2026-08-17;
 this document records the design. It stays in `accepted/` until the RFCs it
 governs have all shipped. **Umbrella RFC**: it decides shape and
 constraints, and spawns the RFCs that implement them. It ships no code

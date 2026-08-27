@@ -1,6 +1,6 @@
 # RFC 064 — Finish the CLI front door: caller-supplied paths and flag values
 
-**Status.** Accepted — owner approved 2026-08-27.
+**Status.** Implemented (v6.0.0). Accepted — owner approved 2026-08-27.
 **Tracks.** v6 CLI contract. **Blocking for 6.0.0** — these are RFC 048
 § 6 prerequisites that RFC 048 itself promotes to blocking.
 **Touches.** `crates/apimock-config/src/path_util.rs`,

@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 062, the v6 threat model
 
-**Governing RFC.** [RFC 062](../../accepted/062-v6-threat-model.md)
+**Governing RFC.** [RFC 062](../../done/062-v6-threat-model.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0 — **blocking**
 **Self-contained.** Everything you need is here. RFC 062 is the

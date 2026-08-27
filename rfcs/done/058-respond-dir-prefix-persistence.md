@@ -1,6 +1,6 @@
 # RFC 058 — `respond_dir` is resolved at load and written back, growing on every save
 
-**Status.** **Accepted** — approved by the project owner 2026-08-19.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-19.
 **Not yet implemented.**
 **Tracks.** Correctness; released-version data integrity. Risk **R-10**.
 **Touches.** `crates/apimock-routing/src/rule_set.rs`,

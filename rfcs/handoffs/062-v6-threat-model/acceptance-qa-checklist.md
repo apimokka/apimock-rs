@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 062, the v6 threat model
 
-**Governing RFC.** [RFC 062](../../accepted/062-v6-threat-model.md)
+**Governing RFC.** [RFC 062](../../done/062-v6-threat-model.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ## A. Before-state confirmed

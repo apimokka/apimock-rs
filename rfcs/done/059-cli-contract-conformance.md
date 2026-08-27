@@ -1,6 +1,6 @@
 # RFC 059 — CLI contract conformance: enforce it across every command, not per command
 
-**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-20.
 **Not yet implemented.**
 [Handed off](../handoffs/059-cli-contract-conformance/implementation-handoff.md) 2026-08-20,
 with its open questions decided. Blocking for 6.0.0.
@@ -10,7 +10,7 @@ my view — see § Motivation.
 parsing; a new shared test harness and conformance suite under
 `crates/apimock/tests/`.
 **Depends on.** [RFC 049](../done/049-cli-front-door.md) (the rule),
-[RFC 053](../accepted/053-v6-cli-contract.md) (the taxonomy).
+[RFC 053](../done/053-v6-cli-contract.md) (the taxonomy).
 
 ## Summary
 

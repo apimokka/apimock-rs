@@ -1,6 +1,6 @@
 # RFC 065 — The response body-source model: say what you serve
 
-**Status.** Accepted — owner approved 2026-08-27.
+**Status.** Implemented (v6.0.0). Accepted — owner approved 2026-08-27.
 **Tracks.** v6 response correctness. **Blocking for 6.0.0.**
 **Touches.** `crates/apimock-routing/src/rule_set/rule/respond.rs`,
 `crates/apimock-server/src/respond_response.rs`,

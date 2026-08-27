@@ -1,6 +1,6 @@
 # RFC 062 — The v6 threat model, refreshed for a CLI that writes
 
-**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-20.
 **Not yet implemented.**
 [Handed off](../handoffs/062-v6-threat-model/implementation-handoff.md) 2026-08-20,
 with its open questions decided. Blocking for 6.0.0 as a decision.
@@ -9,8 +9,8 @@ settled; never done. **Blocking for 6.0.0** as a *decision*, not because
 a live hole is known.
 **Touches.** Documentation, and — depending on § Design's decision —
 `crates/apimock/src/cmd/set.rs`.
-**Depends on.** [RFC 048](../accepted/048-v6-cli-interface-concept.md)
-§ 9 (T1/T2), [RFC 057](../accepted/057-set-command.md) (the write
+**Depends on.** [RFC 048](../done/048-v6-cli-interface-concept.md)
+§ 9 (T1/T2), [RFC 057](../done/057-set-command.md) (the write
 surface).
 
 ## Summary

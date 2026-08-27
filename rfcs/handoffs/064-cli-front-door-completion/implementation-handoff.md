@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 064, finish the CLI front door
 
-**Governing RFC.** [RFC 064](../../accepted/064-cli-front-door-completion.md)
+**Governing RFC.** [RFC 064](../../done/064-cli-front-door-completion.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0. **Blocking for the release cut.**
 **Baseline.** `main` @ `9bdc769`.

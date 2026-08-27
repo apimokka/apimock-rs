@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 041, error type shape
 
-**Governing RFC.** [RFC 041](../../accepted/041-error-type-shape.md)
+**Governing RFC.** [RFC 041](../../done/041-error-type-shape.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md) —
 decisions, sizes and the variant tables; you need nothing else in hand.
 

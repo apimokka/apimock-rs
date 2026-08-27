@@ -1,6 +1,6 @@
 # RFC 055 — `apimock get`: what will this request return?
 
-**Status.** **Accepted** — approved by the project owner 2026-08-19.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-19.
 Implemented and merged to `main`; awaiting the 6.0.0 release.
 
 **Tracks.** v6. [RFC 048](./048-v6-cli-interface-concept.md) § 11 item 4 —

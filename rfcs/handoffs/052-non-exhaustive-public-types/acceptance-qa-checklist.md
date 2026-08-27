@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 052
 
-**Governing RFC.** [RFC 052](../../accepted/052-non-exhaustive-public-types.md)
+**Governing RFC.** [RFC 052](../../done/052-non-exhaustive-public-types.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---

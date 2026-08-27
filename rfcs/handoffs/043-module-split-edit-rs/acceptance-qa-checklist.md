@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 043, module split of `workspace/edit.rs`
 
-**Governing RFC.** [RFC 043](../../accepted/043-module-split-edit-rs.md)
+**Governing RFC.** [RFC 043](../../done/043-module-split-edit-rs.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md) —
 the regions, the target layout, and what is out of scope.
 

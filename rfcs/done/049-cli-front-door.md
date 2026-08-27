@@ -7,7 +7,7 @@ a mock server. So does `--help`. So does any typo. The CLI accepts
 everything and understands almost none of it.
 **Touches.** `crates/apimock/src/args.rs`, `crates/apimock/src/args/constant.rs`,
 documentation. **No change to the mock-serving path.**
-**Governed by.** [RFC 048](../accepted/048-v6-cli-interface-concept.md) § 6 — this
+**Governed by.** [RFC 048](../done/048-v6-cli-interface-concept.md) § 6 — this
 is the first of its prerequisites, and it blocks v5's deprecation
 release.
 

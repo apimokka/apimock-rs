@@ -1,6 +1,6 @@
 # RFC 061 — Test on the platforms we ship
 
-**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-20.
 **Not yet implemented.**
 [Handed off](../handoffs/061-cross-platform-ci/implementation-handoff.md) 2026-08-20,
 with its open questions decided. Blocking for 6.0.0.

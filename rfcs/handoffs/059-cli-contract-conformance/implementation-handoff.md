@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 059, CLI contract conformance
 
-**Governing RFC.** [RFC 059](../../accepted/059-cli-contract-conformance.md)
+**Governing RFC.** [RFC 059](../../done/059-cli-contract-conformance.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0 — **blocking**
 **Self-contained.** Every fact you need is restated here, including RFC

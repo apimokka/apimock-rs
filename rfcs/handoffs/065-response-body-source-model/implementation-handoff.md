@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 065, the response body-source model
 
-**Governing RFC.** [RFC 065](../../accepted/065-response-body-source-model.md)
+**Governing RFC.** [RFC 065](../../done/065-response-body-source-model.md)
 **Companion.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0, **blocking**.
 **Baseline.** `main` @ `bfd01db`.

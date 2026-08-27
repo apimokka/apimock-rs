@@ -1,7 +1,7 @@
 # Implementation Handoff — 6.0.0: `match-test --format` is undiscoverable
 
-**Governing RFC.** [RFC 059](../../accepted/059-cli-contract-conformance.md);
-[RFC 048](../../accepted/048-v6-cli-interface-concept.md) § 5.
+**Governing RFC.** [RFC 059](../../done/059-cli-contract-conformance.md);
+[RFC 048](../../done/048-v6-cli-interface-concept.md) § 5.
 **Milestone.** 6.0.0. **Blocking the cut.**
 **Baseline.** `main` @ `a0a3f65`.
 **Found.** Writing the 6.0.0 CHANGELOG, checking a migration-guide claim

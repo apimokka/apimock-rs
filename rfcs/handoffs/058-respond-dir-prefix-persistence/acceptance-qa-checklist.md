@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 058, `respond_dir` persistence
 
-**Governing RFC.** [RFC 058](../../accepted/058-respond-dir-prefix-persistence.md)
+**Governing RFC.** [RFC 058](../../done/058-respond-dir-prefix-persistence.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md) —
 decisions and mechanism; you do not need any other RFC in hand.
 

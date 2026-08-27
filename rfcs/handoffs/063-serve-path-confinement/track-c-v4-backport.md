@@ -1,6 +1,6 @@
 # Track C — the 4.8.1 backport
 
-**Governing RFC.** [RFC 063](../../accepted/063-serve-path-confinement.md)
+**Governing RFC.** [RFC 063](../../done/063-serve-path-confinement.md)
 **Entry point.** [`implementation-handoff.md`](./implementation-handoff.md) — Tracks A and B, both delivered
 **Checklist.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md) — § E applies here too, adapted
 **Milestone.** **4.8.1**, published alongside 5.19.1

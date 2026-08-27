@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 063, confine the serve path
 
-**Governing RFC.** [RFC 063](../../accepted/063-serve-path-confinement.md)
+**Governing RFC.** [RFC 063](../../done/063-serve-path-confinement.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0, a 5.19.1 backport, **and a 4.8.1 backport** —
 three tracks. Tracks A and B are in § 5; **Track C has its own

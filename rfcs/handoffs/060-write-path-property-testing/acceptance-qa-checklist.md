@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 060, write-path property testing
 
-**Governing RFC.** [RFC 060](../../accepted/060-write-path-property-testing.md)
+**Governing RFC.** [RFC 060](../../done/060-write-path-property-testing.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md) —
 the invariants and the decisions; nothing else needed in hand.
 

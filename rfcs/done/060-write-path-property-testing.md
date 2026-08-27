@@ -1,14 +1,14 @@
 # RFC 060 — Property-test the config write path
 
-**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-20.
 **Not yet implemented.**
 [Handed off](../handoffs/060-write-path-property-testing/implementation-handoff.md) 2026-08-20,
 with its open questions decided.
 **Tracks.** Release quality; data integrity. Recommended before 6.0.0.
 **Touches.** `crates/apimock-config/src/workspace/tests/` — new
 property tests. No production code, unless a property finds a bug.
-**Depends on.** [RFC 056](../accepted/056-toml-edit-migration.md) (the
-write path), [RFC 058](../accepted/058-respond-dir-prefix-persistence.md)
+**Depends on.** [RFC 056](../done/056-toml-edit-migration.md) (the
+write path), [RFC 058](../done/058-respond-dir-prefix-persistence.md)
 (the bug that motivates this).
 
 ## Summary

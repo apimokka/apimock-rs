@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 042, external change detection
 
-**Governing RFC.** [RFC 042](../../accepted/042-external-change-detection.md)
+**Governing RFC.** [RFC 042](../../done/042-external-change-detection.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md) —
 the defect, and what is deliberately not being built.
 

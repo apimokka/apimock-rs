@@ -1,7 +1,7 @@
 # Implementation Handoff — 6.0.0: remove the deprecated `validate --json`
 
 **Governing RFCs.** [RFC 054](../../done/054-deprecation-release.md)
-§ *"What 6.0.0 then does"*; [RFC 048](../../accepted/048-v6-cli-interface-concept.md)
+§ *"What 6.0.0 then does"*; [RFC 048](../../done/048-v6-cli-interface-concept.md)
 § 7 (the loud-failure requirement).
 **Milestone.** 6.0.0. **Blocking the cut.**
 **Baseline.** `main` @ `13f5ddf`.

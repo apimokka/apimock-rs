@@ -1,6 +1,6 @@
 # Implementation Handoff — 6.0.0: `apimock serve`, and `--allow-outside` in help
 
-**Governing RFC.** [RFC 053](../../accepted/053-v6-cli-contract.md)
+**Governing RFC.** [RFC 053](../../done/053-v6-cli-contract.md)
 § "Bare `apimock` keeps working, and gains an explicit form".
 **Also closes.** Pre-cut audit F-1
 (`.git-exclude/release/6.0.0/PRE-CUT-AUDIT.md`).

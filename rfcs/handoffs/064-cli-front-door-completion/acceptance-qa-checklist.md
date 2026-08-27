@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 064
 
-**Governing RFC.** [RFC 064](../../accepted/064-cli-front-door-completion.md)
+**Governing RFC.** [RFC 064](../../done/064-cli-front-door-completion.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 Every row is a claim a reviewer will re-run. Tick it only if you ran it.

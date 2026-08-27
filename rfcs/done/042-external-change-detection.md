@@ -1,6 +1,6 @@
 # RFC 042 — External change detection: correct the contract, don't build a watcher
 
-**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-20.
 **Not yet implemented.**
 [Handed off](../handoffs/042-external-change-detection/implementation-handoff.md) 2026-08-20.
 **Tracks.** v6 API quality; GUI integration. **Rescoped** after the
@@ -8,7 +8,7 @@ owner's G1 answer (2026-08-17) removed its original premise.
 **Touches.** `crates/apimock-config/src/workspace.rs` — chiefly its
 documentation, plus `sync_from_disk`'s handling of node identity.
 **Depends on.** Nothing. Interacts with
-[RFC 057](../accepted/057-set-command.md)'s addressing finding.
+[RFC 057](../done/057-set-command.md)'s addressing finding.
 
 ## Summary
 

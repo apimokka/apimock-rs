@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 058, `respond_dir` persistence
 
-**Governing RFC.** [RFC 058](../../accepted/058-respond-dir-prefix-persistence.md)
+**Governing RFC.** [RFC 058](../../done/058-respond-dir-prefix-persistence.md)
 **Risk.** **R-10** in `ROADMAP.md` — a released data-integrity defect
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0 — this is **breaking**, see § 2

@@ -1,6 +1,6 @@
 # RFC 041 — Public API shape: error boxing, `kind()`, and `#[non_exhaustive]` across the surface
 
-**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-20.
 **Not yet implemented.** Breaking; 6.0.0.
 **Amended 2026-08-20, before implementation started** — scope broadened
 from the six error enums to the whole re-exported public surface, on the
@@ -8,7 +8,7 @@ owner's decision. See § The decision that broadened this RFC.
 [Handed off](../handoffs/041-error-type-shape/implementation-handoff.md) 2026-08-20,
 with both open questions decided.
 **Tracks.** v6 API quality. The error half of what
-[RFC 052](../accepted/052-non-exhaustive-public-types.md) did for the
+[RFC 052](../done/052-non-exhaustive-public-types.md) did for the
 trace and request types.
 **Touches.** The three `error.rs` files and the 15 call sites that
 suppress a lint because of them; and, since the 2026-08-20 amendment,
@@ -127,7 +127,7 @@ not.
 
 ### It pairs with RFC 039, and neither substitutes for the other
 
-[RFC 039](./039-public-api-additive-only-gate.md) makes API changes
+[RFC 039](../accepted/039-public-api-additive-only-gate.md) makes API changes
 **visible** in review. `#[non_exhaustive]` makes additive ones
 **legal** without a major bump. A project with only the gate learns
 about every break after writing it; a project with only the attribute

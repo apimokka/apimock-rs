@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 056
 
-**Governing RFC.** [RFC 056](../../accepted/056-toml-edit-migration.md)
+**Governing RFC.** [RFC 056](../../done/056-toml-edit-migration.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ---

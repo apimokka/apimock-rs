@@ -27,45 +27,17 @@ depends-on, and the rest of the planned portfolio.
 ## Accepted
 
 Approved by the project owner: the design is settled and an implementer
-may start. Most are already implemented and merged to `main`, awaiting
-the 6.0.0 release that will move them to `done/` — but approval and
-implementation are separate events, so the state column says which is
-which rather than leaving a reader to assume.
+may start. An RFC sits here from approval until the version carrying it
+ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 
 | ID  | Title | State |
 |-----|-------|-------|
 | 039 | [An additive-only gate for the public API](./accepted/039-public-api-additive-only-gate.md) — enable after 6.0.0 | **not started** — deliberately deferred; enable *after* 6.0.0 |
-| 040 | [Trace channel: redaction, and non-JSON body capture](./accepted/040-trace-capture-and-redaction.md) | implemented, merged to `main` |
-| 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./accepted/041-error-type-shape.md) | implemented, merged to `main` |
-| 042 | [External change detection: correct the contract](./accepted/042-external-change-detection.md) | implemented, merged to `main` |
-| 043 | [Module split: `workspace/edit.rs`](./accepted/043-module-split-edit-rs.md) | implemented, merged to `main` |
-| 048 | [v6 concept: the CLI as a first-class interface](./accepted/048-v6-cli-interface-concept.md) — umbrella | umbrella concept — realised by the RFCs below; no separate implementation |
-| 050 | [Should non-JSON request bodies be captured at all?](./accepted/050-non-json-body-capture-decision.md) — decision RFC | decision RFC — decision recorded; merged to `main` |
-| 051 | [Redact credential headers in verbose request logging](./accepted/051-verbose-log-header-redaction.md) | implemented, merged to `main` |
-| 052 | [`#[non_exhaustive]` on the public types that keep growing](./accepted/052-non-exhaustive-public-types.md) | implemented, merged to `main` |
-| 053 | [The v6 CLI contract](./accepted/053-v6-cli-contract.md) | contract spec — realised by 055 / 057 / 059 / 064; no separate implementation |
-| 055 | [`apimock get`: what will this request return?](./accepted/055-get-command.md) | implemented, merged to `main` |
-| 056 | [Preserve what people wrote: `toml_edit` for the save path](./accepted/056-toml-edit-migration.md) | implemented, merged to `main` |
-| 057 | [`apimock set`: make the server answer X under condition Y](./accepted/057-set-command.md) | implemented, merged to `main` |
-| 058 | [`respond_dir` grows on every save](./accepted/058-respond-dir-prefix-persistence.md) — **released defect, R-10** | implemented, merged to `main` |
-| 059 | [CLI contract conformance across every command](./accepted/059-cli-contract-conformance.md) | implemented, merged to `main` |
-| 060 | [Property-test the config write path](./accepted/060-write-path-property-testing.md) | implemented, merged to `main` |
-| 061 | [Test on the platforms we ship](./accepted/061-cross-platform-ci.md) | implemented, merged to `main` — its matrix gates every CI run |
-| 062 | [The v6 threat model, refreshed](./accepted/062-v6-threat-model.md) | implemented, merged to `main` |
-| 063 | [Confine the serve path](./accepted/063-serve-path-confinement.md) | implemented, merged to `main`; **fixed in 4.8.1 / 5.19.1**, [GHSA-72g6-wgrg-vhm7](https://github.com/apimokka/apimock-rs/security/advisories/GHSA-72g6-wgrg-vhm7) |
-| 064 | [Finish the CLI front door](./accepted/064-cli-front-door-completion.md) | implemented, merged to `main`; **Amendment 1** (`--flag=value`) merged |
-| 065 | [The response body-source model](./accepted/065-response-body-source-model.md) | implemented, merged to `main` |
 
-Handoffs live under `handoffs/NNN-slug/` and inherit their status from
-the governing RFC — they are companion execution documents, not
-separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
-
-> **Ships in 6.0.0 — verified 2026-08-27 against `main`.** Every RFC
-> here except **039** is implemented and merged, and moves to `done/`
-> **when 6.0.0 ships**, not before: `accepted/` is defined to cover
-> "implemented and merged, awaiting a release", which is exactly this
-> state. 039 stays — it is approved and deliberately unimplemented until
-> after the release.
+> The other 20 that were here shipped in **6.0.0** (2026-08-28) and have
+> moved to `done/`. **039 stays**: it is approved and deliberately
+> unimplemented until *after* 6.0.0 — enabling an additive-only gate
+> before the major that breaks things would have been backwards.
 
 ## Done (Released)
 
@@ -116,6 +88,26 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 049 | [The CLI front door](./done/049-cli-front-door.md) | v5.18.0 |
 | 054 | [The v5 deprecation release](./done/054-deprecation-release.md) | v5.19.0 |
 | 066 | [Branching and merge policy](./done/066-branching-and-merge-policy.md) — who may merge; the release line is not the dev team's to move | (policy) |
+| 040 | [Trace channel: redaction, and non-JSON body capture](./done/040-trace-capture-and-redaction.md) | v6.0.0 |
+| 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./done/041-error-type-shape.md) | v6.0.0 |
+| 042 | [External change detection: correct the contract](./done/042-external-change-detection.md) | v6.0.0 |
+| 043 | [Module split: `workspace/edit.rs`](./done/043-module-split-edit-rs.md) | v6.0.0 |
+| 048 | [v6 concept: the CLI as a first-class interface](./done/048-v6-cli-interface-concept.md) — umbrella | v6.0.0 |
+| 050 | [Should non-JSON request bodies be captured at all?](./done/050-non-json-body-capture-decision.md) — decision RFC | v6.0.0 |
+| 051 | [Redact credential headers in verbose request logging](./done/051-verbose-log-header-redaction.md) | v6.0.0 |
+| 052 | [`#[non_exhaustive]` on the public types that keep growing](./done/052-non-exhaustive-public-types.md) | v6.0.0 |
+| 053 | [The v6 CLI contract](./done/053-v6-cli-contract.md) | v6.0.0 |
+| 055 | [`apimock get`: what will this request return?](./done/055-get-command.md) | v6.0.0 |
+| 056 | [Preserve what people wrote: `toml_edit` for the save path](./done/056-toml-edit-migration.md) | v6.0.0 |
+| 057 | [`apimock set`: make the server answer X under condition Y](./done/057-set-command.md) | v6.0.0 |
+| 058 | [`respond_dir` grows on every save](./done/058-respond-dir-prefix-persistence.md) — **released defect, R-10** | v6.0.0 |
+| 059 | [CLI contract conformance across every command](./done/059-cli-contract-conformance.md) | v6.0.0 |
+| 060 | [Property-test the config write path](./done/060-write-path-property-testing.md) | v6.0.0 |
+| 061 | [Test on the platforms we ship](./done/061-cross-platform-ci.md) | v6.0.0 |
+| 062 | [The v6 threat model, refreshed](./done/062-v6-threat-model.md) | v6.0.0 |
+| 063 | [Confine the serve path](./done/063-serve-path-confinement.md) | v6.0.0 |
+| 064 | [Finish the CLI front door](./done/064-cli-front-door-completion.md) | v6.0.0 |
+| 065 | [The response body-source model](./done/065-response-body-source-model.md) | v6.0.0 |
 
 ## Archive
 

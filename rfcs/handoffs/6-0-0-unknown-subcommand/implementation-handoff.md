@@ -1,8 +1,8 @@
 # Implementation Handoff — 6.0.0: an unknown subcommand must not start a server
 
-**Governing RFCs.** [RFC 048](../../accepted/048-v6-cli-interface-concept.md)
-§ 6; [RFC 059](../../accepted/059-cli-contract-conformance.md);
-[RFC 064](../../accepted/064-cli-front-door-completion.md).
+**Governing RFCs.** [RFC 048](../../done/048-v6-cli-interface-concept.md)
+§ 6; [RFC 059](../../done/059-cli-contract-conformance.md);
+[RFC 064](../../done/064-cli-front-door-completion.md).
 **Milestone.** 6.0.0. **Blocking the cut.**
 **Baseline.** `main` @ `ed42fc0`.
 **Found.** During 6.0.0 release preparation, verifying a claim in the

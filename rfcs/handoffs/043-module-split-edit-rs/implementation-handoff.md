@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 043, module split of `workspace/edit.rs`
 
-**Governing RFC.** [RFC 043](../../accepted/043-module-split-edit-rs.md)
+**Governing RFC.** [RFC 043](../../done/043-module-split-edit-rs.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0. **Non-breaking** — no public item moves
 **Sequencing.** RFC 057 has **landed**, so this is unblocked. See § 5.

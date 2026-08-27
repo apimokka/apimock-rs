@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 042, external change detection
 
-**Governing RFC.** [RFC 042](../../accepted/042-external-change-detection.md)
+**Governing RFC.** [RFC 042](../../done/042-external-change-detection.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0. **Non-breaking** — no signature changes
 **Self-contained.** Everything you need is here. RFC 042 is the

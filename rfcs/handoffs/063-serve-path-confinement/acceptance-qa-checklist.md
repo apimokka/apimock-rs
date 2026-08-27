@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 063, confine the serve path
 
-**Governing RFC.** [RFC 063](../../accepted/063-serve-path-confinement.md)
+**Governing RFC.** [RFC 063](../../done/063-serve-path-confinement.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 > 🔒 **EMBARGOED.** Local branch only. No push, no PR, no CI dispatch.

@@ -2,7 +2,7 @@
 
 **Source.** `.git-exclude/reviewed/pre-6.0.0-audit/AUDIT-001.md`, items
 E-1, B-2, B-3, B-4, F-1.
-**Governing rationale.** [RFC 048](../../accepted/048-v6-cli-interface-concept.md)
+**Governing rationale.** [RFC 048](../../done/048-v6-cli-interface-concept.md)
 § 1 (who U2 is) and § 5 (documentation ranks with the public API).
 **Milestone.** 6.0.0. **Blocking for the cut.**
 **Baseline.** `main`, after RFC 065 merges. **Do not start § 2–§ 5

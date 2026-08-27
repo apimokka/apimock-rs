@@ -1,6 +1,6 @@
 # RFC 050 — Should non-JSON request bodies be captured at all?
 
-**Status.** **Accepted** — **decided 2026-08-17, answer (2), presence only.**
+**Status.** Implemented (v6.0.0). Accepted — **decided 2026-08-17, answer (2), presence only.**
 Implemented and merged to `main`; awaiting the 6.0.0 release. Approved
 by the project owner, who also confirmed the GUI wants body metadata
 (Unresolved 3). **This is a decision

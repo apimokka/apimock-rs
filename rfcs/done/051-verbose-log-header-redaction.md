@@ -1,6 +1,6 @@
 # RFC 051 — Redact credential headers in verbose request logging
 
-**Status.** **Accepted** — approved by the project owner 2026-08-17.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-17.
 Implemented and merged to `main`; awaiting the 6.0.0 release.
 
 **Tracks.** Security. The second place request headers are emitted

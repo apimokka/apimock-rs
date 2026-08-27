@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 059, CLI contract conformance
 
-**Governing RFC.** [RFC 059](../../accepted/059-cli-contract-conformance.md)
+**Governing RFC.** [RFC 059](../../done/059-cli-contract-conformance.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md) —
 the contract is restated in its § 3; you need no other RFC in hand.
 

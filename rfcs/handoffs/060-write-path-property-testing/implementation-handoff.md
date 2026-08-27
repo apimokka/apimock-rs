@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 060, property-test the write path
 
-**Governing RFC.** [RFC 060](../../accepted/060-write-path-property-testing.md)
+**Governing RFC.** [RFC 060](../../done/060-write-path-property-testing.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0. **No production code** — unless a property finds a bug
 **Self-contained.** Everything you need is here. RFC 060 is the

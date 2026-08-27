@@ -1,6 +1,6 @@
 # Handoff — RFC 064 Amendment 1, a `--flag=value` form
 
-**Governing RFC.** [RFC 064, Amendment 1](../../accepted/064-cli-front-door-completion.md#amendment-1--a---flagvalue-form-approved-2026-08-27)
+**Governing RFC.** [RFC 064, Amendment 1](../../done/064-cli-front-door-completion.md#amendment-1--a---flagvalue-form-approved-2026-08-27)
 **Risk brief.** `.git-exclude/reviewed/pre-6.0.0-audit/DECISION-001-flag-equals-value.md`
 **Milestone.** 6.0.0, **blocking**.
 **Baseline.** `main` @ `87d2584`.

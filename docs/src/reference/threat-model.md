@@ -3,7 +3,7 @@
 This page states, deliberately, what apimock's actual security surface
 is in 6.0.0 — what each actor can do, what apimock allows on purpose and
 why, and what apimock is not trying to protect against. It supersedes
-[RFC 048](https://github.com/apimokka/apimock-rs/blob/main/rfcs/accepted/048-v6-cli-interface-concept.md)
+[RFC 048](https://github.com/apimokka/apimock-rs/blob/main/rfcs/done/048-v6-cli-interface-concept.md)
 § 9, which was written before `apimock set` existed and never revisited
 once it shipped — the gap this page exists to close, by living
 somewhere it will actually be read again.

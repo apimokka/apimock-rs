@@ -1,6 +1,6 @@
 # RFC 040 — Trace channel: header redaction
 
-**Status.** **Accepted** — approved by the project owner 2026-08-17.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-17.
 Implemented and merged to `main`; awaiting the 6.0.0 release.
 
 **Amended 2026-08-17, during implementation:** goal 3 (non-JSON body

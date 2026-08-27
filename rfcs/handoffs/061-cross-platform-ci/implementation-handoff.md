@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 061, test on the platforms we ship
 
-**Governing RFC.** [RFC 061](../../accepted/061-cross-platform-ci.md)
+**Governing RFC.** [RFC 061](../../done/061-cross-platform-ci.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0 — **blocking**
 **Self-contained.** Everything you need is here. RFC 061 is the

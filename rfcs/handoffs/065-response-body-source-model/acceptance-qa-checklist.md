@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 065
 
-**Governing RFC.** [RFC 065](../../accepted/065-response-body-source-model.md)
+**Governing RFC.** [RFC 065](../../done/065-response-body-source-model.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 Every row is a claim a reviewer will re-run. Tick only what you ran.

@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 057, `apimock set`
 
-**Governing RFC.** [RFC 057](../../accepted/057-set-command.md)
+**Governing RFC.** [RFC 057](../../done/057-set-command.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 **Contract.** Restated in the handoff's § 3 — you do not need RFC 053
 in hand to work through section F.

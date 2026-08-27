@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 041, error type shape
 
-**Governing RFC.** [RFC 041](../../accepted/041-error-type-shape.md)
+**Governing RFC.** [RFC 041](../../done/041-error-type-shape.md)
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0 — **breaking**, deliberately
 **Self-contained.** Every fact you need is restated here. RFC 041 is the

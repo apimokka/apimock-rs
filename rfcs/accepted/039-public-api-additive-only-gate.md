@@ -8,8 +8,8 @@ settled; the gate is enabled after 6.0.0 ships. See § When this turns on.
 **Touches.** `.github/workflows/ci.yaml`, a checked-in API baseline per
 crate, `CONTRIBUTING`-level documentation.
 **Depends on.** A stable 6.0.0 public surface. Related:
-[RFC 052](../accepted/052-non-exhaustive-public-types.md),
-[RFC 041](./041-error-type-shape.md).
+[RFC 052](../done/052-non-exhaustive-public-types.md),
+[RFC 041](../done/041-error-type-shape.md).
 
 ## Summary
 

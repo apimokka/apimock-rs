@@ -1,6 +1,6 @@
 # RFC 052 — `#[non_exhaustive]` on the public types that keep growing
 
-**Status.** **Accepted** — **decision approved by the project owner
+**Status.** Implemented (v6.0.0). Accepted — **decision approved by the project owner
 2026-08-17**; this document records it and scopes the work. Implemented
 and merged to `main`; awaiting the 6.0.0 release.
 

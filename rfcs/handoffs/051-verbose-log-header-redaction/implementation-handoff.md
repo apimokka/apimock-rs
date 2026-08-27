@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 051, verbose-log header redaction
 
-**Governing RFC.** [RFC 051](../../accepted/051-verbose-log-header-redaction.md)
+**Governing RFC.** [RFC 051](../../done/051-verbose-log-header-redaction.md)
 **Milestone.** M3 — **P1, security**, targeting **v5.19.0**
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 
@@ -79,7 +79,7 @@ implementation detail.
 Either way, do **not** add `#[non_exhaustive]` yourself. The owner has
 approved applying it to all five affected types — `TraceConfig`,
 `RequestSummary`, `ParsedRequest`, `LogConfig`, `VerboseConfig` — but as
-**one coordinated change**, [RFC 052](../../accepted/052-non-exhaustive-public-types.md),
+**one coordinated change**, [RFC 052](../../done/052-non-exhaustive-public-types.md),
 not piecemeal inside three RFCs. Recorded as **R-09** in `ROADMAP.md`.
 
 Worth knowing: `apimock-config`'s `view.rs` types *are*
@@ -113,7 +113,7 @@ Establish it from source. Then say whether it belongs in this change or
 its own, with the reasoning. Do not silently fix it and do not silently
 skip it.
 
-Note the interaction: [RFC 050](../../accepted/050-non-json-body-capture-decision.md)
+Note the interaction: [RFC 050](../../done/050-non-json-body-capture-decision.md)
 decided the *trace channel* captures body presence only, never content.
 If verbose logging prints body content to a console, that is a stronger
 version of the same exposure, and the two answers should at least be

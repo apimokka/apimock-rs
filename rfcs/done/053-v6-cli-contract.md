@@ -1,6 +1,6 @@
 # RFC 053 — The v6 CLI contract
 
-**Status.** **Accepted** — approved by the project owner 2026-08-17.
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-17.
 First realised by [RFC 054](../done/054-deprecation-release.md) in 5.19.0 and
 extended by [RFC 055](./055-get-command.md); it stays in `accepted/` until
 `set` ([RFC 057](./057-set-command.md)) completes the surface it

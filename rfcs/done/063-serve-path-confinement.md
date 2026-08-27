@@ -1,6 +1,6 @@
 # RFC 063 — Confine the serve path: a remotely reachable traversal, and a config capability
 
-**Status.** **Accepted** — approved by the project owner 2026-08-20,
+**Status.** Implemented (v6.0.0). Accepted — approved by the project owner 2026-08-20,
 together with all three § Disclosure decisions: **yes** to a 5.19.1
 backport, **yes** to a published advisory, **yes** 6.0.0 waits.
 **EMBARGOED — this file and its handoff must not reach the public
@@ -11,7 +11,7 @@ about **released versions** — see § Disclosure.
 **Touches.** `crates/apimock-server/src/dyn_route.rs`,
 `crates/apimock-server/src/response/file_response.rs`, the three
 `FileResponse` construction sites, `docs/src/reference/threat-model.md`.
-**Depends on.** [RFC 062](../accepted/062-v6-threat-model.md), which
+**Depends on.** [RFC 062](../done/062-v6-threat-model.md), which
 confined the **write** path and prompted this by documenting what it did
 not cover.
 

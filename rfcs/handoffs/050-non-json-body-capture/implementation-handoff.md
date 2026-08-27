@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 050, body presence in trace events
 
-**Governing RFC.** [RFC 050](../../accepted/050-non-json-body-capture-decision.md)
+**Governing RFC.** [RFC 050](../../done/050-non-json-body-capture-decision.md)
 **Milestone.** M3 — P2, targeting **v5.19.0**
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 
@@ -72,7 +72,7 @@ This is not hypothetical: RFC 040 already did exactly this to
 
 **Decided 2026-08-17.** `#[non_exhaustive]` is approved for all five
 affected types, as **one coordinated change** —
-[RFC 052](../../accepted/052-non-exhaustive-public-types.md) — not
+[RFC 052](../../done/052-non-exhaustive-public-types.md) — not
 piecemeal inside three RFCs.
 
 **What that means for you:** this RFC adds fields by its very nature, so
@@ -132,7 +132,7 @@ Length and presence only.
   `parsed_request_from`, `trace.rs`'s `RequestSummary`, documentation.
 - **Out:** body content of any kind; response bodies; JSON capture
   behaviour; matching, dispatch, response construction; `log.verbose`
-  logging — that is [RFC 051](../../accepted/051-verbose-log-header-redaction.md).
+  logging — that is [RFC 051](../../done/051-verbose-log-header-redaction.md).
 - If the additive field turns out not to be additive, **stop and
   escalate** rather than reshaping consumers to fit.
 

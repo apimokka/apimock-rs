@@ -1,9 +1,9 @@
 # Implementation Handoff — RFC 057, `apimock set`
 
-**Governing RFC.** [RFC 057](../../accepted/057-set-command.md)
-**Contract.** [RFC 053](../../accepted/053-v6-cli-contract.md) — **restated in full in § 3**, so this package is self-contained
-**Write path.** [RFC 056](../../accepted/056-toml-edit-migration.md) — already merged
-**Umbrella.** [RFC 048](../../accepted/048-v6-cli-interface-concept.md) § 11 item 5 — the last of the portfolio
+**Governing RFC.** [RFC 057](../../done/057-set-command.md)
+**Contract.** [RFC 053](../../done/053-v6-cli-contract.md) — **restated in full in § 3**, so this package is self-contained
+**Write path.** [RFC 056](../../done/056-toml-edit-migration.md) — already merged
+**Umbrella.** [RFC 048](../../done/048-v6-cli-interface-concept.md) § 11 item 5 — the last of the portfolio
 **Companion doc.** [`acceptance-qa-checklist.md`](./acceptance-qa-checklist.md)
 **Milestone.** 6.0.0
 
@@ -163,7 +163,7 @@ Keep the returned type `#[non_exhaustive]` per RFC 052.
 ## 3. The contract, restated — so this package stands alone
 
 RFC 053 is the authority and lives at
-`rfcs/accepted/053-v6-cli-contract.md`. Everything you need to build
+`rfcs/done/053-v6-cli-contract.md`. Everything you need to build
 `set` is copied here, because this handoff is given to you on its own.
 **If the two ever disagree, RFC 053 wins — say so rather than following
 this section.**

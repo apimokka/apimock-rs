@@ -1,6 +1,6 @@
 # Acceptance / QA Checklist — RFC 061, cross-platform CI
 
-**Governing RFC.** [RFC 061](../../accepted/061-cross-platform-ci.md)
+**Governing RFC.** [RFC 061](../../done/061-cross-platform-ci.md)
 **Handoff.** [`implementation-handoff.md`](./implementation-handoff.md)
 
 ## A. The matrix
