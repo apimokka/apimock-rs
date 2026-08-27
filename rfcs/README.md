@@ -34,31 +34,38 @@ which rather than leaving a reader to assume.
 
 | ID  | Title | State |
 |-----|-------|-------|
-| 039 | [An additive-only gate for the public API](./accepted/039-public-api-additive-only-gate.md) — enable after 6.0.0 | not started; **enable after 6.0.0** |
-| 040 | [Trace channel: redaction, and non-JSON body capture](./accepted/040-trace-capture-and-redaction.md) | merged to `main` |
-| 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./accepted/041-error-type-shape.md) | handed off; breaking |
-| 042 | [External change detection: correct the contract](./accepted/042-external-change-detection.md) | handed off |
-| 043 | [Module split: `workspace/edit.rs`](./accepted/043-module-split-edit-rs.md) | handed off; 057 landed, unblocked |
-| 048 | [v6 concept: the CLI as a first-class interface](./accepted/048-v6-cli-interface-concept.md) — umbrella | governs the rest |
-| 050 | [Should non-JSON request bodies be captured at all?](./accepted/050-non-json-body-capture-decision.md) — decision RFC | merged to `main` |
-| 051 | [Redact credential headers in verbose request logging](./accepted/051-verbose-log-header-redaction.md) | merged to `main` |
-| 052 | [`#[non_exhaustive]` on the public types that keep growing](./accepted/052-non-exhaustive-public-types.md) | merged to `main` |
-| 053 | [The v6 CLI contract](./accepted/053-v6-cli-contract.md) | contract; completed by 057 |
-| 055 | [`apimock get`: what will this request return?](./accepted/055-get-command.md) | merged to `main` |
-| 056 | [Preserve what people wrote: `toml_edit` for the save path](./accepted/056-toml-edit-migration.md) | merged to `main` |
-| 057 | [`apimock set`: make the server answer X under condition Y](./accepted/057-set-command.md) | merged to `main` |
-| 058 | [`respond_dir` grows on every save](./accepted/058-respond-dir-prefix-persistence.md) — **released defect, R-10** | merged to `main` |
-| 059 | [CLI contract conformance across every command](./accepted/059-cli-contract-conformance.md) | handed off; **blocking 6.0.0** |
-| 060 | [Property-test the config write path](./accepted/060-write-path-property-testing.md) | handed off |
-| 061 | [Test on the platforms we ship](./accepted/061-cross-platform-ci.md) | handed off; **blocking 6.0.0** |
-| 062 | [The v6 threat model, refreshed](./accepted/062-v6-threat-model.md) | handed off; **blocking 6.0.0** |
-| 063 | [Confine the serve path](./accepted/063-serve-path-confinement.md) | merged to `main`; **fixed in 4.8.1 / 5.19.1**, [GHSA-72g6-wgrg-vhm7](https://github.com/apimokka/apimock-rs/security/advisories/GHSA-72g6-wgrg-vhm7) |
-| 064 | [Finish the CLI front door](./accepted/064-cli-front-door-completion.md) | merged to `main` (`9f9a193`); **Amendment 1** (`--flag=value`) merged to `main` (`b62ab00`), CI green; **blocking 6.0.0** |
-| 065 | [The response body-source model](./accepted/065-response-body-source-model.md) | merged to `main` (`7d8a0d7`), CI green; **blocking 6.0.0** |
+| 039 | [An additive-only gate for the public API](./accepted/039-public-api-additive-only-gate.md) — enable after 6.0.0 | **not started** — deliberately deferred; enable *after* 6.0.0 |
+| 040 | [Trace channel: redaction, and non-JSON body capture](./accepted/040-trace-capture-and-redaction.md) | implemented, merged to `main` |
+| 041 | [Error type shape: boxing, `kind()`, and `#[non_exhaustive]`](./accepted/041-error-type-shape.md) | implemented, merged to `main` |
+| 042 | [External change detection: correct the contract](./accepted/042-external-change-detection.md) | implemented, merged to `main` |
+| 043 | [Module split: `workspace/edit.rs`](./accepted/043-module-split-edit-rs.md) | implemented, merged to `main` |
+| 048 | [v6 concept: the CLI as a first-class interface](./accepted/048-v6-cli-interface-concept.md) — umbrella | umbrella concept — realised by the RFCs below; no separate implementation |
+| 050 | [Should non-JSON request bodies be captured at all?](./accepted/050-non-json-body-capture-decision.md) — decision RFC | decision RFC — decision recorded; merged to `main` |
+| 051 | [Redact credential headers in verbose request logging](./accepted/051-verbose-log-header-redaction.md) | implemented, merged to `main` |
+| 052 | [`#[non_exhaustive]` on the public types that keep growing](./accepted/052-non-exhaustive-public-types.md) | implemented, merged to `main` |
+| 053 | [The v6 CLI contract](./accepted/053-v6-cli-contract.md) | contract spec — realised by 055 / 057 / 059 / 064; no separate implementation |
+| 055 | [`apimock get`: what will this request return?](./accepted/055-get-command.md) | implemented, merged to `main` |
+| 056 | [Preserve what people wrote: `toml_edit` for the save path](./accepted/056-toml-edit-migration.md) | implemented, merged to `main` |
+| 057 | [`apimock set`: make the server answer X under condition Y](./accepted/057-set-command.md) | implemented, merged to `main` |
+| 058 | [`respond_dir` grows on every save](./accepted/058-respond-dir-prefix-persistence.md) — **released defect, R-10** | implemented, merged to `main` |
+| 059 | [CLI contract conformance across every command](./accepted/059-cli-contract-conformance.md) | implemented, merged to `main` |
+| 060 | [Property-test the config write path](./accepted/060-write-path-property-testing.md) | implemented, merged to `main` |
+| 061 | [Test on the platforms we ship](./accepted/061-cross-platform-ci.md) | implemented, merged to `main` — its matrix gates every CI run |
+| 062 | [The v6 threat model, refreshed](./accepted/062-v6-threat-model.md) | implemented, merged to `main` |
+| 063 | [Confine the serve path](./accepted/063-serve-path-confinement.md) | implemented, merged to `main`; **fixed in 4.8.1 / 5.19.1**, [GHSA-72g6-wgrg-vhm7](https://github.com/apimokka/apimock-rs/security/advisories/GHSA-72g6-wgrg-vhm7) |
+| 064 | [Finish the CLI front door](./accepted/064-cli-front-door-completion.md) | implemented, merged to `main`; **Amendment 1** (`--flag=value`) merged |
+| 065 | [The response body-source model](./accepted/065-response-body-source-model.md) | implemented, merged to `main` |
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not
 separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
+
+> **Ships in 6.0.0 — verified 2026-08-27 against `main`.** Every RFC
+> here except **039** is implemented and merged, and moves to `done/`
+> **when 6.0.0 ships**, not before: `accepted/` is defined to cover
+> "implemented and merged, awaiting a release", which is exactly this
+> state. 039 stays — it is approved and deliberately unimplemented until
+> after the release.
 
 ## Done (Released)
 
