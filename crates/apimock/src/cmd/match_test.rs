@@ -171,27 +171,42 @@ struct MatchTestArgs {
 
 impl MatchTestArgs {
     fn parse(args: &[String]) -> anyhow::Result<Self> {
-        let rule_set = flag_value(args, RULE_SET_NAMES)
-            .ok_or_else(|| anyhow::anyhow!("--rule-set <path> is required"))?;
-
-        let rule_index: Option<usize> = if let Some(s) = flag_value(args, RULE_NAMES) {
-            let n: usize = s
-                .parse()
-                .with_context(|| format!("--rule must be a positive integer, got: {}", s))?;
-            if n == 0 {
-                anyhow::bail!("--rule is 1-based; use 1 for the first rule");
+        // A dangling `--rule-set` (no value) and an absent one both mean
+        // "no rule set was given" from a required flag's point of view —
+        // the same message applies to both (RFC 064: this is the one
+        // place a required flag's dangling form must keep saying
+        // exactly what it already said, not `flag_value`'s new generic
+        // "requires a value").
+        let rule_set = match flag_value(args, RULE_SET_NAMES) {
+            Ok(Some(v)) => v,
+            Ok(None) | Err(_) => {
+                return Err(anyhow::anyhow!("--rule-set <path> is required"));
             }
-            Some(n - 1)
-        } else {
-            None
         };
 
-        let path = flag_value(args, PATH_NAMES).unwrap_or_else(|| "/".to_owned());
+        let rule_index: Option<usize> =
+            if let Some(s) = flag_value(args, RULE_NAMES).map_err(|e| anyhow::anyhow!(e))? {
+                let n: usize = s
+                    .parse()
+                    .with_context(|| format!("--rule must be a positive integer, got: {}", s))?;
+                if n == 0 {
+                    anyhow::bail!("--rule is 1-based; use 1 for the first rule");
+                }
+                Some(n - 1)
+            } else {
+                None
+            };
+
+        let path = flag_value(args, PATH_NAMES)
+            .map_err(|e| anyhow::anyhow!(e))?
+            .unwrap_or_else(|| "/".to_owned());
         let method = flag_value(args, METHOD_NAMES)
+            .map_err(|e| anyhow::anyhow!(e))?
             .unwrap_or_else(|| "GET".to_owned())
             .to_uppercase();
 
         let headers = flag_values_all(args, HEADER_NAMES)
+            .map_err(|e| anyhow::anyhow!(e))?
             .into_iter()
             .filter_map(|h| {
                 let idx = h.find(':')?;
@@ -201,11 +216,14 @@ impl MatchTestArgs {
             })
             .collect();
 
-        let body = flag_value(args, BODY_NAMES);
-        let body_file = flag_value(args, BODY_FILE_NAMES);
+        let body = flag_value(args, BODY_NAMES).map_err(|e| anyhow::anyhow!(e))?;
+        let body_file = flag_value(args, BODY_FILE_NAMES).map_err(|e| anyhow::anyhow!(e))?;
         let quiet = flag_present(args, QUIET_NAMES);
 
-        let format = match flag_value(args, &[FORMAT_FLAG]).as_deref() {
+        let format = match flag_value(args, &[FORMAT_FLAG])
+            .map_err(|e| anyhow::anyhow!(e))?
+            .as_deref()
+        {
             None => None,
             Some("text") => Some(Format::Text),
             Some("json") => Some(Format::Json),
@@ -496,11 +514,14 @@ mod tests {
             .map(|s| s.to_string())
             .collect();
         assert_eq!(
-            flag_value(&args, RULE_SET_NAMES).as_deref(),
+            flag_value(&args, RULE_SET_NAMES).unwrap().as_deref(),
             Some("foo.toml")
         );
-        assert_eq!(flag_value(&args, PATH_NAMES).as_deref(), Some("/api"));
-        assert_eq!(flag_value(&args, METHOD_NAMES), None);
+        assert_eq!(
+            flag_value(&args, PATH_NAMES).unwrap().as_deref(),
+            Some("/api")
+        );
+        assert_eq!(flag_value(&args, METHOD_NAMES).unwrap(), None);
     }
 
     #[test]
@@ -514,7 +535,7 @@ mod tests {
         .iter()
         .map(|s| s.to_string())
         .collect();
-        let vals = flag_values_all(&args, HEADER_NAMES);
+        let vals = flag_values_all(&args, HEADER_NAMES).unwrap();
         assert_eq!(vals.len(), 2);
         assert!(vals[0].contains("Content-Type"));
     }

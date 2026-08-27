@@ -60,3 +60,20 @@ pub fn run_stderr(dir: &Path, args: &[&str]) -> (i32, String) {
         String::from_utf8_lossy(&output.stderr).into_owned(),
     )
 }
+
+/// Like [`run`]/[`run_stderr`] together — for a scenario that must
+/// assert on *both* streams at once (RFC 064: a usage error's message
+/// on stderr, and nothing at all on stdout — an assertion neither
+/// single-stream helper above can make by itself).
+pub fn run_full(dir: &Path, args: &[&str]) -> (i32, String, String) {
+    let output = bin()
+        .current_dir(dir)
+        .args(args)
+        .output()
+        .unwrap_or_else(|e| panic!("failed to run apimock {:?}: {}", args, e));
+    (
+        output.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+    )
+}

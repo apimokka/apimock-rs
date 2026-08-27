@@ -9,19 +9,28 @@ mod tests;
 /// Relative path from the current working directory to the parent
 /// directory of the given file.
 ///
-/// # Why a file whose parent we can't determine is an `io::Error`
+/// # Why a bare filename resolves to `.`, not an error
 ///
-/// `Path::parent()` returns `None` for root-only paths (`"/"`) and empty
-/// paths. Neither is a valid config file location, so treating them as an
-/// I/O error keeps the caller's `?` chain clean instead of forcing them
-/// to handle an `Option` separately.
+/// `Path::parent()` returns `None` only for root-only paths (`"/"`) —
+/// **not** for a bare filename like `"apimock.toml"`, where it returns
+/// `Some("")` instead (RFC 064). An empty parent is a real answer ("no
+/// directory component was written"), not a missing one, and the
+/// correct resolution for it is the current directory — the same
+/// place a bare filename already reads from. Passing `""` straight to
+/// `fs::canonicalize` (what this function used to do) fails with
+/// `ENOENT`, which then surfaces as "the config file doesn't exist"
+/// even when it does — this was fixed independently three times at
+/// three different call sites before landing here, where it covers
+/// all of them at once.
 pub fn current_dir_to_file_parent_dir_relative_path(file_path: &str) -> io::Result<PathBuf> {
-    let parent = Path::new(file_path).parent().ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("failed to get parent dir: {}", file_path),
-        )
-    })?;
+    let parent = Path::new(file_path)
+        .parent()
+        .unwrap_or_else(|| Path::new(""));
+    let parent = if parent.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        parent
+    };
     relative_path(env::current_dir()?.as_path(), parent)
 }
 

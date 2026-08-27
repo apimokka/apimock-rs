@@ -171,17 +171,17 @@ struct SetRuleArgs {
 
 impl SetRuleArgs {
     fn parse(args: &[String]) -> Result<Self, String> {
-        let config_path = flag_value(args, CONFIG_NAMES);
-        let rule_set = flag_value(args, RULE_SET_NAMES);
-        let rule_index = flag_value(args, RULE_NAMES)
+        let config_path = flag_value(args, CONFIG_NAMES)?;
+        let rule_set = flag_value(args, RULE_SET_NAMES)?;
+        let rule_index = flag_value(args, RULE_NAMES)?
             .map(|s| {
                 s.parse::<usize>()
                     .map_err(|_| format!("--rule must be a non-negative integer, got '{}'", s))
             })
             .transpose()?;
-        let path = flag_value(args, PATH_NAMES);
-        let method = flag_value(args, METHOD_NAMES).map(|m| m.to_uppercase());
-        let headers = flag_values_all(args, HEADER_NAMES)
+        let path = flag_value(args, PATH_NAMES)?;
+        let method = flag_value(args, METHOD_NAMES)?.map(|m| m.to_uppercase());
+        let headers = flag_values_all(args, HEADER_NAMES)?
             .into_iter()
             .map(|h| {
                 let idx = h
@@ -192,23 +192,23 @@ impl SetRuleArgs {
                 Ok((name, value))
             })
             .collect::<Result<Vec<_>, String>>()?;
-        let status = flag_value(args, STATUS_NAMES)
+        let status = flag_value(args, STATUS_NAMES)?
             .map(|s| {
                 s.parse::<u16>()
                     .map_err(|_| format!("--status must be a valid HTTP status code, got '{}'", s))
             })
             .transpose()?;
-        let json = flag_value(args, JSON_NAMES);
+        let json = flag_value(args, JSON_NAMES)?;
         if let Some(j) = json.as_deref() {
             serde_json::from_str::<serde_json::Value>(j)
                 .map_err(|e| format!("--json is not valid JSON: {}", e))?;
         }
-        let text = flag_value(args, TEXT_NAMES);
+        let text = flag_value(args, TEXT_NAMES)?;
         if json.is_some() && text.is_some() {
             return Err("--json and --text are mutually exclusive".to_owned());
         }
-        let file_path = flag_value(args, FILE_NAMES);
-        let delay_ms = flag_value(args, DELAY_NAMES)
+        let file_path = flag_value(args, FILE_NAMES)?;
+        let delay_ms = flag_value(args, DELAY_NAMES)?
             .map(|s| {
                 s.parse::<u32>()
                     .map_err(|_| format!("--delay must be a non-negative integer, got '{}'", s))
@@ -217,7 +217,7 @@ impl SetRuleArgs {
         let dry_run = flag_present(args, &[DRY_RUN_FLAG]);
         let allow_outside = flag_present(args, &[ALLOW_OUTSIDE_FLAG]);
 
-        let format_raw = flag_value(args, &[FORMAT_FLAG]);
+        let format_raw = flag_value(args, &[FORMAT_FLAG])?;
         let format = match format_raw.as_deref() {
             None => None,
             Some("text") => Some(Format::Text),

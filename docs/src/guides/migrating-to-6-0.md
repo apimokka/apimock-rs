@@ -303,7 +303,10 @@ you need the inner detail.
 ## What isn't changing
 
 Worth stating plainly, since a migration page can read as longer than it
-is: exit codes (`0`/`1`/`2`, set in RFC 049) are not changing. Stream
+is: the exit-code *scheme* (`0`/`1`/`2`, set in RFC 049) is not
+changing — no new code was introduced. Specific invocations did move
+within it this cycle: a subcommand flag given no value, previously
+`0` or `1` depending on the flag, is now always `2` (RFC 064). Stream
 discipline (diagnostics to stderr, machine-readable output to stdout) is
 not changing. `validate`'s own diagnostics, severities, and exit codes
 are not changing — only `--format json`'s wrapping shape around them is

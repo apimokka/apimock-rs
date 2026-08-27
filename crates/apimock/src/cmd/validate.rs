@@ -69,11 +69,21 @@ const JSON_DEPRECATION_WARNING: &str = "apimock validate: --json is deprecated a
 
 impl ValidateArgs {
     pub fn parse(args: &[String]) -> Result<Self, String> {
-        let config_path = super::flags::flag_value(args, CONFIG_NAMES)
-            .ok_or_else(|| "missing required flag --config / -c".to_owned())?;
+        // A dangling `-c` (no value) and an absent `-c` both mean "no
+        // config path was given" from a required flag's point of view —
+        // the same message applies to both (RFC 064: this is the one
+        // place a required flag's dangling form must keep saying
+        // exactly what it already said, not `flag_value`'s new generic
+        // "requires a value").
+        let config_path = match super::flags::flag_value(args, CONFIG_NAMES) {
+            Ok(Some(v)) => v,
+            Ok(None) | Err(_) => {
+                return Err("missing required flag --config / -c".to_owned());
+            }
+        };
 
         let json = args.iter().any(|a| a == JSON_FLAG);
-        let format_raw = super::flags::flag_value(args, &[FORMAT_FLAG]);
+        let format_raw = super::flags::flag_value(args, &[FORMAT_FLAG])?;
 
         // RFC 054: "--json --format json together is a usage error, not
         // a silent precedence rule." Read broadly — any `--format`

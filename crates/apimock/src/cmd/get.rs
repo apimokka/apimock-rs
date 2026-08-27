@@ -83,11 +83,11 @@ impl GetArgs {
         let path =
             positional_path(args).ok_or_else(|| "missing required argument <path>".to_owned())?;
 
-        let config_path = flag_value(args, CONFIG_NAMES);
-        let method = flag_value(args, METHOD_NAMES)
+        let config_path = flag_value(args, CONFIG_NAMES)?;
+        let method = flag_value(args, METHOD_NAMES)?
             .unwrap_or_else(|| "GET".to_owned())
             .to_uppercase();
-        let headers = flag_values_all(args, HEADER_NAMES)
+        let headers = flag_values_all(args, HEADER_NAMES)?
             .into_iter()
             .filter_map(|h| {
                 let idx = h.find(':')?;
@@ -96,13 +96,13 @@ impl GetArgs {
                 Some((name, value))
             })
             .collect();
-        let body = flag_value(args, BODY_NAMES);
-        let body_file = flag_value(args, BODY_FILE_NAMES);
+        let body = flag_value(args, BODY_NAMES)?;
+        let body_file = flag_value(args, BODY_FILE_NAMES)?;
 
         let why_flag_present = flag_present(args, &[WHY_FLAG]);
         let why = if why_flag_present { Some(true) } else { None };
 
-        let format_raw = flag_value(args, &[FORMAT_FLAG]);
+        let format_raw = flag_value(args, &[FORMAT_FLAG])?;
         let format = match format_raw.as_deref() {
             None => None,
             Some("text") => Some(Format::Text),

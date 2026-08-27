@@ -41,16 +41,30 @@ included (each also documents its own diagnostic-specific codes below —
 | Code | Meaning |
 |---|---|
 | `0` | Success, including `--version` / `--help` |
-| `2` | Usage error — an unrecognised option, or a known option given a value that doesn't parse (e.g. `--port notanumber`) |
-| `1` | Everything else, including a known option given **no** value at all (e.g. `-c` with nothing after it) — the same code as a referenced file not existing |
+| `2` | Usage error — an unrecognised option, a known option given a value that doesn't parse (e.g. `--port notanumber`), or (subcommands only, see below) a known option given no value at all |
+| `1` | A referenced file not existing, or a subcommand-specific diagnostic failure (`match-test`'s "no rule matched", `set`'s save failing after a valid edit — see each subcommand's own section) |
 
-A flag given with no value is indistinguishable, at the point the
-argument list is scanned, from a boolean flag's mere presence (`--init`
-takes no value; `-c` normally does) — telling them apart would mean
-changing that scan, which every other flag's exact behaviour depends on
-staying untouched. So `-c` with nothing after it isn't caught as a
-usage error; it falls through and fails later, the same way it always
-has, as exit `1`.
+**Subcommands** (`get`, `set`, `validate`, `match-test`) catch a flag
+given no value — the end of the argument list, or immediately followed
+by another flag — at the same scanning step that catches an
+unrecognised flag, and report it the same way: a usage error, exit `2`
+(RFC 064).
+
+**The root command** (`apimock [-p <port>] [-c <config>] ...`, see
+[Running the server](#running-the-server)) does not share that fix yet
+— it parses its own arguments separately
+(`crates/apimock/src/args.rs`), out of RFC 064's scope. There, a
+dangling flag is never caught as *that* — a missing value — up front;
+each flag instead fails wherever its own value is next used, and which
+exit code results depends on how it fails. `-c`/`-d` with nothing after
+them are checked for existence (`Path::exists()`) against an empty
+path, which is always false, so both fail as exit `1`, the same code as
+a referenced file genuinely not existing. `-p` with nothing after it is
+instead checked by parsing the empty string as a `u16`, which fails to
+*parse* rather than to exist, so it's caught as a usage error, exit
+`2`, the same as `--port notanumber`. The two flags don't disagree by
+design — they just fail at different checks that happen to return
+different codes.
 
 ## Running the server
 
@@ -158,6 +172,23 @@ that ran and found problems is still a `result`, not an `error`** — the
 envelope's top-level shape answers "did this command run", not "is the
 config valid"; check `result.summary.errors` for the latter. `schema`
 starts at `1`; a later, incompatible change to this shape increments it.
+
+Each `kind` maps to a process exit code:
+
+| `kind` | Exit code |
+|---|---|
+| `usage` | `2` |
+| `config_invalid` | `2` |
+| `config_unreadable` | `2` |
+| `io` | `1` |
+| `conflict` | `1` |
+| `internal` | `1` |
+
+The mapping is many-to-one on purpose — the envelope's `kind` is a
+caller-facing category (what went wrong), the exit code is a
+shell-facing signal (did it work); a script branching on exit code
+alone still separates "bad invocation" (`2`) from "ran, but failed"
+(`1`) without needing to parse the envelope at all.
 
 ## `apimock get`
 
