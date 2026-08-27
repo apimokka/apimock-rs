@@ -410,7 +410,11 @@ mod tests {
             display_path(Path::new(".").join(".").join("bad.json").as_path()),
             "bad.json"
         );
-        assert_eq!(display_path(Path::new("data/bad.json")), "data/bad.json");
+        // Built via `Path::join`, not a hardcoded `"data/bad.json"`
+        // literal — a bare string literal bakes in `/`, which isn't
+        // `data\bad.json` on Windows (caught by CI: RFC 061's matrix).
+        let with_dir = Path::new("data").join("bad.json");
+        assert_eq!(display_path(&with_dir), with_dir.to_string_lossy());
         assert_eq!(display_path(Path::new(".")), ".");
     }
 
