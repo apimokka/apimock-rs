@@ -107,7 +107,13 @@ pub fn run(raw_args: &[String]) -> i32 {
     // `--rule-set` in the RFC's own repro then failed for an unrelated
     // reason, propagated as `anyhow::Error` all the way to `main`,
     // surfacing as a generic exit 1 rather than a `usage` exit 2.
-    if let Err(e) = reject_unknown_flags(raw_args, &known_flag_names(), NO_VALUE_FLAG_NAMES) {
+    if let Err(e) = reject_unknown_flags(
+        raw_args,
+        &known_flag_names(),
+        NO_VALUE_FLAG_NAMES,
+        false,
+        "unrecognized argument",
+    ) {
         return usage_error(&e);
     }
     let args = match MatchTestArgs::parse(raw_args) {
@@ -176,8 +182,17 @@ impl MatchTestArgs {
         // the same message applies to both (RFC 064: this is the one
         // place a required flag's dangling form must keep saying
         // exactly what it already said, not `flag_value`'s new generic
-        // "requires a value").
+        // "requires a value"). An *explicit* empty value (`--rule-set=`,
+        // RFC 064 Amendment 1) is a third, distinct case — reviewed as
+        // its own error rather than folded into either of the two
+        // above, so the message names the flag instead of surfacing an
+        // empty path several layers downstream.
         let rule_set = match flag_value(args, RULE_SET_NAMES) {
+            Ok(Some(v)) if v.is_empty() => {
+                return Err(anyhow::anyhow!(
+                    "--rule-set <path> must be a non-empty path, got ''"
+                ));
+            }
             Ok(Some(v)) => v,
             Ok(None) | Err(_) => {
                 return Err(anyhow::anyhow!("--rule-set <path> is required"));
@@ -218,6 +233,8 @@ impl MatchTestArgs {
 
         let body = flag_value(args, BODY_NAMES).map_err(|e| anyhow::anyhow!(e))?;
         let body_file = flag_value(args, BODY_FILE_NAMES).map_err(|e| anyhow::anyhow!(e))?;
+        let body_file = super::flags::reject_empty_path_value(BODY_FILE_NAMES, body_file)
+            .map_err(|e| anyhow::anyhow!(e))?;
         let quiet = flag_present(args, QUIET_NAMES);
 
         let format = match flag_value(args, &[FORMAT_FLAG])

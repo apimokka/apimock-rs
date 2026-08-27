@@ -32,6 +32,48 @@ A near-match suggestion appears where one exists. The message goes to
 stderr, exit code `2`, and no server is started — a typo used to start a
 server on a port nobody asked for; now it doesn't start anything.
 
+## `--flag=value`
+
+Every value-taking flag on every command accepts `--flag=value`
+alongside the space form `--flag value` — `-c=./apimock.toml` and
+`--config ./apimock.toml` are equivalent, on every subcommand and the
+root command (RFC 064 Amendment 1). Splits at the **first** `=` only,
+so a value that itself contains `=` (`--json={"a":"b=c"}`) keeps every
+`=` after the first as part of the value; only a token that *starts
+with* `-` is ever considered for this form, so a positional value
+containing `=` (`get "/a?x=1&y=2"`) or a space-form value containing
+`=` (`-H "Authorization: Basic YWJj=="`, a separate argv token from
+`-H` itself) is never mistaken for one.
+
+`--flag=` (nothing after the `=`) is an **explicit empty value** — the
+same as `--flag ""` — distinct from a dangling `--flag` with nothing
+after it at all, which is still a usage error (RFC 064). This applies
+to *content* flags (`--text`, `--json`, `--body`), where an empty value
+is a real, meaningful answer (an empty response body). It does **not**
+apply to *path*-valued flags (`--config`/`-c`, `--rule-set`/`-r`,
+`--body-file`, `--file`): an empty value there is always a usage error
+naming the flag (`--config / -c must be a non-empty path, got ''`),
+the same style already used for a flag whose value fails to parse
+(`--status`, `--delay`) — found in review of this amendment, since a
+path silently resolved from `""` fails several layers downstream by
+naming an empty path rather than the flag that produced it.
+
+A repeatable flag accepts the `=` form on each occurrence —
+`--header=A: 1 --header=B: 2` adds two headers, the same as
+`--header "A: 1" --header "B: 2"`.
+
+**A no-value (boolean) flag given any `=` form is always a usage
+error, exit `2`.** `--dry-run=true`, `--dry-run=false` and `--dry-run=`
+are all rejected — never read as "present." This is deliberate, not an
+oversight: `--allow-outside` ([RFC 062's write-path confinement
+opt-out](#apimock-set)) is one of these flags, and treating
+`--allow-outside=false` as "present" would silently disable
+confinement on an invocation that asked, in writing, to keep it on.
+There is no `--flag=bool` feature anywhere in this CLI — only
+rejection, applied identically to `=true`, `=false` and `=` alike, so
+accepting one form and not the other can never become a trap someone
+later "simplifies" into accepting both.
+
 ## Exit codes
 
 These apply across the whole CLI, `match-test`, `validate` and `get`

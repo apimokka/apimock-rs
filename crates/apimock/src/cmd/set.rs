@@ -59,7 +59,9 @@ use apimock_config::{
 use crate::args::constant::{DEFAULT_CONFIG_FILE_PATH, DEFAULT_RULE_SET_FILE_PATH};
 
 use super::envelope::{self, ErrorKind, Format};
-use super::flags::{flag_present, flag_value, flag_values_all};
+use super::flags::{
+    flag_present, flag_value, flag_values_all, reject_empty_path_value, reject_unknown_flags,
+};
 
 const CONFIG_NAMES: &[&str] = &["--config", "-c"];
 const RULE_SET_NAMES: &[&str] = &["--rule-set"];
@@ -106,36 +108,6 @@ fn known_flag_names() -> Vec<&'static str> {
     .collect()
 }
 
-/// RFC 049 Goal 1, applied to `set rule`: an unrecognised flag must be
-/// a `usage` error, not silently ignored. `apimock set rule --bogus`
-/// used to fall straight through to "nothing else was given either" —
-/// reaching `run_inner` at all, and (before the second fix in this
-/// round) writing a degenerate rule to disk. Mirrors
-/// `args.rs::reject_unknown_arguments`'s exact skip-next rule for a
-/// value-taking flag's value, so this never disagrees with how
-/// `SetRuleArgs::parse` itself reads a flag's value.
-fn reject_unknown_flags(args: &[String]) -> Result<(), String> {
-    let known = known_flag_names();
-    let mut skip_next = false;
-    for (i, arg) in args.iter().enumerate() {
-        if skip_next {
-            skip_next = false;
-            continue;
-        }
-        if known.contains(&arg.as_str()) {
-            if !NO_VALUE_FLAG_NAMES.contains(&arg.as_str()) {
-                skip_next = args.get(i + 1).is_some_and(|next| !next.starts_with('-'));
-            }
-            continue;
-        }
-        return Err(match crate::args::near_match(arg, &known) {
-            Some(suggestion) => format!("unknown option '{}'; did you mean '{}'?", arg, suggestion),
-            None => format!("unrecognized argument '{}'", arg),
-        });
-    }
-    Ok(())
-}
-
 /// Minimal empty rule set — `RuleSet`'s `rules: Vec<Rule>` has no
 /// `#[serde(default)]`, so a genuinely empty file fails to parse
 /// (`missing field 'rules'`, confirmed empirically before writing
@@ -171,8 +143,8 @@ struct SetRuleArgs {
 
 impl SetRuleArgs {
     fn parse(args: &[String]) -> Result<Self, String> {
-        let config_path = flag_value(args, CONFIG_NAMES)?;
-        let rule_set = flag_value(args, RULE_SET_NAMES)?;
+        let config_path = reject_empty_path_value(CONFIG_NAMES, flag_value(args, CONFIG_NAMES)?)?;
+        let rule_set = reject_empty_path_value(RULE_SET_NAMES, flag_value(args, RULE_SET_NAMES)?)?;
         let rule_index = flag_value(args, RULE_NAMES)?
             .map(|s| {
                 s.parse::<usize>()
@@ -207,7 +179,7 @@ impl SetRuleArgs {
         if json.is_some() && text.is_some() {
             return Err("--json and --text are mutually exclusive".to_owned());
         }
-        let file_path = flag_value(args, FILE_NAMES)?;
+        let file_path = reject_empty_path_value(FILE_NAMES, flag_value(args, FILE_NAMES)?)?;
         let delay_ms = flag_value(args, DELAY_NAMES)?
             .map(|s| {
                 s.parse::<u32>()
@@ -338,7 +310,22 @@ pub fn run(raw_args: &[String]) -> i32 {
     // all — including its own bootstrap-if-missing step — so a
     // rejected invocation never writes anything, not even a starter
     // file (REVIEW-001 § 3).
-    if let Err(e) = reject_unknown_flags(rest) {
+    //
+    // `strict_bare_tokens: true` (RFC 064 Amendment 1) preserves this
+    // command's own pre-existing strictness — unlike `get`'s `<path>`,
+    // `set rule` has no positional argument once its leading `rule`
+    // noun is stripped above, so any leftover token that isn't a known
+    // flag is a mistake, not a value, even if it doesn't start with
+    // `-`. This is `set`'s one behavioural difference from the other
+    // three commands sharing this function, preserved deliberately
+    // rather than loosened by folding its former private copy in.
+    if let Err(e) = reject_unknown_flags(
+        rest,
+        &known_flag_names(),
+        NO_VALUE_FLAG_NAMES,
+        true,
+        "unrecognized argument",
+    ) {
         return usage_error(&e);
     }
     let args = match SetRuleArgs::parse(rest) {

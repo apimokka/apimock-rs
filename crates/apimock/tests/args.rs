@@ -273,6 +273,113 @@ fn bare_relative_config_resolves_the_same_as_dot_slash_prefixed() {
     }
 }
 
+/// RFC 064 Amendment 1: `-c=path` / `--config=path` resolve the same as
+/// the space form, on the root command too, not only the four
+/// subcommands. Same spawn/poll/kill pattern as
+/// `bare_relative_config_resolves_the_same_as_dot_slash_prefixed` above
+/// (a real server would otherwise run forever) — a second test rather
+/// than folding into that one's loop, since its `["-c", arg]` shape is
+/// two argv tokens and the `=` form is one.
+#[test]
+fn config_equals_form_resolves_the_same_as_space_form() {
+    let dir = tempfile::tempdir().expect("failed to create temp dir");
+    std::fs::write(
+        dir.path().join("apimock.toml"),
+        "[listener]\nip_address = \"127.0.0.1\"\nport = 0\n",
+    )
+    .expect("failed to write config");
+
+    for arg in ["-c=apimock.toml", "--config=./apimock.toml"] {
+        let mut child = bin()
+            .current_dir(dir.path())
+            .args([arg])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap_or_else(|e| panic!("failed to spawn apimock {arg}: {e}"));
+
+        let mut stdout = std::io::BufReader::new(child.stdout.take().expect("piped stdout"));
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            use std::io::BufRead;
+            let mut line = String::new();
+            let _ = stdout.read_line(&mut line);
+            let _ = tx.send(line);
+        });
+
+        let saw_config_line = rx
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .map(|line| line.starts_with("[config]"))
+            .unwrap_or(false);
+
+        let _ = child.kill();
+        let output = child.wait_with_output().expect("failed to reap child");
+
+        assert!(
+            saw_config_line,
+            "{arg}: never saw the `[config]` line - resolution likely failed; stderr: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            !String::from_utf8_lossy(&output.stderr).contains("failed to resolve path"),
+            "{arg}: stderr: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
+
+/// A missing file behind `--config=path` must still name the file, the
+/// same as the space form's own non-regression test below — proof the
+/// value was actually extracted from the `=` form, not silently
+/// dropped to an empty string. Exits before ever binding a listener
+/// (`EnvArgs::validate`'s existence check runs first), so this is safe
+/// to run with a plain `.output()`, no spawn/poll/kill needed.
+#[test]
+fn config_equals_form_with_a_missing_file_names_the_file_not_an_empty_path() {
+    let output = bin()
+        .args(["--config=does-not-exist.toml"])
+        .output()
+        .expect("failed to run apimock");
+
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("does-not-exist.toml"),
+        "stderr should name the missing file: {stderr}"
+    );
+}
+
+/// RFC 064 Amendment 1 § 2's hard acceptance gate, on the root command:
+/// a no-value flag given any `=` form is a usage error, never "present"
+/// with the value silently discarded. Exits via
+/// `reject_unknown_arguments` before `EnvArgs::from_args` or any
+/// `--init`/`--yes` branch runs, so none of these ever touch the
+/// filesystem or bind a listener - safe with a plain `.output()`.
+#[test]
+fn root_no_value_flag_given_equals_form_is_a_usage_error() {
+    for arg in [
+        "--init=false",
+        "--init=true",
+        "--init=",
+        "--yes=false",
+        "-y=true",
+        "--middleware=false",
+        "--version=x",
+        "--help=x",
+    ] {
+        let output = bin()
+            .args([arg])
+            .output()
+            .unwrap_or_else(|e| panic!("failed to run apimock {arg}: {e}"));
+        assert_eq!(output.status.code(), Some(2), "{arg}: {output:?}");
+        assert!(
+            output.stdout.is_empty(),
+            "{arg}: stdout was not empty: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+    }
+}
+
 /// `-c` with nothing after it was already a meaningless invocation
 /// before RFC 049 (`args_option_value` returns the empty string for a
 /// value-flag given with no value, the same encoding it uses for a

@@ -74,8 +74,16 @@ impl ValidateArgs {
         // the same message applies to both (RFC 064: this is the one
         // place a required flag's dangling form must keep saying
         // exactly what it already said, not `flag_value`'s new generic
-        // "requires a value").
+        // "requires a value"). An *explicit* empty value (`-c=`, RFC 064
+        // Amendment 1) is a third, distinct case — not "no path given",
+        // but "the path given is empty" — reviewed as its own error
+        // rather than folded into either of the two above, so the
+        // message names the flag instead of surfacing an empty path
+        // several layers downstream.
         let config_path = match super::flags::flag_value(args, CONFIG_NAMES) {
+            Ok(Some(v)) if v.is_empty() => {
+                return Err("--config / -c must be a non-empty path, got ''".to_owned());
+            }
             Ok(Some(v)) => v,
             Ok(None) | Err(_) => {
                 return Err("missing required flag --config / -c".to_owned());
@@ -153,9 +161,13 @@ pub fn run(args: &[String]) -> i32 {
     // (`--strct`) must never be silently absorbed the way it previously
     // was, since `ValidateArgs::parse` only ever *looked for* its known
     // flags and had no path that noticed an unrecognised one.
-    if let Err(e) =
-        super::flags::reject_unknown_flags(args, &known_flag_names(), NO_VALUE_FLAG_NAMES)
-    {
+    if let Err(e) = super::flags::reject_unknown_flags(
+        args,
+        &known_flag_names(),
+        NO_VALUE_FLAG_NAMES,
+        false,
+        "unrecognized argument",
+    ) {
         return usage_error(&e);
     }
     let parsed = match ValidateArgs::parse(args) {

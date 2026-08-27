@@ -278,22 +278,33 @@ impl EnvArgs {
 }
 
 /// Look up the value associated with any of the given option names in
-/// `env::args()`.
+/// `env::args()`, in either the space form (`--config path`) or the
+/// `=` form (`--config=path`, RFC 064 Amendment 1).
 ///
 /// For flags that don't take a value (e.g. `--init`), returns `Some("")`
-/// so the caller can check `.is_some()` without caring about the payload.
+/// so the caller can check `.is_some()` without caring about the
+/// payload — reachable here only for the space form, since
+/// `reject_unknown_arguments` (called before this, in
+/// `EnvArgs::default`) already rejects a no-value flag given any `=`
+/// form as a usage error before this function ever runs.
 fn args_option_value(option_names: &[&str]) -> Option<String> {
     let args: Vec<String> = env::args().collect();
 
-    let name_index = args
-        .iter()
-        .position(|arg| option_names.contains(&arg.as_str()))?;
-
-    let name_value = args.get(name_index + 1);
-    match name_value {
-        Some(v) if !v.starts_with('-') => Some(v.to_owned()),
-        _ => Some(String::new()),
+    for (i, arg) in args.iter().enumerate() {
+        if let Some((name, value)) = crate::cmd::flags::split_equals_form(arg) {
+            if option_names.contains(&name) {
+                return Some(value.to_owned());
+            }
+            continue;
+        }
+        if option_names.contains(&arg.as_str()) {
+            return match args.get(i + 1) {
+                Some(v) if !v.starts_with('-') => Some(v.to_owned()),
+                _ => Some(String::new()),
+            };
+        }
     }
+    None
 }
 
 /// True if any of `raw` matches one of `option_names` exactly.
@@ -315,43 +326,36 @@ fn exit_usage_error(message: &str) -> ! {
 /// suggestion where one exists - the difference between a dead end and
 /// a self-correction, for a person and for an agent alike.
 ///
-/// Positional values consumed by a known flag (e.g. the number after
-/// `-p`) are skipped along with that flag, using the exact same
-/// "does the next token start with `-`" rule `args_option_value` uses,
-/// so this never disagrees with how a flag's value actually gets read.
+/// Delegates the actual scan (skip-next for a value-taking flag's
+/// value, `--flag=value` recognition, the no-value-flag-plus-`=` gate)
+/// to `crate::cmd::flags::reject_unknown_flags` — RFC 064 Amendment 1
+/// folded this function's own copy of that logic into the one already
+/// shared by `get`/`validate`/`match-test`/`set`, rather than adding
+/// `=`-form support to a fourth private copy. `strict_bare_tokens:
+/// false` preserves this command's own pre-existing leniency: a bare
+/// word that isn't a known flag (e.g. a stray positional-looking
+/// token) was never rejected here, and still isn't.
+///
+/// `raw[0]` (the binary path) is skipped by starting the delegated
+/// scan at `raw[1..]`. A subcommand name at `raw[1]` never reaches this
+/// function at all — `EnvArgs::default` dispatches and exits for all
+/// four before this runs — and a bare word never triggers this
+/// function's error branch regardless (it only fires on a token
+/// starting with `-`, and `strict_bare_tokens` is `false` here), so no
+/// special case for subcommand names is needed.
+///
+/// The `"unknown option"` phrase (rather than `reject_unknown_flags`'s
+/// own default `"unrecognized argument"`) matches this function's
+/// pre-existing wording, pinned by `crates/apimock/tests/args.rs`.
 fn reject_unknown_arguments(raw: &[String]) {
-    let known = KNOWN_TOP_LEVEL_OPTION_NAMES.as_ref();
-    let mut skip_next = false;
-    for (i, arg) in raw.iter().enumerate() {
-        if i == 0 {
-            continue; // argv[0]: the binary path itself
-        }
-        if skip_next {
-            skip_next = false;
-            continue;
-        }
-        if arg == "match-test" || arg == "validate" || arg == "get" || arg == "set" {
-            // Positional subcommand names are handled by their own
-            // caller before this runs; reaching here at all means
-            // neither matched, so nothing to do with them here either.
-            continue;
-        }
-        if known.contains(&arg.as_str()) {
-            let next_is_value = raw.get(i + 1).is_some_and(|next| !next.starts_with('-'));
-            if next_is_value {
-                skip_next = true;
-            }
-            continue;
-        }
-        if arg.starts_with('-') {
-            match near_match(arg, known) {
-                Some(suggestion) => exit_usage_error(&format!(
-                    "unknown option '{}'; did you mean '{}'?",
-                    arg, suggestion
-                )),
-                None => exit_usage_error(&format!("unknown option '{}'", arg)),
-            }
-        }
+    if let Err(e) = crate::cmd::flags::reject_unknown_flags(
+        raw.get(1..).unwrap_or(&[]),
+        KNOWN_TOP_LEVEL_OPTION_NAMES.as_ref(),
+        NO_VALUE_TOP_LEVEL_OPTION_NAMES.as_ref(),
+        false,
+        "unknown option",
+    ) {
+        exit_usage_error(&e);
     }
 }
 

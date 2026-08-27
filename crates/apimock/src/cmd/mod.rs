@@ -1,5 +1,5 @@
 pub mod envelope;
-mod flags;
+pub(crate) mod flags;
 pub mod get;
 pub mod match_test;
 mod rule_check;

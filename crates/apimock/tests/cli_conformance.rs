@@ -689,3 +689,512 @@ fn a_genuinely_missing_config_file_still_errors_naming_the_file_not_an_empty_pat
         "stderr should not show an empty resolved path:\n{stderr}"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// RFC 064 Amendment 1: a `--flag=value` form
+// ═══════════════════════════════════════════════════════════════════
+
+// ── § 5a: the gate — every no-value flag rejects every `=` form ──────
+
+/// Assert `<flag>=true`, `<flag>=false` and `<flag>=` are each a
+/// `usage` error: exit 2, nothing on stdout, something on stderr. The
+/// hard acceptance gate (handoff § 2): a no-value flag given any `=`
+/// form must never be read as "present" — `=true` exactly like
+/// `=false`, never one accepted and the other rejected.
+fn assert_equals_form_rejected_for_no_value_flag(
+    dir: &std::path::Path,
+    args_prefix: &[&str],
+    flag: &str,
+) {
+    for suffix in ["=true", "=false", "="] {
+        let flag_arg = format!("{flag}{suffix}");
+        let mut args: Vec<&str> = args_prefix.to_vec();
+        args.push(flag_arg.as_str());
+        let (code, stdout, stderr) = run_full(dir, &args);
+        assert_eq!(code, 2, "{flag_arg}: exit was {code}, stderr:\n{stderr}");
+        assert!(
+            stdout.is_empty(),
+            "{flag_arg}: stdout was not empty:\n{stdout}"
+        );
+        assert!(!stderr.is_empty(), "{flag_arg}: stderr was empty");
+    }
+}
+
+#[test]
+fn get_no_value_flag_rejects_every_equals_form() {
+    let dir = valid_workspace();
+    assert_equals_form_rejected_for_no_value_flag(dir.path(), &["get", "/a"], "--why");
+}
+
+#[test]
+fn set_rule_no_value_flags_reject_every_equals_form() {
+    let dir = valid_workspace();
+    for flag in ["--dry-run", "--allow-outside"] {
+        assert_equals_form_rejected_for_no_value_flag(dir.path(), &["set", "rule"], flag);
+    }
+}
+
+#[test]
+fn validate_no_value_flags_reject_every_equals_form() {
+    let dir = valid_workspace();
+    for flag in ["--strict", "--quiet", "--json"] {
+        assert_equals_form_rejected_for_no_value_flag(
+            dir.path(),
+            &["validate", "-c", "apimock.toml"],
+            flag,
+        );
+    }
+}
+
+#[test]
+fn match_test_no_value_flags_reject_every_equals_form() {
+    let dir = valid_workspace();
+    for flag in ["--quiet", "-q"] {
+        assert_equals_form_rejected_for_no_value_flag(
+            dir.path(),
+            &["match-test", "--rule-set", "rules.toml"],
+            flag,
+        );
+    }
+}
+
+/// The row that matters most (handoff § 5a): `--allow-outside=false`
+/// must not be read as "present" — which would silently disable RFC
+/// 062's write-path confinement while the caller wrote `false` to keep
+/// it on. Asserted on the filesystem, not just the exit code: nothing
+/// is written outside the workspace, and the workspace's own files are
+/// byte-identical to before the rejected invocation.
+#[test]
+fn allow_outside_equals_false_does_not_disable_confinement() {
+    let dir = valid_workspace();
+    let before_apimock_toml = std::fs::read_to_string(dir.path().join("apimock.toml")).unwrap();
+    let before_rules_toml = std::fs::read_to_string(dir.path().join("rules.toml")).unwrap();
+
+    let outside = tempfile::tempdir().expect("outside tempdir");
+    let outside_rule_set = outside.path().join("elsewhere.toml");
+    let outside_rule_set_str = outside_rule_set.to_str().unwrap().to_owned();
+
+    let (code, stdout, stderr) = run_full(
+        dir.path(),
+        &[
+            "set",
+            "rule",
+            "-c",
+            "apimock.toml",
+            "--rule-set",
+            outside_rule_set_str.as_str(),
+            "--path",
+            "/x",
+            "--status",
+            "200",
+            "--text",
+            "hi",
+            "--allow-outside=false",
+        ],
+    );
+    assert_eq!(code, 2, "stdout:\n{stdout}\nstderr:\n{stderr}");
+    assert!(stdout.is_empty(), "stdout:\n{stdout}");
+    assert!(
+        !outside_rule_set.exists(),
+        "a rule set was written outside the workspace despite --allow-outside=false"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("apimock.toml")).unwrap(),
+        before_apimock_toml,
+        "apimock.toml changed despite the invocation being rejected"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("rules.toml")).unwrap(),
+        before_rules_toml,
+        "rules.toml changed despite the invocation being rejected"
+    );
+}
+
+/// `=true` is rejected exactly like `=false` (handoff § 2: "there is no
+/// `--flag=bool` feature here; there is only rejection" — accepting one
+/// and not the other is the asymmetry someone later "simplifies" into
+/// accepting both).
+#[test]
+fn allow_outside_equals_true_is_also_rejected() {
+    let dir = valid_workspace();
+    let (code, stdout, _stderr) = run_full(
+        dir.path(),
+        &[
+            "set",
+            "rule",
+            "-c",
+            "apimock.toml",
+            "--path",
+            "/x",
+            "--status",
+            "200",
+            "--text",
+            "hi",
+            "--allow-outside=true",
+        ],
+    );
+    assert_eq!(code, 2);
+    assert!(stdout.is_empty(), "stdout:\n{stdout}");
+}
+
+#[test]
+fn dry_run_equals_false_is_rejected_and_rule_set_stays_byte_identical() {
+    let dir = valid_workspace();
+    let before = std::fs::read_to_string(dir.path().join("rules.toml")).unwrap();
+    let (code, stdout, _stderr) = run_full(
+        dir.path(),
+        &[
+            "set",
+            "rule",
+            "-c",
+            "apimock.toml",
+            "--rule-set",
+            "rules.toml",
+            "--path",
+            "/x",
+            "--status",
+            "200",
+            "--text",
+            "hi",
+            "--dry-run=false",
+        ],
+    );
+    assert_eq!(code, 2);
+    assert!(stdout.is_empty(), "stdout:\n{stdout}");
+    let after = std::fs::read_to_string(dir.path().join("rules.toml")).unwrap();
+    assert_eq!(before, after);
+}
+
+// ── § 5b: the feature ─────────────────────────────────────────────────
+
+#[test]
+fn set_rule_text_equals_dash_prefixed_value_writes_correctly() {
+    let dir = valid_workspace();
+    let (code, _stdout) = run(
+        dir.path(),
+        &[
+            "set",
+            "rule",
+            "-c",
+            "apimock.toml",
+            "--rule-set",
+            "rules.toml",
+            "--path",
+            "/dash",
+            "--status",
+            "200",
+            "--text=-hello",
+        ],
+    );
+    assert_eq!(code, 0);
+    let rules = std::fs::read_to_string(dir.path().join("rules.toml")).unwrap();
+    assert!(rules.contains("-hello"), "rules.toml:\n{rules}");
+}
+
+#[test]
+fn set_rule_text_equals_form_accepts_various_dash_leading_values() {
+    let dir = valid_workspace();
+    for (path, value) in [
+        ("/bullet", "- item"),
+        ("/yaml-sep", "---"),
+        ("/diff-hunk", "-1,2 +1,3 @@"),
+    ] {
+        let text_arg = format!("--text={value}");
+        let (code, _stdout) = run(
+            dir.path(),
+            &[
+                "set",
+                "rule",
+                "-c",
+                "apimock.toml",
+                "--rule-set",
+                "rules.toml",
+                "--path",
+                path,
+                "--status",
+                "200",
+                text_arg.as_str(),
+            ],
+        );
+        assert_eq!(code, 0, "path {path}, value {value:?}");
+        let rules = std::fs::read_to_string(dir.path().join("rules.toml")).unwrap();
+        assert!(
+            rules.contains(value),
+            "rules.toml should contain {value:?}:\n{rules}"
+        );
+    }
+}
+
+#[test]
+fn config_equals_form_works_on_every_subcommand() {
+    let dir = valid_workspace();
+
+    let (code, _) = run(dir.path(), &["validate", "--config=./apimock.toml"]);
+    assert_eq!(code, 0, "validate --config=");
+    let (code, _) = run(dir.path(), &["validate", "-c=./apimock.toml"]);
+    assert_eq!(code, 0, "validate -c=");
+
+    let (code, _) = run(dir.path(), &["get", "/a", "--config=./apimock.toml"]);
+    assert_eq!(code, 0, "get --config=");
+    let (code, _) = run(dir.path(), &["get", "/a", "-c=./apimock.toml"]);
+    assert_eq!(code, 0, "get -c=");
+
+    let (code, _) = run(
+        dir.path(),
+        &[
+            "set",
+            "rule",
+            "--config=./apimock.toml",
+            "--rule-set",
+            "rules.toml",
+            "--path",
+            "/eq",
+            "--status",
+            "200",
+            "--text",
+            "ok",
+        ],
+    );
+    assert_eq!(code, 0, "set --config=");
+
+    let (code, _) = run(
+        dir.path(),
+        &["match-test", "--rule-set=./rules.toml", "--path", "/a"],
+    );
+    assert_eq!(code, 0, "match-test --rule-set=");
+}
+
+#[test]
+fn text_equals_form_with_nothing_after_is_an_explicit_empty_value() {
+    let dir = valid_workspace();
+    // Precedent: `--text ""` (space form, explicit empty string) works
+    // today, exit 0 — `--text=` (handoff § 4) must behave the same, not
+    // be confused with a dangling `--text` (no `=`, nothing after),
+    // which is a usage error (RFC 064).
+    let (code, _stdout) = run(
+        dir.path(),
+        &[
+            "set",
+            "rule",
+            "-c",
+            "apimock.toml",
+            "--rule-set",
+            "rules.toml",
+            "--path",
+            "/empty",
+            "--status",
+            "204",
+            "--text=",
+        ],
+    );
+    assert_eq!(code, 0);
+}
+
+#[test]
+fn dangling_text_without_equals_is_still_a_usage_error() {
+    let dir = valid_workspace();
+    let (code, stdout, stderr) = run_full(
+        dir.path(),
+        &[
+            "set",
+            "rule",
+            "-c",
+            "apimock.toml",
+            "--path",
+            "/x",
+            "--status",
+            "200",
+            "--text",
+        ],
+    );
+    assert_eq!(code, 2, "stderr:\n{stderr}");
+    assert!(stdout.is_empty());
+}
+
+#[test]
+fn header_equals_form_repeated_yields_two_headers() {
+    let dir = valid_workspace();
+    let (code, v) = run_json(
+        dir.path(),
+        &[
+            "get",
+            "/a",
+            "--header=X-One: 1",
+            "--header=X-Two: 2",
+            "--format",
+            "json",
+        ],
+    );
+    assert_eq!(code, 0);
+    // `get`'s request headers aren't echoed into its own JSON result
+    // shape, but a bad merge (e.g. only the first `--header` surviving)
+    // would still show up as a parse/usage failure above; a stronger
+    // assertion is available through `match-test`'s `--why`-style
+    // per-condition breakdown, but the two-headers-both-parsed claim is
+    // adequately covered by this command succeeding at all with two
+    // `=`-form repeats where a broken merge would instead misinterpret
+    // the second as an unrelated token. Complemented by the unit test
+    // `flag_values_all_collects_equals_form_occurrences` in
+    // `cmd/flags.rs`, which asserts the collected values directly.
+    assert!(v.get("result").is_some(), "result: {v}");
+}
+
+// ── § 5c: non-regression ──────────────────────────────────────────────
+
+#[test]
+fn header_value_containing_equals_still_works_in_space_form() {
+    // `-H "Authorization: Basic YWJj=="` — the value legitimately
+    // contains `=`, and is a *separate* argv token from `-H` itself, so
+    // it must never be mistaken for `-H`'s own `=` form.
+    let dir = valid_workspace();
+    let (code, v) = run_json(
+        dir.path(),
+        &[
+            "get",
+            "/a",
+            "-H",
+            "Authorization: Basic YWJj==",
+            "--format",
+            "json",
+        ],
+    );
+    assert_eq!(code, 0);
+    assert!(v.get("result").is_some(), "result: {v}");
+}
+
+#[test]
+fn positional_path_containing_query_string_with_equals_still_works() {
+    // `get "/a?x=1&y=2"` — a positional argument containing `=`, never
+    // starting with `-`, so `split_equals_form` never touches it.
+    let dir = valid_workspace();
+    let (code, _stdout) = run(dir.path(), &["get", "/a?x=1&y=2"]);
+    assert_eq!(code, 0);
+}
+
+#[test]
+fn typo_in_equals_form_still_suggests_a_near_match() {
+    let dir = valid_workspace();
+    let (code, stderr) = run_stderr(
+        dir.path(),
+        &["validate", "-c", "apimock.toml", "--strct=true"],
+    );
+    assert_eq!(code, 2);
+    assert!(
+        stderr.contains("did you mean '--strict'?"),
+        "stderr:\n{stderr}"
+    );
+}
+
+/// `set`'s own pre-existing strictness — a leftover token that isn't a
+/// known flag is rejected even if it doesn't start with `-` — was
+/// preserved by name (`strict_bare_tokens: true`) when its private
+/// `reject_unknown_flags` copy was folded into the shared one this
+/// amendment extended. Never explicitly asserted before; closing that
+/// gap here rather than only relying on the consolidation not having
+/// changed anything by inspection.
+#[test]
+fn set_rule_rejects_a_leftover_bare_token_that_is_not_a_known_flag() {
+    let dir = valid_workspace();
+    let (code, stdout, stderr) = run_full(
+        dir.path(),
+        &[
+            "set", "rule", "--path", "/x", "--status", "200", "--text", "hi", "garbage",
+        ],
+    );
+    assert_eq!(code, 2, "stderr:\n{stderr}");
+    assert!(stdout.is_empty(), "stdout:\n{stdout}");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REVIEW-001 § 3: an explicit empty value on a *path*-valued flag is
+// a usage error naming the flag, not a downstream failure naming an
+// empty path. Content flags (`--text`, `--json`, `--body`) are
+// unaffected — `--text=` stays a legitimate empty response body
+// (`text_equals_form_with_nothing_after_is_an_explicit_empty_value`,
+// above, still passes unchanged).
+// ═══════════════════════════════════════════════════════════════════
+
+/// Assert `<args_prefix> <flag>=` is a `usage` error naming `flag`,
+/// not a path-resolution failure several layers downstream.
+fn assert_empty_equals_value_names_the_flag(
+    dir: &std::path::Path,
+    args_prefix: &[&str],
+    flag: &str,
+) {
+    let flag_arg = format!("{flag}=");
+    let mut args: Vec<&str> = args_prefix.to_vec();
+    args.push(flag_arg.as_str());
+    let (code, stdout, stderr) = run_full(dir, &args);
+    assert_eq!(code, 2, "{flag_arg}: exit was {code}, stderr:\n{stderr}");
+    assert!(
+        stdout.is_empty(),
+        "{flag_arg}: stdout was not empty:\n{stdout}"
+    );
+    assert!(
+        stderr.contains(flag),
+        "{flag_arg}: stderr should name the flag, not just an empty path:\n{stderr}"
+    );
+}
+
+#[test]
+fn validate_config_equals_empty_names_the_flag() {
+    let dir = valid_workspace();
+    assert_empty_equals_value_names_the_flag(dir.path(), &["validate"], "--config");
+}
+
+#[test]
+fn get_config_equals_empty_names_the_flag() {
+    let dir = valid_workspace();
+    assert_empty_equals_value_names_the_flag(dir.path(), &["get", "/a"], "--config");
+}
+
+#[test]
+fn get_body_file_equals_empty_names_the_flag() {
+    let dir = valid_workspace();
+    assert_empty_equals_value_names_the_flag(dir.path(), &["get", "/a"], "--body-file");
+}
+
+#[test]
+fn set_rule_path_flags_equals_empty_name_the_flag() {
+    let dir = valid_workspace();
+    for flag in ["--config", "--rule-set", "--file"] {
+        assert_empty_equals_value_names_the_flag(
+            dir.path(),
+            &["set", "rule", "--path", "/x", "--status", "200"],
+            flag,
+        );
+    }
+}
+
+#[test]
+fn match_test_rule_set_equals_empty_names_the_flag() {
+    let dir = valid_workspace();
+    assert_empty_equals_value_names_the_flag(dir.path(), &["match-test"], "--rule-set");
+}
+
+#[test]
+fn match_test_body_file_equals_empty_names_the_flag() {
+    let dir = valid_workspace();
+    assert_empty_equals_value_names_the_flag(
+        dir.path(),
+        &["match-test", "--rule-set", "rules.toml"],
+        "--body-file",
+    );
+}
+
+/// Contrast case (REVIEW-001's own table): `set`'s already-numeric
+/// flags reject an empty value in the same style, unaffected by this
+/// fix since they never went through `flag_value` as a bare passthrough
+/// to begin with — included so the "path flags now match the numeric
+/// flags' existing style" claim is asserted, not just narrated.
+#[test]
+fn set_rule_status_equals_empty_still_names_the_flag_unaffected_by_this_fix() {
+    let dir = valid_workspace();
+    let (code, stdout, stderr) = run_full(
+        dir.path(),
+        &["set", "rule", "--path", "/x", "--status=", "--text", "hi"],
+    );
+    assert_eq!(code, 2, "stderr:\n{stderr}");
+    assert!(stdout.is_empty(), "stdout:\n{stdout}");
+    assert!(stderr.contains("--status"), "stderr:\n{stderr}");
+}

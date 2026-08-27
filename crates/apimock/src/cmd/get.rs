@@ -32,7 +32,9 @@ use apimock_server::server::handle_options;
 use apimock_server::types::CollectedResponse;
 
 use super::envelope::{self, Format};
-use super::flags::{flag_present, flag_value, flag_values_all, reject_unknown_flags};
+use super::flags::{
+    flag_present, flag_value, flag_values_all, reject_empty_path_value, reject_unknown_flags,
+};
 use super::rule_check::{ConditionCheck, evaluate_rule};
 
 const CONFIG_NAMES: &[&str] = &["--config", "-c"];
@@ -83,7 +85,7 @@ impl GetArgs {
         let path =
             positional_path(args).ok_or_else(|| "missing required argument <path>".to_owned())?;
 
-        let config_path = flag_value(args, CONFIG_NAMES)?;
+        let config_path = reject_empty_path_value(CONFIG_NAMES, flag_value(args, CONFIG_NAMES)?)?;
         let method = flag_value(args, METHOD_NAMES)?
             .unwrap_or_else(|| "GET".to_owned())
             .to_uppercase();
@@ -97,7 +99,8 @@ impl GetArgs {
             })
             .collect();
         let body = flag_value(args, BODY_NAMES)?;
-        let body_file = flag_value(args, BODY_FILE_NAMES)?;
+        let body_file =
+            reject_empty_path_value(BODY_FILE_NAMES, flag_value(args, BODY_FILE_NAMES)?)?;
 
         let why_flag_present = flag_present(args, &[WHY_FLAG]);
         let why = if why_flag_present { Some(true) } else { None };
@@ -169,6 +172,15 @@ fn positional_path(args: &[String]) -> Option<String> {
             skip_next = false;
             continue;
         }
+        if super::flags::split_equals_form(arg).is_some() {
+            // `--flag=value` (RFC 064 Amendment 1) is self-contained —
+            // no separate value token follows to skip. Reaching here at
+            // all means `reject_unknown_flags` (run first, in `run()`)
+            // already validated this is a known flag in a valid form —
+            // a bare `/a?x=1&y=2` positional path never starts with
+            // `-`, so it can never be mistaken for one.
+            continue;
+        }
         if let Some(names) = all_flag_names
             .iter()
             .find(|names| names.contains(&arg.as_str()))
@@ -196,7 +208,13 @@ pub fn run(raw_args: &[String]) -> i32 {
     // RFC 059: rejected before `GetArgs::parse` even runs, same as
     // `set` — an unrecognised flag is a `usage` error, not something a
     // positional-argument scan should ever be asked to silently absorb.
-    if let Err(e) = reject_unknown_flags(raw_args, &known_flag_names(), NO_VALUE_FLAG_NAMES) {
+    if let Err(e) = reject_unknown_flags(
+        raw_args,
+        &known_flag_names(),
+        NO_VALUE_FLAG_NAMES,
+        false,
+        "unrecognized argument",
+    ) {
         return usage_error(&e);
     }
     let args = match GetArgs::parse(raw_args) {

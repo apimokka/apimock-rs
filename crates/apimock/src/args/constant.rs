@@ -36,6 +36,23 @@ pub const KNOWN_TOP_LEVEL_OPTION_NAMES: [&str; 13] = [
     "-h",
 ];
 
+/// The subset of [`KNOWN_TOP_LEVEL_OPTION_NAMES`] that takes no value —
+/// every other known top-level flag does. Used by
+/// `crate::cmd::flags::reject_unknown_flags` (RFC 064 Amendment 1) so a
+/// no-value flag given any `--flag=value` form (`--init=false`,
+/// `--yes=true`) is rejected as a usage error rather than silently read
+/// as "present", the same gate every other command's own no-value
+/// flags get.
+pub const NO_VALUE_TOP_LEVEL_OPTION_NAMES: [&str; 7] = [
+    "--init",
+    "--middleware",
+    "-y",
+    "--yes",
+    "--version",
+    "--help",
+    "-h",
+];
+
 pub const DEFAULT_CONFIG_FILE_PATH: &str = "./apimock.toml";
 pub const DEFAULT_RULE_SET_FILE_PATH: &str = "./apimock-rule-set.toml";
 pub const DEFAULT_MIDDLEWARE_FILE_PATH: &str = "./apimock-middleware.rhai";
