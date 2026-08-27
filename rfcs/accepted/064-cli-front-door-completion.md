@@ -309,6 +309,99 @@ currently say nothing.
 | `normalize_bare_relative_path` and the new fix interact | The former prepends `./`, which the latter already handles; keep both, and keep `tests/args.rs:280` green |
 | Documentation drifts again | Goal 4: each documented code gets a test |
 
+## Amendment 1 — a `--flag=value` form (approved 2026-08-27)
+
+**Status.** Approved after a risk assessment the owner asked for
+explicitly. Brief:
+`.git-exclude/reviewed/pre-6.0.0-audit/DECISION-001-flag-equals-value.md`.
+**Handoff.** [`amendment-flag-equals-value.md`](../handoffs/064-cli-front-door-completion/amendment-flag-equals-value.md)
+
+### Why
+
+Found while reviewing this RFC's own implementation (§ 5 of the dev
+team's package established there was no *regression* from
+`-`-prefixed values; the further question was whether such a value is
+expressible **at all**). It is not:
+
+| Attempt | Result |
+|---|---|
+| `--text "- item"` | exit 2 — `unrecognized argument '- item'` |
+| `--text=-hello` | exit 2 — `unrecognized argument '--text=-hello'` |
+| `--text -- -hello` | exit 2 — `unknown option '--'` |
+
+`reject_unknown_flags` rejects any token starting with `-` before
+`flag_value` is reached, and neither standard escape hatch exists. So
+`apimock set rule --text` cannot express a markdown bullet, a YAML
+`---`, or a diff hunk — on v6's headline feature, whose intended author
+is a machine generating fixtures. The error also misnames the problem:
+*"unknown option '- item'; did you mean '-c'?"*
+
+Pre-existing across all of v5; *loud* (exit 2) rather than silent, which
+puts it a class below this RFC's original two defects — but with no
+workaround at all.
+
+### The security condition — not advice, a gate
+
+**A no-value flag given any `=` form must be a usage error, exit `2`.**
+
+Presence is read by `flag_present`, which matches the flag name exactly
+and **discards any value**. A naive `=`-splitting implementation that
+resolves `--allow-outside=false` to "flag present" would **disable
+RFC 062's write-path confinement while the author wrote `false` to keep
+it on** — a security property inverted by a token the parser throws
+away, at exit 0, with no diagnostic.
+
+Today all such forms are cleanly rejected (`unknown option
+'--allow-outside=false'`). **This is therefore a regression to avoid,
+not a hole to close** — a partial implementation is strictly worse than
+shipping nothing.
+
+Severity is not uniform, and is stated here rather than flattened:
+
+| Flag | Command | If mis-parsed | Severity |
+|---|---|---|---|
+| `--allow-outside` | `set` | RFC 062 write confinement disabled | **Severe** |
+| `--dry-run` | `set` | Nothing written when the caller expects a write | Moderate |
+| `--yes` | root (`args.rs:120`, `args_option_value(…).is_some()`) | Prompts skipped, defaults accepted. **Cannot overwrite an existing config** — `--init` refuses regardless, verified | Moderate |
+| `--why`, `--quiet`, `--strict`, `--json`, `--middleware` | various | Output/verbosity only | Low |
+
+`=true` must be rejected exactly as `=false` is. Accepting one and not
+the other is the asymmetry that gets "simplified" later into accepting
+both.
+
+### Scope: all three parsers, and consolidate
+
+The same skip-next rule exists **three** times — `args.rs:340` (root),
+`cmd/flags.rs:80` (`get`/`validate`/`match-test`), and
+**`cmd/set.rs:127`, a private duplicate** serving `set`. RFC 059 left
+the duplicate deliberately, which was sound then and is not now: **the
+one command carrying `--allow-outside` is the one that does not share
+the common parser.**
+
+This is the same shape as this RFC's own root cause —
+`normalize_bare_relative_path` fixed in one place and patched around
+twice more. **Consolidate `set.rs`'s copy into the shared one** rather
+than adding `=` handling to both. The root command is included for the
+same reason: adding a form to two parsers out of three deepens exactly
+the divergence that caused this.
+
+### Settled decisions
+
+| Question | Decision |
+|---|---|
+| Split on which `=`? | **The first**, and only for tokens starting with `-`. Values legitimately contain `=` — `-H "Authorization: Basic YWJj=="` and `get "/a?x=1&y=2"` both work today and must keep working. Gating on the leading `-` keeps the positional URL path untouched |
+| Short flags too? | **Yes** — `-c=path` as well as `--config=path`. apimock has no clustered short flags, so there is no ambiguity, and teaching one form while rejecting the other sets a trap |
+| `--text=` with nothing after? | **An explicit empty value**, distinct from a dangling `--text` (a usage error). Precedent exists: `--text ""` works today, exit 0 |
+| Repeatable flags? | `--header=A: 1 --header=B: 2` must work — `flag_values_all` gets the same treatment |
+
+### Rejected alternatives
+
+| Option | Why not |
+|---|---|
+| `--` end-of-flags separator | Doesn't fit — `--` conventionally ends *all* flag parsing; it does not deliver a value to a preceding flag |
+| Relax `!starts_with('-')` for content flags only | **Actively worse.** `--text --dry-run` would swallow `--dry-run` as text, reintroducing the silent-wrong-behaviour class this RFC just closed |
+| Do nothing | Leaves the gap above, with a misleading error, on v6's headline feature |
+
 ## Unresolved questions
 
 1. **Is exit `1` reachable outside `match-test`'s "no match"?** I could
