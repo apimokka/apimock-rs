@@ -32,7 +32,10 @@ and nothing is published to either registry, until that click.
 
 1. **Version bump.** `./version.sh --update X.Y.Z`. This updates
    `[workspace.package].version` in `Cargo.toml`, the internal crate
-   pins (kept at `"5"`, not re-pinned to the exact version), `Cargo.lock`,
+   pins (**set to the exact version** — `"6.0.0"`, not a major-only
+   `"6"`; a major-only caret pin never matches a prerelease, which is
+   why every RC and alpha used to fail at `cargo build --locked`),
+   `Cargo.lock`,
    and all four npm manifests including the `optionalDependencies`
    platform-binary pins — then verifies every surface agrees. If it
    exits non-zero, **stop and fix the script's target, don't hand-edit**
