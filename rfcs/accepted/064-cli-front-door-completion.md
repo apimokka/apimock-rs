@@ -183,15 +183,35 @@ RFC 048 § 6 also lists **RFC 045 Goal 4** — `validate` passing on inert
 configuration — as blocking, on the grounds that *"U2 generating config
 changes that calculus"*.
 
-No RFC after 045 addresses it. RFC 045 said of the structural option:
-*"it may be impractical; that is a legitimate outcome, **but it should
-be established rather than assumed**."* It remains assumed.
+> **Correction, 2026-08-27.** An earlier revision of this section said
+> Goal 4 *"remains assumed"* and called it an open owner decision. **That
+> was wrong, and I stated it twice before checking.** RFC 045's own
+> Unresolved question 2 records it as **✅ Resolved**: option 3
+> (structural exhaustiveness) was investigated *with a working
+> prototype* and rejected on a specific technical basis — `Respond` and
+> `DefaultRespond` both carry a field named
+> `delay_response_milliseconds`, so a name-based check reports
+> "referenced" and passes while blind to whether the rule-set copy was
+> ever read, which was RFC 045's Defect 2 exactly. Option 2 has no
+> target: 0 of 47 fields were inert after the fixes, and everything
+> known-inert (`[guard]`, `[file_tree_view]`, the trace channel) already
+> has its own disposition. Option 1 stands, with reasons. RFC 045 asked
+> for the outcome to be *established rather than assumed* — and it did
+> exactly that.
 
-**That is a decision, not implementation work, and it is the owner's.**
-Accepting the limitation with a stated reason is a legitimate
-resolution; leaving it unexamined at the release boundary is not, since
-RFC 048 made it blocking. Excluded here so this RFC stays one coherent
-piece of work.
+What RFC 048 § 6 actually leaves open is narrower: whether v6's
+machine-authored configs change that conclusion. **They do not, and the
+surface is smaller than in v5.** Measured 2026-08-27: an unknown key is
+**rejected at load**, both under `[rules.guard]` and at
+`[service]` level (exit 2, *"configuration validation failed"* /
+*"failed to load config"*). A config author — human or agent — cannot
+write a setting apimock silently ignores, because a setting apimock does
+not know is an error. The U2 concern was that an agent writes a key,
+apimock ignores it, and the agent believes it took effect; that
+sequence cannot occur.
+
+**Disposition: closed, no owner decision required.** Excluded from this
+RFC's implementation scope, and not blocking 6.0.0.
 
 ## Design
 

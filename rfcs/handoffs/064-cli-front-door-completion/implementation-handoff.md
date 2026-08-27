@@ -247,9 +247,11 @@ review-request package rather than deciding silently.**
 
 ## 4. What is NOT in scope
 
-- **RFC 045 Goal 4** (`validate` passing on inert configuration). It is
-  the fourth open RFC 048 § 6 prerequisite, and it is an **owner
-  decision**, not implementation work. Do not touch it.
+- **RFC 045 Goal 4** (`validate` passing on inert configuration). Do not
+  touch it. *(Corrected 2026-08-27, after this handoff shipped: this
+  originally called it an open owner decision. It is not — RFC 045
+  resolved it, and it is now closed. Out of scope either way, so nothing
+  you did under this handoff is affected.)*
 - Rewriting argument parsing. RFC 049's scan stays.
 - Changing which flags exist, or any command's success output.
 - Changing required-flag handling — it is already correct.
