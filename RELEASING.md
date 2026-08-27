@@ -42,6 +42,13 @@ and nothing is published to either registry, until that click.
    what it missed; a hand-edited version is exactly the kind of drift
    `version-consistency-check` exists to catch later, at the worst
    possible time.
+
+   **`version.sh` stages what it edits.** To abort a bump,
+   `git checkout -- .` **is not enough** — it restores from the index,
+   which already holds the new version, so it looks like it worked and
+   didn't. Use `git restore --source=HEAD --staged --worktree .`.
+   Found 2026-08-27 while reverting a test bump during the 6.0.0
+   pre-cut audit.
 2. **Remove the `main` development notice from `README.md`** if it is
    present. `README.md` is `readme = "../../README.md"` in the `apimock`
    manifest — it *is* the crates.io landing page — so a notice saying
