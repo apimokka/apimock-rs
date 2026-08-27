@@ -22,7 +22,9 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-*(None open.)*
+| ID  | Title |
+|-----|-------|
+| 066 | [Branching and merge policy](./proposed/066-branching-and-merge-policy.md) — who may merge, and the release-line boundary |
 
 ## Accepted
 
