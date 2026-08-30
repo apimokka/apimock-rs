@@ -241,6 +241,50 @@ jobs:
       - name: cargo update --workspace --locked
         run: cargo update --workspace --locked
 
+  # Post-6.0.0 release-process audit § 3: nothing ran `cargo package`
+  # before this, so a packaging problem (an excluded file a crate needs,
+  # a manifest error) only ever surfaced during `cargo publish`, after
+  # the tag and the draft Release — the same "discovered during a live
+  # release" class the npm propagation-wait section of `RELEASING.md`
+  # documents for a different job.
+  #
+  # `--workspace` (not `-p <crate>` per package) was chosen and tested,
+  # not assumed: established locally that `cargo package --workspace`
+  # verifies each crate's tarball against the *other tarballs this same
+  # command just packaged* (cargo's co-packaging temp registry), never
+  # against crates.io's already-published copy - confirmed by
+  # deliberately breaking `apimock-routing` (a `compile_error!` in
+  # `lib.rs`) and observing `cargo package --workspace` fail the
+  # verification build for it, then reverting. So this job is safe to
+  # run unconditionally, on every push, at whatever version the
+  # workspace currently declares (including one already published,
+  # which it always is between releases) - it does not need gating to
+  # "only when unpublished" or "only on the release path", the two
+  # options considered and neither of which turned out to be necessary.
+  package:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: cargo package --workspace
+        run: cargo package --workspace
+
   # Pre-6.0.0 docs audit, E-1: `docs.yaml` only builds (and, in the same
   # job, deploys to GitHub Pages) on push to `main` -- a docs-build
   # break was found only after landing, with the published site already

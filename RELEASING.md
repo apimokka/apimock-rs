@@ -132,6 +132,70 @@ runs.
 Publishing is the only human confirmation point in the whole flow.
 Nothing before it is public; nothing after it is reversible.
 
+## npm publish order
+
+`npm-platforms-publish` (`release-publish.yaml`) publishes the three
+platform packages (`@apimock-rs/bin-linux-x64-gnu`,
+`@apimock-rs/bin-darwin-arm64`, `@apimock-rs/bin-win32-x64-msvc`) as a
+matrix, then `npm-core-publish` publishes the core `apimock` package,
+which declares all three as `optionalDependencies`.
+
+**`npm-core-publish` has failed once, on 6.0.0** — a partial publish:
+the three platform packages were live, the core package was not, and
+`crates-io-publish` never ran (it is downstream of `npm-core-publish` —
+see below). Root cause: npm silently omits an `optionalDependencies`
+entry it cannot yet resolve, and `npm-core-publish` starts generating
+its lockfile immediately after `npm-platforms-publish` reports success,
+with no wait for npm's own propagation delay. The gap between the last
+platform publish completing and the core job starting has been as low
+as 2 seconds on a real release; a rerun 113 seconds later succeeded. As
+of this writing that gap is still unguarded — see the open item this
+section exists to work around until it is closed.
+
+### How to tell what actually published
+
+**Check the registry, not the job log** — the log tells you what was
+*attempted*, not what a client sees. For all four npm packages:
+
+```sh
+npm view @apimock-rs/bin-linux-x64-gnu version
+npm view @apimock-rs/bin-darwin-arm64 version
+npm view @apimock-rs/bin-win32-x64-msvc version
+npm view apimock version
+```
+
+Compare each against the tag. A package missing the tagged version
+never published; one showing it did, regardless of what the job's exit
+code said.
+
+### Recovery
+
+**Used successfully on 6.0.0:** `gh run rerun <run-id> --failed`. This
+re-runs only the failed job and its downstream dependents — the three
+platform packages that already published are **not** re-attempted,
+which matters, because re-publishing an already-published npm version
+fails outright rather than being treated as a no-op (the exact error
+text has not been captured here — not re-derived by deliberately
+re-publishing a live package just to quote it). Find the run id with
+`gh run list --workflow=release-publish.yaml`.
+
+Do **not** attempt a local `npm publish` for the core package as a
+substitute — like crates.io (see below), this repository authenticates
+to npm via a trusted-publisher record (OIDC via GitHub Actions, no
+stored token), the same class of mechanism described in § "Publisher
+records bind to a workflow *filename*" below. A local `npm publish`
+cannot present that identity.
+
+### A partial npm publish is not self-healing
+
+`crates-io-publish` `needs: npm-core-publish` — so an npm-core-publish
+failure means **crates.io never runs at all**, silently. A release
+"finishing" with only three of four npm packages and zero crates
+published looks, from the Actions run list, like a single red job deep
+in the pipeline — check what actually reached each registry (this
+section, and § "If crates.io publishing fails partway" below) rather
+than trusting the shape of the failure to be obvious from the log.
+
 ## crates.io publish order
 
 `cargo publish --workspace` (a single command, `crates-io-publish` job
