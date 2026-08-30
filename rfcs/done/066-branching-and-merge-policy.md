@@ -119,6 +119,42 @@ architect's for minor/patch, and the publish path has failed three times
 in ways only visible during a live release. A review disposition
 approves *code*; it never approves a release action.
 
+> ### Amendment 2 — 2026-08-28: a wait/retry carve-out for the publish workflow
+>
+> **Proposed — awaiting owner approval.** § 2's clause *"editing a
+> workflow file that a publisher record binds to
+> (`release-publish.yaml`)"* is **narrowed** to exclude:
+>
+> > **A wait, retry or poll that changes nothing about what publishes,
+> > in what order, or with what credentials.**
+>
+> Everything else in § 2 stands: no tags, no `release/*`, no
+> version-number commits, no publishing, and no change to the publish
+> *content* or order without explicit owner instruction.
+>
+> **Why.** § 2 exists because the publish path has failed in ways only
+> visible during a live release. 6.0.0 failed exactly that way —
+> `npm-core-publish` lost a race with npm's registry propagation and
+> left a partially published release. The fix is to make that job
+> *wait longer*, which is on the same side of § 2's concern as the
+> clause itself. As written, § 2 forbids the repair of the failure mode
+> it was written to guard against.
+>
+> **How this surfaced.** I wrote a handoff instructing the dev team to
+> make that edit, without mentioning the prohibition — in a policy I had
+> written five days earlier. They stopped and escalated rather than
+> proceeding, which is what § 2 is for and is why it stays.
+>
+> A one-off authorisation for this edit would leave the next person in
+> the identical position, so the boundary moves rather than the
+> instance.
+>
+> **Scope, deliberately tight.** "Changes nothing about what publishes,
+> in what order, or with what credentials" is the test. Adding a
+> `sleep`, a retry loop, or a poll-until-resolvable qualifies. Reordering
+> jobs, adding or removing a published artefact, or touching
+> `id-token`/registry configuration does not — those stay owner-only.
+
 ### 3. The working tree is shared
 
 More than one agent works in the same checkout. Therefore:
