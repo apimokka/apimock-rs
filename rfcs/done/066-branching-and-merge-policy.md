@@ -119,9 +119,9 @@ architect's for minor/patch, and the publish path has failed three times
 in ways only visible during a live release. A review disposition
 approves *code*; it never approves a release action.
 
-> ### Amendment 2 — 2026-08-28: a wait/retry carve-out for the publish workflow
+> ### Amendment 2 — adopted 2026-08-30: a wait/retry carve-out for the publish workflow
 >
-> **Proposed — awaiting owner approval.** § 2's clause *"editing a
+> **Adopted — owner approved 2026-08-30.** § 2's clause *"editing a
 > workflow file that a publisher record binds to
 > (`release-publish.yaml`)"* is **narrowed** to exclude:
 >
