@@ -67,6 +67,19 @@ and nothing is published to either registry, until that click.
    at tag time (see below), but there's no reason to discover a red gate
    for the first time during a release.
 
+   **Also confirm the `package` job actually ran, rather than
+   skipping.** It compares `[workspace.package].version` against
+   crates.io and skips `cargo package --workspace` when that version is
+   already published — correct between releases, since the check would
+   fail spuriously there. But if the crates.io query is *inconclusive*
+   (network, rate limit) it **also skips, and the job still reports
+   green** — deliberately, to avoid a false red on ordinary pushes. On
+   the release path the version has just been bumped and is not yet
+   published, so the job must run; a skip there means the packaging
+   check silently did not happen, at the one moment it exists for. The
+   job logs which branch it took: look for *"is not yet on crates.io;
+   running cargo package --workspace"*.
+
    **Check which commit the green run belongs to**, not just that a
    green run exists. This step used to read "already on `main` with CI
    green", which v5.19.0 showed to be unmeetable for a release cut from
