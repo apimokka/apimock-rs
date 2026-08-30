@@ -90,6 +90,20 @@ jobs:
           npm ci
           npm publish
 
+  # RFC 066 Amendment 2: a wait that changes nothing about what
+  # publishes, in what order, or with what credentials - the carve-out
+  # this job's fix sits inside, and nothing else.
+  #
+  # 6.0.0 failed here: `npm install --package-lock-only` ran with no
+  # wait of any kind right after `npm-platforms-publish` reported
+  # success, and npm silently omits an `optionalDependencies` entry it
+  # cannot yet resolve - so the generated lock was missing all three
+  # platform packages, and `npm ci` then rejected it against a
+  # `package.json` that declares them. The gap between the last
+  # platform publish completing and this job starting has been as low
+  # as 2 seconds on a real release (`RELEASING.md`'s "npm publish
+  # order" section has the measured history) - the eight prior
+  # successes were the race being won, not absent.
   npm-core-publish:
     runs-on: ubuntu-latest
     needs: npm-platforms-publish
@@ -102,6 +116,14 @@ jobs:
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Wait for platform packages to propagate
+        run: |
+          bash .github/workflows/scripts/wait-for-npm-propagation.sh \
+            "${{ env.TAG }}" \
+            "@apimock-rs/bin-linux-x64-gnu" \
+            "@apimock-rs/bin-darwin-arm64" \
+            "@apimock-rs/bin-win32-x64-msvc"
 
       - name: npm publish
         working-directory: npm
