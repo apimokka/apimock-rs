@@ -248,19 +248,41 @@ jobs:
   # release" class the npm propagation-wait section of `RELEASING.md`
   # documents for a different job.
   #
-  # `--workspace` (not `-p <crate>` per package) was chosen and tested,
-  # not assumed: established locally that `cargo package --workspace`
-  # verifies each crate's tarball against the *other tarballs this same
-  # command just packaged* (cargo's co-packaging temp registry), never
-  # against crates.io's already-published copy - confirmed by
-  # deliberately breaking `apimock-routing` (a `compile_error!` in
-  # `lib.rs`) and observing `cargo package --workspace` fail the
-  # verification build for it, then reverting. So this job is safe to
-  # run unconditionally, on every push, at whatever version the
-  # workspace currently declares (including one already published,
-  # which it always is between releases) - it does not need gating to
-  # "only when unpublished" or "only on the release path", the two
-  # options considered and neither of which turned out to be necessary.
+  # Gated on the workspace version not already being on crates.io -
+  # this is load-bearing, not defensive filler, and was found the hard
+  # way. A first version of this job ran `cargo package --workspace`
+  # unconditionally, on the reasoning that `--workspace` mode verifies
+  # each crate against the *other tarballs this same command just
+  # packaged* (cargo's co-packaging temp registry) rather than against
+  # crates.io. True for a crate with no workspace-internal dependency
+  # (confirmed by deliberately breaking `apimock-routing` itself with a
+  # `compile_error!` and watching its own verification fail) - false
+  # for one that depends on a sibling crate still at an *already
+  # published* version: `apimock-config` depends on `apimock-routing`,
+  # and once that exact version string exists on crates.io, cargo
+  # resolves it from there instead of from the sibling tarball just
+  # packaged alongside it. Reproduced by adding a `pub fn` to
+  # `apimock-routing` and calling it from `apimock-config` with the
+  # version left at the already-published `6.0.0`: verification failed
+  # with "cannot find function" against the *published* crate, proving
+  # the unconditional job would turn red on the first ordinary
+  # cross-crate change after any release and stay red until the next
+  # one - reverted before committing. So: check whether the current
+  # `apimock` version (all four crates are always bumped together, so
+  # one is representative) is already live on crates.io first, and
+  # only run the real packaging build when it is not - true exactly on
+  # the release path, between `version.sh --update` and the tag, which
+  # is the one place this gate needs to fire.
+  #
+  # Fails open toward *skipping*, not running, when the crates.io query
+  # itself is inconclusive (network hiccup, rate limit, non-2xx) -
+  # deliberately, since this job runs on every ordinary push and a
+  # false positive here (the exact failure mode above) is worse than an
+  # occasional missed check that the very next push re-attempts. No
+  # retry loop: unlike `verify-published`/`verify-crates-io` (checking
+  # whether something *just* published has propagated), this checks a
+  # stable historical fact - it either already answers correctly on the
+  # first try or the failure-open default handles it.
   package:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -268,10 +290,55 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Read workspace version
+        id: version
+        run: |
+          VERSION=$(awk '
+            /^\[workspace\.package\]/ { in_section=1; next }
+            /^\[/                     { in_section=0 }
+            in_section && /^[[:space:]]*version[[:space:]]*=/ {
+              line=$0
+              sub(/^[[:space:]]*version[[:space:]]*=[[:space:]]*"/, "", line)
+              sub(/".*$/, "", line)
+              print line
+              exit
+            }
+          ' Cargo.toml)
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read [workspace.package].version from Cargo.toml"
+            exit 1
+          fi
+          echo "Workspace version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether this version is already on crates.io
+        id: published
+        run: |
+          # Same User-Agent convention as release-publish.yaml's
+          # verify-crates-io - crates.io's API rejects an unidentified
+          # request. `apimock` stands in for all four crates (always
+          # bumped together by version.sh).
+          RESPONSE=$(curl -sf \
+            -H "User-Agent: apimock-rs-ci-package-gate (https://github.com/apimokka/apimock-rs)" \
+            "https://crates.io/api/v1/crates/apimock" || true)
+          if [ -z "$RESPONSE" ]; then
+            echo "crates.io query failed or was inconclusive; skipping cargo package --workspace this run"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          elif echo "$RESPONSE" | jq -e --arg v "${{ steps.version.outputs.version }}" \
+            '.versions // [] | any(.num == $v)' > /dev/null 2>&1; then
+            echo "${{ steps.version.outputs.version }} is already on crates.io; skipping cargo package --workspace this run"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "${{ steps.version.outputs.version }} is not yet on crates.io; running cargo package --workspace"
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Rust
+        if: steps.published.outputs.published != 'true'
         run: bash .github/workflows/scripts/install-rust.sh stable
 
       - name: Cache cargo dependencies and build
+        if: steps.published.outputs.published != 'true'
         uses: actions/cache@v5
         with:
           path: |
@@ -283,6 +350,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: cargo package --workspace
+        if: steps.published.outputs.published != 'true'
         run: cargo package --workspace
 
   # Pre-6.0.0 docs audit, E-1: `docs.yaml` only builds (and, in the same
