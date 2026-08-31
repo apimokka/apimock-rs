@@ -326,9 +326,19 @@ fn every_usage_flag_appears_in_help() {
 #[test]
 fn bare_relative_config_resolves_the_same_as_dot_slash_prefixed() {
     let dir = tempfile::tempdir().expect("failed to create temp dir");
+    // Post-6.0.0 test-integrity handoff § 2: this used to be
+    // `[listener]`-only, which fails to *load* (`missing field
+    // "service"`) and exits 1 before ever binding a listener — the
+    // test passed anyway because it only polls for the `[config]`
+    // line, which prints before the load failure. Genuinely loads, not
+    // merely asserted to: verified directly with this exact fixture
+    // (`apimock -c apimock.toml -p 0`, real run, `Listening on ...`
+    // printed) before wiring it in here. Matches the shape
+    // `serve_with_config_flag_behaves_like_bare_apimock_with_config_flag`
+    // already uses. `-p 0` avoids depending on a fixed port.
     std::fs::write(
         dir.path().join("apimock.toml"),
-        "[listener]\nip_address = \"127.0.0.1\"\nport = 0\n",
+        "[service]\nfallback_respond_dir = \".\"\n",
     )
     .expect("failed to write config");
 
@@ -342,7 +352,7 @@ fn bare_relative_config_resolves_the_same_as_dot_slash_prefixed() {
         // bounded deadline.
         let mut child = bin()
             .current_dir(dir.path())
-            .args(["-c", arg])
+            .args(["-c", arg, "-p", "0"])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
@@ -388,16 +398,19 @@ fn bare_relative_config_resolves_the_same_as_dot_slash_prefixed() {
 #[test]
 fn config_equals_form_resolves_the_same_as_space_form() {
     let dir = tempfile::tempdir().expect("failed to create temp dir");
+    // Post-6.0.0 test-integrity handoff § 2 — same fixture fix and same
+    // reason as `bare_relative_config_resolves_the_same_as_dot_slash_prefixed`
+    // above; see its comment.
     std::fs::write(
         dir.path().join("apimock.toml"),
-        "[listener]\nip_address = \"127.0.0.1\"\nport = 0\n",
+        "[service]\nfallback_respond_dir = \".\"\n",
     )
     .expect("failed to write config");
 
     for arg in ["-c=apimock.toml", "--config=./apimock.toml"] {
         let mut child = bin()
             .current_dir(dir.path())
-            .args([arg])
+            .args([arg, "-p", "0"])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
