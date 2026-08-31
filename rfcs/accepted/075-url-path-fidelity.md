@@ -1,6 +1,6 @@
 # RFC 075 — URL path fidelity: decoding, case, and prefix boundaries
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-09-01.
 **Tracks.** Correctness. External audit 2026-09-01, F-03, F-05, F-02.
 **Touches.** `crates/apimock-routing/src/util/http.rs`,
 `crates/apimock-server/src/json_path_util.rs`, prefix matching in

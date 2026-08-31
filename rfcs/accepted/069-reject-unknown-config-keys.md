@@ -1,6 +1,6 @@
 # RFC 069 — Reject configuration we do not understand
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-09-01.
 **Tracks.** Correctness / U2 safety. External audit 2026-09-01, F-17.
 **Touches.** `crates/apimock-routing` (the rule-facing `Deserialize`
 types), `crates/apimock-config`, `docs/src/guides/migrating-to-*`.

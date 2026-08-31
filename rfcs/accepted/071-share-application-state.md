@@ -1,6 +1,6 @@
 # RFC 071 — Stop deep-cloning application state on every request
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-09-01.
 **Tracks.** Performance. External audit 2026-09-01, P-01 (the High
 finding on the code-quality axis) and P-02.
 **Touches.** `crates/apimock-server/src/server.rs`.

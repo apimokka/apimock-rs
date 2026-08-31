@@ -22,44 +22,7 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-| ID  | Title |
-|-----|-------|
-| 067 | [CORS: stop reflecting any origin with credentials](./proposed/067-cors-credential-reflection.md) — audit S-01, **highest-ranked** |
-| 068 | [Bound what one request can consume](./proposed/068-bound-per-request-resources.md) — audit S-02, S-03 |
-| 069 | [Reject configuration we do not understand](./proposed/069-reject-unknown-config-keys.md) — audit F-17 |
-| 070 | [`round_robin` must rotate per match group](./proposed/070-round-robin-per-match-group.md) — audit F-01 |
-| 071 | [Stop deep-cloning application state per request](./proposed/071-share-application-state.md) — audit P-01, P-02 |
-| 072 | [Header matching must fail closed](./proposed/072-header-matching-fails-closed.md) — audit S-04 |
-| 073 | [Observability: correct events, honest limits, no leaks](./proposed/073-observability-correct-and-safe.md) — audit F-08, S-05, S-06 |
-| 074 | [TLS: bound the handshake, and fail loudly](./proposed/074-tls-availability.md) — audit S-07, S-08 |
-| 075 | [URL path fidelity](./proposed/075-url-path-fidelity.md) — audit F-03, F-05, F-02 |
-| 076 | [Serve JSON as it was written](./proposed/076-serve-responses-as-written.md) — audit F-04, P-04 |
-| 077 | [Work that should not be per-request](./proposed/077-per-request-work.md) — audit P-05–P-09 |
-| 078 | [Correct four false statements; add troubleshooting](./proposed/078-documentation-corrections.md) — audit D-01–D-07 |
-| 079 | [Remove code that says something untrue](./proposed/079-dead-and-misleading-code.md) — audit F-10, M-03, M-04, M-09 |
-
-> All five come from the independent audit of 6.0.0 run 2026-08-31 →
-> 09-01 (`.git-exclude/tmp/audit/report/`, reviewed in
-> `.git-exclude/reviewed/external-audit-2026-09-01/REVIEW-001.md`).
-> Together they close **every finding in the audit**. 067–071 carry all
-> five High findings plus the silent-permissiveness defect; 072–079 are
-> the medium and low tail. Each headline claim was re-verified against a
-> running server before the RFC was written.
->
-> **Three ordering constraints, which are not preference:**
->
-> - **075 must not land before its own § Design ordering rule is
->   honoured.** Percent-decoding added *after* dot-segment normalisation
->   would let `%2e%2e` become `..` post-normalisation and reintroduce
->   GHSA-72g6-wgrg-vhm7 by another route. RFC 063's confinement is the
->   backstop, not a substitute.
-> - **078 is partly blocked by 070, 073, 075 and 076.** Four of its
->   corrections describe behaviour those RFCs change. Its D-03/D-04/D-05/
->   D-06 half and the troubleshooting page are unblocked and can go now;
->   the rest waits, and becomes *mandatory* if those RFCs are declined.
-> - **071 before 077.** 071 is roughly 20× the cost of the whole 077
->   cluster; doing the tail first would measure noise.
-
+*(None open.)*
 
 ## Accepted
 
@@ -70,6 +33,19 @@ ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 | ID  | Title | State |
 |-----|-------|-------|
 | 039 | [An additive-only gate for the public API](./accepted/039-public-api-additive-only-gate.md) — enable after 6.0.0 | **not started** — deliberately deferred; enable *after* 6.0.0 |
+| 067 | [CORS: stop reflecting any origin with credentials](./accepted/067-cors-credential-reflection.md) — audit S-01, **highest-ranked** | accepted 2026-09-01; handed off (tranche) |
+| 068 | [Bound what one request can consume](./accepted/068-bound-per-request-resources.md) — audit S-02, S-03 | accepted 2026-09-01; handed off (tranche) |
+| 069 | [Reject configuration we do not understand](./accepted/069-reject-unknown-config-keys.md) — audit F-17 | accepted 2026-09-01; handed off (tranche) |
+| 070 | [`round_robin` must rotate per match group](./accepted/070-round-robin-per-match-group.md) — audit F-01 | accepted 2026-09-01; handed off (tranche) |
+| 071 | [Stop deep-cloning application state per request](./accepted/071-share-application-state.md) — audit P-01, P-02 | accepted 2026-09-01; handed off (tranche) |
+| 072 | [Header matching must fail closed](./accepted/072-header-matching-fails-closed.md) — audit S-04 | accepted 2026-09-01; handed off (tranche) |
+| 073 | [Observability: correct events, honest limits, no leaks](./accepted/073-observability-correct-and-safe.md) — audit F-08, S-05, S-06 | accepted 2026-09-01; handed off (tranche) |
+| 074 | [TLS: bound the handshake, and fail loudly](./accepted/074-tls-availability.md) — audit S-07, S-08 | accepted 2026-09-01; handed off (tranche) |
+| 075 | [URL path fidelity](./accepted/075-url-path-fidelity.md) — audit F-03, F-05, F-02 | accepted 2026-09-01; handed off (tranche) |
+| 076 | [Serve JSON as it was written](./accepted/076-serve-responses-as-written.md) — audit F-04, P-04 | accepted 2026-09-01; handed off (tranche) |
+| 077 | [Work that should not be per-request](./accepted/077-per-request-work.md) — audit P-05–P-09 | accepted 2026-09-01; handed off (tranche) |
+| 078 | [Correct four false statements; add troubleshooting](./accepted/078-documentation-corrections.md) — audit D-01–D-07 | accepted 2026-09-01; handed off (tranche) |
+| 079 | [Remove code that says something untrue](./accepted/079-dead-and-misleading-code.md) — audit F-10, M-03, M-04, M-09 | accepted 2026-09-01; handed off (tranche) |
 
 > The other 20 that were here shipped in **6.0.0** (2026-08-28) and have
 > moved to `done/`. **039 stays**: it is approved and deliberately
@@ -105,6 +81,13 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 > here where it matched neither RFC 000's definition nor its own purpose:
 > it identified a missing library guide, then sat somewhere it could not
 > serve as one.
+
+> **RFCs 067–079 all come from the independent audit of 6.0.0** and are
+> handed off as **six tranches**, not thirteen packages —
+> `rfcs/handoffs/audit-t1-…` through `audit-t6-…`. Each tranche is a
+> coherent shippable unit with its own release constraint, which is how
+> the work is actually done; grouping by RFC number would have split
+> them across releases and lost the ordering that matters.
 
 ## Done (Released)
 

@@ -1,6 +1,6 @@
 # RFC 078 — Correct four false statements, and give users somewhere to look
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-09-01.
 **Tracks.** Documentation. External audit 2026-09-01, D-01 through
 D-07, and the Troubleshooting gap (scored 2/5, the lowest in the
 documentation audit).

@@ -1,6 +1,6 @@
 # RFC 079 — Remove code that says something untrue
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-09-01.
 **Tracks.** Maintainability. External audit 2026-09-01, F-10, M-03a/b,
 M-04a–e, M-09.
 **Touches.** Several crates; each item is small and independent.

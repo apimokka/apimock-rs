@@ -1,6 +1,6 @@
 # RFC 073 — Observability: correct events, honest limits, no leaks
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-09-01.
 **Tracks.** Correctness / privacy. External audit 2026-09-01, F-08,
 S-05, S-06, D-02.
 **Touches.** `crates/apimock-server/src/server.rs`,

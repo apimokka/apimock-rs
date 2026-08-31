@@ -1,6 +1,6 @@
 # RFC 074 — TLS: bound the handshake, and fail loudly
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-09-01.
 **Tracks.** Availability. External audit 2026-09-01, S-07, S-08.
 **Touches.** `crates/apimock-server/src/server.rs`,
 `crates/apimock-server/src/tls.rs`, `docs/src/guides/serve-over-https.md`.

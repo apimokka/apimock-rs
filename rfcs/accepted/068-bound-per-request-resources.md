@@ -1,6 +1,6 @@
 # RFC 068 — Bound what one request can consume
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-09-01.
 **Tracks.** Availability. External audit 2026-09-01, S-02 and S-03
 (two of the three High findings on that axis).
 **Touches.** `crates/apimock-server/src/parsed_request.rs`,

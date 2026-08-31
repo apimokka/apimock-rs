@@ -1,6 +1,6 @@
 # RFC 077 — Work that should not be per-request
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Accepted — owner approved 2026-09-01.
 **Tracks.** Performance. External audit 2026-09-01, P-05, P-06, P-07,
 P-09.
 **Touches.** `crates/apimock-server/src/response/file_response.rs`,
