@@ -58,3 +58,20 @@ public-API baselines (`crates/*/public-api.txt`), which are generated
 from the crates and gated in CI. **If this documentation and a baseline
 disagree, the baseline is correct** — please
 [open an issue](https://github.com/apimokka/apimock-rs/issues).
+
+**Where to find them, because it is not where you would look.** The
+baselines live on the repository's default branch:
+
+> <https://github.com/apimokka/apimock-rs/tree/main/crates>
+
+They are **not in the `6.0.0` tag** — the gate that produces them landed
+shortly after 6.0.0 shipped — and they are **not in the published crate
+tarballs**, where `exclude = ["public-api.txt"]` keeps a CI artefact out
+of what consumers download. Releases after 6.0.0 will carry them at the
+tag; the tarball exclusion is permanent and deliberate.
+
+The 6.0.0 baselines are still an accurate record of 6.0.0's surface:
+they were generated from a tree with no source changes since the tag.
+
+*Reported by the apimokka team, who went looking for the tiebreaker this
+page promises and found nothing at the tag.*

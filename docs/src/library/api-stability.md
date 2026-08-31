@@ -33,11 +33,17 @@ deliberate — additive-only means *declared*, not *unchecked*.
    Not a hand-maintained list that drifts — the actual surface, with
    the commit that changed it and its message.
 2. **These files are the answer to "what can I call?"** They are
-   generated from the crates and gated, so they cannot be stale. This
-   handoff quotes them; if the two disagree, believe the baseline.
+   generated from the crates and gated, so they cannot drift from the
+   code on the branch that carries them. This documentation quotes them;
+   if the two disagree, believe the baseline.
 
-The baseline was generated at the 6.0.0 tag with zero source changes
-since it, so it *provably* is the released surface.
+**They live on the default branch**, and only there — see
+[the section index](./README.md) for why, and for the link. They are
+absent from the `6.0.0` tag and from every published crate tarball.
+
+The 6.0.0 baselines were generated from a tree with no source changes
+since the tag, so their *content* is the released surface even though
+their *location* is not the release.
 
 ## `#[non_exhaustive]` — what you cannot do (RFC 052)
 
