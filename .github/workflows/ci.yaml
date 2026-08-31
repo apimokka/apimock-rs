@@ -353,6 +353,80 @@ jobs:
         if: steps.published.outputs.published != 'true'
         run: cargo package --workspace
 
+  # RFC 039: fails when a crate's public API changes without the
+  # checked-in baseline (`crates/<name>/public-api.txt`) being updated
+  # in the same commit — a diff the reviewer sees in the PR, not just a
+  # tool that compares against the last release. Baselined at the
+  # 6.0.0 tag, with zero source changes in between (verified before
+  # generating), so this baseline *is* the released 6.0.0 surface.
+  #
+  # `cargo-public-api` builds rustdoc JSON, which needs a **nightly**
+  # toolchain — pinned to a dated one below, bumped deliberately, so
+  # this job's flakiness surface is "hasn't been bumped yet" rather
+  # than "whatever today's nightly happens to be". This proves nothing
+  # about what compiles for users; **the `msrv` job stays the sole
+  # authority on what the crates support** — the two toolchains answer
+  # different questions and are not meant to agree.
+  #
+  # `-s` (`--omit blanket-impls`) only. Blanket impls
+  # (`impl<T> Any for T`, `impl<T,U> Into<U> for T where U: From<T>`,
+  # …) are identical for every public type in every crate regardless of
+  # this crate's own code — zero signal, pure noise. Auto-trait impls
+  # (`Send`/`Sync`/…) and derived impls (`Clone`/`Debug`/…) are kept
+  # despite being noisier: losing either is a real fact about a
+  # specific public type changing, which is exactly Goal 1's class of
+  # break — even when the trigger is a dependency bump rather than a
+  # direct edit here, since `Cargo.lock` changes are already their own
+  # deliberate, reviewed commit in this project (the `lockfile` job).
+  public-api:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    env:
+      PINNED_NIGHTLY: nightly-2026-08-29
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install pinned nightly toolchain
+        run: bash .github/workflows/scripts/install-rust.sh ${{ env.PINNED_NIGHTLY }}
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-public-api-${{ env.PINNED_NIGHTLY }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-public-api-${{ env.PINNED_NIGHTLY }}-
+
+      # Not version-pinned, matching how `cargo-audit` is installed
+      # above (`--locked` for reproducible internal dependency
+      # resolution, not a pinned release of the tool itself) — this
+      # job's actual flakiness risk is the nightly, addressed above.
+      - name: Cache cargo-public-api binary
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/bin/cargo-public-api
+          key: ${{ runner.os }}-cargo-public-api-bin-${{ env.PINNED_NIGHTLY }}
+
+      - name: Install cargo-public-api
+        run: command -v cargo-public-api || cargo +${{ env.PINNED_NIGHTLY }} install cargo-public-api --locked
+
+      - name: Check public API against the checked-in baseline
+        run: |
+          FAILED=0
+          for crate in apimock apimock-config apimock-routing apimock-server; do
+            NEW=$(mktemp)
+            cargo +${{ env.PINNED_NIGHTLY }} public-api -p "$crate" -s 2>/dev/null > "$NEW"
+            if ! diff -u "crates/$crate/public-api.txt" "$NEW"; then
+              echo "::error::$crate's public API changed. Update crates/$crate/public-api.txt in this commit to declare the change, or undo the change that caused it."
+              FAILED=1
+            fi
+          done
+          exit "$FAILED"
+
   # Pre-6.0.0 docs audit, E-1: `docs.yaml` only builds (and, in the same
   # job, deploys to GitHub Pages) on push to `main` -- a docs-build
   # break was found only after landing, with the published site already

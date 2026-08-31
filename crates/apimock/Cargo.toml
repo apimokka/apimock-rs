@@ -10,6 +10,10 @@ authors.workspace       = true
 categories.workspace    = true
 keywords.workspace      = true
 repository.workspace    = true
+# RFC 039: the public-API baseline is a CI artefact (diffed against a
+# freshly-generated one, never read by any build), not something a
+# downstream consumer needs in the published tarball.
+exclude = ["public-api.txt"]
 
 [features]
 default         = []

@@ -14,9 +14,9 @@ Thanks for understanding the scope and spirit of the project.
 
 ## Before you open a PR
 
-CI (`.github/workflows/ci.yaml`) runs six checks on every push to `main`
-and every pull request, and all six are required to merge. Reproduce
-them locally before pushing:
+CI (`.github/workflows/ci.yaml`) runs several checks on every push to
+`main` and every pull request, and all of them are required to merge.
+Reproduce the core ones locally before pushing:
 
 ```sh
 cargo fmt --all --check
@@ -25,6 +25,8 @@ cargo test --workspace
 cargo check --workspace   # on the toolchain pinned as rust-version in Cargo.toml
 cargo audit               # requires: cargo install cargo-audit --locked
 cargo update --workspace --locked
+cargo package --workspace # skipped in CI when the current version is already on crates.io
+mdbook build docs         # requires: mdbook, mdbook-mermaid
 ```
 
 `cargo test --workspace --lib` is a fine fast-feedback command while
@@ -36,6 +38,25 @@ pull request. **A scheduled run turning red with no new commit is
 correct behaviour, not a broken gate** — it means a vulnerability
 advisory was published against a dependency this project already uses,
 which is new information about existing code, not about your change.
+
+## If you change a crate's public API
+
+RFC 039's `public-api` job fails when a crate's public surface changes
+without its checked-in baseline (`crates/<name>/public-api.txt`)
+changing in the same commit — additive changes included, not just
+removals. Update the baseline in the commit that changes the API; don't
+auto-generate it reflexively without reading the diff, since the diff
+*is* the review artefact.
+
+```sh
+rustup install nightly-2026-08-29   # or whatever ci.yaml currently pins
+cargo +nightly-2026-08-29 install cargo-public-api --locked
+cargo +nightly-2026-08-29 public-api -p <crate> -s > crates/<crate>/public-api.txt
+```
+
+Requires a nightly toolchain (`cargo-public-api` builds rustdoc JSON) —
+unrelated to `rust-version`/the `msrv` job above, which stays the
+authority on what the crates support to build.
 
 ## Version bumps
 

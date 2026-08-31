@@ -1,0 +1,803 @@
+pub mod apimock_server
+pub mod apimock_server::constant
+pub const apimock_server::constant::CSV_RECORDS_DEFAULT_KEY: &str
+pub const apimock_server::constant::DEFAULT_RESPONSE_HEADERS: &[(&str, &str)]
+pub const apimock_server::constant::ROOT_DIRECTORY_FILE_NAME: &str
+pub mod apimock_server::control
+#[non_exhaustive] pub enum apimock_server::control::ReloadHint
+pub apimock_server::control::ReloadHint::None
+pub apimock_server::control::ReloadHint::Reload
+pub apimock_server::control::ReloadHint::Restart
+impl core::clone::Clone for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::clone(&self) -> apimock_server::control::ReloadHint
+impl core::convert::From<apimock_config::view::ReloadHint> for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::from(apimock_config::view::ReloadHint) -> Self
+impl core::convert::From<apimock_server::control::ReloadHint> for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::from(apimock_server::control::ReloadHint) -> Self
+impl core::fmt::Debug for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_server::control::ReloadHint
+impl serde_core::ser::Serialize for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_server::control::ReloadHint
+impl core::marker::Send for apimock_server::control::ReloadHint
+impl core::marker::Sync for apimock_server::control::ReloadHint
+impl core::marker::Unpin for apimock_server::control::ReloadHint
+impl core::marker::UnsafeUnpin for apimock_server::control::ReloadHint
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ReloadHint
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ReloadHint
+#[non_exhaustive] pub enum apimock_server::control::ServerState
+pub apimock_server::control::ServerState::Running
+pub apimock_server::control::ServerState::ShuttingDown
+pub apimock_server::control::ServerState::Starting
+pub apimock_server::control::ServerState::Stopped
+impl core::clone::Clone for apimock_server::control::ServerState
+pub fn apimock_server::control::ServerState::clone(&self) -> apimock_server::control::ServerState
+impl core::fmt::Debug for apimock_server::control::ServerState
+pub fn apimock_server::control::ServerState::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_server::control::ServerState
+impl serde_core::ser::Serialize for apimock_server::control::ServerState
+pub fn apimock_server::control::ServerState::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_server::control::ServerState
+impl core::marker::Send for apimock_server::control::ServerState
+impl core::marker::Sync for apimock_server::control::ServerState
+impl core::marker::Unpin for apimock_server::control::ServerState
+impl core::marker::UnsafeUnpin for apimock_server::control::ServerState
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerState
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerState
+#[non_exhaustive] pub struct apimock_server::control::ServerControl
+impl apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::new() -> Self
+impl core::clone::Clone for apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::clone(&self) -> apimock_server::control::ServerControl
+impl core::default::Default for apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::default() -> apimock_server::control::ServerControl
+impl core::fmt::Debug for apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::control::ServerControl
+impl core::marker::Send for apimock_server::control::ServerControl
+impl core::marker::Sync for apimock_server::control::ServerControl
+impl core::marker::Unpin for apimock_server::control::ServerControl
+impl core::marker::UnsafeUnpin for apimock_server::control::ServerControl
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerControl
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerControl
+#[non_exhaustive] pub struct apimock_server::control::ServerHandle
+pub apimock_server::control::ServerHandle::cert_reloader: core::option::Option<alloc::sync::Arc<apimock_server::tls::ReloadableCertResolver>>
+pub apimock_server::control::ServerHandle::http_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+pub apimock_server::control::ServerHandle::https_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+impl apimock_server::control::ServerHandle
+pub fn apimock_server::control::ServerHandle::reload_tls_certs(&self, &str, &str) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for apimock_server::control::ServerHandle
+pub fn apimock_server::control::ServerHandle::clone(&self) -> apimock_server::control::ServerHandle
+impl core::fmt::Debug for apimock_server::control::ServerHandle
+pub fn apimock_server::control::ServerHandle::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::control::ServerHandle
+impl core::marker::Send for apimock_server::control::ServerHandle
+impl core::marker::Sync for apimock_server::control::ServerHandle
+impl core::marker::Unpin for apimock_server::control::ServerHandle
+impl core::marker::UnsafeUnpin for apimock_server::control::ServerHandle
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerHandle
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerHandle
+pub mod apimock_server::dyn_route
+pub async fn apimock_server::dyn_route::dyn_route_content(&str, &str, &http::header::map::HeaderMap, core::option::Option<&std::path::Path>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub mod apimock_server::error
+#[non_exhaustive] pub enum apimock_server::error::ServerError
+pub apimock_server::error::ServerError::Config(apimock_config::error::ConfigError)
+pub apimock_server::error::ServerError::Io(core::io::error::Error)
+pub apimock_server::error::ServerError::ListenerAddress
+pub apimock_server::error::ServerError::ListenerAddress::addr: alloc::string::String
+pub apimock_server::error::ServerError::ListenerAddress::reason: alloc::string::String
+pub apimock_server::error::ServerError::MiddlewareCompile
+pub apimock_server::error::ServerError::MiddlewareCompile::path: std::path::PathBuf
+pub apimock_server::error::ServerError::MiddlewareCompile::reason: alloc::string::String
+pub apimock_server::error::ServerError::MiddlewareMissing
+pub apimock_server::error::ServerError::MiddlewareMissing::path: std::path::PathBuf
+pub apimock_server::error::ServerError::TlsLoad
+pub apimock_server::error::ServerError::TlsLoad::kind: apimock_server::error::TlsKind
+pub apimock_server::error::ServerError::TlsLoad::path: std::path::PathBuf
+pub apimock_server::error::ServerError::TlsLoad::reason: alloc::string::String
+impl apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::kind(&self) -> apimock_server::error::ServerErrorKind
+impl core::convert::From<apimock_config::error::ConfigError> for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::from(apimock_config::error::ConfigError) -> Self
+impl core::convert::From<core::io::error::Error> for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::from(core::io::error::Error) -> Self
+impl core::error::Error for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::error::ServerError
+impl core::marker::Send for apimock_server::error::ServerError
+impl core::marker::Sync for apimock_server::error::ServerError
+impl core::marker::Unpin for apimock_server::error::ServerError
+impl core::marker::UnsafeUnpin for apimock_server::error::ServerError
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::error::ServerError
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::error::ServerError
+#[non_exhaustive] pub enum apimock_server::error::ServerErrorKind
+pub apimock_server::error::ServerErrorKind::Config
+pub apimock_server::error::ServerErrorKind::Io
+pub apimock_server::error::ServerErrorKind::ListenerAddress
+pub apimock_server::error::ServerErrorKind::MiddlewareCompile
+pub apimock_server::error::ServerErrorKind::MiddlewareMissing
+pub apimock_server::error::ServerErrorKind::TlsLoad
+impl core::clone::Clone for apimock_server::error::ServerErrorKind
+pub fn apimock_server::error::ServerErrorKind::clone(&self) -> apimock_server::error::ServerErrorKind
+impl core::cmp::Eq for apimock_server::error::ServerErrorKind
+impl core::cmp::PartialEq for apimock_server::error::ServerErrorKind
+pub fn apimock_server::error::ServerErrorKind::eq(&self, &apimock_server::error::ServerErrorKind) -> bool
+impl core::fmt::Debug for apimock_server::error::ServerErrorKind
+pub fn apimock_server::error::ServerErrorKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_server::error::ServerErrorKind
+impl core::marker::StructuralPartialEq for apimock_server::error::ServerErrorKind
+impl core::marker::Freeze for apimock_server::error::ServerErrorKind
+impl core::marker::Send for apimock_server::error::ServerErrorKind
+impl core::marker::Sync for apimock_server::error::ServerErrorKind
+impl core::marker::Unpin for apimock_server::error::ServerErrorKind
+impl core::marker::UnsafeUnpin for apimock_server::error::ServerErrorKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::error::ServerErrorKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::error::ServerErrorKind
+#[non_exhaustive] pub enum apimock_server::error::TlsKind
+pub apimock_server::error::TlsKind::Certificate
+pub apimock_server::error::TlsKind::PrivateKey
+impl core::clone::Clone for apimock_server::error::TlsKind
+pub fn apimock_server::error::TlsKind::clone(&self) -> apimock_server::error::TlsKind
+impl core::fmt::Debug for apimock_server::error::TlsKind
+pub fn apimock_server::error::TlsKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_server::error::TlsKind
+pub fn apimock_server::error::TlsKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_server::error::TlsKind
+impl core::marker::Freeze for apimock_server::error::TlsKind
+impl core::marker::Send for apimock_server::error::TlsKind
+impl core::marker::Sync for apimock_server::error::TlsKind
+impl core::marker::Unpin for apimock_server::error::TlsKind
+impl core::marker::UnsafeUnpin for apimock_server::error::TlsKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::error::TlsKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::error::TlsKind
+pub type apimock_server::error::ServerResult<T> = core::result::Result<T, apimock_server::error::ServerError>
+pub mod apimock_server::http_util
+pub fn apimock_server::http_util::content_type_is_application_json(&http::header::map::HeaderMap<http::header::value::HeaderValue>) -> core::option::Option<bool>
+pub async fn apimock_server::http_util::delay_response(u32)
+pub mod apimock_server::json_path_util
+pub const apimock_server::json_path_util::ROOT_DIRECTORY_FILE_NAME: &str
+pub fn apimock_server::json_path_util::resolve_with_json_compatible_extensions(&str) -> core::option::Option<alloc::string::String>
+pub mod apimock_server::middleware
+pub mod apimock_server::middleware::middleware_handler
+#[non_exhaustive] pub struct apimock_server::middleware::middleware_handler::MiddlewareHandler
+pub apimock_server::middleware::middleware_handler::MiddlewareHandler::ast: rhai::ast::ast::AST
+pub apimock_server::middleware::middleware_handler::MiddlewareHandler::confine_to: core::option::Option<std::path::PathBuf>
+pub apimock_server::middleware::middleware_handler::MiddlewareHandler::engine: alloc::sync::Arc<rhai::engine::Engine>
+pub apimock_server::middleware::middleware_handler::MiddlewareHandler::file_path: alloc::string::String
+impl apimock_server::middleware::middleware_handler::MiddlewareHandler
+pub async fn apimock_server::middleware::middleware_handler::MiddlewareHandler::handle(&self, &str, core::option::Option<&serde_json::value::Value>, &http::header::map::HeaderMap) -> core::option::Option<core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>>
+pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::new(&str) -> apimock_server::error::ServerResult<Self>
+impl core::clone::Clone for apimock_server::middleware::middleware_handler::MiddlewareHandler
+pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::clone(&self) -> apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Freeze for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Send for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Sync for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Unpin for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::UnsafeUnpin for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
+pub struct apimock_server::middleware::LoadedMiddlewares
+impl apimock_server::middleware::LoadedMiddlewares
+pub fn apimock_server::middleware::LoadedMiddlewares::compile(&[alloc::string::String], &str) -> apimock_server::error::ServerResult<Self>
+pub fn apimock_server::middleware::LoadedMiddlewares::is_empty(&self) -> bool
+pub fn apimock_server::middleware::LoadedMiddlewares::iter(&self) -> core::slice::iter::Iter<'_, apimock_server::middleware::middleware_handler::MiddlewareHandler>
+pub fn apimock_server::middleware::LoadedMiddlewares::len(&self) -> usize
+impl core::clone::Clone for apimock_server::middleware::LoadedMiddlewares
+pub fn apimock_server::middleware::LoadedMiddlewares::clone(&self) -> apimock_server::middleware::LoadedMiddlewares
+impl core::default::Default for apimock_server::middleware::LoadedMiddlewares
+pub fn apimock_server::middleware::LoadedMiddlewares::default() -> apimock_server::middleware::LoadedMiddlewares
+impl core::marker::Freeze for apimock_server::middleware::LoadedMiddlewares
+impl core::marker::Send for apimock_server::middleware::LoadedMiddlewares
+impl core::marker::Sync for apimock_server::middleware::LoadedMiddlewares
+impl core::marker::Unpin for apimock_server::middleware::LoadedMiddlewares
+impl core::marker::UnsafeUnpin for apimock_server::middleware::LoadedMiddlewares
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::middleware::LoadedMiddlewares
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::middleware::LoadedMiddlewares
+#[non_exhaustive] pub struct apimock_server::middleware::MiddlewareHandler
+pub apimock_server::middleware::MiddlewareHandler::ast: rhai::ast::ast::AST
+pub apimock_server::middleware::MiddlewareHandler::confine_to: core::option::Option<std::path::PathBuf>
+pub apimock_server::middleware::MiddlewareHandler::engine: alloc::sync::Arc<rhai::engine::Engine>
+pub apimock_server::middleware::MiddlewareHandler::file_path: alloc::string::String
+impl apimock_server::middleware::middleware_handler::MiddlewareHandler
+pub async fn apimock_server::middleware::middleware_handler::MiddlewareHandler::handle(&self, &str, core::option::Option<&serde_json::value::Value>, &http::header::map::HeaderMap) -> core::option::Option<core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>>
+pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::new(&str) -> apimock_server::error::ServerResult<Self>
+impl core::clone::Clone for apimock_server::middleware::middleware_handler::MiddlewareHandler
+pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::clone(&self) -> apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Freeze for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Send for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Sync for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Unpin for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::UnsafeUnpin for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
+pub mod apimock_server::parsed_request
+pub fn apimock_server::parsed_request::capture_in_log(&apimock_routing::parsed_request::ParsedRequest, apimock_config::config::log_config::verbose_config::VerboseConfig)
+pub async fn apimock_server::parsed_request::parsed_request_from(http::request::Request<hyper::body::incoming::Incoming>) -> core::result::Result<apimock_routing::parsed_request::ParsedRequest, alloc::string::String>
+pub mod apimock_server::respond_response
+pub async fn apimock_server::respond_response::respond_response(&apimock_routing::rule_set::rule::respond::Respond, &str, &apimock_routing::parsed_request::ParsedRequest, core::option::Option<u32>, core::option::Option<&std::path::Path>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub mod apimock_server::respond_util
+pub fn apimock_server::respond_util::full_file_path(&str, &str) -> core::option::Option<alloc::string::String>
+pub mod apimock_server::response
+pub mod apimock_server::response::confine
+pub fn apimock_server::response::confine::canonical_dir(&str) -> core::option::Option<std::path::PathBuf>
+pub fn apimock_server::response::confine::confine(&str, core::option::Option<&std::path::Path>) -> core::option::Option<std::path::PathBuf>
+pub mod apimock_server::response::error_response
+pub fn apimock_server::response::error_response::bad_request_response(&str, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::error_response::internal_server_error_response(&str, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::error_response::not_found_response(&http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub mod apimock_server::response::file_response
+pub struct apimock_server::response::file_response::FileResponse
+impl apimock_server::response::file_response::FileResponse
+pub async fn apimock_server::response::file_response::FileResponse::file_content_response(&mut self) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::file_response::FileResponse::new(&str, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap, core::option::Option<&std::path::Path>) -> Self
+pub fn apimock_server::response::file_response::FileResponse::new_with_csv_records_jsonpath(&str, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, core::option::Option<alloc::string::String>, &http::header::map::HeaderMap, core::option::Option<&std::path::Path>) -> Self
+impl core::marker::Freeze for apimock_server::response::file_response::FileResponse
+impl core::marker::Send for apimock_server::response::file_response::FileResponse
+impl core::marker::Sync for apimock_server::response::file_response::FileResponse
+impl core::marker::Unpin for apimock_server::response::file_response::FileResponse
+impl core::marker::UnsafeUnpin for apimock_server::response::file_response::FileResponse
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::response::file_response::FileResponse
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::response::file_response::FileResponse
+pub mod apimock_server::response::json_response
+pub fn apimock_server::response::json_response::json_response(&str, core::option::Option<&http::status::StatusCode>, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap, core::option::Option<&str>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub mod apimock_server::response::status_code_response
+pub fn apimock_server::response::status_code_response::status_code_response(&http::status::StatusCode, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::status_code_response::status_code_response_with_message(&http::status::StatusCode, &str, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub mod apimock_server::response::text_response
+pub fn apimock_server::response::text_response::text_response(&str, core::option::Option<&str>, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub mod apimock_server::response_handler
+pub enum apimock_server::response_handler::BodyKind
+pub apimock_server::response_handler::BodyKind::Binary(alloc::vec::Vec<u8>)
+pub apimock_server::response_handler::BodyKind::Empty
+pub apimock_server::response_handler::BodyKind::Text(alloc::string::String)
+impl core::clone::Clone for apimock_server::response_handler::BodyKind
+pub fn apimock_server::response_handler::BodyKind::clone(&self) -> apimock_server::response_handler::BodyKind
+impl core::default::Default for apimock_server::response_handler::BodyKind
+pub fn apimock_server::response_handler::BodyKind::default() -> apimock_server::response_handler::BodyKind
+impl core::marker::Freeze for apimock_server::response_handler::BodyKind
+impl core::marker::Send for apimock_server::response_handler::BodyKind
+impl core::marker::Sync for apimock_server::response_handler::BodyKind
+impl core::marker::Unpin for apimock_server::response_handler::BodyKind
+impl core::marker::UnsafeUnpin for apimock_server::response_handler::BodyKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::response_handler::BodyKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::response_handler::BodyKind
+pub struct apimock_server::response_handler::ResponseHandler
+impl apimock_server::response_handler::ResponseHandler
+pub fn apimock_server::response_handler::ResponseHandler::into_response(self, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response_handler::ResponseHandler::with_binary_body(self, alloc::vec::Vec<u8>, core::option::Option<impl core::convert::Into<alloc::string::String>>) -> Self
+pub fn apimock_server::response_handler::ResponseHandler::with_custom_headers(self, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>) -> Self
+pub fn apimock_server::response_handler::ResponseHandler::with_header(self, impl core::convert::Into<alloc::string::String>, core::option::Option<impl core::convert::Into<alloc::string::String>>) -> Self
+pub fn apimock_server::response_handler::ResponseHandler::with_headers<K, V, I>(self, I) -> Self where K: core::convert::Into<alloc::string::String>, V: core::convert::Into<alloc::string::String>, I: core::iter::traits::collect::IntoIterator<Item = (K, core::option::Option<V>)>
+pub fn apimock_server::response_handler::ResponseHandler::with_json_body(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn apimock_server::response_handler::ResponseHandler::with_status(self, &http::status::StatusCode) -> Self
+pub fn apimock_server::response_handler::ResponseHandler::with_text(self, impl core::convert::Into<alloc::string::String>, core::option::Option<&str>) -> Self
+impl core::default::Default for apimock_server::response_handler::ResponseHandler
+pub fn apimock_server::response_handler::ResponseHandler::default() -> apimock_server::response_handler::ResponseHandler
+impl core::marker::Freeze for apimock_server::response_handler::ResponseHandler
+impl core::marker::Send for apimock_server::response_handler::ResponseHandler
+impl core::marker::Sync for apimock_server::response_handler::ResponseHandler
+impl core::marker::Unpin for apimock_server::response_handler::ResponseHandler
+impl core::marker::UnsafeUnpin for apimock_server::response_handler::ResponseHandler
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::response_handler::ResponseHandler
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::response_handler::ResponseHandler
+pub fn apimock_server::response_handler::default_response_headers(&http::header::map::HeaderMap) -> http::header::map::HeaderMap
+pub mod apimock_server::server
+#[non_exhaustive] pub enum apimock_server::server::ReloadHint
+pub apimock_server::server::ReloadHint::None
+pub apimock_server::server::ReloadHint::Reload
+pub apimock_server::server::ReloadHint::Restart
+impl core::clone::Clone for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::clone(&self) -> apimock_server::control::ReloadHint
+impl core::convert::From<apimock_config::view::ReloadHint> for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::from(apimock_config::view::ReloadHint) -> Self
+impl core::convert::From<apimock_server::control::ReloadHint> for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::from(apimock_server::control::ReloadHint) -> Self
+impl core::fmt::Debug for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_server::control::ReloadHint
+impl serde_core::ser::Serialize for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_server::control::ReloadHint
+impl core::marker::Send for apimock_server::control::ReloadHint
+impl core::marker::Sync for apimock_server::control::ReloadHint
+impl core::marker::Unpin for apimock_server::control::ReloadHint
+impl core::marker::UnsafeUnpin for apimock_server::control::ReloadHint
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ReloadHint
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ReloadHint
+#[non_exhaustive] pub enum apimock_server::server::ServerState
+pub apimock_server::server::ServerState::Running
+pub apimock_server::server::ServerState::ShuttingDown
+pub apimock_server::server::ServerState::Starting
+pub apimock_server::server::ServerState::Stopped
+impl core::clone::Clone for apimock_server::control::ServerState
+pub fn apimock_server::control::ServerState::clone(&self) -> apimock_server::control::ServerState
+impl core::fmt::Debug for apimock_server::control::ServerState
+pub fn apimock_server::control::ServerState::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_server::control::ServerState
+impl serde_core::ser::Serialize for apimock_server::control::ServerState
+pub fn apimock_server::control::ServerState::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_server::control::ServerState
+impl core::marker::Send for apimock_server::control::ServerState
+impl core::marker::Sync for apimock_server::control::ServerState
+impl core::marker::Unpin for apimock_server::control::ServerState
+impl core::marker::UnsafeUnpin for apimock_server::control::ServerState
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerState
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerState
+#[non_exhaustive] pub struct apimock_server::server::AppState
+pub apimock_server::server::AppState::config: apimock_config::config::Config
+pub apimock_server::server::AppState::middlewares: apimock_server::middleware::LoadedMiddlewares
+pub apimock_server::server::AppState::tracer: apimock_server::trace::TraceEmitter
+impl apimock_server::server::AppState
+pub fn apimock_server::server::AppState::new(apimock_config::config::Config, apimock_server::middleware::LoadedMiddlewares, apimock_server::trace::TraceEmitter) -> Self
+impl core::clone::Clone for apimock_server::server::AppState
+pub fn apimock_server::server::AppState::clone(&self) -> apimock_server::server::AppState
+impl core::marker::Freeze for apimock_server::server::AppState
+impl core::marker::Send for apimock_server::server::AppState
+impl core::marker::Sync for apimock_server::server::AppState
+impl core::marker::Unpin for apimock_server::server::AppState
+impl core::marker::UnsafeUnpin for apimock_server::server::AppState
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::server::AppState
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::server::AppState
+#[non_exhaustive] pub struct apimock_server::server::Server
+pub apimock_server::server::Server::app_state: apimock_server::server::AppState
+pub apimock_server::server::Server::http_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+pub apimock_server::server::Server::https_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+impl apimock_server::server::Server
+pub async fn apimock_server::server::Server::bind_http(&self) -> apimock_server::error::ServerResult<core::option::Option<tokio::net::tcp::listener::TcpListener>>
+pub async fn apimock_server::server::Server::bind_https(&self) -> apimock_server::error::ServerResult<core::option::Option<(tokio::net::tcp::listener::TcpListener, tokio_rustls::server::TlsAcceptor)>>
+pub async fn apimock_server::server::Server::new(apimock_config::config::Config) -> apimock_server::error::ServerResult<Self>
+pub async fn apimock_server::server::Server::serve_http(&self, tokio::net::tcp::listener::TcpListener)
+pub async fn apimock_server::server::Server::serve_https(&self, tokio::net::tcp::listener::TcpListener, tokio_rustls::server::TlsAcceptor)
+pub async fn apimock_server::server::Server::start(&self)
+impl core::marker::Freeze for apimock_server::server::Server
+impl core::marker::Send for apimock_server::server::Server
+impl core::marker::Sync for apimock_server::server::Server
+impl core::marker::Unpin for apimock_server::server::Server
+impl core::marker::UnsafeUnpin for apimock_server::server::Server
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::server::Server
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::server::Server
+#[non_exhaustive] pub struct apimock_server::server::ServerControl
+impl apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::new() -> Self
+impl core::clone::Clone for apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::clone(&self) -> apimock_server::control::ServerControl
+impl core::default::Default for apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::default() -> apimock_server::control::ServerControl
+impl core::fmt::Debug for apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::control::ServerControl
+impl core::marker::Send for apimock_server::control::ServerControl
+impl core::marker::Sync for apimock_server::control::ServerControl
+impl core::marker::Unpin for apimock_server::control::ServerControl
+impl core::marker::UnsafeUnpin for apimock_server::control::ServerControl
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerControl
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerControl
+#[non_exhaustive] pub struct apimock_server::server::ServerHandle
+pub apimock_server::server::ServerHandle::cert_reloader: core::option::Option<alloc::sync::Arc<apimock_server::tls::ReloadableCertResolver>>
+pub apimock_server::server::ServerHandle::http_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+pub apimock_server::server::ServerHandle::https_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+impl apimock_server::control::ServerHandle
+pub fn apimock_server::control::ServerHandle::reload_tls_certs(&self, &str, &str) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for apimock_server::control::ServerHandle
+pub fn apimock_server::control::ServerHandle::clone(&self) -> apimock_server::control::ServerHandle
+impl core::fmt::Debug for apimock_server::control::ServerHandle
+pub fn apimock_server::control::ServerHandle::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::control::ServerHandle
+impl core::marker::Send for apimock_server::control::ServerHandle
+impl core::marker::Sync for apimock_server::control::ServerHandle
+impl core::marker::Unpin for apimock_server::control::ServerHandle
+impl core::marker::UnsafeUnpin for apimock_server::control::ServerHandle
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerHandle
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerHandle
+pub fn apimock_server::server::handle_options(&http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub async fn apimock_server::server::service(http::request::Request<hyper::body::incoming::Incoming>, alloc::sync::Arc<tokio::sync::mutex::Mutex<apimock_server::server::AppState>>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub mod apimock_server::tls
+pub struct apimock_server::tls::ReloadableCertResolver
+impl apimock_server::tls::ReloadableCertResolver
+pub fn apimock_server::tls::ReloadableCertResolver::new(alloc::vec::Vec<rustls_pki_types::CertificateDer<'static>>, rustls_pki_types::PrivateKeyDer<'static>) -> core::result::Result<Self, apimock_server::tls::TlsReloadError>
+pub fn apimock_server::tls::ReloadableCertResolver::reload_from_paths(&self, &str, &str) -> core::result::Result<(), apimock_server::tls::TlsReloadError>
+impl core::fmt::Debug for apimock_server::tls::ReloadableCertResolver
+pub fn apimock_server::tls::ReloadableCertResolver::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl rustls::server::server_conn::ResolvesServerCert for apimock_server::tls::ReloadableCertResolver
+pub fn apimock_server::tls::ReloadableCertResolver::resolve(&self, rustls::server::server_conn::ClientHello<'_>) -> core::option::Option<alloc::sync::Arc<rustls::crypto::signer::CertifiedKey>>
+impl !core::marker::Freeze for apimock_server::tls::ReloadableCertResolver
+impl core::marker::Send for apimock_server::tls::ReloadableCertResolver
+impl core::marker::Sync for apimock_server::tls::ReloadableCertResolver
+impl core::marker::Unpin for apimock_server::tls::ReloadableCertResolver
+impl core::marker::UnsafeUnpin for apimock_server::tls::ReloadableCertResolver
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::tls::ReloadableCertResolver
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::tls::ReloadableCertResolver
+pub struct apimock_server::tls::TlsReloadError
+pub apimock_server::tls::TlsReloadError::reason: alloc::string::String
+impl core::clone::Clone for apimock_server::tls::TlsReloadError
+pub fn apimock_server::tls::TlsReloadError::clone(&self) -> apimock_server::tls::TlsReloadError
+impl core::error::Error for apimock_server::tls::TlsReloadError
+impl core::fmt::Debug for apimock_server::tls::TlsReloadError
+pub fn apimock_server::tls::TlsReloadError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_server::tls::TlsReloadError
+pub fn apimock_server::tls::TlsReloadError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::tls::TlsReloadError
+impl core::marker::Send for apimock_server::tls::TlsReloadError
+impl core::marker::Sync for apimock_server::tls::TlsReloadError
+impl core::marker::Unpin for apimock_server::tls::TlsReloadError
+impl core::marker::UnsafeUnpin for apimock_server::tls::TlsReloadError
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::tls::TlsReloadError
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::tls::TlsReloadError
+pub fn apimock_server::tls::build_server_config_reloadable(alloc::vec::Vec<rustls_pki_types::CertificateDer<'static>>, rustls_pki_types::PrivateKeyDer<'static>) -> core::result::Result<(rustls::server::server_conn::ServerConfig, alloc::sync::Arc<apimock_server::tls::ReloadableCertResolver>), apimock_server::tls::TlsReloadError>
+pub fn apimock_server::tls::build_server_config_static(alloc::vec::Vec<rustls_pki_types::CertificateDer<'static>>, rustls_pki_types::PrivateKeyDer<'static>) -> core::result::Result<rustls::server::server_conn::ServerConfig, alloc::string::String>
+pub fn apimock_server::tls::load_certs(&str) -> apimock_server::error::ServerResult<alloc::vec::Vec<rustls_pki_types::CertificateDer<'static>>>
+pub fn apimock_server::tls::load_private_key(&str) -> apimock_server::error::ServerResult<rustls_pki_types::PrivateKeyDer<'static>>
+pub mod apimock_server::trace
+pub enum apimock_server::trace::HeaderRedactionMode
+pub apimock_server::trace::HeaderRedactionMode::Allowlist
+pub apimock_server::trace::HeaderRedactionMode::Denylist
+impl core::clone::Clone for apimock_server::trace::HeaderRedactionMode
+pub fn apimock_server::trace::HeaderRedactionMode::clone(&self) -> apimock_server::trace::HeaderRedactionMode
+impl core::cmp::Eq for apimock_server::trace::HeaderRedactionMode
+impl core::cmp::PartialEq for apimock_server::trace::HeaderRedactionMode
+pub fn apimock_server::trace::HeaderRedactionMode::eq(&self, &apimock_server::trace::HeaderRedactionMode) -> bool
+impl core::fmt::Debug for apimock_server::trace::HeaderRedactionMode
+pub fn apimock_server::trace::HeaderRedactionMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for apimock_server::trace::HeaderRedactionMode
+impl core::marker::Freeze for apimock_server::trace::HeaderRedactionMode
+impl core::marker::Send for apimock_server::trace::HeaderRedactionMode
+impl core::marker::Sync for apimock_server::trace::HeaderRedactionMode
+impl core::marker::Unpin for apimock_server::trace::HeaderRedactionMode
+impl core::marker::UnsafeUnpin for apimock_server::trace::HeaderRedactionMode
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::trace::HeaderRedactionMode
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::trace::HeaderRedactionMode
+pub enum apimock_server::trace::Outcome
+pub apimock_server::trace::Outcome::Error
+pub apimock_server::trace::Outcome::Error::kind: alloc::string::String
+pub apimock_server::trace::Outcome::Error::message: alloc::string::String
+pub apimock_server::trace::Outcome::Fallback
+pub apimock_server::trace::Outcome::Fallback::file_path: alloc::string::String
+pub apimock_server::trace::Outcome::Fallback::status: u16
+pub apimock_server::trace::Outcome::Matched
+pub apimock_server::trace::Outcome::Matched::rule_index: usize
+pub apimock_server::trace::Outcome::Matched::rule_set_index: usize
+pub apimock_server::trace::Outcome::Miss
+pub apimock_server::trace::Outcome::Miss::status: u16
+impl core::clone::Clone for apimock_server::trace::Outcome
+pub fn apimock_server::trace::Outcome::clone(&self) -> apimock_server::trace::Outcome
+impl core::fmt::Debug for apimock_server::trace::Outcome
+pub fn apimock_server::trace::Outcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_server::trace::Outcome
+pub fn apimock_server::trace::Outcome::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_server::trace::Outcome
+impl core::marker::Send for apimock_server::trace::Outcome
+impl core::marker::Sync for apimock_server::trace::Outcome
+impl core::marker::Unpin for apimock_server::trace::Outcome
+impl core::marker::UnsafeUnpin for apimock_server::trace::Outcome
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::trace::Outcome
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::trace::Outcome
+pub enum apimock_server::trace::TraceTransportConfig
+pub apimock_server::trace::TraceTransportConfig::Disabled
+pub apimock_server::trace::TraceTransportConfig::Tcp
+pub apimock_server::trace::TraceTransportConfig::Tcp::addr: alloc::string::String
+pub apimock_server::trace::TraceTransportConfig::Uds
+pub apimock_server::trace::TraceTransportConfig::Uds::path: alloc::string::String
+impl core::clone::Clone for apimock_server::trace::TraceTransportConfig
+pub fn apimock_server::trace::TraceTransportConfig::clone(&self) -> apimock_server::trace::TraceTransportConfig
+impl core::default::Default for apimock_server::trace::TraceTransportConfig
+pub fn apimock_server::trace::TraceTransportConfig::default() -> apimock_server::trace::TraceTransportConfig
+impl core::fmt::Debug for apimock_server::trace::TraceTransportConfig
+pub fn apimock_server::trace::TraceTransportConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::trace::TraceTransportConfig
+impl core::marker::Send for apimock_server::trace::TraceTransportConfig
+impl core::marker::Sync for apimock_server::trace::TraceTransportConfig
+impl core::marker::Unpin for apimock_server::trace::TraceTransportConfig
+impl core::marker::UnsafeUnpin for apimock_server::trace::TraceTransportConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::trace::TraceTransportConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::trace::TraceTransportConfig
+pub struct apimock_server::trace::MatchTraceEvent
+pub apimock_server::trace::MatchTraceEvent::dropped_count: u32
+pub apimock_server::trace::MatchTraceEvent::duration_ms: u32
+pub apimock_server::trace::MatchTraceEvent::event_id: u64
+pub apimock_server::trace::MatchTraceEvent::outcome: apimock_server::trace::Outcome
+pub apimock_server::trace::MatchTraceEvent::received_at_ms: u64
+pub apimock_server::trace::MatchTraceEvent::request: apimock_server::trace::RequestSummary
+pub apimock_server::trace::MatchTraceEvent::schema_version: u8
+impl core::clone::Clone for apimock_server::trace::MatchTraceEvent
+pub fn apimock_server::trace::MatchTraceEvent::clone(&self) -> apimock_server::trace::MatchTraceEvent
+impl core::fmt::Debug for apimock_server::trace::MatchTraceEvent
+pub fn apimock_server::trace::MatchTraceEvent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_server::trace::MatchTraceEvent
+pub fn apimock_server::trace::MatchTraceEvent::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_server::trace::MatchTraceEvent
+impl core::marker::Send for apimock_server::trace::MatchTraceEvent
+impl core::marker::Sync for apimock_server::trace::MatchTraceEvent
+impl core::marker::Unpin for apimock_server::trace::MatchTraceEvent
+impl core::marker::UnsafeUnpin for apimock_server::trace::MatchTraceEvent
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::trace::MatchTraceEvent
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::trace::MatchTraceEvent
+#[non_exhaustive] pub struct apimock_server::trace::RequestSummary
+pub apimock_server::trace::RequestSummary::body_json: core::option::Option<serde_json::value::Value>
+pub apimock_server::trace::RequestSummary::body_len: core::option::Option<usize>
+pub apimock_server::trace::RequestSummary::body_truncated: bool
+pub apimock_server::trace::RequestSummary::headers: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
+pub apimock_server::trace::RequestSummary::method: alloc::string::String
+pub apimock_server::trace::RequestSummary::url_path: alloc::string::String
+impl apimock_server::trace::RequestSummary
+pub fn apimock_server::trace::RequestSummary::new(alloc::string::String, alloc::string::String, alloc::vec::Vec<(alloc::string::String, alloc::string::String)>, core::option::Option<usize>, &apimock_server::trace::TraceConfig) -> Self
+impl core::clone::Clone for apimock_server::trace::RequestSummary
+pub fn apimock_server::trace::RequestSummary::clone(&self) -> apimock_server::trace::RequestSummary
+impl core::fmt::Debug for apimock_server::trace::RequestSummary
+pub fn apimock_server::trace::RequestSummary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_server::trace::RequestSummary
+pub fn apimock_server::trace::RequestSummary::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_server::trace::RequestSummary
+impl core::marker::Send for apimock_server::trace::RequestSummary
+impl core::marker::Sync for apimock_server::trace::RequestSummary
+impl core::marker::Unpin for apimock_server::trace::RequestSummary
+impl core::marker::UnsafeUnpin for apimock_server::trace::RequestSummary
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::trace::RequestSummary
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::trace::RequestSummary
+#[non_exhaustive] pub struct apimock_server::trace::TraceConfig
+pub apimock_server::trace::TraceConfig::capture_body: bool
+pub apimock_server::trace::TraceConfig::header_allowlist: alloc::vec::Vec<alloc::string::String>
+pub apimock_server::trace::TraceConfig::header_denylist: alloc::vec::Vec<alloc::string::String>
+pub apimock_server::trace::TraceConfig::header_redaction: apimock_server::trace::HeaderRedactionMode
+pub apimock_server::trace::TraceConfig::max_body_bytes: usize
+impl core::clone::Clone for apimock_server::trace::TraceConfig
+pub fn apimock_server::trace::TraceConfig::clone(&self) -> apimock_server::trace::TraceConfig
+impl core::default::Default for apimock_server::trace::TraceConfig
+pub fn apimock_server::trace::TraceConfig::default() -> Self
+impl core::fmt::Debug for apimock_server::trace::TraceConfig
+pub fn apimock_server::trace::TraceConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::trace::TraceConfig
+impl core::marker::Send for apimock_server::trace::TraceConfig
+impl core::marker::Sync for apimock_server::trace::TraceConfig
+impl core::marker::Unpin for apimock_server::trace::TraceConfig
+impl core::marker::UnsafeUnpin for apimock_server::trace::TraceConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::trace::TraceConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::trace::TraceConfig
+pub struct apimock_server::trace::TraceEmitter
+pub apimock_server::trace::TraceEmitter::config: alloc::sync::Arc<apimock_server::trace::TraceConfig>
+impl apimock_server::trace::TraceEmitter
+pub fn apimock_server::trace::TraceEmitter::emit(&self, u64, u32, apimock_server::trace::RequestSummary, apimock_server::trace::Outcome)
+pub fn apimock_server::trace::TraceEmitter::enrich_with_body(&self, &mut apimock_server::trace::RequestSummary, core::option::Option<&serde_json::value::Value>)
+pub fn apimock_server::trace::TraceEmitter::has_subscribers(&self) -> bool
+pub fn apimock_server::trace::TraceEmitter::new() -> Self
+pub fn apimock_server::trace::TraceEmitter::subscribe(&self) -> tokio::sync::broadcast::Receiver<apimock_server::trace::MatchTraceEvent>
+pub fn apimock_server::trace::TraceEmitter::with_config(apimock_server::trace::TraceConfig) -> Self
+impl core::clone::Clone for apimock_server::trace::TraceEmitter
+pub fn apimock_server::trace::TraceEmitter::clone(&self) -> apimock_server::trace::TraceEmitter
+impl core::default::Default for apimock_server::trace::TraceEmitter
+pub fn apimock_server::trace::TraceEmitter::default() -> Self
+impl core::marker::Freeze for apimock_server::trace::TraceEmitter
+impl core::marker::Send for apimock_server::trace::TraceEmitter
+impl core::marker::Sync for apimock_server::trace::TraceEmitter
+impl core::marker::Unpin for apimock_server::trace::TraceEmitter
+impl core::marker::UnsafeUnpin for apimock_server::trace::TraceEmitter
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::trace::TraceEmitter
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::trace::TraceEmitter
+pub struct apimock_server::trace::TraceTransport
+impl apimock_server::trace::TraceTransport
+pub async fn apimock_server::trace::TraceTransport::accept_loop(apimock_server::trace::TraceTransportConfig, apimock_server::trace::TraceEmitter)
+impl core::marker::Freeze for apimock_server::trace::TraceTransport
+impl core::marker::Send for apimock_server::trace::TraceTransport
+impl core::marker::Sync for apimock_server::trace::TraceTransport
+impl core::marker::Unpin for apimock_server::trace::TraceTransport
+impl core::marker::UnsafeUnpin for apimock_server::trace::TraceTransport
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::trace::TraceTransport
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::trace::TraceTransport
+pub const apimock_server::trace::DEFAULT_HEADER_DENYLIST: &[&str]
+pub const apimock_server::trace::MAX_SUBSCRIBERS: usize
+pub const apimock_server::trace::REDACTED_HEADER_VALUE: &str
+pub const apimock_server::trace::TRACE_CHANNEL_CAPACITY: usize
+pub fn apimock_server::trace::now_ms() -> u64
+pub mod apimock_server::types
+pub struct apimock_server::types::CollectedResponse
+pub apimock_server::types::CollectedResponse::body: alloc::vec::Vec<u8>
+pub apimock_server::types::CollectedResponse::headers: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
+pub apimock_server::types::CollectedResponse::status: http::status::StatusCode
+impl apimock_server::types::CollectedResponse
+pub async fn apimock_server::types::CollectedResponse::collect(http::response::Response<apimock_server::types::BoxBody>) -> Self
+impl core::marker::Freeze for apimock_server::types::CollectedResponse
+impl core::marker::Send for apimock_server::types::CollectedResponse
+impl core::marker::Sync for apimock_server::types::CollectedResponse
+impl core::marker::Unpin for apimock_server::types::CollectedResponse
+impl core::marker::UnsafeUnpin for apimock_server::types::CollectedResponse
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::types::CollectedResponse
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::types::CollectedResponse
+pub type apimock_server::types::BoxBody = http_body_util::combinators::box_body::BoxBody<bytes::bytes::Bytes, core::convert::Infallible>
+#[non_exhaustive] pub enum apimock_server::ReloadHint
+pub apimock_server::ReloadHint::None
+pub apimock_server::ReloadHint::Reload
+pub apimock_server::ReloadHint::Restart
+impl core::clone::Clone for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::clone(&self) -> apimock_server::control::ReloadHint
+impl core::convert::From<apimock_config::view::ReloadHint> for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::from(apimock_config::view::ReloadHint) -> Self
+impl core::convert::From<apimock_server::control::ReloadHint> for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::from(apimock_server::control::ReloadHint) -> Self
+impl core::fmt::Debug for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_server::control::ReloadHint
+impl serde_core::ser::Serialize for apimock_server::control::ReloadHint
+pub fn apimock_server::control::ReloadHint::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_server::control::ReloadHint
+impl core::marker::Send for apimock_server::control::ReloadHint
+impl core::marker::Sync for apimock_server::control::ReloadHint
+impl core::marker::Unpin for apimock_server::control::ReloadHint
+impl core::marker::UnsafeUnpin for apimock_server::control::ReloadHint
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ReloadHint
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ReloadHint
+#[non_exhaustive] pub enum apimock_server::ServerError
+pub apimock_server::ServerError::Config(apimock_config::error::ConfigError)
+pub apimock_server::ServerError::Io(core::io::error::Error)
+pub apimock_server::ServerError::ListenerAddress
+pub apimock_server::ServerError::ListenerAddress::addr: alloc::string::String
+pub apimock_server::ServerError::ListenerAddress::reason: alloc::string::String
+pub apimock_server::ServerError::MiddlewareCompile
+pub apimock_server::ServerError::MiddlewareCompile::path: std::path::PathBuf
+pub apimock_server::ServerError::MiddlewareCompile::reason: alloc::string::String
+pub apimock_server::ServerError::MiddlewareMissing
+pub apimock_server::ServerError::MiddlewareMissing::path: std::path::PathBuf
+pub apimock_server::ServerError::TlsLoad
+pub apimock_server::ServerError::TlsLoad::kind: apimock_server::error::TlsKind
+pub apimock_server::ServerError::TlsLoad::path: std::path::PathBuf
+pub apimock_server::ServerError::TlsLoad::reason: alloc::string::String
+impl apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::kind(&self) -> apimock_server::error::ServerErrorKind
+impl core::convert::From<apimock_config::error::ConfigError> for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::from(apimock_config::error::ConfigError) -> Self
+impl core::convert::From<core::io::error::Error> for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::from(core::io::error::Error) -> Self
+impl core::error::Error for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_server::error::ServerError
+pub fn apimock_server::error::ServerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::error::ServerError
+impl core::marker::Send for apimock_server::error::ServerError
+impl core::marker::Sync for apimock_server::error::ServerError
+impl core::marker::Unpin for apimock_server::error::ServerError
+impl core::marker::UnsafeUnpin for apimock_server::error::ServerError
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::error::ServerError
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::error::ServerError
+#[non_exhaustive] pub enum apimock_server::ServerState
+pub apimock_server::ServerState::Running
+pub apimock_server::ServerState::ShuttingDown
+pub apimock_server::ServerState::Starting
+pub apimock_server::ServerState::Stopped
+impl core::clone::Clone for apimock_server::control::ServerState
+pub fn apimock_server::control::ServerState::clone(&self) -> apimock_server::control::ServerState
+impl core::fmt::Debug for apimock_server::control::ServerState
+pub fn apimock_server::control::ServerState::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_server::control::ServerState
+impl serde_core::ser::Serialize for apimock_server::control::ServerState
+pub fn apimock_server::control::ServerState::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_server::control::ServerState
+impl core::marker::Send for apimock_server::control::ServerState
+impl core::marker::Sync for apimock_server::control::ServerState
+impl core::marker::Unpin for apimock_server::control::ServerState
+impl core::marker::UnsafeUnpin for apimock_server::control::ServerState
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerState
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerState
+#[non_exhaustive] pub enum apimock_server::TlsKind
+pub apimock_server::TlsKind::Certificate
+pub apimock_server::TlsKind::PrivateKey
+impl core::clone::Clone for apimock_server::error::TlsKind
+pub fn apimock_server::error::TlsKind::clone(&self) -> apimock_server::error::TlsKind
+impl core::fmt::Debug for apimock_server::error::TlsKind
+pub fn apimock_server::error::TlsKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_server::error::TlsKind
+pub fn apimock_server::error::TlsKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_server::error::TlsKind
+impl core::marker::Freeze for apimock_server::error::TlsKind
+impl core::marker::Send for apimock_server::error::TlsKind
+impl core::marker::Sync for apimock_server::error::TlsKind
+impl core::marker::Unpin for apimock_server::error::TlsKind
+impl core::marker::UnsafeUnpin for apimock_server::error::TlsKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::error::TlsKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::error::TlsKind
+#[non_exhaustive] pub struct apimock_server::AppState
+pub apimock_server::AppState::config: apimock_config::config::Config
+pub apimock_server::AppState::middlewares: apimock_server::middleware::LoadedMiddlewares
+pub apimock_server::AppState::tracer: apimock_server::trace::TraceEmitter
+impl apimock_server::server::AppState
+pub fn apimock_server::server::AppState::new(apimock_config::config::Config, apimock_server::middleware::LoadedMiddlewares, apimock_server::trace::TraceEmitter) -> Self
+impl core::clone::Clone for apimock_server::server::AppState
+pub fn apimock_server::server::AppState::clone(&self) -> apimock_server::server::AppState
+impl core::marker::Freeze for apimock_server::server::AppState
+impl core::marker::Send for apimock_server::server::AppState
+impl core::marker::Sync for apimock_server::server::AppState
+impl core::marker::Unpin for apimock_server::server::AppState
+impl core::marker::UnsafeUnpin for apimock_server::server::AppState
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::server::AppState
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::server::AppState
+pub struct apimock_server::LoadedMiddlewares
+impl apimock_server::middleware::LoadedMiddlewares
+pub fn apimock_server::middleware::LoadedMiddlewares::compile(&[alloc::string::String], &str) -> apimock_server::error::ServerResult<Self>
+pub fn apimock_server::middleware::LoadedMiddlewares::is_empty(&self) -> bool
+pub fn apimock_server::middleware::LoadedMiddlewares::iter(&self) -> core::slice::iter::Iter<'_, apimock_server::middleware::middleware_handler::MiddlewareHandler>
+pub fn apimock_server::middleware::LoadedMiddlewares::len(&self) -> usize
+impl core::clone::Clone for apimock_server::middleware::LoadedMiddlewares
+pub fn apimock_server::middleware::LoadedMiddlewares::clone(&self) -> apimock_server::middleware::LoadedMiddlewares
+impl core::default::Default for apimock_server::middleware::LoadedMiddlewares
+pub fn apimock_server::middleware::LoadedMiddlewares::default() -> apimock_server::middleware::LoadedMiddlewares
+impl core::marker::Freeze for apimock_server::middleware::LoadedMiddlewares
+impl core::marker::Send for apimock_server::middleware::LoadedMiddlewares
+impl core::marker::Sync for apimock_server::middleware::LoadedMiddlewares
+impl core::marker::Unpin for apimock_server::middleware::LoadedMiddlewares
+impl core::marker::UnsafeUnpin for apimock_server::middleware::LoadedMiddlewares
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::middleware::LoadedMiddlewares
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::middleware::LoadedMiddlewares
+#[non_exhaustive] pub struct apimock_server::MiddlewareHandler
+pub apimock_server::MiddlewareHandler::ast: rhai::ast::ast::AST
+pub apimock_server::MiddlewareHandler::confine_to: core::option::Option<std::path::PathBuf>
+pub apimock_server::MiddlewareHandler::engine: alloc::sync::Arc<rhai::engine::Engine>
+pub apimock_server::MiddlewareHandler::file_path: alloc::string::String
+impl apimock_server::middleware::middleware_handler::MiddlewareHandler
+pub async fn apimock_server::middleware::middleware_handler::MiddlewareHandler::handle(&self, &str, core::option::Option<&serde_json::value::Value>, &http::header::map::HeaderMap) -> core::option::Option<core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>>
+pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::new(&str) -> apimock_server::error::ServerResult<Self>
+impl core::clone::Clone for apimock_server::middleware::middleware_handler::MiddlewareHandler
+pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::clone(&self) -> apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Freeze for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Send for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Sync for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::Unpin for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl core::marker::UnsafeUnpin for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
+#[non_exhaustive] pub struct apimock_server::Server
+pub apimock_server::Server::app_state: apimock_server::server::AppState
+pub apimock_server::Server::http_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+pub apimock_server::Server::https_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+impl apimock_server::server::Server
+pub async fn apimock_server::server::Server::bind_http(&self) -> apimock_server::error::ServerResult<core::option::Option<tokio::net::tcp::listener::TcpListener>>
+pub async fn apimock_server::server::Server::bind_https(&self) -> apimock_server::error::ServerResult<core::option::Option<(tokio::net::tcp::listener::TcpListener, tokio_rustls::server::TlsAcceptor)>>
+pub async fn apimock_server::server::Server::new(apimock_config::config::Config) -> apimock_server::error::ServerResult<Self>
+pub async fn apimock_server::server::Server::serve_http(&self, tokio::net::tcp::listener::TcpListener)
+pub async fn apimock_server::server::Server::serve_https(&self, tokio::net::tcp::listener::TcpListener, tokio_rustls::server::TlsAcceptor)
+pub async fn apimock_server::server::Server::start(&self)
+impl core::marker::Freeze for apimock_server::server::Server
+impl core::marker::Send for apimock_server::server::Server
+impl core::marker::Sync for apimock_server::server::Server
+impl core::marker::Unpin for apimock_server::server::Server
+impl core::marker::UnsafeUnpin for apimock_server::server::Server
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::server::Server
+impl !core::panic::unwind_safe::UnwindSafe for apimock_server::server::Server
+#[non_exhaustive] pub struct apimock_server::ServerControl
+impl apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::new() -> Self
+impl core::clone::Clone for apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::clone(&self) -> apimock_server::control::ServerControl
+impl core::default::Default for apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::default() -> apimock_server::control::ServerControl
+impl core::fmt::Debug for apimock_server::control::ServerControl
+pub fn apimock_server::control::ServerControl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::control::ServerControl
+impl core::marker::Send for apimock_server::control::ServerControl
+impl core::marker::Sync for apimock_server::control::ServerControl
+impl core::marker::Unpin for apimock_server::control::ServerControl
+impl core::marker::UnsafeUnpin for apimock_server::control::ServerControl
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerControl
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerControl
+#[non_exhaustive] pub struct apimock_server::ServerHandle
+pub apimock_server::ServerHandle::cert_reloader: core::option::Option<alloc::sync::Arc<apimock_server::tls::ReloadableCertResolver>>
+pub apimock_server::ServerHandle::http_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+pub apimock_server::ServerHandle::https_addr: core::option::Option<core::net::socket_addr::SocketAddr>
+impl apimock_server::control::ServerHandle
+pub fn apimock_server::control::ServerHandle::reload_tls_certs(&self, &str, &str) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for apimock_server::control::ServerHandle
+pub fn apimock_server::control::ServerHandle::clone(&self) -> apimock_server::control::ServerHandle
+impl core::fmt::Debug for apimock_server::control::ServerHandle
+pub fn apimock_server::control::ServerHandle::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::control::ServerHandle
+impl core::marker::Send for apimock_server::control::ServerHandle
+impl core::marker::Sync for apimock_server::control::ServerHandle
+impl core::marker::Unpin for apimock_server::control::ServerHandle
+impl core::marker::UnsafeUnpin for apimock_server::control::ServerHandle
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerHandle
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerHandle
+pub async fn apimock_server::service(http::request::Request<hyper::body::incoming::Incoming>, alloc::sync::Arc<tokio::sync::mutex::Mutex<apimock_server::server::AppState>>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub type apimock_server::ServerResult<T> = core::result::Result<T, apimock_server::error::ServerError>

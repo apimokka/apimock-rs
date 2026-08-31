@@ -1,0 +1,166 @@
+pub mod apimock
+pub use apimock::config
+pub use apimock::routing
+pub use apimock::server
+pub mod apimock::app
+#[non_exhaustive] pub struct apimock::app::App
+pub apimock::app::App::server: apimock_server::server::Server
+impl apimock::app::App
+pub async fn apimock::app::App::new(&apimock::args::EnvArgs, core::option::Option<tokio::sync::mpsc::bounded::Sender<alloc::string::String>>, bool) -> apimock_server::error::ServerResult<Self>
+impl core::marker::Freeze for apimock::app::App
+impl core::marker::Send for apimock::app::App
+impl core::marker::Sync for apimock::app::App
+impl core::marker::Unpin for apimock::app::App
+impl core::marker::UnsafeUnpin for apimock::app::App
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock::app::App
+impl !core::panic::unwind_safe::UnwindSafe for apimock::app::App
+pub mod apimock::args
+pub mod apimock::args::constant
+pub const apimock::args::constant::CONFIG_FILE_PATH_OPTION_NAMES: [&str; 2]
+pub const apimock::args::constant::CONFIG_LISTENER_PORT_OPTION_NAMES: [&str; 2]
+pub const apimock::args::constant::DEFAULT_CONFIG_FILE_PATH: &str
+pub const apimock::args::constant::DEFAULT_MIDDLEWARE_FILE_PATH: &str
+pub const apimock::args::constant::DEFAULT_RULE_SET_FILE_PATH: &str
+pub const apimock::args::constant::FALLBACK_RESPOND_DIR_PATH_OPTION_NAMES: [&str; 2]
+pub const apimock::args::constant::HELP_OPTION_NAMES: [&str; 2]
+pub const apimock::args::constant::INCLUDES_MIDDLEWARE_OPTION_NAMES: [&str; 1]
+pub const apimock::args::constant::INIT_CONFIG_OPTION_NAMES: [&str; 1]
+pub const apimock::args::constant::KNOWN_SUBCOMMAND_NAMES: [&str; 4]
+pub const apimock::args::constant::KNOWN_TOP_LEVEL_OPTION_NAMES: [&str; 13]
+pub const apimock::args::constant::NO_VALUE_TOP_LEVEL_OPTION_NAMES: [&str; 7]
+pub const apimock::args::constant::VERSION_OPTION_NAMES: [&str; 1]
+pub const apimock::args::constant::YES_OPTION_NAMES: [&str; 2]
+pub mod apimock::args::init_interactive
+pub struct apimock::args::init_interactive::InitAnswers
+pub apimock::args::init_interactive::InitAnswers::enable_tls: bool
+pub apimock::args::init_interactive::InitAnswers::fallback_respond_dir: alloc::string::String
+pub apimock::args::init_interactive::InitAnswers::include_middleware: bool
+pub apimock::args::init_interactive::InitAnswers::include_rule_set: bool
+pub apimock::args::init_interactive::InitAnswers::ip_address: alloc::string::String
+pub apimock::args::init_interactive::InitAnswers::port: u16
+impl core::clone::Clone for apimock::args::init_interactive::InitAnswers
+pub fn apimock::args::init_interactive::InitAnswers::clone(&self) -> apimock::args::init_interactive::InitAnswers
+impl core::default::Default for apimock::args::init_interactive::InitAnswers
+pub fn apimock::args::init_interactive::InitAnswers::default() -> Self
+impl core::fmt::Debug for apimock::args::init_interactive::InitAnswers
+pub fn apimock::args::init_interactive::InitAnswers::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock::args::init_interactive::InitAnswers
+impl core::marker::Send for apimock::args::init_interactive::InitAnswers
+impl core::marker::Sync for apimock::args::init_interactive::InitAnswers
+impl core::marker::Unpin for apimock::args::init_interactive::InitAnswers
+impl core::marker::UnsafeUnpin for apimock::args::init_interactive::InitAnswers
+impl core::panic::unwind_safe::RefUnwindSafe for apimock::args::init_interactive::InitAnswers
+impl core::panic::unwind_safe::UnwindSafe for apimock::args::init_interactive::InitAnswers
+pub fn apimock::args::init_interactive::is_interactive() -> bool
+pub fn apimock::args::init_interactive::print_summary(&apimock::args::init_interactive::InitAnswers)
+pub fn apimock::args::init_interactive::render_apimock_toml(&apimock::args::init_interactive::InitAnswers) -> alloc::string::String
+pub fn apimock::args::init_interactive::run(bool, bool) -> core::io::error::Result<apimock::args::init_interactive::InitAnswers>
+#[non_exhaustive] pub struct apimock::args::EnvArgs
+pub apimock::args::EnvArgs::config_file_path: core::option::Option<alloc::string::String>
+pub apimock::args::EnvArgs::fallback_respond_dir_path: core::option::Option<alloc::string::String>
+pub apimock::args::EnvArgs::port: core::option::Option<u16>
+impl apimock::args::EnvArgs
+pub fn apimock::args::EnvArgs::default() -> anyhow::Result<core::option::Option<Self>>
+pub fn apimock::args::EnvArgs::empty() -> Self
+pub fn apimock::args::EnvArgs::validate(&self) -> anyhow::Result<()>
+impl core::clone::Clone for apimock::args::EnvArgs
+pub fn apimock::args::EnvArgs::clone(&self) -> apimock::args::EnvArgs
+impl core::marker::Freeze for apimock::args::EnvArgs
+impl core::marker::Send for apimock::args::EnvArgs
+impl core::marker::Sync for apimock::args::EnvArgs
+impl core::marker::Unpin for apimock::args::EnvArgs
+impl core::marker::UnsafeUnpin for apimock::args::EnvArgs
+impl core::panic::unwind_safe::RefUnwindSafe for apimock::args::EnvArgs
+impl core::panic::unwind_safe::UnwindSafe for apimock::args::EnvArgs
+pub mod apimock::cmd
+pub mod apimock::cmd::envelope
+pub enum apimock::cmd::envelope::ErrorKind
+pub apimock::cmd::envelope::ErrorKind::ConfigInvalid
+pub apimock::cmd::envelope::ErrorKind::ConfigUnreadable
+pub apimock::cmd::envelope::ErrorKind::Conflict
+pub apimock::cmd::envelope::ErrorKind::Internal
+pub apimock::cmd::envelope::ErrorKind::Io
+pub apimock::cmd::envelope::ErrorKind::Usage
+impl core::marker::Freeze for apimock::cmd::envelope::ErrorKind
+impl core::marker::Send for apimock::cmd::envelope::ErrorKind
+impl core::marker::Sync for apimock::cmd::envelope::ErrorKind
+impl core::marker::Unpin for apimock::cmd::envelope::ErrorKind
+impl core::marker::UnsafeUnpin for apimock::cmd::envelope::ErrorKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock::cmd::envelope::ErrorKind
+impl core::panic::unwind_safe::UnwindSafe for apimock::cmd::envelope::ErrorKind
+pub enum apimock::cmd::envelope::Format
+pub apimock::cmd::envelope::Format::Json
+pub apimock::cmd::envelope::Format::Text
+impl core::clone::Clone for apimock::cmd::envelope::Format
+pub fn apimock::cmd::envelope::Format::clone(&self) -> apimock::cmd::envelope::Format
+impl core::cmp::Eq for apimock::cmd::envelope::Format
+impl core::cmp::PartialEq for apimock::cmd::envelope::Format
+pub fn apimock::cmd::envelope::Format::eq(&self, &apimock::cmd::envelope::Format) -> bool
+impl core::marker::Copy for apimock::cmd::envelope::Format
+impl core::marker::StructuralPartialEq for apimock::cmd::envelope::Format
+impl core::marker::Freeze for apimock::cmd::envelope::Format
+impl core::marker::Send for apimock::cmd::envelope::Format
+impl core::marker::Sync for apimock::cmd::envelope::Format
+impl core::marker::Unpin for apimock::cmd::envelope::Format
+impl core::marker::UnsafeUnpin for apimock::cmd::envelope::Format
+impl core::panic::unwind_safe::RefUnwindSafe for apimock::cmd::envelope::Format
+impl core::panic::unwind_safe::UnwindSafe for apimock::cmd::envelope::Format
+pub const apimock::cmd::envelope::SCHEMA_VERSION: u32
+pub fn apimock::cmd::envelope::err(apimock::cmd::envelope::ErrorKind, impl core::convert::Into<alloc::string::String>) -> serde_json::value::Value
+pub fn apimock::cmd::envelope::kind_for_apply_error(&apimock_config::error::ApplyError) -> apimock::cmd::envelope::ErrorKind
+pub fn apimock::cmd::envelope::kind_for_config_error(&apimock_config::error::ConfigError) -> apimock::cmd::envelope::ErrorKind
+pub fn apimock::cmd::envelope::kind_for_routing_error(&apimock_routing::error::RoutingError) -> apimock::cmd::envelope::ErrorKind
+pub fn apimock::cmd::envelope::kind_for_save_error(&apimock_config::error::SaveError) -> apimock::cmd::envelope::ErrorKind
+pub fn apimock::cmd::envelope::kind_for_workspace_error(&apimock_config::error::WorkspaceError) -> apimock::cmd::envelope::ErrorKind
+pub fn apimock::cmd::envelope::ok(serde_json::value::Value) -> serde_json::value::Value
+pub mod apimock::cmd::get
+pub fn apimock::cmd::get::run(&[alloc::string::String]) -> i32
+pub mod apimock::cmd::match_test
+pub fn apimock::cmd::match_test::run(&[alloc::string::String]) -> i32
+pub mod apimock::cmd::set
+pub fn apimock::cmd::set::run(&[alloc::string::String]) -> i32
+pub mod apimock::cmd::validate
+pub struct apimock::cmd::validate::ValidateArgs
+pub apimock::cmd::validate::ValidateArgs::config_path: alloc::string::String
+pub apimock::cmd::validate::ValidateArgs::format: core::option::Option<apimock::cmd::envelope::Format>
+pub apimock::cmd::validate::ValidateArgs::quiet: bool
+pub apimock::cmd::validate::ValidateArgs::strict: bool
+impl apimock::cmd::validate::ValidateArgs
+pub fn apimock::cmd::validate::ValidateArgs::parse(&[alloc::string::String]) -> core::result::Result<Self, alloc::string::String>
+impl core::marker::Freeze for apimock::cmd::validate::ValidateArgs
+impl core::marker::Send for apimock::cmd::validate::ValidateArgs
+impl core::marker::Sync for apimock::cmd::validate::ValidateArgs
+impl core::marker::Unpin for apimock::cmd::validate::ValidateArgs
+impl core::marker::UnsafeUnpin for apimock::cmd::validate::ValidateArgs
+impl core::panic::unwind_safe::RefUnwindSafe for apimock::cmd::validate::ValidateArgs
+impl core::panic::unwind_safe::UnwindSafe for apimock::cmd::validate::ValidateArgs
+pub fn apimock::cmd::validate::run(&[alloc::string::String]) -> i32
+#[non_exhaustive] pub struct apimock::App
+pub apimock::App::server: apimock_server::server::Server
+impl apimock::app::App
+pub async fn apimock::app::App::new(&apimock::args::EnvArgs, core::option::Option<tokio::sync::mpsc::bounded::Sender<alloc::string::String>>, bool) -> apimock_server::error::ServerResult<Self>
+impl core::marker::Freeze for apimock::app::App
+impl core::marker::Send for apimock::app::App
+impl core::marker::Sync for apimock::app::App
+impl core::marker::Unpin for apimock::app::App
+impl core::marker::UnsafeUnpin for apimock::app::App
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock::app::App
+impl !core::panic::unwind_safe::UnwindSafe for apimock::app::App
+#[non_exhaustive] pub struct apimock::EnvArgs
+pub apimock::EnvArgs::config_file_path: core::option::Option<alloc::string::String>
+pub apimock::EnvArgs::fallback_respond_dir_path: core::option::Option<alloc::string::String>
+pub apimock::EnvArgs::port: core::option::Option<u16>
+impl apimock::args::EnvArgs
+pub fn apimock::args::EnvArgs::default() -> anyhow::Result<core::option::Option<Self>>
+pub fn apimock::args::EnvArgs::empty() -> Self
+pub fn apimock::args::EnvArgs::validate(&self) -> anyhow::Result<()>
+impl core::clone::Clone for apimock::args::EnvArgs
+pub fn apimock::args::EnvArgs::clone(&self) -> apimock::args::EnvArgs
+impl core::marker::Freeze for apimock::args::EnvArgs
+impl core::marker::Send for apimock::args::EnvArgs
+impl core::marker::Sync for apimock::args::EnvArgs
+impl core::marker::Unpin for apimock::args::EnvArgs
+impl core::marker::UnsafeUnpin for apimock::args::EnvArgs
+impl core::panic::unwind_safe::RefUnwindSafe for apimock::args::EnvArgs
+impl core::panic::unwind_safe::UnwindSafe for apimock::args::EnvArgs
+pub async fn apimock::new(&apimock::args::EnvArgs) -> apimock_server::error::ServerResult<apimock::app::App>

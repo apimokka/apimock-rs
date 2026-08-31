@@ -1,0 +1,1868 @@
+pub mod apimock_config
+pub mod apimock_config::config
+pub mod apimock_config::config::constant
+pub const apimock_config::config::constant::LISTENER_DEFAULT_IP_ADDRESS: &str
+pub const apimock_config::config::constant::LISTENER_DEFAULT_PORT: u16
+pub const apimock_config::config::constant::PRINT_DELIMITER: &str
+pub const apimock_config::config::constant::SERVICE_DEFAULT_FALLBACK_RESPOND_DIR: &str
+pub mod apimock_config::config::file_tree_config
+pub struct apimock_config::config::file_tree_config::FileTreeViewConfig
+pub apimock_config::config::file_tree_config::FileTreeViewConfig::builtin_excludes: bool
+pub apimock_config::config::file_tree_config::FileTreeViewConfig::extra_excludes: alloc::vec::Vec<alloc::string::String>
+pub apimock_config::config::file_tree_config::FileTreeViewConfig::include: alloc::vec::Vec<alloc::string::String>
+pub apimock_config::config::file_tree_config::FileTreeViewConfig::respect_gitignore: bool
+pub apimock_config::config::file_tree_config::FileTreeViewConfig::show_hidden: bool
+impl apimock_config::config::file_tree_config::FileTreeViewConfig
+pub fn apimock_config::config::file_tree_config::FileTreeViewConfig::to_filter(&self) -> apimock_routing::view::build::FileTreeFilter
+impl core::clone::Clone for apimock_config::config::file_tree_config::FileTreeViewConfig
+pub fn apimock_config::config::file_tree_config::FileTreeViewConfig::clone(&self) -> apimock_config::config::file_tree_config::FileTreeViewConfig
+impl core::default::Default for apimock_config::config::file_tree_config::FileTreeViewConfig
+pub fn apimock_config::config::file_tree_config::FileTreeViewConfig::default() -> Self
+impl core::fmt::Debug for apimock_config::config::file_tree_config::FileTreeViewConfig
+pub fn apimock_config::config::file_tree_config::FileTreeViewConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::file_tree_config::FileTreeViewConfig
+pub fn apimock_config::config::file_tree_config::FileTreeViewConfig::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::file_tree_config::FileTreeViewConfig
+impl core::marker::Send for apimock_config::config::file_tree_config::FileTreeViewConfig
+impl core::marker::Sync for apimock_config::config::file_tree_config::FileTreeViewConfig
+impl core::marker::Unpin for apimock_config::config::file_tree_config::FileTreeViewConfig
+impl core::marker::UnsafeUnpin for apimock_config::config::file_tree_config::FileTreeViewConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::file_tree_config::FileTreeViewConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::file_tree_config::FileTreeViewConfig
+pub mod apimock_config::config::listener_config
+pub mod apimock_config::config::listener_config::tls_config
+pub struct apimock_config::config::listener_config::tls_config::TlsConfig
+pub apimock_config::config::listener_config::tls_config::TlsConfig::cert: alloc::string::String
+pub apimock_config::config::listener_config::tls_config::TlsConfig::key: alloc::string::String
+pub apimock_config::config::listener_config::tls_config::TlsConfig::port: core::option::Option<u16>
+impl apimock_config::config::listener_config::tls_config::TlsConfig
+pub fn apimock_config::config::listener_config::tls_config::TlsConfig::validate(&self) -> bool
+impl core::clone::Clone for apimock_config::config::listener_config::tls_config::TlsConfig
+pub fn apimock_config::config::listener_config::tls_config::TlsConfig::clone(&self) -> apimock_config::config::listener_config::tls_config::TlsConfig
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::listener_config::tls_config::TlsConfig
+pub fn apimock_config::config::listener_config::tls_config::TlsConfig::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::listener_config::tls_config::TlsConfig
+impl core::marker::Send for apimock_config::config::listener_config::tls_config::TlsConfig
+impl core::marker::Sync for apimock_config::config::listener_config::tls_config::TlsConfig
+impl core::marker::Unpin for apimock_config::config::listener_config::tls_config::TlsConfig
+impl core::marker::UnsafeUnpin for apimock_config::config::listener_config::tls_config::TlsConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::listener_config::tls_config::TlsConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::listener_config::tls_config::TlsConfig
+#[non_exhaustive] pub struct apimock_config::config::listener_config::ListenerConfig
+pub apimock_config::config::listener_config::ListenerConfig::ip_address: alloc::string::String
+pub apimock_config::config::listener_config::ListenerConfig::port: u16
+pub apimock_config::config::listener_config::ListenerConfig::tls: core::option::Option<apimock_config::config::listener_config::tls_config::TlsConfig>
+impl apimock_config::config::listener_config::ListenerConfig
+pub fn apimock_config::config::listener_config::ListenerConfig::validate(&self) -> bool
+impl core::clone::Clone for apimock_config::config::listener_config::ListenerConfig
+pub fn apimock_config::config::listener_config::ListenerConfig::clone(&self) -> apimock_config::config::listener_config::ListenerConfig
+impl core::default::Default for apimock_config::config::listener_config::ListenerConfig
+pub fn apimock_config::config::listener_config::ListenerConfig::default() -> Self
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::listener_config::ListenerConfig
+pub fn apimock_config::config::listener_config::ListenerConfig::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::listener_config::ListenerConfig
+impl core::marker::Send for apimock_config::config::listener_config::ListenerConfig
+impl core::marker::Sync for apimock_config::config::listener_config::ListenerConfig
+impl core::marker::Unpin for apimock_config::config::listener_config::ListenerConfig
+impl core::marker::UnsafeUnpin for apimock_config::config::listener_config::ListenerConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::listener_config::ListenerConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::listener_config::ListenerConfig
+pub mod apimock_config::config::log_config
+pub mod apimock_config::config::log_config::verbose_config
+#[non_exhaustive] pub struct apimock_config::config::log_config::verbose_config::VerboseConfig
+pub apimock_config::config::log_config::verbose_config::VerboseConfig::body: bool
+pub apimock_config::config::log_config::verbose_config::VerboseConfig::header: bool
+impl apimock_config::config::log_config::verbose_config::VerboseConfig
+pub const fn apimock_config::config::log_config::verbose_config::VerboseConfig::new(bool, bool) -> Self
+impl core::clone::Clone for apimock_config::config::log_config::verbose_config::VerboseConfig
+pub fn apimock_config::config::log_config::verbose_config::VerboseConfig::clone(&self) -> apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::default::Default for apimock_config::config::log_config::verbose_config::VerboseConfig
+pub fn apimock_config::config::log_config::verbose_config::VerboseConfig::default() -> apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::fmt::Display for apimock_config::config::log_config::verbose_config::VerboseConfig
+pub fn apimock_config::config::log_config::verbose_config::VerboseConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::log_config::verbose_config::VerboseConfig
+pub fn apimock_config::config::log_config::verbose_config::VerboseConfig::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::marker::Send for apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::marker::Sync for apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::marker::Unpin for apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::marker::UnsafeUnpin for apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::log_config::verbose_config::VerboseConfig
+#[non_exhaustive] pub struct apimock_config::config::log_config::LogConfig
+pub apimock_config::config::log_config::LogConfig::verbose: apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::clone::Clone for apimock_config::config::log_config::LogConfig
+pub fn apimock_config::config::log_config::LogConfig::clone(&self) -> apimock_config::config::log_config::LogConfig
+impl core::default::Default for apimock_config::config::log_config::LogConfig
+pub fn apimock_config::config::log_config::LogConfig::default() -> apimock_config::config::log_config::LogConfig
+impl core::fmt::Display for apimock_config::config::log_config::LogConfig
+pub fn apimock_config::config::log_config::LogConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::log_config::LogConfig
+pub fn apimock_config::config::log_config::LogConfig::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::log_config::LogConfig
+impl core::marker::Send for apimock_config::config::log_config::LogConfig
+impl core::marker::Sync for apimock_config::config::log_config::LogConfig
+impl core::marker::Unpin for apimock_config::config::log_config::LogConfig
+impl core::marker::UnsafeUnpin for apimock_config::config::log_config::LogConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::log_config::LogConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::log_config::LogConfig
+pub mod apimock_config::config::service_config
+#[non_exhaustive] pub struct apimock_config::config::service_config::ServiceConfig
+pub apimock_config::config::service_config::ServiceConfig::fallback_respond_dir: alloc::string::String
+pub apimock_config::config::service_config::ServiceConfig::middlewares_file_paths: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub apimock_config::config::service_config::ServiceConfig::rule_sets: alloc::vec::Vec<apimock_routing::rule_set::RuleSet>
+pub apimock_config::config::service_config::ServiceConfig::rule_sets_file_paths: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub apimock_config::config::service_config::ServiceConfig::strategy: core::option::Option<apimock_routing::strategy::Strategy>
+impl apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::validate(&self) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::clone(&self) -> apimock_config::config::service_config::ServiceConfig
+impl core::default::Default for apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::default() -> Self
+impl core::fmt::Display for apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::service_config::ServiceConfig
+impl core::marker::Send for apimock_config::config::service_config::ServiceConfig
+impl core::marker::Sync for apimock_config::config::service_config::ServiceConfig
+impl core::marker::Unpin for apimock_config::config::service_config::ServiceConfig
+impl core::marker::UnsafeUnpin for apimock_config::config::service_config::ServiceConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::service_config::ServiceConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::service_config::ServiceConfig
+#[non_exhaustive] pub struct apimock_config::config::Config
+pub apimock_config::config::Config::file_path: core::option::Option<alloc::string::String>
+pub apimock_config::config::Config::file_tree_view: core::option::Option<apimock_config::config::file_tree_config::FileTreeViewConfig>
+pub apimock_config::config::Config::listener: core::option::Option<apimock_config::config::listener_config::ListenerConfig>
+pub apimock_config::config::Config::log: core::option::Option<apimock_config::config::log_config::LogConfig>
+pub apimock_config::config::Config::service: apimock_config::config::service_config::ServiceConfig
+impl apimock_config::config::Config
+pub fn apimock_config::config::Config::compute_fallback_respond_dir(&mut self, core::option::Option<&alloc::string::String>) -> apimock_config::error::ConfigResult<()>
+pub fn apimock_config::config::Config::current_dir_to_parent_dir_relative_path(&self) -> apimock_config::error::ConfigResult<alloc::string::String>
+pub fn apimock_config::config::Config::listener_http_addr(&self) -> core::option::Option<alloc::string::String>
+pub fn apimock_config::config::Config::listener_https_addr(&self) -> core::option::Option<alloc::string::String>
+pub fn apimock_config::config::Config::new(core::option::Option<&alloc::string::String>, core::option::Option<&alloc::string::String>) -> apimock_config::error::ConfigResult<Self>
+impl core::clone::Clone for apimock_config::config::Config
+pub fn apimock_config::config::Config::clone(&self) -> apimock_config::config::Config
+impl core::default::Default for apimock_config::config::Config
+pub fn apimock_config::config::Config::default() -> Self
+impl core::fmt::Display for apimock_config::config::Config
+pub fn apimock_config::config::Config::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::Config
+pub fn apimock_config::config::Config::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::Config
+impl core::marker::Send for apimock_config::config::Config
+impl core::marker::Sync for apimock_config::config::Config
+impl core::marker::Unpin for apimock_config::config::Config
+impl core::marker::UnsafeUnpin for apimock_config::config::Config
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::Config
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::Config
+pub mod apimock_config::error
+#[non_exhaustive] pub enum apimock_config::error::ApplyError
+pub apimock_config::error::ApplyError::InvalidPayload
+pub apimock_config::error::ApplyError::InvalidPayload::reason: alloc::string::String
+pub apimock_config::error::ApplyError::UnknownNode
+pub apimock_config::error::ApplyError::UnknownNode::id: apimock_config::view::NodeId
+pub apimock_config::error::ApplyError::WrongNodeKind
+pub apimock_config::error::ApplyError::WrongNodeKind::id: apimock_config::view::NodeId
+pub apimock_config::error::ApplyError::WrongNodeKind::reason: alloc::string::String
+impl apimock_config::error::ApplyError
+pub fn apimock_config::error::ApplyError::kind(&self) -> apimock_config::error::ApplyErrorKind
+impl core::error::Error for apimock_config::error::ApplyError
+impl core::fmt::Debug for apimock_config::error::ApplyError
+pub fn apimock_config::error::ApplyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::error::ApplyError
+pub fn apimock_config::error::ApplyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::error::ApplyError
+impl core::marker::Send for apimock_config::error::ApplyError
+impl core::marker::Sync for apimock_config::error::ApplyError
+impl core::marker::Unpin for apimock_config::error::ApplyError
+impl core::marker::UnsafeUnpin for apimock_config::error::ApplyError
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::ApplyError
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::error::ApplyError
+#[non_exhaustive] pub enum apimock_config::error::ApplyErrorKind
+pub apimock_config::error::ApplyErrorKind::InvalidPayload
+pub apimock_config::error::ApplyErrorKind::UnknownNode
+pub apimock_config::error::ApplyErrorKind::WrongNodeKind
+impl core::clone::Clone for apimock_config::error::ApplyErrorKind
+pub fn apimock_config::error::ApplyErrorKind::clone(&self) -> apimock_config::error::ApplyErrorKind
+impl core::cmp::Eq for apimock_config::error::ApplyErrorKind
+impl core::cmp::PartialEq for apimock_config::error::ApplyErrorKind
+pub fn apimock_config::error::ApplyErrorKind::eq(&self, &apimock_config::error::ApplyErrorKind) -> bool
+impl core::fmt::Debug for apimock_config::error::ApplyErrorKind
+pub fn apimock_config::error::ApplyErrorKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::error::ApplyErrorKind
+impl core::marker::StructuralPartialEq for apimock_config::error::ApplyErrorKind
+impl core::marker::Freeze for apimock_config::error::ApplyErrorKind
+impl core::marker::Send for apimock_config::error::ApplyErrorKind
+impl core::marker::Sync for apimock_config::error::ApplyErrorKind
+impl core::marker::Unpin for apimock_config::error::ApplyErrorKind
+impl core::marker::UnsafeUnpin for apimock_config::error::ApplyErrorKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::ApplyErrorKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::error::ApplyErrorKind
+#[non_exhaustive] pub enum apimock_config::error::ConfigError
+pub apimock_config::error::ConfigError::ConfigParse
+pub apimock_config::error::ConfigError::ConfigParse::canonical: core::option::Option<std::path::PathBuf>
+pub apimock_config::error::ConfigError::ConfigParse::path: std::path::PathBuf
+pub apimock_config::error::ConfigError::ConfigParse::source: alloc::boxed::Box<toml::de::error::Error>
+pub apimock_config::error::ConfigError::ConfigRead
+pub apimock_config::error::ConfigError::ConfigRead::path: std::path::PathBuf
+pub apimock_config::error::ConfigError::ConfigRead::source: core::io::error::Error
+pub apimock_config::error::ConfigError::PathResolve
+pub apimock_config::error::ConfigError::PathResolve::path: std::path::PathBuf
+pub apimock_config::error::ConfigError::PathResolve::source: core::io::error::Error
+pub apimock_config::error::ConfigError::RuleSet(apimock_routing::error::RoutingError)
+pub apimock_config::error::ConfigError::Validation
+pub apimock_config::error::ConfigError::Validation::reason: alloc::string::String
+impl apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::kind(&self) -> apimock_config::error::ConfigErrorKind
+impl core::convert::From<apimock_config::error::ConfigError> for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::from(apimock_config::error::ConfigError) -> Self
+impl core::convert::From<apimock_routing::error::RoutingError> for apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::from(apimock_routing::error::RoutingError) -> Self
+impl core::error::Error for apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::error::ConfigError
+impl core::marker::Send for apimock_config::error::ConfigError
+impl core::marker::Sync for apimock_config::error::ConfigError
+impl core::marker::Unpin for apimock_config::error::ConfigError
+impl core::marker::UnsafeUnpin for apimock_config::error::ConfigError
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::ConfigError
+impl !core::panic::unwind_safe::UnwindSafe for apimock_config::error::ConfigError
+#[non_exhaustive] pub enum apimock_config::error::ConfigErrorKind
+pub apimock_config::error::ConfigErrorKind::Parse
+pub apimock_config::error::ConfigErrorKind::PathResolve
+pub apimock_config::error::ConfigErrorKind::Read
+pub apimock_config::error::ConfigErrorKind::RuleSet
+pub apimock_config::error::ConfigErrorKind::Validation
+impl core::clone::Clone for apimock_config::error::ConfigErrorKind
+pub fn apimock_config::error::ConfigErrorKind::clone(&self) -> apimock_config::error::ConfigErrorKind
+impl core::cmp::Eq for apimock_config::error::ConfigErrorKind
+impl core::cmp::PartialEq for apimock_config::error::ConfigErrorKind
+pub fn apimock_config::error::ConfigErrorKind::eq(&self, &apimock_config::error::ConfigErrorKind) -> bool
+impl core::fmt::Debug for apimock_config::error::ConfigErrorKind
+pub fn apimock_config::error::ConfigErrorKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::error::ConfigErrorKind
+impl core::marker::StructuralPartialEq for apimock_config::error::ConfigErrorKind
+impl core::marker::Freeze for apimock_config::error::ConfigErrorKind
+impl core::marker::Send for apimock_config::error::ConfigErrorKind
+impl core::marker::Sync for apimock_config::error::ConfigErrorKind
+impl core::marker::Unpin for apimock_config::error::ConfigErrorKind
+impl core::marker::UnsafeUnpin for apimock_config::error::ConfigErrorKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::ConfigErrorKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::error::ConfigErrorKind
+#[non_exhaustive] pub enum apimock_config::error::SaveError
+pub apimock_config::error::SaveError::Conflict
+pub apimock_config::error::SaveError::Conflict::path: std::path::PathBuf
+pub apimock_config::error::SaveError::Inconsistent
+pub apimock_config::error::SaveError::Inconsistent::reason: alloc::string::String
+pub apimock_config::error::SaveError::Read
+pub apimock_config::error::SaveError::Read::path: std::path::PathBuf
+pub apimock_config::error::SaveError::Read::source: core::io::error::Error
+pub apimock_config::error::SaveError::Serialize
+pub apimock_config::error::SaveError::Serialize::path: std::path::PathBuf
+pub apimock_config::error::SaveError::Serialize::source: toml::ser::error::Error
+pub apimock_config::error::SaveError::Write
+pub apimock_config::error::SaveError::Write::path: std::path::PathBuf
+pub apimock_config::error::SaveError::Write::source: core::io::error::Error
+impl apimock_config::error::SaveError
+pub fn apimock_config::error::SaveError::kind(&self) -> apimock_config::error::SaveErrorKind
+impl core::error::Error for apimock_config::error::SaveError
+pub fn apimock_config::error::SaveError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for apimock_config::error::SaveError
+pub fn apimock_config::error::SaveError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::error::SaveError
+pub fn apimock_config::error::SaveError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::error::SaveError
+impl core::marker::Send for apimock_config::error::SaveError
+impl core::marker::Sync for apimock_config::error::SaveError
+impl core::marker::Unpin for apimock_config::error::SaveError
+impl core::marker::UnsafeUnpin for apimock_config::error::SaveError
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::SaveError
+impl !core::panic::unwind_safe::UnwindSafe for apimock_config::error::SaveError
+#[non_exhaustive] pub enum apimock_config::error::SaveErrorKind
+pub apimock_config::error::SaveErrorKind::Conflict
+pub apimock_config::error::SaveErrorKind::Inconsistent
+pub apimock_config::error::SaveErrorKind::Read
+pub apimock_config::error::SaveErrorKind::Serialize
+pub apimock_config::error::SaveErrorKind::Write
+impl core::clone::Clone for apimock_config::error::SaveErrorKind
+pub fn apimock_config::error::SaveErrorKind::clone(&self) -> apimock_config::error::SaveErrorKind
+impl core::cmp::Eq for apimock_config::error::SaveErrorKind
+impl core::cmp::PartialEq for apimock_config::error::SaveErrorKind
+pub fn apimock_config::error::SaveErrorKind::eq(&self, &apimock_config::error::SaveErrorKind) -> bool
+impl core::fmt::Debug for apimock_config::error::SaveErrorKind
+pub fn apimock_config::error::SaveErrorKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::error::SaveErrorKind
+impl core::marker::StructuralPartialEq for apimock_config::error::SaveErrorKind
+impl core::marker::Freeze for apimock_config::error::SaveErrorKind
+impl core::marker::Send for apimock_config::error::SaveErrorKind
+impl core::marker::Sync for apimock_config::error::SaveErrorKind
+impl core::marker::Unpin for apimock_config::error::SaveErrorKind
+impl core::marker::UnsafeUnpin for apimock_config::error::SaveErrorKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::SaveErrorKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::error::SaveErrorKind
+#[non_exhaustive] pub enum apimock_config::error::WorkspaceError
+pub apimock_config::error::WorkspaceError::Config(apimock_config::error::ConfigError)
+pub apimock_config::error::WorkspaceError::InvalidRoot
+pub apimock_config::error::WorkspaceError::InvalidRoot::path: std::path::PathBuf
+pub apimock_config::error::WorkspaceError::InvalidRoot::reason: alloc::string::String
+impl apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::kind(&self) -> apimock_config::error::WorkspaceErrorKind
+impl core::convert::From<apimock_config::error::ConfigError> for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::from(apimock_config::error::ConfigError) -> Self
+impl core::error::Error for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::error::WorkspaceError
+impl core::marker::Send for apimock_config::error::WorkspaceError
+impl core::marker::Sync for apimock_config::error::WorkspaceError
+impl core::marker::Unpin for apimock_config::error::WorkspaceError
+impl core::marker::UnsafeUnpin for apimock_config::error::WorkspaceError
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::WorkspaceError
+impl !core::panic::unwind_safe::UnwindSafe for apimock_config::error::WorkspaceError
+#[non_exhaustive] pub enum apimock_config::error::WorkspaceErrorKind
+pub apimock_config::error::WorkspaceErrorKind::Config
+pub apimock_config::error::WorkspaceErrorKind::InvalidRoot
+impl core::clone::Clone for apimock_config::error::WorkspaceErrorKind
+pub fn apimock_config::error::WorkspaceErrorKind::clone(&self) -> apimock_config::error::WorkspaceErrorKind
+impl core::cmp::Eq for apimock_config::error::WorkspaceErrorKind
+impl core::cmp::PartialEq for apimock_config::error::WorkspaceErrorKind
+pub fn apimock_config::error::WorkspaceErrorKind::eq(&self, &apimock_config::error::WorkspaceErrorKind) -> bool
+impl core::fmt::Debug for apimock_config::error::WorkspaceErrorKind
+pub fn apimock_config::error::WorkspaceErrorKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::error::WorkspaceErrorKind
+impl core::marker::StructuralPartialEq for apimock_config::error::WorkspaceErrorKind
+impl core::marker::Freeze for apimock_config::error::WorkspaceErrorKind
+impl core::marker::Send for apimock_config::error::WorkspaceErrorKind
+impl core::marker::Sync for apimock_config::error::WorkspaceErrorKind
+impl core::marker::Unpin for apimock_config::error::WorkspaceErrorKind
+impl core::marker::UnsafeUnpin for apimock_config::error::WorkspaceErrorKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::WorkspaceErrorKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::error::WorkspaceErrorKind
+pub type apimock_config::error::ConfigResult<T> = core::result::Result<T, apimock_config::error::ConfigError>
+pub mod apimock_config::path_util
+pub fn apimock_config::path_util::current_dir_to_file_parent_dir_relative_path(&str) -> core::io::error::Result<std::path::PathBuf>
+pub fn apimock_config::path_util::relative_path(&std::path::Path, &std::path::Path) -> core::io::error::Result<std::path::PathBuf>
+pub mod apimock_config::view
+#[non_exhaustive] pub enum apimock_config::view::BodyConditionKind
+pub apimock_config::view::BodyConditionKind::Json
+impl core::clone::Clone for apimock_config::view::BodyConditionKind
+pub fn apimock_config::view::BodyConditionKind::clone(&self) -> apimock_config::view::BodyConditionKind
+impl core::cmp::Eq for apimock_config::view::BodyConditionKind
+impl core::cmp::PartialEq for apimock_config::view::BodyConditionKind
+pub fn apimock_config::view::BodyConditionKind::eq(&self, &apimock_config::view::BodyConditionKind) -> bool
+impl core::fmt::Debug for apimock_config::view::BodyConditionKind
+pub fn apimock_config::view::BodyConditionKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::BodyConditionKind
+impl core::marker::StructuralPartialEq for apimock_config::view::BodyConditionKind
+impl core::marker::Freeze for apimock_config::view::BodyConditionKind
+impl core::marker::Send for apimock_config::view::BodyConditionKind
+impl core::marker::Sync for apimock_config::view::BodyConditionKind
+impl core::marker::Unpin for apimock_config::view::BodyConditionKind
+impl core::marker::UnsafeUnpin for apimock_config::view::BodyConditionKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::BodyConditionKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::BodyConditionKind
+#[non_exhaustive] pub enum apimock_config::view::BodyOp
+pub apimock_config::view::BodyOp::Absent
+pub apimock_config::view::BodyOp::ArrayContains
+pub apimock_config::view::BodyOp::ArrayLengthAtLeast
+pub apimock_config::view::BodyOp::ArrayLengthEqual
+pub apimock_config::view::BodyOp::Contains
+pub apimock_config::view::BodyOp::EndsWith
+pub apimock_config::view::BodyOp::Equal
+pub apimock_config::view::BodyOp::EqualInteger
+pub apimock_config::view::BodyOp::EqualNumber
+pub apimock_config::view::BodyOp::EqualString
+pub apimock_config::view::BodyOp::EqualTyped
+pub apimock_config::view::BodyOp::Exists
+pub apimock_config::view::BodyOp::GreaterOrEqual
+pub apimock_config::view::BodyOp::GreaterThan
+pub apimock_config::view::BodyOp::LessOrEqual
+pub apimock_config::view::BodyOp::LessThan
+pub apimock_config::view::BodyOp::MapDoesNotHaveKey
+pub apimock_config::view::BodyOp::MapHasKey
+pub apimock_config::view::BodyOp::NotContains
+pub apimock_config::view::BodyOp::NotEndsWith
+pub apimock_config::view::BodyOp::NotRegex
+pub apimock_config::view::BodyOp::NotStartsWith
+pub apimock_config::view::BodyOp::Regex
+pub apimock_config::view::BodyOp::StartsWith
+pub apimock_config::view::BodyOp::StructuralContains
+impl core::clone::Clone for apimock_config::view::BodyOp
+pub fn apimock_config::view::BodyOp::clone(&self) -> apimock_config::view::BodyOp
+impl core::cmp::Eq for apimock_config::view::BodyOp
+impl core::cmp::PartialEq for apimock_config::view::BodyOp
+pub fn apimock_config::view::BodyOp::eq(&self, &apimock_config::view::BodyOp) -> bool
+impl core::fmt::Debug for apimock_config::view::BodyOp
+pub fn apimock_config::view::BodyOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::BodyOp
+impl core::marker::StructuralPartialEq for apimock_config::view::BodyOp
+impl core::marker::Freeze for apimock_config::view::BodyOp
+impl core::marker::Send for apimock_config::view::BodyOp
+impl core::marker::Sync for apimock_config::view::BodyOp
+impl core::marker::Unpin for apimock_config::view::BodyOp
+impl core::marker::UnsafeUnpin for apimock_config::view::BodyOp
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::BodyOp
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::BodyOp
+#[non_exhaustive] pub enum apimock_config::view::ConfigFileKind
+pub apimock_config::view::ConfigFileKind::Middleware
+pub apimock_config::view::ConfigFileKind::Root
+pub apimock_config::view::ConfigFileKind::RuleSet
+impl core::clone::Clone for apimock_config::view::ConfigFileKind
+pub fn apimock_config::view::ConfigFileKind::clone(&self) -> apimock_config::view::ConfigFileKind
+impl core::fmt::Debug for apimock_config::view::ConfigFileKind
+pub fn apimock_config::view::ConfigFileKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::ConfigFileKind
+impl serde_core::ser::Serialize for apimock_config::view::ConfigFileKind
+pub fn apimock_config::view::ConfigFileKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ConfigFileKind
+impl core::marker::Send for apimock_config::view::ConfigFileKind
+impl core::marker::Sync for apimock_config::view::ConfigFileKind
+impl core::marker::Unpin for apimock_config::view::ConfigFileKind
+impl core::marker::UnsafeUnpin for apimock_config::view::ConfigFileKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ConfigFileKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ConfigFileKind
+#[non_exhaustive] pub enum apimock_config::view::DiffKind
+pub apimock_config::view::DiffKind::Added
+pub apimock_config::view::DiffKind::BodyConditionAdded
+pub apimock_config::view::DiffKind::BodyConditionRemoved
+pub apimock_config::view::DiffKind::HeaderConditionAdded
+pub apimock_config::view::DiffKind::HeaderConditionRemoved
+pub apimock_config::view::DiffKind::Removed
+pub apimock_config::view::DiffKind::Updated
+impl core::clone::Clone for apimock_config::view::DiffKind
+pub fn apimock_config::view::DiffKind::clone(&self) -> apimock_config::view::DiffKind
+impl core::fmt::Debug for apimock_config::view::DiffKind
+pub fn apimock_config::view::DiffKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::DiffKind
+impl serde_core::ser::Serialize for apimock_config::view::DiffKind
+pub fn apimock_config::view::DiffKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::DiffKind
+impl core::marker::Send for apimock_config::view::DiffKind
+impl core::marker::Sync for apimock_config::view::DiffKind
+impl core::marker::Unpin for apimock_config::view::DiffKind
+impl core::marker::UnsafeUnpin for apimock_config::view::DiffKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::DiffKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::DiffKind
+#[non_exhaustive] pub enum apimock_config::view::EditCommand
+pub apimock_config::view::EditCommand::AddBodyCondition
+pub apimock_config::view::EditCommand::AddBodyCondition::condition: apimock_config::view::BodyConditionPayload
+pub apimock_config::view::EditCommand::AddBodyCondition::rule_id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::AddHeaderCondition
+pub apimock_config::view::EditCommand::AddHeaderCondition::condition: apimock_config::view::HeaderConditionPayload
+pub apimock_config::view::EditCommand::AddHeaderCondition::rule_id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::AddRule
+pub apimock_config::view::EditCommand::AddRule::parent: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::AddRule::rule: apimock_config::view::RulePayload
+pub apimock_config::view::EditCommand::AddRuleSet
+pub apimock_config::view::EditCommand::AddRuleSet::path: alloc::string::String
+pub apimock_config::view::EditCommand::DeleteRule
+pub apimock_config::view::EditCommand::DeleteRule::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::MoveRule
+pub apimock_config::view::EditCommand::MoveRule::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::MoveRule::new_index: usize
+pub apimock_config::view::EditCommand::RemoveBodyCondition
+pub apimock_config::view::EditCommand::RemoveBodyCondition::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::RemoveHeaderCondition
+pub apimock_config::view::EditCommand::RemoveHeaderCondition::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::RemoveRuleSet
+pub apimock_config::view::EditCommand::RemoveRuleSet::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::UpdateBodyCondition
+pub apimock_config::view::EditCommand::UpdateBodyCondition::condition: apimock_config::view::BodyConditionPayload
+pub apimock_config::view::EditCommand::UpdateBodyCondition::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::UpdateHeaderCondition
+pub apimock_config::view::EditCommand::UpdateHeaderCondition::condition: apimock_config::view::HeaderConditionPayload
+pub apimock_config::view::EditCommand::UpdateHeaderCondition::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::UpdateRespond
+pub apimock_config::view::EditCommand::UpdateRespond::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::UpdateRespond::respond: apimock_config::view::RespondPayload
+pub apimock_config::view::EditCommand::UpdateRootSetting
+pub apimock_config::view::EditCommand::UpdateRootSetting::key: apimock_config::view::RootSettingKey
+pub apimock_config::view::EditCommand::UpdateRootSetting::value: apimock_config::view::EditValue
+pub apimock_config::view::EditCommand::UpdateRule
+pub apimock_config::view::EditCommand::UpdateRule::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::UpdateRule::rule: apimock_config::view::RulePayload
+pub apimock_config::view::EditCommand::UpdateRuleSetStrategy
+pub apimock_config::view::EditCommand::UpdateRuleSetStrategy::id: apimock_config::view::NodeId
+pub apimock_config::view::EditCommand::UpdateRuleSetStrategy::strategy: core::option::Option<alloc::string::String>
+impl core::clone::Clone for apimock_config::view::EditCommand
+pub fn apimock_config::view::EditCommand::clone(&self) -> apimock_config::view::EditCommand
+impl core::fmt::Debug for apimock_config::view::EditCommand
+pub fn apimock_config::view::EditCommand::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::EditCommand
+impl core::marker::Send for apimock_config::view::EditCommand
+impl core::marker::Sync for apimock_config::view::EditCommand
+impl core::marker::Unpin for apimock_config::view::EditCommand
+impl core::marker::UnsafeUnpin for apimock_config::view::EditCommand
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::EditCommand
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::EditCommand
+#[non_exhaustive] pub enum apimock_config::view::EditValue
+pub apimock_config::view::EditValue::Boolean(bool)
+pub apimock_config::view::EditValue::Enum(alloc::string::String)
+pub apimock_config::view::EditValue::Integer(i64)
+pub apimock_config::view::EditValue::Json(serde_json::value::Value)
+pub apimock_config::view::EditValue::String(alloc::string::String)
+pub apimock_config::view::EditValue::StringList(alloc::vec::Vec<alloc::string::String>)
+impl core::clone::Clone for apimock_config::view::EditValue
+pub fn apimock_config::view::EditValue::clone(&self) -> apimock_config::view::EditValue
+impl core::fmt::Debug for apimock_config::view::EditValue
+pub fn apimock_config::view::EditValue::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::EditValue
+impl core::marker::Send for apimock_config::view::EditValue
+impl core::marker::Sync for apimock_config::view::EditValue
+impl core::marker::Unpin for apimock_config::view::EditValue
+impl core::marker::UnsafeUnpin for apimock_config::view::EditValue
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::EditValue
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::EditValue
+#[non_exhaustive] pub enum apimock_config::view::HeaderOp
+pub apimock_config::view::HeaderOp::Absent
+pub apimock_config::view::HeaderOp::Contains
+pub apimock_config::view::HeaderOp::EndsWith
+pub apimock_config::view::HeaderOp::Equal
+pub apimock_config::view::HeaderOp::Exists
+pub apimock_config::view::HeaderOp::NotContains
+pub apimock_config::view::HeaderOp::NotEndsWith
+pub apimock_config::view::HeaderOp::NotEqual
+pub apimock_config::view::HeaderOp::NotRegex
+pub apimock_config::view::HeaderOp::NotStartsWith
+pub apimock_config::view::HeaderOp::Regex
+pub apimock_config::view::HeaderOp::StartsWith
+pub apimock_config::view::HeaderOp::WildCard
+impl core::clone::Clone for apimock_config::view::HeaderOp
+pub fn apimock_config::view::HeaderOp::clone(&self) -> apimock_config::view::HeaderOp
+impl core::cmp::Eq for apimock_config::view::HeaderOp
+impl core::cmp::PartialEq for apimock_config::view::HeaderOp
+pub fn apimock_config::view::HeaderOp::eq(&self, &apimock_config::view::HeaderOp) -> bool
+impl core::fmt::Debug for apimock_config::view::HeaderOp
+pub fn apimock_config::view::HeaderOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::HeaderOp
+impl core::marker::StructuralPartialEq for apimock_config::view::HeaderOp
+impl core::marker::Freeze for apimock_config::view::HeaderOp
+impl core::marker::Send for apimock_config::view::HeaderOp
+impl core::marker::Sync for apimock_config::view::HeaderOp
+impl core::marker::Unpin for apimock_config::view::HeaderOp
+impl core::marker::UnsafeUnpin for apimock_config::view::HeaderOp
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::HeaderOp
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::HeaderOp
+#[non_exhaustive] pub enum apimock_config::view::NodeKind
+pub apimock_config::view::NodeKind::FileNode
+pub apimock_config::view::NodeKind::Respond
+pub apimock_config::view::NodeKind::RootSetting
+pub apimock_config::view::NodeKind::Rule
+pub apimock_config::view::NodeKind::RuleSet
+pub apimock_config::view::NodeKind::Script
+impl core::clone::Clone for apimock_config::view::NodeKind
+pub fn apimock_config::view::NodeKind::clone(&self) -> apimock_config::view::NodeKind
+impl core::fmt::Debug for apimock_config::view::NodeKind
+pub fn apimock_config::view::NodeKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::NodeKind
+impl serde_core::ser::Serialize for apimock_config::view::NodeKind
+pub fn apimock_config::view::NodeKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::NodeKind
+impl core::marker::Send for apimock_config::view::NodeKind
+impl core::marker::Sync for apimock_config::view::NodeKind
+impl core::marker::Unpin for apimock_config::view::NodeKind
+impl core::marker::UnsafeUnpin for apimock_config::view::NodeKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::NodeKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::NodeKind
+#[non_exhaustive] pub enum apimock_config::view::RootSettingKey
+pub apimock_config::view::RootSettingKey::FileTreeBuiltinExcludes
+pub apimock_config::view::RootSettingKey::FileTreeExtraExcludes
+pub apimock_config::view::RootSettingKey::FileTreeInclude
+pub apimock_config::view::RootSettingKey::FileTreeRespectGitignore
+pub apimock_config::view::RootSettingKey::FileTreeShowHidden
+pub apimock_config::view::RootSettingKey::ListenerIpAddress
+pub apimock_config::view::RootSettingKey::ListenerPort
+pub apimock_config::view::RootSettingKey::LogFile
+pub apimock_config::view::RootSettingKey::LogFormat
+pub apimock_config::view::RootSettingKey::LogLevel
+pub apimock_config::view::RootSettingKey::ServiceFallbackRespondDir
+pub apimock_config::view::RootSettingKey::ServiceStrategy
+pub apimock_config::view::RootSettingKey::TlsCertFile
+pub apimock_config::view::RootSettingKey::TlsEnabled
+pub apimock_config::view::RootSettingKey::TlsKeyFile
+pub apimock_config::view::RootSettingKey::TraceCaptureBody
+pub apimock_config::view::RootSettingKey::TraceMaxBodyBytes
+impl core::clone::Clone for apimock_config::view::RootSettingKey
+pub fn apimock_config::view::RootSettingKey::clone(&self) -> apimock_config::view::RootSettingKey
+impl core::fmt::Debug for apimock_config::view::RootSettingKey
+pub fn apimock_config::view::RootSettingKey::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::RootSettingKey
+impl core::marker::Freeze for apimock_config::view::RootSettingKey
+impl core::marker::Send for apimock_config::view::RootSettingKey
+impl core::marker::Sync for apimock_config::view::RootSettingKey
+impl core::marker::Unpin for apimock_config::view::RootSettingKey
+impl core::marker::UnsafeUnpin for apimock_config::view::RootSettingKey
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::RootSettingKey
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::RootSettingKey
+#[non_exhaustive] pub enum apimock_config::view::Severity
+pub apimock_config::view::Severity::Error
+pub apimock_config::view::Severity::Info
+pub apimock_config::view::Severity::Warning
+impl core::clone::Clone for apimock_config::view::Severity
+pub fn apimock_config::view::Severity::clone(&self) -> apimock_config::view::Severity
+impl core::fmt::Debug for apimock_config::view::Severity
+pub fn apimock_config::view::Severity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::Severity
+impl serde_core::ser::Serialize for apimock_config::view::Severity
+pub fn apimock_config::view::Severity::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::Severity
+impl core::marker::Send for apimock_config::view::Severity
+impl core::marker::Sync for apimock_config::view::Severity
+impl core::marker::Unpin for apimock_config::view::Severity
+impl core::marker::UnsafeUnpin for apimock_config::view::Severity
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::Severity
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::Severity
+#[non_exhaustive] pub enum apimock_config::view::UrlPathOp
+pub apimock_config::view::UrlPathOp::Contains
+pub apimock_config::view::UrlPathOp::EndsWith
+pub apimock_config::view::UrlPathOp::Equal
+pub apimock_config::view::UrlPathOp::NotContains
+pub apimock_config::view::UrlPathOp::NotEndsWith
+pub apimock_config::view::UrlPathOp::NotEqual
+pub apimock_config::view::UrlPathOp::NotRegex
+pub apimock_config::view::UrlPathOp::NotStartsWith
+pub apimock_config::view::UrlPathOp::Regex
+pub apimock_config::view::UrlPathOp::StartsWith
+pub apimock_config::view::UrlPathOp::WildCard
+impl core::clone::Clone for apimock_config::view::UrlPathOp
+pub fn apimock_config::view::UrlPathOp::clone(&self) -> apimock_config::view::UrlPathOp
+impl core::cmp::Eq for apimock_config::view::UrlPathOp
+impl core::cmp::PartialEq for apimock_config::view::UrlPathOp
+pub fn apimock_config::view::UrlPathOp::eq(&self, &apimock_config::view::UrlPathOp) -> bool
+impl core::fmt::Debug for apimock_config::view::UrlPathOp
+pub fn apimock_config::view::UrlPathOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::UrlPathOp
+impl core::marker::StructuralPartialEq for apimock_config::view::UrlPathOp
+impl core::marker::Freeze for apimock_config::view::UrlPathOp
+impl core::marker::Send for apimock_config::view::UrlPathOp
+impl core::marker::Sync for apimock_config::view::UrlPathOp
+impl core::marker::Unpin for apimock_config::view::UrlPathOp
+impl core::marker::UnsafeUnpin for apimock_config::view::UrlPathOp
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::UrlPathOp
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::UrlPathOp
+#[non_exhaustive] pub struct apimock_config::view::ApplyResult
+pub apimock_config::view::ApplyResult::changed_nodes: alloc::vec::Vec<apimock_config::view::NodeId>
+pub apimock_config::view::ApplyResult::diagnostics: alloc::vec::Vec<apimock_config::view::Diagnostic>
+pub apimock_config::view::ApplyResult::requires_reload: bool
+impl core::clone::Clone for apimock_config::view::ApplyResult
+pub fn apimock_config::view::ApplyResult::clone(&self) -> apimock_config::view::ApplyResult
+impl core::fmt::Debug for apimock_config::view::ApplyResult
+pub fn apimock_config::view::ApplyResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ApplyResult
+pub fn apimock_config::view::ApplyResult::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ApplyResult
+impl core::marker::Send for apimock_config::view::ApplyResult
+impl core::marker::Sync for apimock_config::view::ApplyResult
+impl core::marker::Unpin for apimock_config::view::ApplyResult
+impl core::marker::UnsafeUnpin for apimock_config::view::ApplyResult
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ApplyResult
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ApplyResult
+#[non_exhaustive] pub struct apimock_config::view::BodyConditionPayload
+pub apimock_config::view::BodyConditionPayload::kind: apimock_config::view::BodyConditionKind
+pub apimock_config::view::BodyConditionPayload::op: apimock_config::view::BodyOp
+pub apimock_config::view::BodyConditionPayload::path: alloc::string::String
+pub apimock_config::view::BodyConditionPayload::value: serde_json::value::Value
+impl apimock_config::view::BodyConditionPayload
+pub fn apimock_config::view::BodyConditionPayload::new(apimock_config::view::BodyConditionKind, impl core::convert::Into<alloc::string::String>, apimock_config::view::BodyOp, serde_json::value::Value) -> Self
+impl core::clone::Clone for apimock_config::view::BodyConditionPayload
+pub fn apimock_config::view::BodyConditionPayload::clone(&self) -> apimock_config::view::BodyConditionPayload
+impl core::fmt::Debug for apimock_config::view::BodyConditionPayload
+pub fn apimock_config::view::BodyConditionPayload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::BodyConditionPayload
+impl core::marker::Send for apimock_config::view::BodyConditionPayload
+impl core::marker::Sync for apimock_config::view::BodyConditionPayload
+impl core::marker::Unpin for apimock_config::view::BodyConditionPayload
+impl core::marker::UnsafeUnpin for apimock_config::view::BodyConditionPayload
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::BodyConditionPayload
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::BodyConditionPayload
+#[non_exhaustive] pub struct apimock_config::view::ConditionWithId<V>
+pub apimock_config::view::ConditionWithId::id: apimock_config::view::NodeId
+pub apimock_config::view::ConditionWithId::view: V
+impl<V> apimock_config::view::ConditionWithId<V>
+pub fn apimock_config::view::ConditionWithId<V>::new(apimock_config::view::NodeId, V) -> Self
+impl<V: core::clone::Clone> core::clone::Clone for apimock_config::view::ConditionWithId<V>
+pub fn apimock_config::view::ConditionWithId<V>::clone(&self) -> apimock_config::view::ConditionWithId<V>
+impl<V: core::fmt::Debug> core::fmt::Debug for apimock_config::view::ConditionWithId<V>
+pub fn apimock_config::view::ConditionWithId<V>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<V> core::marker::Freeze for apimock_config::view::ConditionWithId<V> where V: core::marker::Freeze
+impl<V> core::marker::Send for apimock_config::view::ConditionWithId<V> where V: core::marker::Send
+impl<V> core::marker::Sync for apimock_config::view::ConditionWithId<V> where V: core::marker::Sync
+impl<V> core::marker::Unpin for apimock_config::view::ConditionWithId<V> where V: core::marker::Unpin
+impl<V> core::marker::UnsafeUnpin for apimock_config::view::ConditionWithId<V> where V: core::marker::UnsafeUnpin
+impl<V> core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ConditionWithId<V> where V: core::panic::unwind_safe::RefUnwindSafe
+impl<V> core::panic::unwind_safe::UnwindSafe for apimock_config::view::ConditionWithId<V> where V: core::panic::unwind_safe::UnwindSafe
+#[non_exhaustive] pub struct apimock_config::view::ConfigFileView
+pub apimock_config::view::ConfigFileView::display_name: alloc::string::String
+pub apimock_config::view::ConfigFileView::kind: apimock_config::view::ConfigFileKind
+pub apimock_config::view::ConfigFileView::nodes: alloc::vec::Vec<apimock_config::view::ConfigNodeView>
+pub apimock_config::view::ConfigFileView::path: std::path::PathBuf
+impl core::clone::Clone for apimock_config::view::ConfigFileView
+pub fn apimock_config::view::ConfigFileView::clone(&self) -> apimock_config::view::ConfigFileView
+impl core::fmt::Debug for apimock_config::view::ConfigFileView
+pub fn apimock_config::view::ConfigFileView::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ConfigFileView
+pub fn apimock_config::view::ConfigFileView::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ConfigFileView
+impl core::marker::Send for apimock_config::view::ConfigFileView
+impl core::marker::Sync for apimock_config::view::ConfigFileView
+impl core::marker::Unpin for apimock_config::view::ConfigFileView
+impl core::marker::UnsafeUnpin for apimock_config::view::ConfigFileView
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ConfigFileView
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ConfigFileView
+#[non_exhaustive] pub struct apimock_config::view::ConfigNodeView
+pub apimock_config::view::ConfigNodeView::display_name: alloc::string::String
+pub apimock_config::view::ConfigNodeView::id: apimock_config::view::NodeId
+pub apimock_config::view::ConfigNodeView::kind: apimock_config::view::NodeKind
+pub apimock_config::view::ConfigNodeView::source_file: std::path::PathBuf
+pub apimock_config::view::ConfigNodeView::toml_path: alloc::string::String
+pub apimock_config::view::ConfigNodeView::validation: apimock_config::view::NodeValidation
+impl core::clone::Clone for apimock_config::view::ConfigNodeView
+pub fn apimock_config::view::ConfigNodeView::clone(&self) -> apimock_config::view::ConfigNodeView
+impl core::fmt::Debug for apimock_config::view::ConfigNodeView
+pub fn apimock_config::view::ConfigNodeView::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ConfigNodeView
+pub fn apimock_config::view::ConfigNodeView::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ConfigNodeView
+impl core::marker::Send for apimock_config::view::ConfigNodeView
+impl core::marker::Sync for apimock_config::view::ConfigNodeView
+impl core::marker::Unpin for apimock_config::view::ConfigNodeView
+impl core::marker::UnsafeUnpin for apimock_config::view::ConfigNodeView
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ConfigNodeView
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ConfigNodeView
+#[non_exhaustive] pub struct apimock_config::view::Diagnostic
+pub apimock_config::view::Diagnostic::file: core::option::Option<std::path::PathBuf>
+pub apimock_config::view::Diagnostic::message: alloc::string::String
+pub apimock_config::view::Diagnostic::node_id: core::option::Option<apimock_config::view::NodeId>
+pub apimock_config::view::Diagnostic::severity: apimock_config::view::Severity
+impl apimock_config::view::Diagnostic
+pub fn apimock_config::view::Diagnostic::new(apimock_config::view::Severity, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for apimock_config::view::Diagnostic
+pub fn apimock_config::view::Diagnostic::clone(&self) -> apimock_config::view::Diagnostic
+impl core::fmt::Debug for apimock_config::view::Diagnostic
+pub fn apimock_config::view::Diagnostic::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::Diagnostic
+pub fn apimock_config::view::Diagnostic::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::Diagnostic
+impl core::marker::Send for apimock_config::view::Diagnostic
+impl core::marker::Sync for apimock_config::view::Diagnostic
+impl core::marker::Unpin for apimock_config::view::Diagnostic
+impl core::marker::UnsafeUnpin for apimock_config::view::Diagnostic
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::Diagnostic
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::Diagnostic
+#[non_exhaustive] pub struct apimock_config::view::DiffItem
+pub apimock_config::view::DiffItem::kind: apimock_config::view::DiffKind
+pub apimock_config::view::DiffItem::summary: alloc::string::String
+pub apimock_config::view::DiffItem::target: apimock_config::view::NodeId
+impl apimock_config::view::DiffItem
+pub fn apimock_config::view::DiffItem::new(apimock_config::view::DiffKind, apimock_config::view::NodeId, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for apimock_config::view::DiffItem
+pub fn apimock_config::view::DiffItem::clone(&self) -> apimock_config::view::DiffItem
+impl core::fmt::Debug for apimock_config::view::DiffItem
+pub fn apimock_config::view::DiffItem::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::DiffItem
+pub fn apimock_config::view::DiffItem::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::DiffItem
+impl core::marker::Send for apimock_config::view::DiffItem
+impl core::marker::Sync for apimock_config::view::DiffItem
+impl core::marker::Unpin for apimock_config::view::DiffItem
+impl core::marker::UnsafeUnpin for apimock_config::view::DiffItem
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::DiffItem
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::DiffItem
+#[non_exhaustive] pub struct apimock_config::view::HeaderConditionPayload
+pub apimock_config::view::HeaderConditionPayload::name: alloc::string::String
+pub apimock_config::view::HeaderConditionPayload::op: apimock_config::view::HeaderOp
+pub apimock_config::view::HeaderConditionPayload::value: core::option::Option<alloc::string::String>
+impl apimock_config::view::HeaderConditionPayload
+pub fn apimock_config::view::HeaderConditionPayload::new(impl core::convert::Into<alloc::string::String>, apimock_config::view::HeaderOp) -> Self
+impl core::clone::Clone for apimock_config::view::HeaderConditionPayload
+pub fn apimock_config::view::HeaderConditionPayload::clone(&self) -> apimock_config::view::HeaderConditionPayload
+impl core::fmt::Debug for apimock_config::view::HeaderConditionPayload
+pub fn apimock_config::view::HeaderConditionPayload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::HeaderConditionPayload
+impl core::marker::Send for apimock_config::view::HeaderConditionPayload
+impl core::marker::Sync for apimock_config::view::HeaderConditionPayload
+impl core::marker::Unpin for apimock_config::view::HeaderConditionPayload
+impl core::marker::UnsafeUnpin for apimock_config::view::HeaderConditionPayload
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::HeaderConditionPayload
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::HeaderConditionPayload
+#[non_exhaustive] pub struct apimock_config::view::NodeId(pub uuid::Uuid)
+impl apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::new() -> Self
+impl core::clone::Clone for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::clone(&self) -> apimock_config::view::NodeId
+impl core::cmp::Eq for apimock_config::view::NodeId
+impl core::cmp::PartialEq for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::eq(&self, &apimock_config::view::NodeId) -> bool
+impl core::default::Default for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::default() -> Self
+impl core::fmt::Debug for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for apimock_config::view::NodeId
+impl core::marker::StructuralPartialEq for apimock_config::view::NodeId
+impl serde_core::ser::Serialize for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::view::NodeId
+impl core::marker::Send for apimock_config::view::NodeId
+impl core::marker::Sync for apimock_config::view::NodeId
+impl core::marker::Unpin for apimock_config::view::NodeId
+impl core::marker::UnsafeUnpin for apimock_config::view::NodeId
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::NodeId
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::NodeId
+#[non_exhaustive] pub struct apimock_config::view::NodeValidation
+pub apimock_config::view::NodeValidation::issues: alloc::vec::Vec<apimock_config::view::ValidationIssue>
+pub apimock_config::view::NodeValidation::ok: bool
+impl apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::ok() -> Self
+impl core::clone::Clone for apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::clone(&self) -> apimock_config::view::NodeValidation
+impl core::default::Default for apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::default() -> apimock_config::view::NodeValidation
+impl core::fmt::Debug for apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::NodeValidation
+impl core::marker::Send for apimock_config::view::NodeValidation
+impl core::marker::Sync for apimock_config::view::NodeValidation
+impl core::marker::Unpin for apimock_config::view::NodeValidation
+impl core::marker::UnsafeUnpin for apimock_config::view::NodeValidation
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::NodeValidation
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::NodeValidation
+#[non_exhaustive] pub struct apimock_config::view::ReloadHint
+pub apimock_config::view::ReloadHint::requires_reload: bool
+pub apimock_config::view::ReloadHint::requires_restart: bool
+impl apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::for_key(apimock_config::view::RootSettingKey) -> Self
+pub fn apimock_config::view::ReloadHint::none() -> Self
+pub fn apimock_config::view::ReloadHint::reload() -> Self
+pub fn apimock_config::view::ReloadHint::restart() -> Self
+impl core::clone::Clone for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::clone(&self) -> apimock_config::view::ReloadHint
+impl core::default::Default for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::default() -> apimock_config::view::ReloadHint
+impl core::fmt::Debug for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::ReloadHint
+impl serde_core::ser::Serialize for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ReloadHint
+impl core::marker::Send for apimock_config::view::ReloadHint
+impl core::marker::Sync for apimock_config::view::ReloadHint
+impl core::marker::Unpin for apimock_config::view::ReloadHint
+impl core::marker::UnsafeUnpin for apimock_config::view::ReloadHint
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ReloadHint
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ReloadHint
+#[non_exhaustive] pub struct apimock_config::view::RespondPayload
+pub apimock_config::view::RespondPayload::delay_milliseconds: core::option::Option<u32>
+pub apimock_config::view::RespondPayload::file_path: core::option::Option<alloc::string::String>
+pub apimock_config::view::RespondPayload::json: core::option::Option<alloc::string::String>
+pub apimock_config::view::RespondPayload::status: core::option::Option<u16>
+pub apimock_config::view::RespondPayload::text: core::option::Option<alloc::string::String>
+impl core::clone::Clone for apimock_config::view::RespondPayload
+pub fn apimock_config::view::RespondPayload::clone(&self) -> apimock_config::view::RespondPayload
+impl core::default::Default for apimock_config::view::RespondPayload
+pub fn apimock_config::view::RespondPayload::default() -> apimock_config::view::RespondPayload
+impl core::fmt::Debug for apimock_config::view::RespondPayload
+pub fn apimock_config::view::RespondPayload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::RespondPayload
+impl core::marker::Send for apimock_config::view::RespondPayload
+impl core::marker::Sync for apimock_config::view::RespondPayload
+impl core::marker::Unpin for apimock_config::view::RespondPayload
+impl core::marker::UnsafeUnpin for apimock_config::view::RespondPayload
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::RespondPayload
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::RespondPayload
+#[non_exhaustive] pub struct apimock_config::view::RulePayload
+pub apimock_config::view::RulePayload::body: core::option::Option<alloc::vec::Vec<apimock_config::view::BodyConditionPayload>>
+pub apimock_config::view::RulePayload::headers: core::option::Option<alloc::vec::Vec<apimock_config::view::HeaderConditionPayload>>
+pub apimock_config::view::RulePayload::method: core::option::Option<alloc::string::String>
+pub apimock_config::view::RulePayload::priority: core::option::Option<i32>
+pub apimock_config::view::RulePayload::respond: apimock_config::view::RespondPayload
+pub apimock_config::view::RulePayload::url_path: core::option::Option<alloc::string::String>
+pub apimock_config::view::RulePayload::url_path_op: core::option::Option<apimock_config::view::UrlPathOp>
+impl core::clone::Clone for apimock_config::view::RulePayload
+pub fn apimock_config::view::RulePayload::clone(&self) -> apimock_config::view::RulePayload
+impl core::default::Default for apimock_config::view::RulePayload
+pub fn apimock_config::view::RulePayload::default() -> apimock_config::view::RulePayload
+impl core::fmt::Debug for apimock_config::view::RulePayload
+pub fn apimock_config::view::RulePayload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::RulePayload
+impl core::marker::Send for apimock_config::view::RulePayload
+impl core::marker::Sync for apimock_config::view::RulePayload
+impl core::marker::Unpin for apimock_config::view::RulePayload
+impl core::marker::UnsafeUnpin for apimock_config::view::RulePayload
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::RulePayload
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::RulePayload
+#[non_exhaustive] pub struct apimock_config::view::SaveResult
+pub apimock_config::view::SaveResult::changed_files: alloc::vec::Vec<std::path::PathBuf>
+pub apimock_config::view::SaveResult::diff_summary: alloc::vec::Vec<apimock_config::view::DiffItem>
+pub apimock_config::view::SaveResult::requires_reload: bool
+impl core::clone::Clone for apimock_config::view::SaveResult
+pub fn apimock_config::view::SaveResult::clone(&self) -> apimock_config::view::SaveResult
+impl core::fmt::Debug for apimock_config::view::SaveResult
+pub fn apimock_config::view::SaveResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::SaveResult
+pub fn apimock_config::view::SaveResult::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::SaveResult
+impl core::marker::Send for apimock_config::view::SaveResult
+impl core::marker::Sync for apimock_config::view::SaveResult
+impl core::marker::Unpin for apimock_config::view::SaveResult
+impl core::marker::UnsafeUnpin for apimock_config::view::SaveResult
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::SaveResult
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::SaveResult
+#[non_exhaustive] pub struct apimock_config::view::ValidationIssue
+pub apimock_config::view::ValidationIssue::message: alloc::string::String
+pub apimock_config::view::ValidationIssue::severity: apimock_config::view::Severity
+impl apimock_config::view::ValidationIssue
+pub fn apimock_config::view::ValidationIssue::new(apimock_config::view::Severity, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for apimock_config::view::ValidationIssue
+pub fn apimock_config::view::ValidationIssue::clone(&self) -> apimock_config::view::ValidationIssue
+impl core::fmt::Debug for apimock_config::view::ValidationIssue
+pub fn apimock_config::view::ValidationIssue::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ValidationIssue
+pub fn apimock_config::view::ValidationIssue::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ValidationIssue
+impl core::marker::Send for apimock_config::view::ValidationIssue
+impl core::marker::Sync for apimock_config::view::ValidationIssue
+impl core::marker::Unpin for apimock_config::view::ValidationIssue
+impl core::marker::UnsafeUnpin for apimock_config::view::ValidationIssue
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ValidationIssue
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ValidationIssue
+#[non_exhaustive] pub struct apimock_config::view::ValidationReport
+pub apimock_config::view::ValidationReport::diagnostics: alloc::vec::Vec<apimock_config::view::Diagnostic>
+pub apimock_config::view::ValidationReport::is_valid: bool
+impl apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::ok() -> Self
+impl core::clone::Clone for apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::clone(&self) -> apimock_config::view::ValidationReport
+impl core::default::Default for apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::default() -> Self
+impl core::fmt::Debug for apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ValidationReport
+impl core::marker::Send for apimock_config::view::ValidationReport
+impl core::marker::Sync for apimock_config::view::ValidationReport
+impl core::marker::Unpin for apimock_config::view::ValidationReport
+impl core::marker::UnsafeUnpin for apimock_config::view::ValidationReport
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ValidationReport
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ValidationReport
+#[non_exhaustive] pub struct apimock_config::view::WorkspaceSnapshot
+pub apimock_config::view::WorkspaceSnapshot::diagnostics: alloc::vec::Vec<apimock_config::view::Diagnostic>
+pub apimock_config::view::WorkspaceSnapshot::files: alloc::vec::Vec<apimock_config::view::ConfigFileView>
+pub apimock_config::view::WorkspaceSnapshot::routes: apimock_routing::view::RouteCatalogSnapshot
+impl apimock_config::view::WorkspaceSnapshot
+pub fn apimock_config::view::WorkspaceSnapshot::empty() -> Self
+impl core::clone::Clone for apimock_config::view::WorkspaceSnapshot
+pub fn apimock_config::view::WorkspaceSnapshot::clone(&self) -> apimock_config::view::WorkspaceSnapshot
+impl core::fmt::Debug for apimock_config::view::WorkspaceSnapshot
+pub fn apimock_config::view::WorkspaceSnapshot::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::WorkspaceSnapshot
+pub fn apimock_config::view::WorkspaceSnapshot::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::WorkspaceSnapshot
+impl core::marker::Send for apimock_config::view::WorkspaceSnapshot
+impl core::marker::Sync for apimock_config::view::WorkspaceSnapshot
+impl core::marker::Unpin for apimock_config::view::WorkspaceSnapshot
+impl core::marker::UnsafeUnpin for apimock_config::view::WorkspaceSnapshot
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::WorkspaceSnapshot
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::WorkspaceSnapshot
+pub mod apimock_config::workspace
+pub struct apimock_config::workspace::Workspace
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::apply(&mut self, apimock_config::view::EditCommand) -> core::result::Result<apimock_config::view::ApplyResult, apimock_config::error::ApplyError>
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::config(&self) -> &apimock_config::config::Config
+pub fn apimock_config::workspace::Workspace::has_external_changes(&self) -> bool
+pub fn apimock_config::workspace::Workspace::list_directory(&self, &std::path::Path) -> alloc::vec::Vec<apimock_routing::view::FileNodeView>
+pub fn apimock_config::workspace::Workspace::load(std::path::PathBuf) -> core::result::Result<Self, apimock_config::error::WorkspaceError>
+pub fn apimock_config::workspace::Workspace::root_path(&self) -> &std::path::Path
+pub fn apimock_config::workspace::Workspace::sync_from_disk(&mut self) -> core::result::Result<(), apimock_config::error::WorkspaceError>
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::describe(&self, apimock_config::view::NodeId) -> core::option::Option<alloc::string::String>
+pub fn apimock_config::workspace::Workspace::preview_changes(&self) -> alloc::vec::Vec<apimock_config::view::DiffItem>
+pub fn apimock_config::workspace::Workspace::respond_id_at(&self, usize, usize) -> core::option::Option<apimock_config::view::NodeId>
+pub fn apimock_config::workspace::Workspace::rule_id_at(&self, usize, usize) -> core::option::Option<apimock_config::view::NodeId>
+pub fn apimock_config::workspace::Workspace::rule_set_id_at(&self, usize) -> core::option::Option<apimock_config::view::NodeId>
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::has_unsaved_changes(&self) -> bool
+pub fn apimock_config::workspace::Workspace::save(&mut self) -> core::result::Result<apimock_config::view::SaveResult, apimock_config::error::SaveError>
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::snapshot(&self) -> apimock_config::view::WorkspaceSnapshot
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::validate(&self) -> apimock_config::view::ValidationReport
+impl core::marker::Freeze for apimock_config::workspace::Workspace
+impl core::marker::Send for apimock_config::workspace::Workspace
+impl core::marker::Sync for apimock_config::workspace::Workspace
+impl core::marker::Unpin for apimock_config::workspace::Workspace
+impl core::marker::UnsafeUnpin for apimock_config::workspace::Workspace
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::workspace::Workspace
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::workspace::Workspace
+#[non_exhaustive] pub enum apimock_config::ApplyError
+pub apimock_config::ApplyError::InvalidPayload
+pub apimock_config::ApplyError::InvalidPayload::reason: alloc::string::String
+pub apimock_config::ApplyError::UnknownNode
+pub apimock_config::ApplyError::UnknownNode::id: apimock_config::view::NodeId
+pub apimock_config::ApplyError::WrongNodeKind
+pub apimock_config::ApplyError::WrongNodeKind::id: apimock_config::view::NodeId
+pub apimock_config::ApplyError::WrongNodeKind::reason: alloc::string::String
+impl apimock_config::error::ApplyError
+pub fn apimock_config::error::ApplyError::kind(&self) -> apimock_config::error::ApplyErrorKind
+impl core::error::Error for apimock_config::error::ApplyError
+impl core::fmt::Debug for apimock_config::error::ApplyError
+pub fn apimock_config::error::ApplyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::error::ApplyError
+pub fn apimock_config::error::ApplyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::error::ApplyError
+impl core::marker::Send for apimock_config::error::ApplyError
+impl core::marker::Sync for apimock_config::error::ApplyError
+impl core::marker::Unpin for apimock_config::error::ApplyError
+impl core::marker::UnsafeUnpin for apimock_config::error::ApplyError
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::ApplyError
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::error::ApplyError
+#[non_exhaustive] pub enum apimock_config::BodyConditionKind
+pub apimock_config::BodyConditionKind::Json
+impl core::clone::Clone for apimock_config::view::BodyConditionKind
+pub fn apimock_config::view::BodyConditionKind::clone(&self) -> apimock_config::view::BodyConditionKind
+impl core::cmp::Eq for apimock_config::view::BodyConditionKind
+impl core::cmp::PartialEq for apimock_config::view::BodyConditionKind
+pub fn apimock_config::view::BodyConditionKind::eq(&self, &apimock_config::view::BodyConditionKind) -> bool
+impl core::fmt::Debug for apimock_config::view::BodyConditionKind
+pub fn apimock_config::view::BodyConditionKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::BodyConditionKind
+impl core::marker::StructuralPartialEq for apimock_config::view::BodyConditionKind
+impl core::marker::Freeze for apimock_config::view::BodyConditionKind
+impl core::marker::Send for apimock_config::view::BodyConditionKind
+impl core::marker::Sync for apimock_config::view::BodyConditionKind
+impl core::marker::Unpin for apimock_config::view::BodyConditionKind
+impl core::marker::UnsafeUnpin for apimock_config::view::BodyConditionKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::BodyConditionKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::BodyConditionKind
+#[non_exhaustive] pub enum apimock_config::BodyOp
+pub apimock_config::BodyOp::Absent
+pub apimock_config::BodyOp::ArrayContains
+pub apimock_config::BodyOp::ArrayLengthAtLeast
+pub apimock_config::BodyOp::ArrayLengthEqual
+pub apimock_config::BodyOp::Contains
+pub apimock_config::BodyOp::EndsWith
+pub apimock_config::BodyOp::Equal
+pub apimock_config::BodyOp::EqualInteger
+pub apimock_config::BodyOp::EqualNumber
+pub apimock_config::BodyOp::EqualString
+pub apimock_config::BodyOp::EqualTyped
+pub apimock_config::BodyOp::Exists
+pub apimock_config::BodyOp::GreaterOrEqual
+pub apimock_config::BodyOp::GreaterThan
+pub apimock_config::BodyOp::LessOrEqual
+pub apimock_config::BodyOp::LessThan
+pub apimock_config::BodyOp::MapDoesNotHaveKey
+pub apimock_config::BodyOp::MapHasKey
+pub apimock_config::BodyOp::NotContains
+pub apimock_config::BodyOp::NotEndsWith
+pub apimock_config::BodyOp::NotRegex
+pub apimock_config::BodyOp::NotStartsWith
+pub apimock_config::BodyOp::Regex
+pub apimock_config::BodyOp::StartsWith
+pub apimock_config::BodyOp::StructuralContains
+impl core::clone::Clone for apimock_config::view::BodyOp
+pub fn apimock_config::view::BodyOp::clone(&self) -> apimock_config::view::BodyOp
+impl core::cmp::Eq for apimock_config::view::BodyOp
+impl core::cmp::PartialEq for apimock_config::view::BodyOp
+pub fn apimock_config::view::BodyOp::eq(&self, &apimock_config::view::BodyOp) -> bool
+impl core::fmt::Debug for apimock_config::view::BodyOp
+pub fn apimock_config::view::BodyOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::BodyOp
+impl core::marker::StructuralPartialEq for apimock_config::view::BodyOp
+impl core::marker::Freeze for apimock_config::view::BodyOp
+impl core::marker::Send for apimock_config::view::BodyOp
+impl core::marker::Sync for apimock_config::view::BodyOp
+impl core::marker::Unpin for apimock_config::view::BodyOp
+impl core::marker::UnsafeUnpin for apimock_config::view::BodyOp
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::BodyOp
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::BodyOp
+#[non_exhaustive] pub enum apimock_config::ConfigError
+pub apimock_config::ConfigError::ConfigParse
+pub apimock_config::ConfigError::ConfigParse::canonical: core::option::Option<std::path::PathBuf>
+pub apimock_config::ConfigError::ConfigParse::path: std::path::PathBuf
+pub apimock_config::ConfigError::ConfigParse::source: alloc::boxed::Box<toml::de::error::Error>
+pub apimock_config::ConfigError::ConfigRead
+pub apimock_config::ConfigError::ConfigRead::path: std::path::PathBuf
+pub apimock_config::ConfigError::ConfigRead::source: core::io::error::Error
+pub apimock_config::ConfigError::PathResolve
+pub apimock_config::ConfigError::PathResolve::path: std::path::PathBuf
+pub apimock_config::ConfigError::PathResolve::source: core::io::error::Error
+pub apimock_config::ConfigError::RuleSet(apimock_routing::error::RoutingError)
+pub apimock_config::ConfigError::Validation
+pub apimock_config::ConfigError::Validation::reason: alloc::string::String
+impl apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::kind(&self) -> apimock_config::error::ConfigErrorKind
+impl core::convert::From<apimock_config::error::ConfigError> for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::from(apimock_config::error::ConfigError) -> Self
+impl core::convert::From<apimock_routing::error::RoutingError> for apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::from(apimock_routing::error::RoutingError) -> Self
+impl core::error::Error for apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::error::ConfigError
+pub fn apimock_config::error::ConfigError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::error::ConfigError
+impl core::marker::Send for apimock_config::error::ConfigError
+impl core::marker::Sync for apimock_config::error::ConfigError
+impl core::marker::Unpin for apimock_config::error::ConfigError
+impl core::marker::UnsafeUnpin for apimock_config::error::ConfigError
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::ConfigError
+impl !core::panic::unwind_safe::UnwindSafe for apimock_config::error::ConfigError
+#[non_exhaustive] pub enum apimock_config::ConfigFileKind
+pub apimock_config::ConfigFileKind::Middleware
+pub apimock_config::ConfigFileKind::Root
+pub apimock_config::ConfigFileKind::RuleSet
+impl core::clone::Clone for apimock_config::view::ConfigFileKind
+pub fn apimock_config::view::ConfigFileKind::clone(&self) -> apimock_config::view::ConfigFileKind
+impl core::fmt::Debug for apimock_config::view::ConfigFileKind
+pub fn apimock_config::view::ConfigFileKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::ConfigFileKind
+impl serde_core::ser::Serialize for apimock_config::view::ConfigFileKind
+pub fn apimock_config::view::ConfigFileKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ConfigFileKind
+impl core::marker::Send for apimock_config::view::ConfigFileKind
+impl core::marker::Sync for apimock_config::view::ConfigFileKind
+impl core::marker::Unpin for apimock_config::view::ConfigFileKind
+impl core::marker::UnsafeUnpin for apimock_config::view::ConfigFileKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ConfigFileKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ConfigFileKind
+#[non_exhaustive] pub enum apimock_config::DiffKind
+pub apimock_config::DiffKind::Added
+pub apimock_config::DiffKind::BodyConditionAdded
+pub apimock_config::DiffKind::BodyConditionRemoved
+pub apimock_config::DiffKind::HeaderConditionAdded
+pub apimock_config::DiffKind::HeaderConditionRemoved
+pub apimock_config::DiffKind::Removed
+pub apimock_config::DiffKind::Updated
+impl core::clone::Clone for apimock_config::view::DiffKind
+pub fn apimock_config::view::DiffKind::clone(&self) -> apimock_config::view::DiffKind
+impl core::fmt::Debug for apimock_config::view::DiffKind
+pub fn apimock_config::view::DiffKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::DiffKind
+impl serde_core::ser::Serialize for apimock_config::view::DiffKind
+pub fn apimock_config::view::DiffKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::DiffKind
+impl core::marker::Send for apimock_config::view::DiffKind
+impl core::marker::Sync for apimock_config::view::DiffKind
+impl core::marker::Unpin for apimock_config::view::DiffKind
+impl core::marker::UnsafeUnpin for apimock_config::view::DiffKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::DiffKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::DiffKind
+#[non_exhaustive] pub enum apimock_config::EditCommand
+pub apimock_config::EditCommand::AddBodyCondition
+pub apimock_config::EditCommand::AddBodyCondition::condition: apimock_config::view::BodyConditionPayload
+pub apimock_config::EditCommand::AddBodyCondition::rule_id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::AddHeaderCondition
+pub apimock_config::EditCommand::AddHeaderCondition::condition: apimock_config::view::HeaderConditionPayload
+pub apimock_config::EditCommand::AddHeaderCondition::rule_id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::AddRule
+pub apimock_config::EditCommand::AddRule::parent: apimock_config::view::NodeId
+pub apimock_config::EditCommand::AddRule::rule: apimock_config::view::RulePayload
+pub apimock_config::EditCommand::AddRuleSet
+pub apimock_config::EditCommand::AddRuleSet::path: alloc::string::String
+pub apimock_config::EditCommand::DeleteRule
+pub apimock_config::EditCommand::DeleteRule::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::MoveRule
+pub apimock_config::EditCommand::MoveRule::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::MoveRule::new_index: usize
+pub apimock_config::EditCommand::RemoveBodyCondition
+pub apimock_config::EditCommand::RemoveBodyCondition::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::RemoveHeaderCondition
+pub apimock_config::EditCommand::RemoveHeaderCondition::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::RemoveRuleSet
+pub apimock_config::EditCommand::RemoveRuleSet::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::UpdateBodyCondition
+pub apimock_config::EditCommand::UpdateBodyCondition::condition: apimock_config::view::BodyConditionPayload
+pub apimock_config::EditCommand::UpdateBodyCondition::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::UpdateHeaderCondition
+pub apimock_config::EditCommand::UpdateHeaderCondition::condition: apimock_config::view::HeaderConditionPayload
+pub apimock_config::EditCommand::UpdateHeaderCondition::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::UpdateRespond
+pub apimock_config::EditCommand::UpdateRespond::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::UpdateRespond::respond: apimock_config::view::RespondPayload
+pub apimock_config::EditCommand::UpdateRootSetting
+pub apimock_config::EditCommand::UpdateRootSetting::key: apimock_config::view::RootSettingKey
+pub apimock_config::EditCommand::UpdateRootSetting::value: apimock_config::view::EditValue
+pub apimock_config::EditCommand::UpdateRule
+pub apimock_config::EditCommand::UpdateRule::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::UpdateRule::rule: apimock_config::view::RulePayload
+pub apimock_config::EditCommand::UpdateRuleSetStrategy
+pub apimock_config::EditCommand::UpdateRuleSetStrategy::id: apimock_config::view::NodeId
+pub apimock_config::EditCommand::UpdateRuleSetStrategy::strategy: core::option::Option<alloc::string::String>
+impl core::clone::Clone for apimock_config::view::EditCommand
+pub fn apimock_config::view::EditCommand::clone(&self) -> apimock_config::view::EditCommand
+impl core::fmt::Debug for apimock_config::view::EditCommand
+pub fn apimock_config::view::EditCommand::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::EditCommand
+impl core::marker::Send for apimock_config::view::EditCommand
+impl core::marker::Sync for apimock_config::view::EditCommand
+impl core::marker::Unpin for apimock_config::view::EditCommand
+impl core::marker::UnsafeUnpin for apimock_config::view::EditCommand
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::EditCommand
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::EditCommand
+#[non_exhaustive] pub enum apimock_config::EditValue
+pub apimock_config::EditValue::Boolean(bool)
+pub apimock_config::EditValue::Enum(alloc::string::String)
+pub apimock_config::EditValue::Integer(i64)
+pub apimock_config::EditValue::Json(serde_json::value::Value)
+pub apimock_config::EditValue::String(alloc::string::String)
+pub apimock_config::EditValue::StringList(alloc::vec::Vec<alloc::string::String>)
+impl core::clone::Clone for apimock_config::view::EditValue
+pub fn apimock_config::view::EditValue::clone(&self) -> apimock_config::view::EditValue
+impl core::fmt::Debug for apimock_config::view::EditValue
+pub fn apimock_config::view::EditValue::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::EditValue
+impl core::marker::Send for apimock_config::view::EditValue
+impl core::marker::Sync for apimock_config::view::EditValue
+impl core::marker::Unpin for apimock_config::view::EditValue
+impl core::marker::UnsafeUnpin for apimock_config::view::EditValue
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::EditValue
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::EditValue
+#[non_exhaustive] pub enum apimock_config::HeaderOp
+pub apimock_config::HeaderOp::Absent
+pub apimock_config::HeaderOp::Contains
+pub apimock_config::HeaderOp::EndsWith
+pub apimock_config::HeaderOp::Equal
+pub apimock_config::HeaderOp::Exists
+pub apimock_config::HeaderOp::NotContains
+pub apimock_config::HeaderOp::NotEndsWith
+pub apimock_config::HeaderOp::NotEqual
+pub apimock_config::HeaderOp::NotRegex
+pub apimock_config::HeaderOp::NotStartsWith
+pub apimock_config::HeaderOp::Regex
+pub apimock_config::HeaderOp::StartsWith
+pub apimock_config::HeaderOp::WildCard
+impl core::clone::Clone for apimock_config::view::HeaderOp
+pub fn apimock_config::view::HeaderOp::clone(&self) -> apimock_config::view::HeaderOp
+impl core::cmp::Eq for apimock_config::view::HeaderOp
+impl core::cmp::PartialEq for apimock_config::view::HeaderOp
+pub fn apimock_config::view::HeaderOp::eq(&self, &apimock_config::view::HeaderOp) -> bool
+impl core::fmt::Debug for apimock_config::view::HeaderOp
+pub fn apimock_config::view::HeaderOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::HeaderOp
+impl core::marker::StructuralPartialEq for apimock_config::view::HeaderOp
+impl core::marker::Freeze for apimock_config::view::HeaderOp
+impl core::marker::Send for apimock_config::view::HeaderOp
+impl core::marker::Sync for apimock_config::view::HeaderOp
+impl core::marker::Unpin for apimock_config::view::HeaderOp
+impl core::marker::UnsafeUnpin for apimock_config::view::HeaderOp
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::HeaderOp
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::HeaderOp
+#[non_exhaustive] pub enum apimock_config::NodeKind
+pub apimock_config::NodeKind::FileNode
+pub apimock_config::NodeKind::Respond
+pub apimock_config::NodeKind::RootSetting
+pub apimock_config::NodeKind::Rule
+pub apimock_config::NodeKind::RuleSet
+pub apimock_config::NodeKind::Script
+impl core::clone::Clone for apimock_config::view::NodeKind
+pub fn apimock_config::view::NodeKind::clone(&self) -> apimock_config::view::NodeKind
+impl core::fmt::Debug for apimock_config::view::NodeKind
+pub fn apimock_config::view::NodeKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::NodeKind
+impl serde_core::ser::Serialize for apimock_config::view::NodeKind
+pub fn apimock_config::view::NodeKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::NodeKind
+impl core::marker::Send for apimock_config::view::NodeKind
+impl core::marker::Sync for apimock_config::view::NodeKind
+impl core::marker::Unpin for apimock_config::view::NodeKind
+impl core::marker::UnsafeUnpin for apimock_config::view::NodeKind
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::NodeKind
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::NodeKind
+#[non_exhaustive] pub enum apimock_config::RootSettingKey
+pub apimock_config::RootSettingKey::FileTreeBuiltinExcludes
+pub apimock_config::RootSettingKey::FileTreeExtraExcludes
+pub apimock_config::RootSettingKey::FileTreeInclude
+pub apimock_config::RootSettingKey::FileTreeRespectGitignore
+pub apimock_config::RootSettingKey::FileTreeShowHidden
+pub apimock_config::RootSettingKey::ListenerIpAddress
+pub apimock_config::RootSettingKey::ListenerPort
+pub apimock_config::RootSettingKey::LogFile
+pub apimock_config::RootSettingKey::LogFormat
+pub apimock_config::RootSettingKey::LogLevel
+pub apimock_config::RootSettingKey::ServiceFallbackRespondDir
+pub apimock_config::RootSettingKey::ServiceStrategy
+pub apimock_config::RootSettingKey::TlsCertFile
+pub apimock_config::RootSettingKey::TlsEnabled
+pub apimock_config::RootSettingKey::TlsKeyFile
+pub apimock_config::RootSettingKey::TraceCaptureBody
+pub apimock_config::RootSettingKey::TraceMaxBodyBytes
+impl core::clone::Clone for apimock_config::view::RootSettingKey
+pub fn apimock_config::view::RootSettingKey::clone(&self) -> apimock_config::view::RootSettingKey
+impl core::fmt::Debug for apimock_config::view::RootSettingKey
+pub fn apimock_config::view::RootSettingKey::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::RootSettingKey
+impl core::marker::Freeze for apimock_config::view::RootSettingKey
+impl core::marker::Send for apimock_config::view::RootSettingKey
+impl core::marker::Sync for apimock_config::view::RootSettingKey
+impl core::marker::Unpin for apimock_config::view::RootSettingKey
+impl core::marker::UnsafeUnpin for apimock_config::view::RootSettingKey
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::RootSettingKey
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::RootSettingKey
+#[non_exhaustive] pub enum apimock_config::SaveError
+pub apimock_config::SaveError::Conflict
+pub apimock_config::SaveError::Conflict::path: std::path::PathBuf
+pub apimock_config::SaveError::Inconsistent
+pub apimock_config::SaveError::Inconsistent::reason: alloc::string::String
+pub apimock_config::SaveError::Read
+pub apimock_config::SaveError::Read::path: std::path::PathBuf
+pub apimock_config::SaveError::Read::source: core::io::error::Error
+pub apimock_config::SaveError::Serialize
+pub apimock_config::SaveError::Serialize::path: std::path::PathBuf
+pub apimock_config::SaveError::Serialize::source: toml::ser::error::Error
+pub apimock_config::SaveError::Write
+pub apimock_config::SaveError::Write::path: std::path::PathBuf
+pub apimock_config::SaveError::Write::source: core::io::error::Error
+impl apimock_config::error::SaveError
+pub fn apimock_config::error::SaveError::kind(&self) -> apimock_config::error::SaveErrorKind
+impl core::error::Error for apimock_config::error::SaveError
+pub fn apimock_config::error::SaveError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for apimock_config::error::SaveError
+pub fn apimock_config::error::SaveError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::error::SaveError
+pub fn apimock_config::error::SaveError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::error::SaveError
+impl core::marker::Send for apimock_config::error::SaveError
+impl core::marker::Sync for apimock_config::error::SaveError
+impl core::marker::Unpin for apimock_config::error::SaveError
+impl core::marker::UnsafeUnpin for apimock_config::error::SaveError
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::SaveError
+impl !core::panic::unwind_safe::UnwindSafe for apimock_config::error::SaveError
+#[non_exhaustive] pub enum apimock_config::Severity
+pub apimock_config::Severity::Error
+pub apimock_config::Severity::Info
+pub apimock_config::Severity::Warning
+impl core::clone::Clone for apimock_config::view::Severity
+pub fn apimock_config::view::Severity::clone(&self) -> apimock_config::view::Severity
+impl core::fmt::Debug for apimock_config::view::Severity
+pub fn apimock_config::view::Severity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::Severity
+impl serde_core::ser::Serialize for apimock_config::view::Severity
+pub fn apimock_config::view::Severity::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::Severity
+impl core::marker::Send for apimock_config::view::Severity
+impl core::marker::Sync for apimock_config::view::Severity
+impl core::marker::Unpin for apimock_config::view::Severity
+impl core::marker::UnsafeUnpin for apimock_config::view::Severity
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::Severity
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::Severity
+#[non_exhaustive] pub enum apimock_config::UrlPathOp
+pub apimock_config::UrlPathOp::Contains
+pub apimock_config::UrlPathOp::EndsWith
+pub apimock_config::UrlPathOp::Equal
+pub apimock_config::UrlPathOp::NotContains
+pub apimock_config::UrlPathOp::NotEndsWith
+pub apimock_config::UrlPathOp::NotEqual
+pub apimock_config::UrlPathOp::NotRegex
+pub apimock_config::UrlPathOp::NotStartsWith
+pub apimock_config::UrlPathOp::Regex
+pub apimock_config::UrlPathOp::StartsWith
+pub apimock_config::UrlPathOp::WildCard
+impl core::clone::Clone for apimock_config::view::UrlPathOp
+pub fn apimock_config::view::UrlPathOp::clone(&self) -> apimock_config::view::UrlPathOp
+impl core::cmp::Eq for apimock_config::view::UrlPathOp
+impl core::cmp::PartialEq for apimock_config::view::UrlPathOp
+pub fn apimock_config::view::UrlPathOp::eq(&self, &apimock_config::view::UrlPathOp) -> bool
+impl core::fmt::Debug for apimock_config::view::UrlPathOp
+pub fn apimock_config::view::UrlPathOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::UrlPathOp
+impl core::marker::StructuralPartialEq for apimock_config::view::UrlPathOp
+impl core::marker::Freeze for apimock_config::view::UrlPathOp
+impl core::marker::Send for apimock_config::view::UrlPathOp
+impl core::marker::Sync for apimock_config::view::UrlPathOp
+impl core::marker::Unpin for apimock_config::view::UrlPathOp
+impl core::marker::UnsafeUnpin for apimock_config::view::UrlPathOp
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::UrlPathOp
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::UrlPathOp
+#[non_exhaustive] pub enum apimock_config::WorkspaceError
+pub apimock_config::WorkspaceError::Config(apimock_config::error::ConfigError)
+pub apimock_config::WorkspaceError::InvalidRoot
+pub apimock_config::WorkspaceError::InvalidRoot::path: std::path::PathBuf
+pub apimock_config::WorkspaceError::InvalidRoot::reason: alloc::string::String
+impl apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::kind(&self) -> apimock_config::error::WorkspaceErrorKind
+impl core::convert::From<apimock_config::error::ConfigError> for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::from(apimock_config::error::ConfigError) -> Self
+impl core::error::Error for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::error::WorkspaceError
+pub fn apimock_config::error::WorkspaceError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::error::WorkspaceError
+impl core::marker::Send for apimock_config::error::WorkspaceError
+impl core::marker::Sync for apimock_config::error::WorkspaceError
+impl core::marker::Unpin for apimock_config::error::WorkspaceError
+impl core::marker::UnsafeUnpin for apimock_config::error::WorkspaceError
+impl !core::panic::unwind_safe::RefUnwindSafe for apimock_config::error::WorkspaceError
+impl !core::panic::unwind_safe::UnwindSafe for apimock_config::error::WorkspaceError
+#[non_exhaustive] pub struct apimock_config::ApplyResult
+pub apimock_config::ApplyResult::changed_nodes: alloc::vec::Vec<apimock_config::view::NodeId>
+pub apimock_config::ApplyResult::diagnostics: alloc::vec::Vec<apimock_config::view::Diagnostic>
+pub apimock_config::ApplyResult::requires_reload: bool
+impl core::clone::Clone for apimock_config::view::ApplyResult
+pub fn apimock_config::view::ApplyResult::clone(&self) -> apimock_config::view::ApplyResult
+impl core::fmt::Debug for apimock_config::view::ApplyResult
+pub fn apimock_config::view::ApplyResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ApplyResult
+pub fn apimock_config::view::ApplyResult::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ApplyResult
+impl core::marker::Send for apimock_config::view::ApplyResult
+impl core::marker::Sync for apimock_config::view::ApplyResult
+impl core::marker::Unpin for apimock_config::view::ApplyResult
+impl core::marker::UnsafeUnpin for apimock_config::view::ApplyResult
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ApplyResult
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ApplyResult
+#[non_exhaustive] pub struct apimock_config::BodyConditionPayload
+pub apimock_config::BodyConditionPayload::kind: apimock_config::view::BodyConditionKind
+pub apimock_config::BodyConditionPayload::op: apimock_config::view::BodyOp
+pub apimock_config::BodyConditionPayload::path: alloc::string::String
+pub apimock_config::BodyConditionPayload::value: serde_json::value::Value
+impl apimock_config::view::BodyConditionPayload
+pub fn apimock_config::view::BodyConditionPayload::new(apimock_config::view::BodyConditionKind, impl core::convert::Into<alloc::string::String>, apimock_config::view::BodyOp, serde_json::value::Value) -> Self
+impl core::clone::Clone for apimock_config::view::BodyConditionPayload
+pub fn apimock_config::view::BodyConditionPayload::clone(&self) -> apimock_config::view::BodyConditionPayload
+impl core::fmt::Debug for apimock_config::view::BodyConditionPayload
+pub fn apimock_config::view::BodyConditionPayload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::BodyConditionPayload
+impl core::marker::Send for apimock_config::view::BodyConditionPayload
+impl core::marker::Sync for apimock_config::view::BodyConditionPayload
+impl core::marker::Unpin for apimock_config::view::BodyConditionPayload
+impl core::marker::UnsafeUnpin for apimock_config::view::BodyConditionPayload
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::BodyConditionPayload
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::BodyConditionPayload
+#[non_exhaustive] pub struct apimock_config::ConditionWithId<V>
+pub apimock_config::ConditionWithId::id: apimock_config::view::NodeId
+pub apimock_config::ConditionWithId::view: V
+impl<V> apimock_config::view::ConditionWithId<V>
+pub fn apimock_config::view::ConditionWithId<V>::new(apimock_config::view::NodeId, V) -> Self
+impl<V: core::clone::Clone> core::clone::Clone for apimock_config::view::ConditionWithId<V>
+pub fn apimock_config::view::ConditionWithId<V>::clone(&self) -> apimock_config::view::ConditionWithId<V>
+impl<V: core::fmt::Debug> core::fmt::Debug for apimock_config::view::ConditionWithId<V>
+pub fn apimock_config::view::ConditionWithId<V>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<V> core::marker::Freeze for apimock_config::view::ConditionWithId<V> where V: core::marker::Freeze
+impl<V> core::marker::Send for apimock_config::view::ConditionWithId<V> where V: core::marker::Send
+impl<V> core::marker::Sync for apimock_config::view::ConditionWithId<V> where V: core::marker::Sync
+impl<V> core::marker::Unpin for apimock_config::view::ConditionWithId<V> where V: core::marker::Unpin
+impl<V> core::marker::UnsafeUnpin for apimock_config::view::ConditionWithId<V> where V: core::marker::UnsafeUnpin
+impl<V> core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ConditionWithId<V> where V: core::panic::unwind_safe::RefUnwindSafe
+impl<V> core::panic::unwind_safe::UnwindSafe for apimock_config::view::ConditionWithId<V> where V: core::panic::unwind_safe::UnwindSafe
+#[non_exhaustive] pub struct apimock_config::Config
+pub apimock_config::Config::file_path: core::option::Option<alloc::string::String>
+pub apimock_config::Config::file_tree_view: core::option::Option<apimock_config::config::file_tree_config::FileTreeViewConfig>
+pub apimock_config::Config::listener: core::option::Option<apimock_config::config::listener_config::ListenerConfig>
+pub apimock_config::Config::log: core::option::Option<apimock_config::config::log_config::LogConfig>
+pub apimock_config::Config::service: apimock_config::config::service_config::ServiceConfig
+impl apimock_config::config::Config
+pub fn apimock_config::config::Config::compute_fallback_respond_dir(&mut self, core::option::Option<&alloc::string::String>) -> apimock_config::error::ConfigResult<()>
+pub fn apimock_config::config::Config::current_dir_to_parent_dir_relative_path(&self) -> apimock_config::error::ConfigResult<alloc::string::String>
+pub fn apimock_config::config::Config::listener_http_addr(&self) -> core::option::Option<alloc::string::String>
+pub fn apimock_config::config::Config::listener_https_addr(&self) -> core::option::Option<alloc::string::String>
+pub fn apimock_config::config::Config::new(core::option::Option<&alloc::string::String>, core::option::Option<&alloc::string::String>) -> apimock_config::error::ConfigResult<Self>
+impl core::clone::Clone for apimock_config::config::Config
+pub fn apimock_config::config::Config::clone(&self) -> apimock_config::config::Config
+impl core::default::Default for apimock_config::config::Config
+pub fn apimock_config::config::Config::default() -> Self
+impl core::fmt::Display for apimock_config::config::Config
+pub fn apimock_config::config::Config::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::Config
+pub fn apimock_config::config::Config::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::Config
+impl core::marker::Send for apimock_config::config::Config
+impl core::marker::Sync for apimock_config::config::Config
+impl core::marker::Unpin for apimock_config::config::Config
+impl core::marker::UnsafeUnpin for apimock_config::config::Config
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::Config
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::Config
+#[non_exhaustive] pub struct apimock_config::ConfigFileView
+pub apimock_config::ConfigFileView::display_name: alloc::string::String
+pub apimock_config::ConfigFileView::kind: apimock_config::view::ConfigFileKind
+pub apimock_config::ConfigFileView::nodes: alloc::vec::Vec<apimock_config::view::ConfigNodeView>
+pub apimock_config::ConfigFileView::path: std::path::PathBuf
+impl core::clone::Clone for apimock_config::view::ConfigFileView
+pub fn apimock_config::view::ConfigFileView::clone(&self) -> apimock_config::view::ConfigFileView
+impl core::fmt::Debug for apimock_config::view::ConfigFileView
+pub fn apimock_config::view::ConfigFileView::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ConfigFileView
+pub fn apimock_config::view::ConfigFileView::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ConfigFileView
+impl core::marker::Send for apimock_config::view::ConfigFileView
+impl core::marker::Sync for apimock_config::view::ConfigFileView
+impl core::marker::Unpin for apimock_config::view::ConfigFileView
+impl core::marker::UnsafeUnpin for apimock_config::view::ConfigFileView
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ConfigFileView
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ConfigFileView
+#[non_exhaustive] pub struct apimock_config::ConfigNodeView
+pub apimock_config::ConfigNodeView::display_name: alloc::string::String
+pub apimock_config::ConfigNodeView::id: apimock_config::view::NodeId
+pub apimock_config::ConfigNodeView::kind: apimock_config::view::NodeKind
+pub apimock_config::ConfigNodeView::source_file: std::path::PathBuf
+pub apimock_config::ConfigNodeView::toml_path: alloc::string::String
+pub apimock_config::ConfigNodeView::validation: apimock_config::view::NodeValidation
+impl core::clone::Clone for apimock_config::view::ConfigNodeView
+pub fn apimock_config::view::ConfigNodeView::clone(&self) -> apimock_config::view::ConfigNodeView
+impl core::fmt::Debug for apimock_config::view::ConfigNodeView
+pub fn apimock_config::view::ConfigNodeView::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ConfigNodeView
+pub fn apimock_config::view::ConfigNodeView::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ConfigNodeView
+impl core::marker::Send for apimock_config::view::ConfigNodeView
+impl core::marker::Sync for apimock_config::view::ConfigNodeView
+impl core::marker::Unpin for apimock_config::view::ConfigNodeView
+impl core::marker::UnsafeUnpin for apimock_config::view::ConfigNodeView
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ConfigNodeView
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ConfigNodeView
+#[non_exhaustive] pub struct apimock_config::Diagnostic
+pub apimock_config::Diagnostic::file: core::option::Option<std::path::PathBuf>
+pub apimock_config::Diagnostic::message: alloc::string::String
+pub apimock_config::Diagnostic::node_id: core::option::Option<apimock_config::view::NodeId>
+pub apimock_config::Diagnostic::severity: apimock_config::view::Severity
+impl apimock_config::view::Diagnostic
+pub fn apimock_config::view::Diagnostic::new(apimock_config::view::Severity, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for apimock_config::view::Diagnostic
+pub fn apimock_config::view::Diagnostic::clone(&self) -> apimock_config::view::Diagnostic
+impl core::fmt::Debug for apimock_config::view::Diagnostic
+pub fn apimock_config::view::Diagnostic::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::Diagnostic
+pub fn apimock_config::view::Diagnostic::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::Diagnostic
+impl core::marker::Send for apimock_config::view::Diagnostic
+impl core::marker::Sync for apimock_config::view::Diagnostic
+impl core::marker::Unpin for apimock_config::view::Diagnostic
+impl core::marker::UnsafeUnpin for apimock_config::view::Diagnostic
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::Diagnostic
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::Diagnostic
+#[non_exhaustive] pub struct apimock_config::DiffItem
+pub apimock_config::DiffItem::kind: apimock_config::view::DiffKind
+pub apimock_config::DiffItem::summary: alloc::string::String
+pub apimock_config::DiffItem::target: apimock_config::view::NodeId
+impl apimock_config::view::DiffItem
+pub fn apimock_config::view::DiffItem::new(apimock_config::view::DiffKind, apimock_config::view::NodeId, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for apimock_config::view::DiffItem
+pub fn apimock_config::view::DiffItem::clone(&self) -> apimock_config::view::DiffItem
+impl core::fmt::Debug for apimock_config::view::DiffItem
+pub fn apimock_config::view::DiffItem::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::DiffItem
+pub fn apimock_config::view::DiffItem::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::DiffItem
+impl core::marker::Send for apimock_config::view::DiffItem
+impl core::marker::Sync for apimock_config::view::DiffItem
+impl core::marker::Unpin for apimock_config::view::DiffItem
+impl core::marker::UnsafeUnpin for apimock_config::view::DiffItem
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::DiffItem
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::DiffItem
+#[non_exhaustive] pub struct apimock_config::HeaderConditionPayload
+pub apimock_config::HeaderConditionPayload::name: alloc::string::String
+pub apimock_config::HeaderConditionPayload::op: apimock_config::view::HeaderOp
+pub apimock_config::HeaderConditionPayload::value: core::option::Option<alloc::string::String>
+impl apimock_config::view::HeaderConditionPayload
+pub fn apimock_config::view::HeaderConditionPayload::new(impl core::convert::Into<alloc::string::String>, apimock_config::view::HeaderOp) -> Self
+impl core::clone::Clone for apimock_config::view::HeaderConditionPayload
+pub fn apimock_config::view::HeaderConditionPayload::clone(&self) -> apimock_config::view::HeaderConditionPayload
+impl core::fmt::Debug for apimock_config::view::HeaderConditionPayload
+pub fn apimock_config::view::HeaderConditionPayload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::HeaderConditionPayload
+impl core::marker::Send for apimock_config::view::HeaderConditionPayload
+impl core::marker::Sync for apimock_config::view::HeaderConditionPayload
+impl core::marker::Unpin for apimock_config::view::HeaderConditionPayload
+impl core::marker::UnsafeUnpin for apimock_config::view::HeaderConditionPayload
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::HeaderConditionPayload
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::HeaderConditionPayload
+#[non_exhaustive] pub struct apimock_config::ListenerConfig
+pub apimock_config::ListenerConfig::ip_address: alloc::string::String
+pub apimock_config::ListenerConfig::port: u16
+pub apimock_config::ListenerConfig::tls: core::option::Option<apimock_config::config::listener_config::tls_config::TlsConfig>
+impl apimock_config::config::listener_config::ListenerConfig
+pub fn apimock_config::config::listener_config::ListenerConfig::validate(&self) -> bool
+impl core::clone::Clone for apimock_config::config::listener_config::ListenerConfig
+pub fn apimock_config::config::listener_config::ListenerConfig::clone(&self) -> apimock_config::config::listener_config::ListenerConfig
+impl core::default::Default for apimock_config::config::listener_config::ListenerConfig
+pub fn apimock_config::config::listener_config::ListenerConfig::default() -> Self
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::listener_config::ListenerConfig
+pub fn apimock_config::config::listener_config::ListenerConfig::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::listener_config::ListenerConfig
+impl core::marker::Send for apimock_config::config::listener_config::ListenerConfig
+impl core::marker::Sync for apimock_config::config::listener_config::ListenerConfig
+impl core::marker::Unpin for apimock_config::config::listener_config::ListenerConfig
+impl core::marker::UnsafeUnpin for apimock_config::config::listener_config::ListenerConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::listener_config::ListenerConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::listener_config::ListenerConfig
+#[non_exhaustive] pub struct apimock_config::LogConfig
+pub apimock_config::LogConfig::verbose: apimock_config::config::log_config::verbose_config::VerboseConfig
+impl core::clone::Clone for apimock_config::config::log_config::LogConfig
+pub fn apimock_config::config::log_config::LogConfig::clone(&self) -> apimock_config::config::log_config::LogConfig
+impl core::default::Default for apimock_config::config::log_config::LogConfig
+pub fn apimock_config::config::log_config::LogConfig::default() -> apimock_config::config::log_config::LogConfig
+impl core::fmt::Display for apimock_config::config::log_config::LogConfig
+pub fn apimock_config::config::log_config::LogConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::log_config::LogConfig
+pub fn apimock_config::config::log_config::LogConfig::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::log_config::LogConfig
+impl core::marker::Send for apimock_config::config::log_config::LogConfig
+impl core::marker::Sync for apimock_config::config::log_config::LogConfig
+impl core::marker::Unpin for apimock_config::config::log_config::LogConfig
+impl core::marker::UnsafeUnpin for apimock_config::config::log_config::LogConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::log_config::LogConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::log_config::LogConfig
+#[non_exhaustive] pub struct apimock_config::NodeId(pub uuid::Uuid)
+impl apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::new() -> Self
+impl core::clone::Clone for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::clone(&self) -> apimock_config::view::NodeId
+impl core::cmp::Eq for apimock_config::view::NodeId
+impl core::cmp::PartialEq for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::eq(&self, &apimock_config::view::NodeId) -> bool
+impl core::default::Default for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::default() -> Self
+impl core::fmt::Debug for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for apimock_config::view::NodeId
+impl core::marker::StructuralPartialEq for apimock_config::view::NodeId
+impl serde_core::ser::Serialize for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::view::NodeId
+pub fn apimock_config::view::NodeId::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::view::NodeId
+impl core::marker::Send for apimock_config::view::NodeId
+impl core::marker::Sync for apimock_config::view::NodeId
+impl core::marker::Unpin for apimock_config::view::NodeId
+impl core::marker::UnsafeUnpin for apimock_config::view::NodeId
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::NodeId
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::NodeId
+#[non_exhaustive] pub struct apimock_config::NodeValidation
+pub apimock_config::NodeValidation::issues: alloc::vec::Vec<apimock_config::view::ValidationIssue>
+pub apimock_config::NodeValidation::ok: bool
+impl apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::ok() -> Self
+impl core::clone::Clone for apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::clone(&self) -> apimock_config::view::NodeValidation
+impl core::default::Default for apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::default() -> apimock_config::view::NodeValidation
+impl core::fmt::Debug for apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::NodeValidation
+pub fn apimock_config::view::NodeValidation::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::NodeValidation
+impl core::marker::Send for apimock_config::view::NodeValidation
+impl core::marker::Sync for apimock_config::view::NodeValidation
+impl core::marker::Unpin for apimock_config::view::NodeValidation
+impl core::marker::UnsafeUnpin for apimock_config::view::NodeValidation
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::NodeValidation
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::NodeValidation
+#[non_exhaustive] pub struct apimock_config::ReloadHint
+pub apimock_config::ReloadHint::requires_reload: bool
+pub apimock_config::ReloadHint::requires_restart: bool
+impl apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::for_key(apimock_config::view::RootSettingKey) -> Self
+pub fn apimock_config::view::ReloadHint::none() -> Self
+pub fn apimock_config::view::ReloadHint::reload() -> Self
+pub fn apimock_config::view::ReloadHint::restart() -> Self
+impl core::clone::Clone for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::clone(&self) -> apimock_config::view::ReloadHint
+impl core::default::Default for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::default() -> apimock_config::view::ReloadHint
+impl core::fmt::Debug for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for apimock_config::view::ReloadHint
+impl serde_core::ser::Serialize for apimock_config::view::ReloadHint
+pub fn apimock_config::view::ReloadHint::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ReloadHint
+impl core::marker::Send for apimock_config::view::ReloadHint
+impl core::marker::Sync for apimock_config::view::ReloadHint
+impl core::marker::Unpin for apimock_config::view::ReloadHint
+impl core::marker::UnsafeUnpin for apimock_config::view::ReloadHint
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ReloadHint
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ReloadHint
+#[non_exhaustive] pub struct apimock_config::RespondPayload
+pub apimock_config::RespondPayload::delay_milliseconds: core::option::Option<u32>
+pub apimock_config::RespondPayload::file_path: core::option::Option<alloc::string::String>
+pub apimock_config::RespondPayload::json: core::option::Option<alloc::string::String>
+pub apimock_config::RespondPayload::status: core::option::Option<u16>
+pub apimock_config::RespondPayload::text: core::option::Option<alloc::string::String>
+impl core::clone::Clone for apimock_config::view::RespondPayload
+pub fn apimock_config::view::RespondPayload::clone(&self) -> apimock_config::view::RespondPayload
+impl core::default::Default for apimock_config::view::RespondPayload
+pub fn apimock_config::view::RespondPayload::default() -> apimock_config::view::RespondPayload
+impl core::fmt::Debug for apimock_config::view::RespondPayload
+pub fn apimock_config::view::RespondPayload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::RespondPayload
+impl core::marker::Send for apimock_config::view::RespondPayload
+impl core::marker::Sync for apimock_config::view::RespondPayload
+impl core::marker::Unpin for apimock_config::view::RespondPayload
+impl core::marker::UnsafeUnpin for apimock_config::view::RespondPayload
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::RespondPayload
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::RespondPayload
+#[non_exhaustive] pub struct apimock_config::RulePayload
+pub apimock_config::RulePayload::body: core::option::Option<alloc::vec::Vec<apimock_config::view::BodyConditionPayload>>
+pub apimock_config::RulePayload::headers: core::option::Option<alloc::vec::Vec<apimock_config::view::HeaderConditionPayload>>
+pub apimock_config::RulePayload::method: core::option::Option<alloc::string::String>
+pub apimock_config::RulePayload::priority: core::option::Option<i32>
+pub apimock_config::RulePayload::respond: apimock_config::view::RespondPayload
+pub apimock_config::RulePayload::url_path: core::option::Option<alloc::string::String>
+pub apimock_config::RulePayload::url_path_op: core::option::Option<apimock_config::view::UrlPathOp>
+impl core::clone::Clone for apimock_config::view::RulePayload
+pub fn apimock_config::view::RulePayload::clone(&self) -> apimock_config::view::RulePayload
+impl core::default::Default for apimock_config::view::RulePayload
+pub fn apimock_config::view::RulePayload::default() -> apimock_config::view::RulePayload
+impl core::fmt::Debug for apimock_config::view::RulePayload
+pub fn apimock_config::view::RulePayload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_config::view::RulePayload
+impl core::marker::Send for apimock_config::view::RulePayload
+impl core::marker::Sync for apimock_config::view::RulePayload
+impl core::marker::Unpin for apimock_config::view::RulePayload
+impl core::marker::UnsafeUnpin for apimock_config::view::RulePayload
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::RulePayload
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::RulePayload
+#[non_exhaustive] pub struct apimock_config::SaveResult
+pub apimock_config::SaveResult::changed_files: alloc::vec::Vec<std::path::PathBuf>
+pub apimock_config::SaveResult::diff_summary: alloc::vec::Vec<apimock_config::view::DiffItem>
+pub apimock_config::SaveResult::requires_reload: bool
+impl core::clone::Clone for apimock_config::view::SaveResult
+pub fn apimock_config::view::SaveResult::clone(&self) -> apimock_config::view::SaveResult
+impl core::fmt::Debug for apimock_config::view::SaveResult
+pub fn apimock_config::view::SaveResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::SaveResult
+pub fn apimock_config::view::SaveResult::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::SaveResult
+impl core::marker::Send for apimock_config::view::SaveResult
+impl core::marker::Sync for apimock_config::view::SaveResult
+impl core::marker::Unpin for apimock_config::view::SaveResult
+impl core::marker::UnsafeUnpin for apimock_config::view::SaveResult
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::SaveResult
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::SaveResult
+#[non_exhaustive] pub struct apimock_config::ServiceConfig
+pub apimock_config::ServiceConfig::fallback_respond_dir: alloc::string::String
+pub apimock_config::ServiceConfig::middlewares_file_paths: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub apimock_config::ServiceConfig::rule_sets: alloc::vec::Vec<apimock_routing::rule_set::RuleSet>
+pub apimock_config::ServiceConfig::rule_sets_file_paths: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub apimock_config::ServiceConfig::strategy: core::option::Option<apimock_routing::strategy::Strategy>
+impl apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::validate(&self) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::clone(&self) -> apimock_config::config::service_config::ServiceConfig
+impl core::default::Default for apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::default() -> Self
+impl core::fmt::Display for apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::service_config::ServiceConfig
+pub fn apimock_config::config::service_config::ServiceConfig::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for apimock_config::config::service_config::ServiceConfig
+impl core::marker::Send for apimock_config::config::service_config::ServiceConfig
+impl core::marker::Sync for apimock_config::config::service_config::ServiceConfig
+impl core::marker::Unpin for apimock_config::config::service_config::ServiceConfig
+impl core::marker::UnsafeUnpin for apimock_config::config::service_config::ServiceConfig
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::service_config::ServiceConfig
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::service_config::ServiceConfig
+#[non_exhaustive] pub struct apimock_config::ValidationIssue
+pub apimock_config::ValidationIssue::message: alloc::string::String
+pub apimock_config::ValidationIssue::severity: apimock_config::view::Severity
+impl apimock_config::view::ValidationIssue
+pub fn apimock_config::view::ValidationIssue::new(apimock_config::view::Severity, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for apimock_config::view::ValidationIssue
+pub fn apimock_config::view::ValidationIssue::clone(&self) -> apimock_config::view::ValidationIssue
+impl core::fmt::Debug for apimock_config::view::ValidationIssue
+pub fn apimock_config::view::ValidationIssue::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ValidationIssue
+pub fn apimock_config::view::ValidationIssue::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ValidationIssue
+impl core::marker::Send for apimock_config::view::ValidationIssue
+impl core::marker::Sync for apimock_config::view::ValidationIssue
+impl core::marker::Unpin for apimock_config::view::ValidationIssue
+impl core::marker::UnsafeUnpin for apimock_config::view::ValidationIssue
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ValidationIssue
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ValidationIssue
+#[non_exhaustive] pub struct apimock_config::ValidationReport
+pub apimock_config::ValidationReport::diagnostics: alloc::vec::Vec<apimock_config::view::Diagnostic>
+pub apimock_config::ValidationReport::is_valid: bool
+impl apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::ok() -> Self
+impl core::clone::Clone for apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::clone(&self) -> apimock_config::view::ValidationReport
+impl core::default::Default for apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::default() -> Self
+impl core::fmt::Debug for apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::ValidationReport
+pub fn apimock_config::view::ValidationReport::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::ValidationReport
+impl core::marker::Send for apimock_config::view::ValidationReport
+impl core::marker::Sync for apimock_config::view::ValidationReport
+impl core::marker::Unpin for apimock_config::view::ValidationReport
+impl core::marker::UnsafeUnpin for apimock_config::view::ValidationReport
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::ValidationReport
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::ValidationReport
+pub struct apimock_config::Workspace
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::apply(&mut self, apimock_config::view::EditCommand) -> core::result::Result<apimock_config::view::ApplyResult, apimock_config::error::ApplyError>
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::config(&self) -> &apimock_config::config::Config
+pub fn apimock_config::workspace::Workspace::has_external_changes(&self) -> bool
+pub fn apimock_config::workspace::Workspace::list_directory(&self, &std::path::Path) -> alloc::vec::Vec<apimock_routing::view::FileNodeView>
+pub fn apimock_config::workspace::Workspace::load(std::path::PathBuf) -> core::result::Result<Self, apimock_config::error::WorkspaceError>
+pub fn apimock_config::workspace::Workspace::root_path(&self) -> &std::path::Path
+pub fn apimock_config::workspace::Workspace::sync_from_disk(&mut self) -> core::result::Result<(), apimock_config::error::WorkspaceError>
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::describe(&self, apimock_config::view::NodeId) -> core::option::Option<alloc::string::String>
+pub fn apimock_config::workspace::Workspace::preview_changes(&self) -> alloc::vec::Vec<apimock_config::view::DiffItem>
+pub fn apimock_config::workspace::Workspace::respond_id_at(&self, usize, usize) -> core::option::Option<apimock_config::view::NodeId>
+pub fn apimock_config::workspace::Workspace::rule_id_at(&self, usize, usize) -> core::option::Option<apimock_config::view::NodeId>
+pub fn apimock_config::workspace::Workspace::rule_set_id_at(&self, usize) -> core::option::Option<apimock_config::view::NodeId>
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::has_unsaved_changes(&self) -> bool
+pub fn apimock_config::workspace::Workspace::save(&mut self) -> core::result::Result<apimock_config::view::SaveResult, apimock_config::error::SaveError>
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::snapshot(&self) -> apimock_config::view::WorkspaceSnapshot
+impl apimock_config::workspace::Workspace
+pub fn apimock_config::workspace::Workspace::validate(&self) -> apimock_config::view::ValidationReport
+impl core::marker::Freeze for apimock_config::workspace::Workspace
+impl core::marker::Send for apimock_config::workspace::Workspace
+impl core::marker::Sync for apimock_config::workspace::Workspace
+impl core::marker::Unpin for apimock_config::workspace::Workspace
+impl core::marker::UnsafeUnpin for apimock_config::workspace::Workspace
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::workspace::Workspace
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::workspace::Workspace
+#[non_exhaustive] pub struct apimock_config::WorkspaceSnapshot
+pub apimock_config::WorkspaceSnapshot::diagnostics: alloc::vec::Vec<apimock_config::view::Diagnostic>
+pub apimock_config::WorkspaceSnapshot::files: alloc::vec::Vec<apimock_config::view::ConfigFileView>
+pub apimock_config::WorkspaceSnapshot::routes: apimock_routing::view::RouteCatalogSnapshot
+impl apimock_config::view::WorkspaceSnapshot
+pub fn apimock_config::view::WorkspaceSnapshot::empty() -> Self
+impl core::clone::Clone for apimock_config::view::WorkspaceSnapshot
+pub fn apimock_config::view::WorkspaceSnapshot::clone(&self) -> apimock_config::view::WorkspaceSnapshot
+impl core::fmt::Debug for apimock_config::view::WorkspaceSnapshot
+pub fn apimock_config::view::WorkspaceSnapshot::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for apimock_config::view::WorkspaceSnapshot
+pub fn apimock_config::view::WorkspaceSnapshot::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for apimock_config::view::WorkspaceSnapshot
+impl core::marker::Send for apimock_config::view::WorkspaceSnapshot
+impl core::marker::Sync for apimock_config::view::WorkspaceSnapshot
+impl core::marker::Unpin for apimock_config::view::WorkspaceSnapshot
+impl core::marker::UnsafeUnpin for apimock_config::view::WorkspaceSnapshot
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::WorkspaceSnapshot
+impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::WorkspaceSnapshot
+pub const apimock_config::LISTENER_DEFAULT_IP_ADDRESS: &str
+pub const apimock_config::LISTENER_DEFAULT_PORT: u16
+pub type apimock_config::ConfigResult<T> = core::result::Result<T, apimock_config::error::ConfigError>
