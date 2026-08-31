@@ -22,7 +22,21 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-*(None open.)*
+| ID  | Title |
+|-----|-------|
+| 067 | [CORS: stop reflecting any origin with credentials](./proposed/067-cors-credential-reflection.md) — audit S-01, **highest-ranked** |
+| 068 | [Bound what one request can consume](./proposed/068-bound-per-request-resources.md) — audit S-02, S-03 |
+| 069 | [Reject configuration we do not understand](./proposed/069-reject-unknown-config-keys.md) — audit F-17 |
+| 070 | [`round_robin` must rotate per match group](./proposed/070-round-robin-per-match-group.md) — audit F-01 |
+| 071 | [Stop deep-cloning application state per request](./proposed/071-share-application-state.md) — audit P-01, P-02 |
+
+> All five come from the independent audit of 6.0.0 run 2026-08-31 →
+> 09-01 (`.git-exclude/tmp/audit/report/`, reviewed in
+> `.git-exclude/reviewed/external-audit-2026-09-01/REVIEW-001.md`).
+> Together they close **all five High findings** plus the
+> silent-permissiveness defect. Each headline claim was re-verified
+> against a running server before the RFC was written.
+
 
 ## Accepted
 
