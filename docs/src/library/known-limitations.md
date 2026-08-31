@@ -18,9 +18,11 @@ baseline put the whole surface in one file for the first time.
 
 - It is genuinely public and genuinely gated, so depending on it will
   not break within 6.x.
-- **Narrowing it is a candidate for 7.0.** If you build on
-  `apimock_server::http_util`, you may be building on something
-  intended to become private.
+- **Narrowing it would be a breaking change, so it cannot happen within
+  6.x** — the API gate would refuse it. But it is a real possibility
+  whenever the next incompatible release is. If you build on
+  `apimock_server::http_util`, you may be building on something that is
+  public by accident rather than by design.
 - If you depend on one of these modules,
   [say so](https://github.com/apimokka/apimock-rs/issues). A module a
   real consumer needs is an argument for keeping it public

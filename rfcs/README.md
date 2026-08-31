@@ -59,10 +59,10 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 >   correspondence, alongside review-requests and release plans.
 >   Name it `<version>-for-<team>` —
 >   `.git-exclude/handoff-external/6.0.0-for-gui-app-team/` is the first.
->   **The version is the point:** such a document describes one API
->   surface, so when a major release changes it the successor supersedes
->   it rather than mutating it in place, and the old one stays an
->   accurate record of what that team was told at the time.
+>   **The version is the point:** such a document describes the API
+>   surface of one release. Pinning it in the name means it stays an
+>   accurate record of what that team was told, instead of being edited
+>   until it no longer matches anything.
 >
 > Added 2026-08-30, after a package for an external app team was filed
 > here where it matched neither RFC 000's definition nor its own purpose:
