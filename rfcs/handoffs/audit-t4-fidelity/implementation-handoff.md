@@ -50,21 +50,41 @@ original advisory happened.
 If any of that is awkward to test, say so and stop. This is the one
 place in the whole audit where a fix can be worse than the defect.
 
-## 2. The decision 075 does not make for you
+## 2. Case — decided 2026-09-01, and the reasoning shapes the implementation
 
-**Case sensitivity is currently neither consistent nor documented** —
-case-insensitivity applies to the final path segment only. The RFC says
-to make it uniform and explicitly leaves *which way* open:
+Open when this handoff was first written; **now settled: uniformly
+case-insensitive, enforced by apimock at every segment.** RFC 075
+§ Design carries the reasoning. The part that changes what you build:
 
-- **Case-sensitive** matches the filesystem on Linux and what a URL
-  implies.
-- **Case-insensitive** is friendlier and matches what the last segment
-  does today.
+**Do not delegate any segment to the filesystem.** Measured on Linux,
+with `sub/users.json` on disk:
 
-**Establish which is intended and document it before implementing.**
-The answer decides whether existing configs break, so it is a behaviour
-decision, not a detail. Report your recommendation; do not pick silently.
+| Request | Result |
+|---|---|
+| `/sub/USERS.json` | **200** — apimock folds the filename itself |
+| `/SUB/users.json` | **404** — the parent segment goes to the filesystem |
 
+Filesystem case behaviour is **not portable**: Linux is case-sensitive;
+Windows (NTFS) and macOS (APFS default) are case-insensitive. So that
+second row returns **404 on Linux and 200 on Windows and macOS** — same
+config, same request, same binary.
+
+**Linux is the outlier, and Linux is what CI runs**, so the failure mode
+is "works on my laptop, 404s in CI".
+
+Consequences:
+
+- Extend the comparison `dyn_route.rs:118-127` already performs for the
+  final segment (`eq_ignore_ascii_case` over the directory listing) to
+  every segment. **Do not construct a path and let the OS resolve it.**
+- Case-sensitivity was never a free alternative: enforcing it would need
+  an explicit post-resolution case check on every segment, because a
+  case-insensitive filesystem opens `SUB/users.json` whatever apimock
+  intended — and it would reverse the deliberate, documented
+  accommodation at `dyn_route.rs:18-25`.
+- **Test on all three platforms.** RFC 061's matrix is exactly what this
+  finding needs; a Linux-only test passes with the defect intact on the
+  other two.
 ## 3. The decision 076 does not make for you
 
 Enabling `serde_json/preserve_order` for inline `respond.json` changes
@@ -103,6 +123,9 @@ known limitation, not a bug to chase here.
 - [ ] Everything in § 1 — this gates the tranche
 - [ ] `%20`, a non-ASCII filename and `+` each resolve
 - [ ] Case behaviour identical across first, middle and last segments
+- [ ] **`/SUB/users.json` and `/sub/USERS.json` both resolve, identically
+      on Linux, macOS and Windows** — the cross-platform assertion is the
+      finding
 - [ ] `/api` prefix matches `/api` and `/api/x`, **not** `/apixyz`
 - [ ] Existing rule-set scoping tests unchanged
 - [ ] The § 2 decision documented
@@ -124,5 +147,5 @@ known limitation, not a bug to chase here.
 ## 6. Report back
 
 `.git-exclude/review-request/audit-t4-fidelity/`, including the § 1
-traversal evidence **quoted in full**, the § 2 case recommendation, and
+traversal evidence **quoted in full**, the § 2 cross-platform case results from all three CI platforms, and
 the § 3 envelope decision.
