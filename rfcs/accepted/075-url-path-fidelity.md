@@ -69,8 +69,60 @@ though it is the least visible.
 > The confinement added by RFC 063 is the backstop and must stay; it is
 > not a substitute for getting the order right.
 
-**F-05** — apply the same case rule to every segment. Which rule is the
-open question below.
+### Case, and why the filesystem must not decide it
+
+**Measured 2026-09-01** on Linux, with `sub/users.json` on disk:
+
+| Request | Result |
+|---|---|
+| `/sub/users.json` | 200 |
+| `/sub/USERS.json` | **200** — apimock case-folds the filename itself (`dyn_route.rs:127`, `eq_ignore_ascii_case` over the directory listing) |
+| `/SUB/users.json` | **404** — the parent segment is handed to the filesystem |
+
+So the split is not arbitrary: apimock implements case-insensitivity for
+the **filename**, deliberately and with a documented rationale
+(`dyn_route.rs:18-25` — *"browsers often canonicalize paths … operators
+rarely care"*), and **delegates parent directories to the filesystem**.
+
+**That delegation is the defect, and it is a portability defect rather
+than merely an inconsistency.** Filesystem case behaviour differs by
+platform:
+
+| Platform | Typical filesystem | Case |
+|---|---|---|
+| Linux | ext4 etc. | **sensitive** |
+| Windows | NTFS | insensitive |
+| macOS | APFS (default) | insensitive |
+
+So `/SUB/users.json` returns **404 on Linux and 200 on Windows and
+macOS** — same config, same request, same apimock version.
+
+**Note which platform is the outlier.** It is Linux — and Linux is what
+CI runs. The failure mode is therefore *"works on my laptop, 404s in
+CI"*, which is the more confusing direction, and it is invisible until
+someone runs a committed rule set somewhere other than where they wrote
+it.
+
+**Resolution: uniformly case-insensitive, enforced by apimock.**
+
+- It matches the **documented intent** already recorded for filenames;
+  case-sensitivity would reverse a deliberate accommodation.
+- It is the only option apimock can actually *guarantee*. Case-sensitive
+  matching would require an explicit post-resolution case comparison on
+  every segment, because a case-insensitive filesystem will happily open
+  `SUB/users.json` regardless of what apimock intended. Case-sensitivity
+  is not freely available; it is extra machinery to defeat the host.
+- A rule set committed to a repository then behaves identically for
+  every developer and in CI, which is the property that matters for a
+  tool used in both.
+
+**Implementation consequence:** apimock must resolve each segment
+through its own case-folding comparison rather than passing the path to
+the filesystem and hoping. `dyn_route.rs:118-127` already does exactly
+this for the final segment; extend the same approach upward.
+
+**F-05** is therefore: apply the existing filename rule to every
+segment.
 
 **F-02** — compare prefixes segment-wise: `/api` matches `/api` and
 `/api/x`, not `/apixyz`.
@@ -96,9 +148,7 @@ open question below.
 
 ## Unresolved questions
 
-1. **Case-insensitive or case-sensitive, uniformly?** The current
-   behaviour is neither. Case-sensitive is what a filesystem does on
-   Linux and what a URL spec implies; case-insensitive is friendlier and
-   is what the last segment does today. **Establish which is documented
-   as intended** before implementing — this is a behaviour choice, not a
-   bug fix, and the answer decides whether existing configs break.
+1. ~~**Case-insensitive or case-sensitive, uniformly?**~~ ✅ **Resolved
+   2026-09-01 — uniformly case-insensitive, enforced by apimock at every
+   segment.** See § Design's "Case, and why the filesystem must not
+   decide it".
