@@ -1,4 +1,4 @@
-# 3. Running a mock server
+# Running a mock server
 
 ## Starting one
 

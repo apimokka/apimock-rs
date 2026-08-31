@@ -1,4 +1,4 @@
-# 1. Crates and architecture
+# Crates and architecture
 
 ## The four crates, and which you depend on
 

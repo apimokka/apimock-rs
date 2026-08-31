@@ -1,4 +1,4 @@
-# 4. API stability — what we promise, and what enforces it
+# API stability — what we promise, and what enforces it
 
 ## The promise
 
@@ -64,7 +64,7 @@ list is in the baselines — grep for `#[non_exhaustive]`.
 - `TraceConfig::default()`, `ServerControl::new()`, and so on.
 
 **If you need to construct a `#[non_exhaustive]` type and there is no
-constructor, that is a gap — tell us.** RFC 052 added constructors
+constructor, that is a gap — let us know.** RFC 052 added constructors
 where a cross-crate caller actually existed; you are a cross-crate
 caller who did not exist yet. `docs/src/guides/migrating-to-6-0.md`
 has the full reasoning.
@@ -80,13 +80,13 @@ The error types you will meet: `WorkspaceError`, `ApplyError`,
 `ServerErrorKind` / `TlsKind` (from `apimock-server`).
 
 `SaveError::Conflict` is the one with real semantics for a GUI — see
-[`02-editing-configuration.md`](./02-editing-configuration.md).
+[`02-editing-configuration.md`](./editing-configuration.md).
 
 ## Semver, concretely
 
 - **6.x** — additive only, gate-enforced. Upgrade freely.
 - **7.0** — may break. There is already one known candidate; see
-  [`06-known-gaps.md`](./06-known-gaps.md) § 1.
+  [`06-known-gaps.md`](./known-limitations.md) § 1.
 - The four crates are **always published together at the same
   version.** `version.sh` bumps every manifest in lockstep and CI
   asserts it. Do not mix 6.0.0 of one with 6.1.0 of another; the

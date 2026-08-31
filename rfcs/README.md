@@ -39,6 +39,30 @@ ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 > unimplemented until *after* 6.0.0 — enabling an additive-only gate
 > before the major that breaks things would have been backwards.
 
+Handoffs live under `handoffs/NNN-slug/` and inherit their status from
+the governing RFC — they are companion execution documents, not
+separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
+
+> **`handoffs/` is for work we commission from our own implementer**,
+> and nothing else. A few are named for a release or a task rather than
+> an RFC number (`6-0-0-…`, `post-6-0-0-…`); those still commission
+> execution here, which is what makes them handoffs.
+>
+> **A document addressed to another team is not one.** It commissions
+> nothing in this repository and has no RFC status to inherit. Split it
+> by what it actually is:
+>
+> - **Explaining our published surface** → `docs/src/`, where it is
+>   published, versioned with the code, and covered by the documentation
+>   gates. `docs/src/library/` exists for exactly this.
+> - **A specific ask to a specific team** → `.git-exclude/`, as
+>   correspondence, alongside review-requests and release plans.
+>
+> Added 2026-08-30, after a package for an external app team was filed
+> here where it matched neither RFC 000's definition nor its own purpose:
+> it identified a missing library guide, then sat somewhere it could not
+> serve as one.
+
 ## Done (Released)
 
 | ID  | Title | Shipped |

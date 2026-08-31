@@ -43,6 +43,15 @@
 
 ---
 
+- [Using apimock as a library](./library/README.md)
+    - [Crates and architecture](./library/crates-and-architecture.md)
+    - [Editing a configuration](./library/editing-configuration.md)
+    - [Running a mock server](./library/running-a-mock-server.md)
+    - [API stability](./library/api-stability.md)
+    - [Known limitations](./library/known-limitations.md)
+
+---
+
 - [How it works](./how-it-works/README.md)
     - [Matching order and precedence](./how-it-works/matching-order-and-precedence.md)
     - [Response decision flow](./how-it-works/response-decision-flow.md)

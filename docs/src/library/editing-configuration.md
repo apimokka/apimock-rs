@@ -1,4 +1,4 @@
-# 2. Editing a configuration — the `Workspace` model
+# Editing a configuration — the `Workspace` model
 
 This is your core loop, and the part of the library most deliberately
 shaped for you.
@@ -56,7 +56,7 @@ UpdateRootSetting
 ```
 
 **This is a closed set.** If a GUI gesture does not map onto one of
-these, there is no supported way to express it — tell us rather than
+these, there is no supported way to express it — open an issue rather than
 editing TOML behind the workspace's back. Adding a variant is additive
 and cheap; two writers to the same file is not.
 
@@ -134,5 +134,5 @@ establishing early:
 - Whether it is cheap enough to poll on a timer, or wants a filesystem
   watcher in front of it.
 
-Please tell us what you find. This is exactly the surface where a first
+Please let us know what you find. This is exactly the surface where a first
 real consumer produces better design than more speculation would.
