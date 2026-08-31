@@ -57,6 +57,12 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 >   gates. `docs/src/library/` exists for exactly this.
 > - **A specific ask to a specific team** → `.git-exclude/`, as
 >   correspondence, alongside review-requests and release plans.
+>   Name it `<version>-for-<team>` —
+>   `.git-exclude/handoff-external/6.0.0-for-gui-app-team/` is the first.
+>   **The version is the point:** such a document describes one API
+>   surface, so when a major release changes it the successor supersedes
+>   it rather than mutating it in place, and the old one stays an
+>   accurate record of what that team was told at the time.
 >
 > Added 2026-08-30, after a package for an external app team was filed
 > here where it matched neither RFC 000's definition nor its own purpose:
