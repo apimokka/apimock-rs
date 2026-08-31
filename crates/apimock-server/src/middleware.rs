@@ -19,8 +19,9 @@ pub use middleware_handler::MiddlewareHandler;
 
 /// An ordered list of compiled middleware handlers.
 ///
-/// Compilation happens once at server startup (see [`compile`]) so the
-/// per-request path is free of filesystem reads and Rhai parsing cost.
+/// Compilation happens once at server startup (see
+/// [`compile`](LoadedMiddlewares::compile)) so the per-request path is
+/// free of filesystem reads and Rhai parsing cost.
 #[derive(Clone, Default)]
 pub struct LoadedMiddlewares {
     handlers: Vec<MiddlewareHandler>,

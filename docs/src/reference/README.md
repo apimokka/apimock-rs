@@ -1,7 +1,7 @@
 # Reference
 
 Exhaustive lookup — what exactly a setting or a flag does. Looking for
-a walkthrough instead? See [Guides](../guides/README.md).
+a walkthrough instead? See [Guides](../guides/).
 
 - [`apimock.toml` root settings](./apimock-toml-root-settings.md)
 - [Rule-set schema](./rule-set-schema.md)

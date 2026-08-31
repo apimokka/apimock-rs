@@ -8,9 +8,12 @@ use serde::Deserialize;
 /// The original `FirstMatch` strategy is unchanged and remains the
 /// default. Three new strategies are added:
 ///
-/// - [`UniformRandom`] — pick uniformly at random from all matching rules.
-/// - [`WeightedRandom`] — pick randomly, weighted by each rule's `weight`.
-/// - [`Priority`] — group by priority, apply a tiebreaker within the group.
+/// - [`UniformRandom`](Strategy::UniformRandom) — pick uniformly at
+///   random from all matching rules.
+/// - [`WeightedRandom`](Strategy::WeightedRandom) — pick randomly,
+///   weighted by each rule's `weight`.
+/// - [`Priority`](Strategy::Priority) — group by priority, apply a
+///   tiebreaker within the group.
 #[derive(Clone, Deserialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]

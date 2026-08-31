@@ -28,17 +28,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       
+      # Post-6.0.0 docs-integrity handoff § 3: this used to resolve
+      # "latest" via an unauthenticated api.github.com call, which
+      # rate-limited during unrelated work and failed a required job
+      # for a reason invisible in the diff. Pinned instead — removes
+      # the API call entirely (a release-asset download URL isn't
+      # subject to the REST API's rate limit) and makes the build
+      # reproducible, which resolving "latest" every run prevented.
+      # `ci.yaml` carries the identical step; bump both together.
       - name: Install mdBook and extension(s)
+        env:
+          MDBOOK_VERSION: 0.5.4
+          MDBOOK_MERMAID_VERSION: 0.17.1
         run: |
-          MDBOOK_URL=$(curl -sL https://api.github.com/repos/rust-lang/mdBook/releases/latest \
-          | jq -r '.assets[] | select(.name | test("x86_64-unknown-linux-gnu\\.tar\\.gz$")) | .browser_download_url')
-          echo mdbook: $MDBOOK_URL
-          curl -L $MDBOOK_URL | tar -xz
+          curl -sL "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VERSION}/mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz" | tar -xz
           sudo mv mdbook /usr/local/bin/
-          MDBOOK_MERMAID_URL=$(curl -sL https://api.github.com/repos/badboy/mdbook-mermaid/releases/latest \
-          | jq -r '.assets[] | select(.name | test("x86_64-unknown-linux-gnu\\.tar\\.gz$")) | .browser_download_url')
-          echo mdbook-mermaid: $MDBOOK_MERMAID_URL
-          curl -L $MDBOOK_MERMAID_URL | tar -xz
+          curl -sL "https://github.com/badboy/mdbook-mermaid/releases/download/v${MDBOOK_MERMAID_VERSION}/mdbook-mermaid-v${MDBOOK_MERMAID_VERSION}-x86_64-unknown-linux-gnu.tar.gz" | tar -xz
           sudo mv mdbook-mermaid /usr/local/bin/
       
       - name: mdbook build

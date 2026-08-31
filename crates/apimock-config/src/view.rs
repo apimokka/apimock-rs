@@ -290,9 +290,9 @@ pub enum EditCommand {
 
 /// Stable identity for one condition, assigned at snapshot time.
 ///
-/// Returned by [`Workspace::snapshot`] alongside each condition view so
-/// GUI code can target granular edit commands without reading index
-/// positions.
+/// Returned by [`Workspace::snapshot`](crate::workspace::Workspace::snapshot)
+/// alongside each condition view so GUI code can target granular edit
+/// commands without reading index positions.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub struct ConditionWithId<V> {

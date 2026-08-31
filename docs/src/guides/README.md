@@ -1,7 +1,7 @@
 # Guides
 
 Task-indexed — each page stands on its own. New here? Start at
-[Getting started](../getting-started/README.md) instead.
+[Getting started](../getting-started/) instead.
 
 - [Serve JSON files from a folder](./serve-json-files-from-a-folder.md)
 - [Match on URL path and method](./match-on-url-path-and-method.md)

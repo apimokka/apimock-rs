@@ -104,8 +104,10 @@ pub async fn parsed_request_from(
 /// still redacts — `TraceConfig::default()` carries the default
 /// denylist — so an out-of-tree caller gets the security fix for free
 /// rather than needing to opt in. In-workspace, use
-/// [`capture_in_log_with_trace_config`], which shares the server's own
-/// `TraceConfig` instead of a fresh default one.
+/// `capture_in_log_with_trace_config` (crate-private by design — not
+/// linked here since it isn't part of this crate's public surface),
+/// which shares the server's own `TraceConfig` instead of a fresh
+/// default one.
 pub fn capture_in_log(request: &ParsedRequest, verbose: VerboseConfig) {
     capture_in_log_with_trace_config(request, verbose, &TraceConfig::default())
 }

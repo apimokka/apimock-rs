@@ -40,9 +40,12 @@ pub struct Body(pub HashMap<BodyKind, IndexMap<String, BodyConditionStatement>>)
 
 /// Per-condition statement for body matching.
 ///
-/// Uses [`BodyOperator`] instead of the shared [`ConditionStatement`]
+/// Uses [`BodyOperator`] instead of the shared
+/// [`ConditionStatement`](crate::rule_set::rule::when::condition_statement::ConditionStatement)
 /// type so the richer body operator set doesn't bleed into header
-/// matching (which uses [`ConditionStatement`] + [`super::rule_op::RuleOp`]).
+/// matching (which uses
+/// [`ConditionStatement`](crate::rule_set::rule::when::condition_statement::ConditionStatement)
+/// + [`super::rule_op::RuleOp`]).
 #[derive(Clone, Debug, Deserialize)]
 pub struct BodyConditionStatement {
     pub op: Option<BodyOperator>,

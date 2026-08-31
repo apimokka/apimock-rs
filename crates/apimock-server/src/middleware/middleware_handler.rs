@@ -37,7 +37,10 @@ pub struct MiddlewareHandler {
     /// The middleware script's own directory, canonicalised once here
     /// at compile time. A file path the script returns is confined to
     /// this directory the same way a rule's `respond.file_path` is
-    /// confined to `respond_dir` — see [`MiddlewareResponse::file_response`].
+    /// confined to `respond_dir` — see `MiddlewareResponse::file_response`
+    /// (private to this crate; not linked here since rustdoc's public
+    /// docs can't resolve a private item, and widening its visibility
+    /// is a separate, deliberate decision — not this comment's to make).
     pub confine_to: Option<PathBuf>,
 }
 

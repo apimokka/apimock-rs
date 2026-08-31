@@ -4,11 +4,13 @@ use serde::Deserialize;
 ///
 /// # String-style operators (5.7.0 baseline)
 ///
-/// These are the original operators. [`Equal`] retains the 5.7.0
-/// string-coercion behaviour for backwards compatibility — both the
-/// JSON value at the dotted path and the configured `value` string are
-/// coerced to strings before comparison. Use [`EqualString`] for an
-/// explicit alias, or [`EqualTyped`] to require an exact JSON-type match.
+/// These are the original operators. [`Equal`](BodyOperator::Equal)
+/// retains the 5.7.0 string-coercion behaviour for backwards
+/// compatibility — both the JSON value at the dotted path and the
+/// configured `value` string are coerced to strings before comparison.
+/// Use [`EqualString`](BodyOperator::EqualString) for an explicit
+/// alias, or [`EqualTyped`](BodyOperator::EqualTyped) to require an
+/// exact JSON-type match.
 ///
 /// # Numeric operators (RFC 008)
 ///
@@ -20,36 +22,40 @@ use serde::Deserialize;
 ///
 /// # Type-aware equality (RFC 008)
 ///
-/// [`EqualTyped`] matches only when the JSON value at the path is
-/// *exactly* equal to the configured JSON value **including type**.
-/// It distinguishes `42` (Number) from `"42"` (String). The configured
-/// `value` string is parsed as JSON (`serde_json::from_str`) at match
-/// time; a non-JSON `value` always fails.
+/// [`EqualTyped`](BodyOperator::EqualTyped) matches only when the JSON
+/// value at the path is *exactly* equal to the configured JSON value
+/// **including type**. It distinguishes `42` (Number) from `"42"`
+/// (String). The configured `value` string is parsed as JSON
+/// (`serde_json::from_str`) at match time; a non-JSON `value` always
+/// fails.
 ///
 /// # Presence operators (RFC 008)
 ///
-/// [`Exists`] / [`Absent`] assert whether the dotted path resolves to
-/// anything in the request JSON. The configured `value` field is
-/// ignored for these operators.
+/// [`Exists`](BodyOperator::Exists) / [`Absent`](BodyOperator::Absent)
+/// assert whether the dotted path resolves to anything in the request
+/// JSON. The configured `value` field is ignored for these operators.
 ///
 /// # Array operators (RFC 008)
 ///
 /// Require the value at the path to be a JSON array.
-/// - [`ArrayLengthEqual`] / [`ArrayLengthAtLeast`]: compare array
-///   length against the configured value (parsed as a non-negative
-///   integer).
-/// - [`ArrayContains`]: checks whether any element in the array equals
-///   the configured value (parsed as JSON for typed comparison).
+/// - [`ArrayLengthEqual`](BodyOperator::ArrayLengthEqual) /
+///   [`ArrayLengthAtLeast`](BodyOperator::ArrayLengthAtLeast): compare
+///   array length against the configured value (parsed as a
+///   non-negative integer).
+/// - [`ArrayContains`](BodyOperator::ArrayContains): checks whether any
+///   element in the array equals the configured value (parsed as JSON
+///   for typed comparison).
 #[derive(Clone, Deserialize, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum BodyOperator {
     // ── string-style (baseline) ─────────────────────────────────────
-    /// String-coercion equality. Alias: [`EqualString`]. Kept for
-    /// backwards compatibility with 5.7.0 rule files.
+    /// String-coercion equality. Alias: [`EqualString`](Self::EqualString).
+    /// Kept for backwards compatibility with 5.7.0 rule files.
     #[default]
     Equal,
-    /// Explicit alias for [`Equal`]. Prefer this in new rules for
-    /// clarity when numeric or typed operators are also present.
+    /// Explicit alias for [`Equal`](Self::Equal). Prefer this in new
+    /// rules for clarity when numeric or typed operators are also
+    /// present.
     EqualString,
     /// Substring check (string-coercion semantics).
     Contains,

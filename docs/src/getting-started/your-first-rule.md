@@ -81,5 +81,5 @@ This is enough to build most mock APIs. Once you outgrow it:
 [Match on headers](../guides/match-on-headers.md), and
 [Match on the request body](../guides/match-on-the-request-body.md)
 cover every operator available for each; the
-[Guides](../guides/README.md) index covers everything else, including
+[Guides](../guides/) index covers everything else, including
 scripting, strategies, TLS, and CI validation.
