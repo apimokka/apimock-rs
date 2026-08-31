@@ -7,4 +7,4 @@ Read in order — each page builds on the last.
 3. [Your first rule](./your-first-rule.md)
 
 Already running and looking for a specific task instead? See
-[Guides](../guides/README.md).
+[Guides](../guides/).

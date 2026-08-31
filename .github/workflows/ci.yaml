@@ -436,7 +436,84 @@ jobs:
   # here instead, where `pull_request` already applies via this
   # workflow's own top-level `on:` trigger. Installs the same
   # mdbook/mdbook-mermaid pair `docs.yaml` does, from the same source,
-  # so a build that passes here passes there too.
+  # so a build that passes here passes there too. `docs.yaml` itself
+  # runs on every push to `main`, whether that's a merged PR (already
+  # covered by this job) or a direct commit (RFC 066 § 6) -- so the
+  # checks below also see every direct-to-main commit via this
+  # workflow's own `push: branches: [main]` trigger, not only PRs.
+  #
+  # Post-6.0.0 docs-integrity handoff § 1: `mdbook build` alone checks
+  # nothing about *content* - two of the three deliberate breaks tried
+  # against it produced no error at all (an unclosed code fence; a
+  # SUMMARY.md entry for a page that doesn't exist, which mdbook
+  # silently stubs rather than failing on). Two checks added for that,
+  # each catching what the other structurally cannot:
+  #
+  # - The stub case is invisible to any link checker - the stub file
+  #   really does get created, so the link to it genuinely resolves.
+  #   Caught instead by checking whether `mdbook build` touched
+  #   anything under `docs/src` at all - on a clean checkout it never
+  #   should, so any diff there names exactly the SUMMARY.md entry that
+  #   caused it.
+  # - The handoff named `mdbook-linkcheck` for broken internal links/
+  #   anchors. **Substituted for `lychee`, established rather than
+  #   assumed**: `mdbook-linkcheck`'s last release is 2022-10-03, and it
+  #   fails outright against this project's mdbook (0.5.4) with
+  #   "Unable to parse RenderContext ... missing field `sections`" - a
+  #   renderer-protocol incompatibility from years of mdbook changes
+  #   since, not a config problem. `lychee` doesn't have this problem
+  #   because it isn't an mdbook renderer backend at all - it scans the
+  #   *built* HTML directly, so it has no protocol to fall out of sync
+  #   with. `--offline` skips external URLs deliberately (an external
+  #   site's own availability is not this book's problem to fail a
+  #   build over); `--include-fragments` is what actually catches an
+  #   anchor like the one that shipped undetected until RFC 065 -
+  #   confirmed by reproducing that exact shape of break locally before
+  #   writing this job, not assumed from lychee's flag description.
+
+  # Post-6.0.0 docs-integrity handoff § 2: nothing ran `cargo doc`
+  # before this, so 16 `rustdoc::broken_intra_doc_links` warnings in
+  # `apimock-routing` sat unseen (surfaced only as a side effect of
+  # generating RFC 039's public-API baseline, which discards rustdoc's
+  # stderr on purpose - those warnings aren't about the public API
+  # shape RFC 039 gates). A workspace-wide `cargo doc` swept up 5 more
+  # in `apimock-config`/`apimock-server` the routing-only run never
+  # touched; all 21 fixed in this same commit (all unambiguous - either
+  # a doc-link missing its item's full/relative path, or a link to a
+  # crate-private item de-linked rather than made public, since
+  # widening visibility is a separate, deliberate decision RFC 039 now
+  # exists to make declared, not this task's to make by accident).
+  #
+  # `RUSTDOCFLAGS="-D warnings"` turns a broken doc link into a build
+  # failure rather than a warning nobody reads - a warning nobody reads
+  # is exactly how these 21 accumulated. `--no-deps`: this is about
+  # this workspace's own doc comments, not third-party crates'.
+  rustdoc:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: "-D warnings"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        run: bash .github/workflows/scripts/install-rust.sh stable
+
+      - name: Cache cargo dependencies and build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: cargo doc --workspace --no-deps
+        run: cargo doc --workspace --no-deps
+
   docs:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -444,19 +521,43 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      # Post-6.0.0 docs-integrity handoff § 3: this used to resolve
+      # "latest" via an unauthenticated api.github.com call, which
+      # rate-limited during unrelated work and failed this required job
+      # for a reason invisible in the diff. Pinned instead, exactly
+      # like `docs.yaml`'s identical step - see its own comment for the
+      # full reasoning; bump both together.
       - name: Install mdBook and extension(s)
+        env:
+          MDBOOK_VERSION: 0.5.4
+          MDBOOK_MERMAID_VERSION: 0.17.1
         run: |
-          MDBOOK_URL=$(curl -sL https://api.github.com/repos/rust-lang/mdBook/releases/latest \
-          | jq -r '.assets[] | select(.name | test("x86_64-unknown-linux-gnu\\.tar\\.gz$")) | .browser_download_url')
-          echo mdbook: $MDBOOK_URL
-          curl -L $MDBOOK_URL | tar -xz
+          curl -sL "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VERSION}/mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz" | tar -xz
           sudo mv mdbook /usr/local/bin/
-          MDBOOK_MERMAID_URL=$(curl -sL https://api.github.com/repos/badboy/mdbook-mermaid/releases/latest \
-          | jq -r '.assets[] | select(.name | test("x86_64-unknown-linux-gnu\\.tar\\.gz$")) | .browser_download_url')
-          echo mdbook-mermaid: $MDBOOK_MERMAID_URL
-          curl -L $MDBOOK_MERMAID_URL | tar -xz
+          curl -sL "https://github.com/badboy/mdbook-mermaid/releases/download/v${MDBOOK_MERMAID_VERSION}/mdbook-mermaid-v${MDBOOK_MERMAID_VERSION}-x86_64-unknown-linux-gnu.tar.gz" | tar -xz
           sudo mv mdbook-mermaid /usr/local/bin/
+
+      - name: Install lychee
+        env:
+          LYCHEE_VERSION: 0.24.2
+        run: |
+          curl -sL "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" | tar -xz
+          sudo mv lychee-x86_64-unknown-linux-gnu/lychee /usr/local/bin/
 
       - name: mdbook build
         working-directory: docs
         run: mdbook build
+
+      - name: Check for a silently-stubbed page (SUMMARY.md entry with no source file)
+        working-directory: docs
+        run: |
+          if [ -n "$(git status --porcelain src)" ]; then
+            echo "::error::mdbook build modified docs/src on a clean checkout - almost always a SUMMARY.md entry naming a page that doesn't exist, which mdbook stubs instead of failing on. Add the missing page, or remove the SUMMARY.md entry."
+            git status --porcelain src
+            exit 1
+          fi
+
+      - name: Check links (internal files and anchors; external links skipped deliberately)
+        working-directory: docs
+        run: |
+          lychee --offline --include-fragments --root-dir "$(pwd)/book" book/

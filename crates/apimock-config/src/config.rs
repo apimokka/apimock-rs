@@ -47,8 +47,8 @@ pub struct Config {
     pub log: Option<LogConfig>,
     pub service: ServiceConfig,
     /// Optional filter configuration for `FileTreeView`. When absent,
-    /// [`FileTreeViewConfig::default()`] applies (dotfiles hidden,
-    /// built-in excludes on).
+    /// [`FileTreeViewConfig::default()`](file_tree_config::FileTreeViewConfig::default)
+    /// applies (dotfiles hidden, built-in excludes on).
     pub file_tree_view: Option<file_tree_config::FileTreeViewConfig>,
 }
 
