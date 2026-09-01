@@ -155,6 +155,31 @@ approves *code*; it never approves a release action.
 > jobs, adding or removing a published artefact, or touching
 > `id-token`/registry configuration does not — those stay owner-only.
 
+> ### Amendment 3 — 2026-09-01: a direct push to `main` is verified too
+>
+> § 1's **Green** precondition governs merges. § 6 permits the architect
+> to commit documents straight to `main`. Nothing covered the gap, and
+> the gap turned out to matter:
+>
+> **`main`'s CI was red for roughly 40 hours across nine consecutive
+> architect pushes** (2026-08-31 `3d8bdd8` → 2026-09-01 `3b16397`), from
+> two dead documentation links introduced by the first of them. It was
+> found by the dev team, whose branch inherited the failure, and fixed
+> outside their tranche's scope because it was blocking them.
+>
+> Throughout that window every dev-team branch was verified by hash,
+> job by job. None of that was applied to `main` itself.
+>
+> **Therefore: after any direct push to `main`, confirm its CI run
+> completes green before moving on.** Not the branch you came from — the
+> run triggered by that push. If it fails, fix it before starting the
+> next thing; a red `main` is inherited by everyone who branches from it,
+> and the person who finds it is not the person who broke it.
+>
+> This is the same **Green** discipline § 1 already requires of the dev
+> team. The asymmetry was never justified — it existed because "no review
+> needed" was silently read as "no verification needed".
+
 ### 3. The working tree is shared
 
 More than one agent works in the same checkout. Therefore:
