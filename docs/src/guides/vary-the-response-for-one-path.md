@@ -81,6 +81,44 @@ Cycles through matches in file order, one per request:
 `server-a`, `server-b`, `server-a`, `server-b`, ... Deterministic, and
 doesn't need `weight` or `priority` set on any rule.
 
+**Rotation is per *match group*, not per rule set** (RFC 070). The
+example above has one group — every request to `/round-robin` matches
+the same two rules — so "cycles through matches in file order" is the
+whole story there. A rule set that serves more than one distinct
+request shape rotates each shape independently:
+
+```toml
+strategy = "round_robin"
+
+[[rules]]
+when.request.url_path = "/a"
+respond.text = "a1"
+
+[[rules]]
+when.request.url_path = "/a"
+respond.text = "a2"
+
+[[rules]]
+when.request.url_path = "/b"
+respond.text = "b1"
+
+[[rules]]
+when.request.url_path = "/b"
+respond.text = "b2"
+
+[[rules]]
+when.request.url_path = "/b"
+respond.text = "b3"
+```
+
+Requesting `/a` four times in a row gives `a1 a2 a1 a2`, exactly as the
+single-group case above. Requesting `/a` and `/b` **alternately** gives
+`/a`: `a1 a2 a1 a2` and `/b`: `b1 b2 b3 b1` — each path's own two- or
+three-rule cycle, independent of how often the other path is also
+requested. Two requests that match the same set of rules always share
+one counter; two requests that match a different set of rules never
+share one, no matter how they're interleaved.
+
 ## Where `strategy` goes
 
 `service.strategy` sets the default for every rule set. A rule set's

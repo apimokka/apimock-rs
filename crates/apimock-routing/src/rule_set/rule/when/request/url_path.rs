@@ -29,6 +29,7 @@ impl std::fmt::Display for UrlPathConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct UrlPath {
     pub value: String,
     #[serde(skip)]

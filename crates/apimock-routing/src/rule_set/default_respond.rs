@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 #[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct DefaultRespond {
     pub delay_response_milliseconds: Option<u32>,
 }

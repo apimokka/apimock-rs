@@ -211,8 +211,12 @@ x-role = { op = "starts_with", value = "admin" }"#,
 }
 
 #[test]
-fn is_match_utf8_decode_failure_returns_true() {
-    // Non-UTF-8 header values are treated as "pass" — log error, don't block.
+fn is_match_utf8_decode_failure_returns_false() {
+    // RFC 072: a header condition is a gate; a value that cannot be read
+    // as UTF-8 does not satisfy it, regardless of the operator — fail
+    // closed, not fail open. See `rule_check.rs`'s agreement test in the
+    // `apimock` crate for the corpus proving this holds across every
+    // operator, and that `match-test` agrees.
     use hyper::header::HeaderName;
     let h = parse_headers(r#"x-bin = { value = "anything" }"#);
     let mut map = HeaderMap::new();
@@ -220,7 +224,35 @@ fn is_match_utf8_decode_failure_returns_true() {
         HeaderName::from_static("x-bin"),
         HeaderValue::from_bytes(b"\xff\xfe").unwrap(),
     );
+    assert!(!h.is_match(&map, 0, 0));
+}
+
+#[test]
+fn is_match_utf8_decode_failure_still_satisfies_exists() {
+    // The header genuinely is present; `exists` only asks that, and
+    // never attempts to decode the value.
+    use hyper::header::HeaderName;
+    let h = parse_headers(r#"x-bin = { op = "exists" }"#);
+    let mut map = HeaderMap::new();
+    map.insert(
+        HeaderName::from_static("x-bin"),
+        HeaderValue::from_bytes(b"\xff\xfe").unwrap(),
+    );
     assert!(h.is_match(&map, 0, 0));
+}
+
+#[test]
+fn is_match_utf8_decode_failure_does_not_satisfy_absent() {
+    // "Cannot be read" is not "not present" — a present-but-undecodable
+    // header must not satisfy `absent`. The deliberate RFC 072 decision.
+    use hyper::header::HeaderName;
+    let h = parse_headers(r#"x-bin = { op = "absent" }"#);
+    let mut map = HeaderMap::new();
+    map.insert(
+        HeaderName::from_static("x-bin"),
+        HeaderValue::from_bytes(b"\xff\xfe").unwrap(),
+    );
+    assert!(!h.is_match(&map, 0, 0));
 }
 
 // ── Validate ─────────────────────────────────────────────────────────

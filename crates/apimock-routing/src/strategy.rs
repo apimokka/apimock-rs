@@ -41,8 +41,10 @@ pub enum Strategy {
         #[serde(default)]
         tiebreaker: PriorityTiebreaker,
     },
-    /// Cycle through matching rules in order, one per request.
-    /// State is kept in an `Arc<AtomicUsize>` on the parent `RuleSet`.
+    /// Cycle through matching rules in order, one per request. Rotates
+    /// independently per distinct set of matching rules (RFC 070) —
+    /// state is kept in a per-match-group counter map on the parent
+    /// `RuleSet`, not one counter for the whole rule set.
     RoundRobin,
 }
 

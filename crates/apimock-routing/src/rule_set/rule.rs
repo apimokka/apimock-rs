@@ -24,6 +24,7 @@ type ConditionKey = String;
 /// assignable.
 #[derive(Clone, Deserialize, Debug)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct Rule {
     pub when: When,
     pub respond: Respond,

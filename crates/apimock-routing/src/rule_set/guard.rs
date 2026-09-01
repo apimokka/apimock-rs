@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 #[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Guard {
     // todo: some fields to define condition affecting a single rule set wholly
 }

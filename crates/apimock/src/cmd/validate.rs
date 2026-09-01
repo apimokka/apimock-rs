@@ -36,7 +36,64 @@
 
 use apimock_config::{Severity, Workspace};
 
+use crate::args::near_match;
 use crate::cmd::envelope::{self, Format};
+
+/// RFC 069: `#[serde(deny_unknown_fields)]` on the rule-facing structs
+/// makes `toml`'s own deserializer name the unknown key, and — because
+/// it already knows exactly which struct rejected it — the full list of
+/// keys that struct *does* accept, in its error message: `unknown field
+/// `headerz`, expected `headers` or `url_path`` (two candidates),
+/// `expected one of `a`, `b`, `c`` (three or more), or `expected
+/// `headers`` (one). Parsed here rather than maintained as a second,
+/// separately-updated list of "known rule-facing field names" — the
+/// message is already scoped to the exact struct that failed, which a
+/// hand-maintained list in this crate could not be without duplicating
+/// every rule-facing struct's field set and keeping it in sync by hand.
+///
+/// Returns `None` if `message` isn't this shape (a config load can fail
+/// for many other reasons), or if nothing in the expected list is close
+/// enough to be a plausible correction (`near_match`'s own threshold —
+/// RFC 059's same machinery, reused here per RFC 069's design).
+///
+/// Searches for the phrase anywhere in `message` rather than requiring
+/// it as a prefix — the caller's `message` is the *whole* load-failure
+/// text (e.g. `"failed to load config: invalid rule set TOML in ...:
+/// TOML parse error at line 3, column 21\n  |\n3 | ...\n  | ^^^\nunknown
+/// field ..."`), not the bare `toml::de::Error::message()` string in
+/// isolation.
+fn unknown_field_suggestion(message: &str) -> Option<String> {
+    let idx = message.find("unknown field `")?;
+    let rest = &message[idx + "unknown field `".len()..];
+    let (field, rest) = rest.split_once('`')?;
+    let rest = rest.strip_prefix(", expected ")?;
+    let rest = rest.strip_prefix("one of ").unwrap_or(rest);
+
+    let candidates: Vec<&str> = rest
+        .split(|c: char| c == ',' || c.is_whitespace())
+        .filter(|s| s.len() >= 2 && s.starts_with('`') && s.ends_with('`'))
+        .map(|s| &s[1..s.len() - 1])
+        .collect();
+
+    let suggestion = near_match(field, &candidates)?;
+    Some(format!(" (did you mean `{suggestion}`?)"))
+}
+
+/// Append [`unknown_field_suggestion`]'s hint to `message` if one
+/// applies — otherwise `message` unchanged. Small wrapper so call sites
+/// read as "the message, augmented" rather than repeating the
+/// `map`/`unwrap_or` at every print site.
+fn with_unknown_field_hint(message: String) -> String {
+    match unknown_field_suggestion(&message) {
+        // `toml::de::Error`'s own Display ends in a trailing newline
+        // (the underlying multi-line "TOML parse error at line N ..."
+        // rendering); trimmed here so the hint reads immediately after
+        // the "expected ..." text on the same line, not on a line of
+        // its own below a blank-looking gap.
+        Some(hint) => message.trim_end().to_owned() + hint.as_str(),
+        None => message,
+    }
+}
 
 /// Flags parsed from the `apimock validate` command line.
 pub struct ValidateArgs {
@@ -216,17 +273,15 @@ pub fn run(args: &[String]) -> i32 {
     let ws = match Workspace::load(parsed.config_path.clone().into()) {
         Ok(ws) => ws,
         Err(e) => {
+            let message = with_unknown_field_hint(format!("failed to load config: {}", e));
             if is_envelope {
-                let envelope = envelope::err(
-                    envelope::kind_for_workspace_error(&e),
-                    format!("failed to load config: {}", e),
-                );
+                let envelope = envelope::err(envelope::kind_for_workspace_error(&e), message);
                 println!(
                     "{}",
                     serde_json::to_string_pretty(&envelope).unwrap_or_default()
                 );
             } else if !parsed.quiet {
-                eprintln!("apimock validate: failed to load config: {}", e);
+                eprintln!("apimock validate: {}", message);
             }
             return 2;
         }
@@ -323,6 +378,76 @@ pub fn run(args: &[String]) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── RFC 069: unknown-field near-match suggestion ────────────────
+
+    #[test]
+    fn unknown_field_suggestion_fires_for_headerz_to_headers() {
+        let msg = "unknown field `headerz`, expected one of `url_path`, `method`, `headers`, \
+                    `body`";
+        assert_eq!(
+            unknown_field_suggestion(msg).as_deref(),
+            Some(" (did you mean `headers`?)")
+        );
+    }
+
+    #[test]
+    fn unknown_field_suggestion_two_candidate_form() {
+        // serde's "expected `a` or `b`" wording (exactly two candidates)
+        // differs from the "expected one of `a`, `b`, `c`" wording
+        // (three or more) — both must parse.
+        let msg = "unknown field `hedaers`, expected `headers` or `url_path`";
+        assert_eq!(
+            unknown_field_suggestion(msg).as_deref(),
+            Some(" (did you mean `headers`?)")
+        );
+    }
+
+    #[test]
+    fn unknown_field_suggestion_single_candidate_form() {
+        let msg = "unknown field `dela`, expected `delay_response_milliseconds`";
+        // Too far an edit distance from the one candidate to be a
+        // plausible typo — `near_match`'s own threshold, unchanged by
+        // this function.
+        assert_eq!(unknown_field_suggestion(msg), None);
+    }
+
+    #[test]
+    fn unknown_field_suggestion_embedded_in_a_larger_multi_line_message() {
+        // The real shape this function actually receives: the full
+        // `toml::de::Error` Display (line/column context, a `^^^^`
+        // underline, then the message) wrapped inside this crate's own
+        // "failed to load config: ..." / "invalid rule set TOML in
+        // `path`: ..." prefix — not the bare `.message()` string.
+        let msg = "failed to load config: invalid rule set TOML in `rules.toml`: TOML parse \
+                    error at line 3, column 21\n  |\n3 | [rules.when.request.headerz]\n  |     \
+                    ^^^^^^^\nunknown field `headerz`, expected one of `url_path`, `method`, \
+                    `headers`, `body`\n";
+        assert_eq!(
+            unknown_field_suggestion(msg).as_deref(),
+            Some(" (did you mean `headers`?)")
+        );
+    }
+
+    #[test]
+    fn unknown_field_suggestion_none_for_an_unrelated_message() {
+        assert_eq!(unknown_field_suggestion("no such file or directory"), None);
+    }
+
+    #[test]
+    fn with_unknown_field_hint_trims_the_trailing_newline_before_appending() {
+        let msg = "unknown field `headerz`, expected `headers` or `url_path`\n".to_owned();
+        assert_eq!(
+            with_unknown_field_hint(msg),
+            "unknown field `headerz`, expected `headers` or `url_path` (did you mean `headers`?)"
+        );
+    }
+
+    #[test]
+    fn with_unknown_field_hint_unchanged_when_no_suggestion_applies() {
+        let msg = "some other failure entirely".to_owned();
+        assert_eq!(with_unknown_field_hint(msg.clone()), msg);
+    }
 
     #[test]
     fn parse_args_requires_config() {

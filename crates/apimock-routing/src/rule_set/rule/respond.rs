@@ -42,6 +42,7 @@ use std::{
 /// JSON is not a JSON body.
 #[derive(Clone, Default, Deserialize, Debug)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct Respond {
     pub file_path: Option<String>,
     pub csv_records_key: Option<String>,

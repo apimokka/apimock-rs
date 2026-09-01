@@ -7,6 +7,7 @@ use crate::parsed_request::ParsedRequest;
 use request::Request;
 
 #[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct When {
     pub request: Request,
 }

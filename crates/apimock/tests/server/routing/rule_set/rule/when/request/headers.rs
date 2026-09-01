@@ -177,6 +177,28 @@ async fn not_match_headers_key_1() {
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
+/// RFC 072 — a header condition must not be satisfied by a value that
+/// cannot be read as UTF-8. Before the fix, `headers.rs` returned `true`
+/// on the decode failure, so this exact request would have matched the
+/// `user.equal "user1"` rule and served its response despite the value
+/// not being `"user1"` — it couldn't be, it isn't valid UTF-8 at all.
+#[tokio::test]
+async fn not_match_headers_key_non_utf8_value_fails_closed() {
+    let port = setup().await;
+
+    let mut headers: HeaderMap<HeaderValue> = HeaderMap::new();
+    headers.insert(
+        HeaderName::from_static("user"),
+        HeaderValue::from_bytes(&[0xFF, 0xFE]).expect("raw bytes are a valid header value"),
+    );
+    let response = TestRequest::default("/headers", port)
+        .with_headers(&headers)
+        .send()
+        .await;
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+}
+
 /// internal setup fn
 async fn setup() -> u16 {
     let test_setup =

@@ -3,6 +3,7 @@ use serde::Deserialize;
 use super::request::rule_op::RuleOp;
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConditionStatement {
     pub op: Option<RuleOp>,
     pub value: String,

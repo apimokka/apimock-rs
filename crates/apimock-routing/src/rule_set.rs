@@ -28,13 +28,34 @@ use rule::{Rule, respond::Respond};
 /// across multiple files that can be enabled/disabled independently.
 /// Match order across sets is determined by the order in
 /// `service.rule_sets`, so the most specific set can be listed first.
-use std::sync::{
-    Arc,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
-fn default_counter() -> Arc<AtomicUsize> {
-    Arc::new(AtomicUsize::new(0))
+/// RFC 070: `round_robin`'s per-match-group counters, keyed by the
+/// exact set of matched rule indices for a request (in match order).
+/// Two requests that select the same candidate rules share a counter;
+/// requests selecting a different candidate set advance independently.
+///
+/// # Bounded by rule-set structure, not by traffic
+///
+/// A rule set of `N` rules has at most `2^N` distinct possible matched
+/// subsets — the powerset of "which rules matched" — so this map's size
+/// is capped by the rule set's own structure (how many rules it has,
+/// and which subsets its conditions can actually produce, which is
+/// usually far fewer than `2^N` in practice). It does **not** grow with
+/// request *volume*: two requests that induce the same subset of
+/// matching rules — however many requests, however varied their other
+/// fields — always hash to the same key and share one counter entry.
+/// There is no way for continued traffic against a fixed rule set to
+/// keep adding new keys once every reachable subset has been seen once.
+/// Established (not assumed) for the review package: see the
+/// `round_robin_map_size_does_not_grow_with_request_volume` test below,
+/// which runs many more requests than there are possible groups and
+/// asserts the map's size stops changing.
+type RoundRobinCounters = Arc<Mutex<HashMap<Vec<usize>, usize>>>;
+
+fn default_round_robin_counters() -> RoundRobinCounters {
+    Arc::new(Mutex::new(HashMap::new()))
 }
 
 /// `true` when `value`, interpreted as a path, is made up of nothing
@@ -60,6 +81,7 @@ fn is_purely_current_dir(value: &str) -> bool {
 /// crate builds one by literal today.
 #[derive(Clone, Deserialize, Debug)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct RuleSet {
     pub prefix: Option<Prefix>,
     pub default: Option<DefaultRespond>,
@@ -72,9 +94,13 @@ pub struct RuleSet {
     pub strategy: Option<Strategy>,
     #[serde(skip)]
     pub file_path: String,
-    /// Per-rule-set round-robin counter. Shared across clones via `Arc`.
-    #[serde(skip, default = "default_counter")]
-    pub round_robin_counter: Arc<AtomicUsize>,
+    /// Per-match-group round-robin counters (RFC 070). Shared across
+    /// clones via `Arc`. See `RoundRobinCounters`'s own doc comment
+    /// (private to this crate; not linked here since rustdoc's public
+    /// docs can't resolve a private item) for the key and the
+    /// bounded-growth argument.
+    #[serde(skip, default = "default_round_robin_counters")]
+    pub round_robin_counters: RoundRobinCounters,
     /// The response directory `Respond::file_path` resolves against,
     /// computed once by `RuleSet::new` (RFC 058). Never deserialised,
     /// never written back to `prefix.respond_dir_prefix` — see
@@ -184,8 +210,8 @@ impl RuleSet {
 
         // - file path (kept for log/display only)
         ret.file_path = rule_set_file_path.to_owned();
-        // - round-robin counter (starts at 0; shared across clones via Arc)
-        ret.round_robin_counter = Arc::new(AtomicUsize::new(0));
+        // - round-robin counters (starts empty; shared across clones via Arc)
+        ret.round_robin_counters = default_round_robin_counters();
 
         Ok(ret)
     }
@@ -328,10 +354,33 @@ impl RuleSet {
                     return None;
                 }
 
-                // Relaxed ordering: atomicity without sequential consistency
-                // is sufficient for a mock server (slight counter reorder
-                // on concurrent requests is acceptable).
-                let idx = self.round_robin_counter.fetch_add(1, Ordering::Relaxed) % matches.len();
+                // RFC 070: the counter is keyed by *which* rules matched,
+                // not shared across the whole rule set — two requests
+                // that select the same candidates advance the same
+                // counter; requests selecting a different candidate set
+                // do not interfere with each other. `matches` is already
+                // in ascending rule order (built by iterating `self.rules`
+                // in order), so the key is stable and comparable across
+                // calls without needing to sort it here.
+                let group_key: Vec<usize> = matches.iter().map(|(idx, _)| *idx).collect();
+                let idx = {
+                    let mut counters = self
+                        .round_robin_counters
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
+                    let counter = counters.entry(group_key).or_insert(0);
+                    let current = *counter;
+                    // Wrapping: a counter that reaches usize::MAX resumes
+                    // at 0 rather than panicking. The sequence it produces
+                    // from that point on is still a valid rotation (every
+                    // value 0..matches.len() still occurs the same
+                    // proportion of the time); only reachable after more
+                    // requests against one group than fits in a usize,
+                    // which is not a real concern on any platform this
+                    // targets.
+                    *counter = current.wrapping_add(1);
+                    current % matches.len()
+                };
 
                 let (rule_idx, rule) = matches[idx];
                 Some((rule_idx, rule.respond.clone()))
@@ -445,7 +494,7 @@ mod tests {
             rules,
             strategy: None,
             file_path: String::new(),
-            round_robin_counter: Arc::new(AtomicUsize::new(0)),
+            round_robin_counters: default_round_robin_counters(),
             resolved_respond_dir: ".".to_owned(),
         }
     }
@@ -524,6 +573,173 @@ mod tests {
             assert_eq!(r.text.as_deref(), Some("response_0"));
             assert_eq!(idx, 0);
         }
+    }
+
+    // -----------------------------------------------------------------
+    // RFC 070 — round_robin rotates per match group, not per rule set.
+    // -----------------------------------------------------------------
+
+    /// Build a `RuleSet` from several `(url_path, rule_count)` groups —
+    /// each group's rules match only that exact `url_path`, exclusively
+    /// (RFC 070's reported scenario needs at least two groups that never
+    /// both match the same request, which is exactly what distinct
+    /// `url_path`s give for free). Responses are named `"<label><n>"`
+    /// where `label` is the group's own url_path with the leading `/`
+    /// stripped and `n` is 1-based *within that group* — `a1 a2` for
+    /// `("/a", 2)`, matching the RFC's own example naming exactly.
+    fn make_multi_group_round_robin_set(groups: &[(&str, usize)]) -> RuleSet {
+        use crate::rule_set::rule::when::request::url_path::{UrlPath, UrlPathConfig};
+
+        let mut rules = Vec::new();
+        for (url_path, count) in groups {
+            let label = url_path.trim_start_matches('/');
+            for i in 1..=*count {
+                rules.push(Rule {
+                    when: When {
+                        request: Request {
+                            url_path_config: Some(UrlPathConfig::Simple((*url_path).to_owned())),
+                            url_path: Some(UrlPath {
+                                value: (*url_path).to_owned(),
+                                value_with_prefix: (*url_path).to_owned(),
+                                op: None,
+                            }),
+                            http_method: None,
+                            headers: None,
+                            body: None,
+                        },
+                    },
+                    respond: Respond {
+                        text: Some(format!("{label}{i}")),
+                        file_path: None,
+                        csv_records_key: None,
+                        json: None,
+                        status: None,
+                        status_code: None,
+                        headers: None,
+                        delay_response_milliseconds: None,
+                    },
+                    weight: None,
+                    priority: None,
+                });
+            }
+        }
+
+        RuleSet {
+            prefix: None,
+            default: None,
+            guard: None,
+            rules,
+            strategy: None,
+            file_path: String::new(),
+            round_robin_counters: default_round_robin_counters(),
+            resolved_respond_dir: ".".to_owned(),
+        }
+    }
+
+    fn respond_text(rs: &RuleSet, strategy: &Strategy, url_path: &str) -> String {
+        rs.find_matched(&get_req(url_path), Some(strategy), 0)
+            .expect("request matches this fixture's rules")
+            .1
+            .text
+            .clone()
+            .expect("fixture rules always set text")
+    }
+
+    /// The RFC's own reported scenario, reproduced exactly: two groups
+    /// of size 2 and 3, requested alternately. Before this fix, `/a`
+    /// returned `a1` on every request — the shared counter only ever
+    /// landed on an even (`/a`) or odd (`/b`-biased) value depending on
+    /// interleaving, and for this exact shape `/a` never rotated at all.
+    #[test]
+    fn round_robin_alternating_two_groups_each_rotate_independently() {
+        let rs = make_multi_group_round_robin_set(&[("/a", 2), ("/b", 3)]);
+        let strategy = Strategy::RoundRobin;
+
+        let mut a_seen = Vec::new();
+        let mut b_seen = Vec::new();
+        for _ in 0..4 {
+            a_seen.push(respond_text(&rs, &strategy, "/a"));
+            b_seen.push(respond_text(&rs, &strategy, "/b"));
+        }
+
+        assert_eq!(
+            a_seen,
+            vec!["a1", "a2", "a1", "a2"],
+            "group /a must rotate through its own 2 rules independently of /b"
+        );
+        assert_eq!(
+            b_seen,
+            vec!["b1", "b2", "b3", "b1"],
+            "group /b must rotate through its own 3 rules independently of /a"
+        );
+    }
+
+    /// Single group, unchanged — the per-group implementation must not
+    /// regress the case that already worked (RFC 070's own acceptance
+    /// bullet, stated as its own scenario rather than folded into the
+    /// pre-existing single-group tests above, since those predate the
+    /// fix and this one is here specifically to keep meaning "the fix
+    /// didn't break the base case" even if those get edited later).
+    #[test]
+    fn round_robin_single_group_still_a1_a2_a1_a2() {
+        let rs = make_multi_group_round_robin_set(&[("/a", 2)]);
+        let strategy = Strategy::RoundRobin;
+
+        let seen: Vec<String> = (0..4).map(|_| respond_text(&rs, &strategy, "/a")).collect();
+
+        assert_eq!(seen, vec!["a1", "a2", "a1", "a2"]);
+    }
+
+    /// Three or more groups, interleaved — not just the reported
+    /// two-group case, since the defect's arithmetic (`counter %
+    /// matches.len()`) could plausibly still misbehave for some N even
+    /// if two groups happened to look right after a narrower fix.
+    #[test]
+    fn round_robin_three_groups_interleaved_each_rotate_independently() {
+        let rs = make_multi_group_round_robin_set(&[("/a", 2), ("/b", 3), ("/c", 4)]);
+        let strategy = Strategy::RoundRobin;
+
+        let mut a_seen = Vec::new();
+        let mut b_seen = Vec::new();
+        let mut c_seen = Vec::new();
+        for _ in 0..5 {
+            a_seen.push(respond_text(&rs, &strategy, "/a"));
+            b_seen.push(respond_text(&rs, &strategy, "/b"));
+            c_seen.push(respond_text(&rs, &strategy, "/c"));
+        }
+
+        assert_eq!(a_seen, vec!["a1", "a2", "a1", "a2", "a1"]);
+        assert_eq!(b_seen, vec!["b1", "b2", "b3", "b1", "b2"]);
+        assert_eq!(c_seen, vec!["c1", "c2", "c3", "c4", "c1"]);
+    }
+
+    /// RFC 070 § Design's open question, established rather than
+    /// assumed: the per-group counter map's size is bounded by the rule
+    /// set's own structure, not by how many requests arrive. A fixed
+    /// 3-group rule set, driven by far more requests than there are
+    /// groups (and in an order designed to touch every group many
+    /// times over, not just once each), must still end with exactly 3
+    /// map entries — never more.
+    #[test]
+    fn round_robin_map_size_does_not_grow_with_request_volume() {
+        let rs = make_multi_group_round_robin_set(&[("/a", 2), ("/b", 3), ("/c", 4)]);
+        let strategy = Strategy::RoundRobin;
+        let paths = ["/a", "/b", "/c"];
+
+        for i in 0..300 {
+            let _ = respond_text(&rs, &strategy, paths[i % paths.len()]);
+        }
+
+        let map_size = rs
+            .round_robin_counters
+            .lock()
+            .expect("counters mutex not poisoned")
+            .len();
+        assert_eq!(
+            map_size, 3,
+            "300 requests across a fixed 3-group rule set must still produce exactly 3 counter \
+             entries, not one that grows with request count"
+        );
     }
 
     // -----------------------------------------------------------------

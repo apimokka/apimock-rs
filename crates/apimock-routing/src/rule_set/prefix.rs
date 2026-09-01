@@ -31,6 +31,7 @@ use std::path::Path;
 /// ```
 #[derive(Clone, Default, Deserialize, Debug)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct Prefix {
     #[serde(rename = "url_path")]
     pub url_path_prefix: Option<String>,

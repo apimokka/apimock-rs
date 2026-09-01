@@ -47,6 +47,7 @@ pub struct Body(pub HashMap<BodyKind, IndexMap<String, BodyConditionStatement>>)
 /// [`ConditionStatement`](crate::rule_set::rule::when::condition_statement::ConditionStatement)
 /// + [`super::rule_op::RuleOp`]).
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BodyConditionStatement {
     pub op: Option<BodyOperator>,
     pub value: String,

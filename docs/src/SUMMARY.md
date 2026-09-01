@@ -29,6 +29,7 @@
     - [Dry-run a rule](./guides/dry-run-a-rule.md)
     - [Watch matches live](./guides/watch-matches-live.md)
     - [Migrating to 6.0.0](./guides/migrating-to-6-0.md)
+    - [Migrating to 6.1.0](./guides/migrating-to-6-1.md)
 
 ---
 

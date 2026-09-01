@@ -16,6 +16,7 @@ use url_path::{UrlPath, UrlPathConfig};
 use util::fmt_condition_connector;
 
 #[derive(Clone, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Request {
     #[serde(rename = "url_path")]
     pub url_path_config: Option<UrlPathConfig>,

@@ -17,6 +17,7 @@ use crate::rule_set::rule::ConditionKey;
 /// with a type that can represent presence operators as well as value operators.
 /// Mirrors the shape of `BodyConditionStatement` in the body module (RFC 017).
 #[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct HeaderConditionStatement {
     #[serde(default)]
     pub op: Option<HeaderOperator>,
@@ -50,6 +51,26 @@ impl Headers {
     /// Conditions are ANDed: every key-condition pair in `self.0` must match.
     /// Presence operators (`Exists`, `Absent`) only check key presence;
     /// value operators compare the request header's value string.
+    ///
+    /// # A header that cannot be read as UTF-8 (RFC 072)
+    ///
+    /// `Exists`/`Absent` are unaffected — they check `contains_key` before
+    /// ever attempting to decode the value, so a present-but-undecodable
+    /// header still correctly satisfies `Exists` and fails `Absent`: the
+    /// header genuinely *is* present, which is all those two operators
+    /// ask. "cannot be read" and "not present" are different things, and
+    /// this is the deliberate, tested answer to which one a decode
+    /// failure counts as — not present is reserved for a header that
+    /// really is absent.
+    ///
+    /// A **value** operator (`equal`, `contains`, …) against an
+    /// undecodable header does **not** satisfy the condition, regardless
+    /// of which operator it is — a gate that cannot evaluate its input
+    /// fails closed rather than silently opening (the previous
+    /// behaviour: `return true` here, matching *any* condition on a
+    /// header sent as invalid UTF-8, unconditionally). See
+    /// `crates/apimock/src/cmd/rule_check.rs`'s `check_headers`, which
+    /// this must agree with — see that agreement test.
     pub fn is_match(
         &self,
         parsed_request_headers: &HeaderMap<HeaderValue>,
@@ -89,7 +110,7 @@ impl Headers {
                             matcher_key,
                             err,
                         );
-                        return true;
+                        return false;
                     }
                 };
 
