@@ -103,6 +103,9 @@ async fn malformed_tls_material_fails_startup_and_binds_no_listener() {
     let http_port = free_tcp_port().await;
     let https_port = free_tcp_port().await;
 
+    let cert_path_toml = toml_safe_path(&cert_path);
+    let key_path_toml = toml_safe_path(&key_path);
+
     let toml_path = dir.path().join("apimock.toml");
     std::fs::write(
         &toml_path,
@@ -111,14 +114,12 @@ async fn malformed_tls_material_fails_startup_and_binds_no_listener() {
              ip_address = \"127.0.0.1\"\n\
              port = {http_port}\n\
              [listener.tls]\n\
-             cert = \"{cert}\"\n\
-             key = \"{key}\"\n\
+             cert = \"{cert_path_toml}\"\n\
+             key = \"{key_path_toml}\"\n\
              port = {https_port}\n\
              [service]\n\
              rule_sets = []\n\
-             fallback_respond_dir = \".\"\n",
-            cert = cert_path.to_string_lossy(),
-            key = key_path.to_string_lossy(),
+             fallback_respond_dir = \".\"\n"
         ),
     )
     .expect("write apimock.toml");
@@ -137,7 +138,7 @@ async fn malformed_tls_material_fails_startup_and_binds_no_listener() {
     };
     let message = err.to_string();
     assert!(
-        message.contains(&cert_path.to_string_lossy().into_owned()),
+        message.contains(&cert_path_toml),
         "error must name the malformed file: {message}"
     );
 
@@ -151,6 +152,22 @@ async fn malformed_tls_material_fails_startup_and_binds_no_listener() {
          proving no HTTP listener was bound: {:?}",
         http_still_free.err()
     );
+}
+
+/// A path string safe to embed inside a TOML double-quoted string.
+///
+/// `path.to_string_lossy()` alone is **not** safe on Windows: a native
+/// path there is backslash-separated, and TOML's basic-string escape
+/// rules treat `\` as the start of an escape sequence — `\A`, `\U`
+/// (followed by non-hex), etc. are invalid escapes, so an
+/// absolute Windows path written in verbatim fails to parse (confirmed
+/// on CI: `windows-latest` failed exactly this way before this helper
+/// existed). Forward slashes work as a path separator on Windows too
+/// (both `std::path` and this project's own TLS/config file loading
+/// just hand the string to the OS), so normalising to `/` sidesteps
+/// TOML escaping entirely rather than escaping every backslash.
+fn toml_safe_path(path: &std::path::Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
 
 /// Bind an ephemeral TCP listener, read back its port, then drop it —
@@ -195,8 +212,8 @@ async fn launch_https_with_s07_settings(
              [service]\n\
              rule_sets = []\n\
              fallback_respond_dir = \".\"\n",
-            cert = cert_file_path().to_string_lossy(),
-            key = key_file_path().to_string_lossy(),
+            cert = toml_safe_path(&cert_file_path()),
+            key = toml_safe_path(&key_file_path()),
         ),
     )
     .expect("write apimock.toml");
