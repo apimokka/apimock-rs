@@ -214,9 +214,7 @@ impl Config {
     /// isn't a bare `bool` any more).
     fn validate(&self) -> Result<(), String> {
         if let Some(listener) = self.listener.as_ref() {
-            if !listener.validate() {
-                return Err("invalid listener configuration".to_owned());
-            }
+            listener.validate()?;
 
             if self.listener_http_addr().is_none() && self.listener_https_addr().is_none() {
                 return Err("at least one listener (http or https) is required".to_owned());

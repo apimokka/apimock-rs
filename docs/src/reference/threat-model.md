@@ -71,7 +71,31 @@ parsed JSON `body` — no headers, no method. Its return value drives the
 response: a string names a file to serve, or a map selects `file_path`
 / `json` / `text`. A script that fails to compile or panics at runtime
 is logged and the request falls through to the next stage — it cannot
-crash the process, but it can silently degrade routing.
+crash the process.
+
+**A non-terminating script fails its own request, not the process
+(RFC 068 S-03).** Before RFC 068, this page said a failing script
+"cannot crash the process, but it can silently degrade routing" — true
+about crashing, wrong about non-termination: a script evaluated
+directly on an async worker thread, with no operation limit, simply
+never returned, which is a stalled server, not degraded routing.
+`[service].middleware_max_operations` (default 10,000,000, generous
+for any reasonable script) bounds a script by work done; evaluation
+also runs in a `spawn_blocking` task rather than directly on the async
+runtime, so a script that still doesn't terminate costs one slow
+request, not one permanently lost worker. Fixed call-depth and
+string/array/map-size ceilings apply regardless of the configured
+operation limit — there is no legitimate mock-middleware reason to
+need more of either.
+
+**A request body is capped before it is buffered (RFC 068 S-02).**
+`[service].max_request_body_bytes` (default 32 MiB) bounds how much of
+one request body is ever collected into memory; a body over the limit
+gets **413** instead of being buffered first. Before this, a body of
+any size was collected whole — the external audit measured one 256 MiB
+request taking the process from 9 MiB RSS to 462 MiB, reachable by a
+single unauthenticated request with no connection limit to bound
+concurrency either.
 
 **What TLS touches.** apimock terminates TLS itself via `rustls` — this
 is not a reverse-proxy setup. Certificates can hot-reload without
@@ -132,6 +156,32 @@ deliberately left it for a later RFC rather than scope-creeping into it.
 Stated here so it isn't only findable by reading that RFC: turning on
 body logging can put credentials or other sensitive body fields on the
 console, verbatim, today.
+
+**Credentialed CORS reflection is allowed, but only for a named or
+loopback origin (RFC 067).** When a request carries `Cookie` or
+`Authorization`, apimock reflects the request's `Origin` into
+`Access-Control-Allow-Origin` and sets
+`Access-Control-Allow-Credentials: true` — but only if that origin is
+`http://localhost:*`, `http://127.0.0.1:*` (allowed implicitly — a page
+served from the developer's own machine is already inside the trust
+boundary the loopback bind assumes), or named in
+`[service].cors_allow_credentials_origins` (exact origin strings, empty
+by default). Every other credentialed request still gets a response —
+refusing it outright would break the many requests that carry a
+`Cookie` incidentally and need no CORS at all — but with the same safe,
+non-credentialed `Access-Control-Allow-Origin: *` a request with no
+`Cookie`/`Authorization` gets; the browser is what then refuses a
+credentialed cross-origin script access to the response.
+
+Before RFC 067, this was unconditional: **any** origin got credentialed
+reflection, no allowlist, not configurable — the textbook CORS
+misconfiguration, and this page's own D-04 gap (the audit's finding
+that this allowance existed without a stated reason here). Binding to
+`127.0.0.1` is not a mitigation for the unconditional case: the
+dangerous request originates from the developer's own browser, on a
+page they merely visited, targeting their own loopback listener — the
+default bind protects against a remote attacker reaching the port, not
+against this.
 
 ## Settled decisions, restated in full
 

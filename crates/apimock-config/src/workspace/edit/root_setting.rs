@@ -85,6 +85,8 @@ impl Workspace {
                         cert: String::new(),
                         key: String::new(),
                         port: None,
+                        handshake_timeout_seconds: None,
+                        max_connections: None,
                     }
                 });
                 tls.cert = s;
@@ -97,6 +99,8 @@ impl Workspace {
                         cert: String::new(),
                         key: String::new(),
                         port: None,
+                        handshake_timeout_seconds: None,
+                        max_connections: None,
                     }
                 });
                 tls.key = s;

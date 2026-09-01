@@ -35,6 +35,8 @@ pub struct FileResponse {
     /// directory doesn't exist) — every candidate is then refused,
     /// never served unchecked.
     confine_to: Option<std::path::PathBuf>,
+    /// RFC 067 — see `response_handler::default_response_headers`.
+    cors_allow_credentials_origins: Vec<String>,
 }
 
 impl FileResponse {
@@ -44,6 +46,7 @@ impl FileResponse {
         custom_headers: Option<&HashMap<String, Option<String>>>,
         request_headers: &HeaderMap,
         confine_to: Option<&Path>,
+        cors_allow_credentials_origins: &[String],
     ) -> Self {
         FileResponse {
             file_path: file_path.to_owned(),
@@ -53,6 +56,7 @@ impl FileResponse {
             custom_headers: custom_headers.cloned(),
             request_headers: request_headers.clone(),
             confine_to: confine_to.map(Path::to_path_buf),
+            cors_allow_credentials_origins: cors_allow_credentials_origins.to_vec(),
         }
     }
 
@@ -63,8 +67,15 @@ impl FileResponse {
         csv_records_key: Option<String>,
         request_headers: &HeaderMap,
         confine_to: Option<&Path>,
+        cors_allow_credentials_origins: &[String],
     ) -> Self {
-        let mut ret = FileResponse::new(file_path, custom_headers, request_headers, confine_to);
+        let mut ret = FileResponse::new(
+            file_path,
+            custom_headers,
+            request_headers,
+            confine_to,
+            cors_allow_credentials_origins,
+        );
         ret.csv_records_key = csv_records_key;
         ret
     }
@@ -81,7 +92,10 @@ impl FileResponse {
                     style("file not found").red(),
                     self.file_path
                 );
-                return not_found_response(&self.request_headers);
+                return not_found_response(
+                    &self.request_headers,
+                    &self.cors_allow_credentials_origins,
+                );
             }
         };
 
@@ -99,11 +113,17 @@ impl FileResponse {
                         style("failed").red(),
                         file_path
                     );
-                    return not_found_response(&self.request_headers);
+                    return not_found_response(
+                        &self.request_headers,
+                        &self.cors_allow_credentials_origins,
+                    );
                 }
             },
             None => {
-                return not_found_response(&self.request_headers);
+                return not_found_response(
+                    &self.request_headers,
+                    &self.cors_allow_credentials_origins,
+                );
             }
         };
         self.file_path = file_path.clone();
@@ -133,6 +153,7 @@ impl FileResponse {
                         internal_server_error_response(
                             "failed to read response file",
                             &self.request_headers,
+                            &self.cors_allow_credentials_origins,
                         )
                     }
                     Err(err) => {
@@ -140,6 +161,7 @@ impl FileResponse {
                         internal_server_error_response(
                             "failed to read response file",
                             &self.request_headers,
+                            &self.cors_allow_credentials_origins,
                         )
                     }
                 }
@@ -149,6 +171,7 @@ impl FileResponse {
                 internal_server_error_response(
                     "failed to read response file",
                     &self.request_headers,
+                    &self.cors_allow_credentials_origins,
                 )
             }
         }
@@ -173,6 +196,7 @@ impl FileResponse {
                     Some(text_file_content_type(ext).as_str()),
                     self.custom_headers.as_ref(),
                     &self.request_headers,
+                    &self.cors_allow_credentials_origins,
                 ),
             },
             None => text_response(
@@ -180,6 +204,7 @@ impl FileResponse {
                 None,
                 self.custom_headers.as_ref(),
                 &self.request_headers,
+                &self.cors_allow_credentials_origins,
             ),
         }
     }
@@ -193,6 +218,7 @@ impl FileResponse {
             self.custom_headers.as_ref(),
             &self.request_headers,
             Some(self.file_path.as_str()),
+            &self.cors_allow_credentials_origins,
         )
     }
 
@@ -213,6 +239,7 @@ impl FileResponse {
             return internal_server_error_response(
                 "failed to analyze csv headers",
                 &self.request_headers,
+                &self.cors_allow_credentials_origins,
             );
         };
 
@@ -246,6 +273,7 @@ impl FileResponse {
                         self.custom_headers.as_ref(),
                         &self.request_headers,
                         Some(self.file_path.as_str()),
+                        &self.cors_allow_credentials_origins,
                     ),
                     Err(err) => {
                         log::error!(
@@ -256,6 +284,7 @@ impl FileResponse {
                         internal_server_error_response(
                             "failed to convert csv records to json response",
                             &self.request_headers,
+                            &self.cors_allow_credentials_origins,
                         )
                     }
                 }
@@ -269,6 +298,7 @@ impl FileResponse {
                 internal_server_error_response(
                     "failed to analyze csv records",
                     &self.request_headers,
+                    &self.cors_allow_credentials_origins,
                 )
             }
         }
@@ -288,6 +318,6 @@ impl FileResponse {
         ResponseHandler::default()
             .with_binary_body(content, Some(content_type))
             .with_custom_headers(self.custom_headers.as_ref())
-            .into_response(&self.request_headers)
+            .into_response(&self.request_headers, &self.cors_allow_credentials_origins)
     }
 }

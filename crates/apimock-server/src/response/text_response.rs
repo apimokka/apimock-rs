@@ -18,9 +18,10 @@ pub fn text_response(
     content_type: Option<&str>,
     custom_headers: Option<&HashMap<String, Option<String>>>,
     request_headers: &HeaderMap,
+    cors_allow_credentials_origins: &[String],
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     ResponseHandler::default()
         .with_text(content, content_type)
         .with_custom_headers(custom_headers)
-        .into_response(request_headers)
+        .into_response(request_headers, cors_allow_credentials_origins)
 }

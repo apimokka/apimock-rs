@@ -38,7 +38,7 @@ deliberate — additive-only means *declared*, not *unchecked*.
    if the two disagree, believe the baseline.
 
 **They live on the default branch**, and only there — see
-[the section index](./README.md) for why, and for the link. They are
+[the section index](./) for why, and for the link. They are
 absent from the `6.0.0` tag and from every published crate tarball.
 
 The 6.0.0 baselines were generated from a tree with no source changes

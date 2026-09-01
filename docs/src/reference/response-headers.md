@@ -25,16 +25,28 @@ code.
 `access-control-allow-origin`, `vary`, and (conditionally)
 `access-control-allow-credentials` depend on whether the request looks
 authenticated — defined as carrying a `cookie` or `authorization`
-header:
+header — **and**, if so, whether the request's `origin` is allowed
+credentialed reflection (RFC 067):
 
-| Request has `cookie`/`authorization`? | `access-control-allow-origin` | `vary` | `access-control-allow-credentials` |
+| Request | `access-control-allow-origin` | `vary` | `access-control-allow-credentials` |
 |---|---|---|---|
-| Yes | The request's own `origin` value, reflected back | `Origin` | `true` |
-| No | `*` | `*` | *(absent)* |
+| No `cookie`/`authorization` | `*` | `*` | *(absent)* |
+| Credentialed, origin **allowed** | The request's own `origin` value, reflected back | `Origin` | `true` |
+| Credentialed, origin **not allowed** | `*` | `*` | *(absent)* |
+
+An origin is "allowed" if it's `http://localhost:*` or
+`http://127.0.0.1:*` (implicitly, always — no configuration needed), or
+appears exactly in `[service].cors_allow_credentials_origins` (empty by
+default). An unlisted, non-loopback origin gets the same response as a
+request with no credentials at all — the response is still served, but
+without the headers a browser needs to expose it to a credentialed
+cross-origin read. See
+[the threat model](threat-model.md#deliberate-allowances-with-reasons)
+for why.
 
 Source: `default_response_headers` /
-`is_likely_authenticated_request` in
-`crates/apimock-server/src/response_handler.rs`.
+`is_likely_authenticated_request` / `is_credentialed_reflection_allowed`
+in `crates/apimock-server/src/response_handler.rs`.
 
 ## `OPTIONS` requests
 

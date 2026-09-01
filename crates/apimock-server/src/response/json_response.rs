@@ -37,6 +37,7 @@ pub fn json_response(
     custom_headers: Option<&HashMap<String, Option<String>>>,
     request_headers: &HeaderMap,
     source: Option<&str>,
+    cors_allow_credentials_origins: &[String],
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     match json5::from_str::<Value>(json_str) {
         Ok(content) => {
@@ -47,7 +48,7 @@ pub fn json_response(
             }
             response_handler
                 .with_custom_headers(custom_headers)
-                .into_response(request_headers)
+                .into_response(request_headers, cors_allow_credentials_origins)
         }
         Err(err) => {
             log::error!(
@@ -55,7 +56,11 @@ pub fn json_response(
                 source.map(|s| format!(" ({})", s)).unwrap_or_default(),
                 err
             );
-            internal_server_error_response("invalid json content", request_headers)
+            internal_server_error_response(
+                "invalid json content",
+                request_headers,
+                cors_allow_credentials_origins,
+            )
         }
     }
 }

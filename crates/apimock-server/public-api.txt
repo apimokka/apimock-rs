@@ -79,7 +79,7 @@ impl core::marker::UnsafeUnpin for apimock_server::control::ServerHandle
 impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerHandle
 impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerHandle
 pub mod apimock_server::dyn_route
-pub async fn apimock_server::dyn_route::dyn_route_content(&str, &str, &http::header::map::HeaderMap, core::option::Option<&std::path::Path>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub async fn apimock_server::dyn_route::dyn_route_content(&str, &str, &http::header::map::HeaderMap, core::option::Option<&std::path::Path>, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub mod apimock_server::error
 #[non_exhaustive] pub enum apimock_server::error::ServerError
 pub apimock_server::error::ServerError::Config(apimock_config::error::ConfigError)
@@ -170,8 +170,8 @@ pub apimock_server::middleware::middleware_handler::MiddlewareHandler::confine_t
 pub apimock_server::middleware::middleware_handler::MiddlewareHandler::engine: alloc::sync::Arc<rhai::engine::Engine>
 pub apimock_server::middleware::middleware_handler::MiddlewareHandler::file_path: alloc::string::String
 impl apimock_server::middleware::middleware_handler::MiddlewareHandler
-pub async fn apimock_server::middleware::middleware_handler::MiddlewareHandler::handle(&self, &str, core::option::Option<&serde_json::value::Value>, &http::header::map::HeaderMap) -> core::option::Option<core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>>
-pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::new(&str) -> apimock_server::error::ServerResult<Self>
+pub async fn apimock_server::middleware::middleware_handler::MiddlewareHandler::handle(&self, &str, core::option::Option<&serde_json::value::Value>, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::option::Option<core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>>
+pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::new(&str, u64) -> apimock_server::error::ServerResult<Self>
 impl core::clone::Clone for apimock_server::middleware::middleware_handler::MiddlewareHandler
 pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::clone(&self) -> apimock_server::middleware::middleware_handler::MiddlewareHandler
 impl core::marker::Freeze for apimock_server::middleware::middleware_handler::MiddlewareHandler
@@ -183,7 +183,7 @@ impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::middleware::mi
 impl !core::panic::unwind_safe::UnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
 pub struct apimock_server::middleware::LoadedMiddlewares
 impl apimock_server::middleware::LoadedMiddlewares
-pub fn apimock_server::middleware::LoadedMiddlewares::compile(&[alloc::string::String], &str) -> apimock_server::error::ServerResult<Self>
+pub fn apimock_server::middleware::LoadedMiddlewares::compile(&[alloc::string::String], &str, u64) -> apimock_server::error::ServerResult<Self>
 pub fn apimock_server::middleware::LoadedMiddlewares::is_empty(&self) -> bool
 pub fn apimock_server::middleware::LoadedMiddlewares::iter(&self) -> core::slice::iter::Iter<'_, apimock_server::middleware::middleware_handler::MiddlewareHandler>
 pub fn apimock_server::middleware::LoadedMiddlewares::len(&self) -> usize
@@ -204,8 +204,8 @@ pub apimock_server::middleware::MiddlewareHandler::confine_to: core::option::Opt
 pub apimock_server::middleware::MiddlewareHandler::engine: alloc::sync::Arc<rhai::engine::Engine>
 pub apimock_server::middleware::MiddlewareHandler::file_path: alloc::string::String
 impl apimock_server::middleware::middleware_handler::MiddlewareHandler
-pub async fn apimock_server::middleware::middleware_handler::MiddlewareHandler::handle(&self, &str, core::option::Option<&serde_json::value::Value>, &http::header::map::HeaderMap) -> core::option::Option<core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>>
-pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::new(&str) -> apimock_server::error::ServerResult<Self>
+pub async fn apimock_server::middleware::middleware_handler::MiddlewareHandler::handle(&self, &str, core::option::Option<&serde_json::value::Value>, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::option::Option<core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>>
+pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::new(&str, u64) -> apimock_server::error::ServerResult<Self>
 impl core::clone::Clone for apimock_server::middleware::middleware_handler::MiddlewareHandler
 pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::clone(&self) -> apimock_server::middleware::middleware_handler::MiddlewareHandler
 impl core::marker::Freeze for apimock_server::middleware::middleware_handler::MiddlewareHandler
@@ -216,10 +216,24 @@ impl core::marker::UnsafeUnpin for apimock_server::middleware::middleware_handle
 impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
 impl !core::panic::unwind_safe::UnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
 pub mod apimock_server::parsed_request
+#[non_exhaustive] pub enum apimock_server::parsed_request::ParsedRequestError
+pub apimock_server::parsed_request::ParsedRequestError::BodyTooLarge
+pub apimock_server::parsed_request::ParsedRequestError::Other(alloc::string::String)
+impl core::fmt::Debug for apimock_server::parsed_request::ParsedRequestError
+pub fn apimock_server::parsed_request::ParsedRequestError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for apimock_server::parsed_request::ParsedRequestError
+pub fn apimock_server::parsed_request::ParsedRequestError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for apimock_server::parsed_request::ParsedRequestError
+impl core::marker::Send for apimock_server::parsed_request::ParsedRequestError
+impl core::marker::Sync for apimock_server::parsed_request::ParsedRequestError
+impl core::marker::Unpin for apimock_server::parsed_request::ParsedRequestError
+impl core::marker::UnsafeUnpin for apimock_server::parsed_request::ParsedRequestError
+impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::parsed_request::ParsedRequestError
+impl core::panic::unwind_safe::UnwindSafe for apimock_server::parsed_request::ParsedRequestError
 pub fn apimock_server::parsed_request::capture_in_log(&apimock_routing::parsed_request::ParsedRequest, apimock_config::config::log_config::verbose_config::VerboseConfig)
-pub async fn apimock_server::parsed_request::parsed_request_from(http::request::Request<hyper::body::incoming::Incoming>) -> core::result::Result<apimock_routing::parsed_request::ParsedRequest, alloc::string::String>
+pub async fn apimock_server::parsed_request::parsed_request_from(http::request::Request<hyper::body::incoming::Incoming>, usize) -> core::result::Result<apimock_routing::parsed_request::ParsedRequest, apimock_server::parsed_request::ParsedRequestError>
 pub mod apimock_server::respond_response
-pub async fn apimock_server::respond_response::respond_response(&apimock_routing::rule_set::rule::respond::Respond, &str, &apimock_routing::parsed_request::ParsedRequest, core::option::Option<u32>, core::option::Option<&std::path::Path>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub async fn apimock_server::respond_response::respond_response(&apimock_routing::rule_set::rule::respond::Respond, &str, &apimock_routing::parsed_request::ParsedRequest, core::option::Option<u32>, core::option::Option<&std::path::Path>, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub mod apimock_server::respond_util
 pub fn apimock_server::respond_util::full_file_path(&str, &str) -> core::option::Option<alloc::string::String>
 pub mod apimock_server::response
@@ -227,15 +241,16 @@ pub mod apimock_server::response::confine
 pub fn apimock_server::response::confine::canonical_dir(&str) -> core::option::Option<std::path::PathBuf>
 pub fn apimock_server::response::confine::confine(&str, core::option::Option<&std::path::Path>) -> core::option::Option<std::path::PathBuf>
 pub mod apimock_server::response::error_response
-pub fn apimock_server::response::error_response::bad_request_response(&str, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
-pub fn apimock_server::response::error_response::internal_server_error_response(&str, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
-pub fn apimock_server::response::error_response::not_found_response(&http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::error_response::bad_request_response(&str, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::error_response::internal_server_error_response(&str, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::error_response::not_found_response(&http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::error_response::payload_too_large_response(&str, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub mod apimock_server::response::file_response
 pub struct apimock_server::response::file_response::FileResponse
 impl apimock_server::response::file_response::FileResponse
 pub async fn apimock_server::response::file_response::FileResponse::file_content_response(&mut self) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
-pub fn apimock_server::response::file_response::FileResponse::new(&str, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap, core::option::Option<&std::path::Path>) -> Self
-pub fn apimock_server::response::file_response::FileResponse::new_with_csv_records_jsonpath(&str, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, core::option::Option<alloc::string::String>, &http::header::map::HeaderMap, core::option::Option<&std::path::Path>) -> Self
+pub fn apimock_server::response::file_response::FileResponse::new(&str, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap, core::option::Option<&std::path::Path>, &[alloc::string::String]) -> Self
+pub fn apimock_server::response::file_response::FileResponse::new_with_csv_records_jsonpath(&str, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, core::option::Option<alloc::string::String>, &http::header::map::HeaderMap, core::option::Option<&std::path::Path>, &[alloc::string::String]) -> Self
 impl core::marker::Freeze for apimock_server::response::file_response::FileResponse
 impl core::marker::Send for apimock_server::response::file_response::FileResponse
 impl core::marker::Sync for apimock_server::response::file_response::FileResponse
@@ -244,12 +259,12 @@ impl core::marker::UnsafeUnpin for apimock_server::response::file_response::File
 impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::response::file_response::FileResponse
 impl core::panic::unwind_safe::UnwindSafe for apimock_server::response::file_response::FileResponse
 pub mod apimock_server::response::json_response
-pub fn apimock_server::response::json_response::json_response(&str, core::option::Option<&http::status::StatusCode>, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap, core::option::Option<&str>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::json_response::json_response(&str, core::option::Option<&http::status::StatusCode>, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap, core::option::Option<&str>, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub mod apimock_server::response::status_code_response
-pub fn apimock_server::response::status_code_response::status_code_response(&http::status::StatusCode, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
-pub fn apimock_server::response::status_code_response::status_code_response_with_message(&http::status::StatusCode, &str, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::status_code_response::status_code_response(&http::status::StatusCode, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::status_code_response::status_code_response_with_message(&http::status::StatusCode, &str, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub mod apimock_server::response::text_response
-pub fn apimock_server::response::text_response::text_response(&str, core::option::Option<&str>, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response::text_response::text_response(&str, core::option::Option<&str>, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub mod apimock_server::response_handler
 pub enum apimock_server::response_handler::BodyKind
 pub apimock_server::response_handler::BodyKind::Binary(alloc::vec::Vec<u8>)
@@ -268,7 +283,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::response_handle
 impl core::panic::unwind_safe::UnwindSafe for apimock_server::response_handler::BodyKind
 pub struct apimock_server::response_handler::ResponseHandler
 impl apimock_server::response_handler::ResponseHandler
-pub fn apimock_server::response_handler::ResponseHandler::into_response(self, &http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::response_handler::ResponseHandler::into_response(self, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub fn apimock_server::response_handler::ResponseHandler::with_binary_body(self, alloc::vec::Vec<u8>, core::option::Option<impl core::convert::Into<alloc::string::String>>) -> Self
 pub fn apimock_server::response_handler::ResponseHandler::with_custom_headers(self, core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, core::option::Option<alloc::string::String>>>) -> Self
 pub fn apimock_server::response_handler::ResponseHandler::with_header(self, impl core::convert::Into<alloc::string::String>, core::option::Option<impl core::convert::Into<alloc::string::String>>) -> Self
@@ -285,7 +300,7 @@ impl core::marker::Unpin for apimock_server::response_handler::ResponseHandler
 impl core::marker::UnsafeUnpin for apimock_server::response_handler::ResponseHandler
 impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::response_handler::ResponseHandler
 impl !core::panic::unwind_safe::UnwindSafe for apimock_server::response_handler::ResponseHandler
-pub fn apimock_server::response_handler::default_response_headers(&http::header::map::HeaderMap) -> http::header::map::HeaderMap
+pub fn apimock_server::response_handler::default_response_headers(&http::header::map::HeaderMap, &[alloc::string::String]) -> http::header::map::HeaderMap
 pub mod apimock_server::server
 #[non_exhaustive] pub enum apimock_server::server::ReloadHint
 pub apimock_server::server::ReloadHint::None
@@ -394,7 +409,7 @@ impl core::marker::Unpin for apimock_server::control::ServerHandle
 impl core::marker::UnsafeUnpin for apimock_server::control::ServerHandle
 impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerHandle
 impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerHandle
-pub fn apimock_server::server::handle_options(&http::header::map::HeaderMap) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub fn apimock_server::server::handle_options(&http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub async fn apimock_server::server::service(http::request::Request<hyper::body::incoming::Incoming>, alloc::sync::Arc<tokio::sync::mutex::Mutex<apimock_server::server::AppState>>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub mod apimock_server::tls
 pub struct apimock_server::tls::ReloadableCertResolver
@@ -716,7 +731,7 @@ impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::server::AppSta
 impl !core::panic::unwind_safe::UnwindSafe for apimock_server::server::AppState
 pub struct apimock_server::LoadedMiddlewares
 impl apimock_server::middleware::LoadedMiddlewares
-pub fn apimock_server::middleware::LoadedMiddlewares::compile(&[alloc::string::String], &str) -> apimock_server::error::ServerResult<Self>
+pub fn apimock_server::middleware::LoadedMiddlewares::compile(&[alloc::string::String], &str, u64) -> apimock_server::error::ServerResult<Self>
 pub fn apimock_server::middleware::LoadedMiddlewares::is_empty(&self) -> bool
 pub fn apimock_server::middleware::LoadedMiddlewares::iter(&self) -> core::slice::iter::Iter<'_, apimock_server::middleware::middleware_handler::MiddlewareHandler>
 pub fn apimock_server::middleware::LoadedMiddlewares::len(&self) -> usize
@@ -737,8 +752,8 @@ pub apimock_server::MiddlewareHandler::confine_to: core::option::Option<std::pat
 pub apimock_server::MiddlewareHandler::engine: alloc::sync::Arc<rhai::engine::Engine>
 pub apimock_server::MiddlewareHandler::file_path: alloc::string::String
 impl apimock_server::middleware::middleware_handler::MiddlewareHandler
-pub async fn apimock_server::middleware::middleware_handler::MiddlewareHandler::handle(&self, &str, core::option::Option<&serde_json::value::Value>, &http::header::map::HeaderMap) -> core::option::Option<core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>>
-pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::new(&str) -> apimock_server::error::ServerResult<Self>
+pub async fn apimock_server::middleware::middleware_handler::MiddlewareHandler::handle(&self, &str, core::option::Option<&serde_json::value::Value>, &http::header::map::HeaderMap, &[alloc::string::String]) -> core::option::Option<core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>>
+pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::new(&str, u64) -> apimock_server::error::ServerResult<Self>
 impl core::clone::Clone for apimock_server::middleware::middleware_handler::MiddlewareHandler
 pub fn apimock_server::middleware::middleware_handler::MiddlewareHandler::clone(&self) -> apimock_server::middleware::middleware_handler::MiddlewareHandler
 impl core::marker::Freeze for apimock_server::middleware::middleware_handler::MiddlewareHandler

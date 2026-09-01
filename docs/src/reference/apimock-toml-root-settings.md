@@ -13,6 +13,8 @@ port = 3001
 cert = "./cert.pem"
 key = "./key.pem"
 # port = 3002   # omit to serve HTTPS-only on `listener.port`
+# handshake_timeout_seconds = 10
+# max_connections = 256
 
 [log]
 verbose = { header = true, body = true }
@@ -22,6 +24,9 @@ strategy = "first_match"
 rule_sets = ["apimock-rule-set.toml"]
 middlewares = ["apimock-middleware.rhai"]
 fallback_respond_dir = "."
+# cors_allow_credentials_origins = ["https://app.example.com"]
+# max_request_body_bytes = 33554432
+# middleware_max_operations = 10000000
 
 [file_tree_view]
 show_hidden = false
@@ -60,6 +65,8 @@ checked at startup, not lazily.
 | `cert` | string | — | Path to the certificate PEM file |
 | `key` | string | — | Path to the private key PEM file |
 | `port` | integer, optional | — | If set, HTTPS listens here and plain HTTP continues on `listener.port`. If omitted, `listener.port` itself becomes HTTPS-only — no plaintext HTTP listener starts at all |
+| `handshake_timeout_seconds` | integer | `10` | An incomplete TLS handshake is dropped after this long |
+| `max_connections` | integer | `256` | Maximum concurrent HTTPS connections. Beyond this, a new connection waits for a slot rather than being refused — the server recovers as soon as one closes |
 
 **Relative `cert`/`key` paths resolve against the process's current
 directory, not against `apimock.toml`'s own location** — unlike
@@ -68,6 +75,12 @@ relative to the config file. Run `apimock` from the directory
 containing the cert/key files, or use absolute paths. See
 [Serve over HTTPS](../guides/serve-over-https.md) for a full working
 example.
+
+**A cert/key that exists but fails to parse stops startup — the server
+never binds any listener, HTTP included.** Before this was fixed, a
+malformed PEM silently fell back to HTTP-only, which is worse than a
+loud failure: an operator who configured HTTPS would not otherwise know
+they didn't get it.
 
 ## `[log]`
 
@@ -84,6 +97,9 @@ example.
 | `rule_sets` | array of strings, optional | — | Rule-set files, checked in this order — see [Rule-set schema](./rule-set-schema.md) |
 | `middlewares` | array of strings, optional | — | Rhai middleware files, checked in this order before any rule set — see [Script with Rhai middleware](../guides/script-with-rhai-middleware.md) |
 | `fallback_respond_dir` | string | `"."` | Directory served by URL path when nothing above matches |
+| `cors_allow_credentials_origins` | array of strings, optional | `[]` | Exact origins (beyond the always-allowed `http://localhost:*` / `http://127.0.0.1:*`) allowed credentialed CORS reflection — see [Response headers](./response-headers.md#cors--origin-and-credentials) |
+| `max_request_body_bytes` | integer | `33554432` (32 MiB) | A request body over this size is refused with `413`, before it is buffered |
+| `middleware_max_operations` | integer | `10000000` | Rhai operations one middleware evaluation may perform before it's aborted — see [Script with Rhai middleware](../guides/script-with-rhai-middleware.md) |
 
 Relative `rule_sets` and `fallback_respond_dir` paths resolve against
 `apimock.toml`'s own directory, regardless of the process's current

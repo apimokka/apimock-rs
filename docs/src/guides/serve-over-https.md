@@ -22,6 +22,15 @@ from the directory containing the PEM files, or use absolute paths.
 See [`apimock.toml` root settings](../reference/apimock-toml-root-settings.md#listenertls)
 for the full field list.
 
+**A cert/key that exists but doesn't parse stops the process, before
+any listener binds.** apimock exits naming the file rather than
+silently falling back to plain HTTP — if you asked for HTTPS and it
+isn't running, that's a startup failure you'll see, not a request that
+looked encrypted and wasn't. `handshake_timeout_seconds` (default 10)
+and `max_connections` (default 256) bound a connection that opens and
+never completes its handshake and how many may be in flight at once —
+both configurable, both generous for local development.
+
 Testing against a self-signed certificate needs `curl -k`
 (`--insecure`) since it isn't in any trust store:
 

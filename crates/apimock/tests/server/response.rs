@@ -1,5 +1,7 @@
 #[path = "response/confinement.rs"]
 mod confinement;
+#[path = "response/cors.rs"]
+mod cors;
 #[path = "response/error_response.rs"]
 mod error_response;
 #[path = "response/file_response.rs"]

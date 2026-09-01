@@ -33,6 +33,7 @@ pub async fn dyn_route_content(
     fallback_respond_dir: &str,
     request_headers: &HeaderMap,
     confine_to: Option<&Path>,
+    cors_allow_credentials_origins: &[String],
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     let request_path =
         Path::new(fallback_respond_dir).join(url_path.strip_prefix("/").unwrap_or_default());
@@ -49,10 +50,11 @@ pub async fn dyn_route_content(
         return internal_server_error_response(
             &format!("parent dir not found: url_path = {}", url_path),
             request_headers,
+            cors_allow_credentials_origins,
         );
     };
     if !parent.exists() {
-        return not_found_response(request_headers);
+        return not_found_response(request_headers, cors_allow_credentials_origins);
     }
     let dir = parent.to_owned();
 
@@ -100,6 +102,7 @@ pub async fn dyn_route_content(
             return internal_server_error_response(
                 "failed to read fallback directory",
                 request_headers,
+                cors_allow_credentials_origins,
             );
         }
         Err(err) => {
@@ -111,6 +114,7 @@ pub async fn dyn_route_content(
             return internal_server_error_response(
                 "failed to read fallback directory",
                 request_headers,
+                cors_allow_credentials_origins,
             );
         }
     };
@@ -146,13 +150,19 @@ pub async fn dyn_route_content(
     }
 
     let Some(found) = found else {
-        return not_found_response(request_headers);
+        return not_found_response(request_headers, cors_allow_credentials_origins);
     };
 
     let file_path = found.to_str().unwrap_or_default();
-    FileResponse::new(file_path, None, request_headers, confine_to)
-        .file_content_response()
-        .await
+    FileResponse::new(
+        file_path,
+        None,
+        request_headers,
+        confine_to,
+        cors_allow_credentials_origins,
+    )
+    .file_content_response()
+    .await
 }
 
 #[cfg(test)]
@@ -183,6 +193,7 @@ mod tests {
             respond_dir.to_str().unwrap(),
             &HeaderMap::new(),
             confine_to.as_deref(),
+            &[],
         )
         .await
         .expect("dyn_route_content must not fail to build a response");
@@ -207,6 +218,7 @@ mod tests {
             dir.path().to_str().unwrap(),
             &HeaderMap::new(),
             None,
+            &[],
         )
         .await
         .expect("dyn_route_content must not fail to build a response");

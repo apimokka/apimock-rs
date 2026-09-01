@@ -32,9 +32,13 @@ impl LoadedMiddlewares {
     ///
     /// Paths are interpreted relative to `relative_dir_path` — the same
     /// convention used by `Config::new` for rule-set paths.
+    ///
+    /// `max_operations` (RFC 068 S-03) is applied identically to every
+    /// middleware here — see `MiddlewareHandler::new`'s doc comment.
     pub fn compile(
         middleware_file_paths: &[String],
         relative_dir_path: &str,
+        max_operations: u64,
     ) -> ServerResult<Self> {
         let mut handlers = Vec::with_capacity(middleware_file_paths.len());
         for (idx, relative_path) in middleware_file_paths.iter().enumerate() {
@@ -49,7 +53,7 @@ impl LoadedMiddlewares {
                     ),
                 ))
             })?;
-            handlers.push(MiddlewareHandler::new(path_str)?);
+            handlers.push(MiddlewareHandler::new(path_str, max_operations)?);
         }
         Ok(Self { handlers })
     }

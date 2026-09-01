@@ -55,6 +55,7 @@ pub async fn respond_response(
     parsed_request: &ParsedRequest,
     rule_set_default_delay_ms: Option<u32>,
     confine_to: Option<&Path>,
+    cors_allow_credentials_origins: &[String],
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     if let Some(delay_ms) = respond
         .delay_response_milliseconds
@@ -74,7 +75,11 @@ pub async fn respond_response(
                 file_path,
                 dir_prefix,
             );
-            return internal_server_error_response("failed to get response file", request_headers);
+            return internal_server_error_response(
+                "failed to get response file",
+                request_headers,
+                cors_allow_credentials_origins,
+            );
         };
 
         // dir_prefix is used only for the file-not-found message above;
@@ -87,6 +92,7 @@ pub async fn respond_response(
             respond.csv_records_key.clone(),
             request_headers,
             confine_to,
+            cors_allow_credentials_origins,
         )
         .file_content_response()
         .await;
@@ -99,12 +105,14 @@ pub async fn respond_response(
                 text.as_str(),
                 respond.headers.as_ref(),
                 request_headers,
+                cors_allow_credentials_origins,
             ),
             None => text_response(
                 text.as_str(),
                 None,
                 respond.headers.as_ref(),
                 request_headers,
+                cors_allow_credentials_origins,
             ),
         };
     }
@@ -116,12 +124,22 @@ pub async fn respond_response(
             respond.headers.as_ref(),
             request_headers,
             None,
+            cors_allow_credentials_origins,
         );
     }
 
     if let Some(status_code) = respond.status_code.as_ref() {
-        return status_code_response(status_code, respond.headers.as_ref(), request_headers);
+        return status_code_response(
+            status_code,
+            respond.headers.as_ref(),
+            request_headers,
+            cors_allow_credentials_origins,
+        );
     }
 
-    internal_server_error_response("invalid respond def", request_headers)
+    internal_server_error_response(
+        "invalid respond def",
+        request_headers,
+        cors_allow_credentials_origins,
+    )
 }

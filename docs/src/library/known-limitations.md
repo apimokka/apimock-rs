@@ -30,7 +30,7 @@ baseline put the whole surface in one file for the first time.
 
 ## Three surfaces have no proven consumer
 
-Introduced on the [section index](./README.md); the specifics:
+Introduced on the [section index](./); the specifics:
 
 **`Workspace::has_external_changes()` / `sync_from_disk()`** — for the
 "file changed underneath a long-lived session" case, which is

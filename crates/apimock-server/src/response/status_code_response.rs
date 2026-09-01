@@ -14,11 +14,12 @@ pub fn status_code_response(
     status_code: &StatusCode,
     headers: Option<&HashMap<String, Option<String>>>,
     request_headers: &HeaderMap,
+    cors_allow_credentials_origins: &[String],
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     ResponseHandler::default()
         .with_status(status_code)
         .with_custom_headers(headers)
-        .into_response(request_headers)
+        .into_response(request_headers, cors_allow_credentials_origins)
 }
 
 /// custom status code response with message in body
@@ -31,10 +32,11 @@ pub fn status_code_response_with_message(
     message: &str,
     headers: Option<&HashMap<String, Option<String>>>,
     request_headers: &HeaderMap,
+    cors_allow_credentials_origins: &[String],
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     ResponseHandler::default()
         .with_status(status_code)
         .with_text(message, None)
         .with_custom_headers(headers)
-        .into_response(request_headers)
+        .into_response(request_headers, cors_allow_credentials_origins)
 }

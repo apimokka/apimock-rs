@@ -367,10 +367,18 @@ fn dispatch(config: &Config, parsed_request: &ParsedRequest) -> DispatchOutcome 
         .as_deref()
         .unwrap_or(&[])
         .len();
+    let cors_allow_credentials_origins = config
+        .service
+        .cors_allow_credentials_origins
+        .as_deref()
+        .unwrap_or(&[]);
 
     if parsed_request.component_parts.method == hyper::Method::OPTIONS {
-        let response = handle_options(&parsed_request.component_parts.headers)
-            .expect("a fixed 204 response cannot fail to build");
+        let response = handle_options(
+            &parsed_request.component_parts.headers,
+            cors_allow_credentials_origins,
+        )
+        .expect("a fixed 204 response cannot fail to build");
         return DispatchOutcome {
             stage: Stage::Options,
             response,
@@ -398,6 +406,7 @@ fn dispatch(config: &Config, parsed_request: &ParsedRequest) -> DispatchOutcome 
                 parsed_request,
                 rule_set_default_delay_ms,
                 confine_to.as_deref(),
+                cors_allow_credentials_origins,
             ))
             .expect("respond_response only fails on a headers-construction bug");
             return DispatchOutcome {
@@ -418,6 +427,7 @@ fn dispatch(config: &Config, parsed_request: &ParsedRequest) -> DispatchOutcome 
         config.service.fallback_respond_dir.as_str(),
         &parsed_request.component_parts.headers,
         confine_to.as_deref(),
+        cors_allow_credentials_origins,
     ))
     .expect("dyn_route_content only fails on a headers-construction bug");
     DispatchOutcome {

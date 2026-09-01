@@ -37,6 +37,7 @@ impl ResponseHandler {
     pub fn into_response(
         self,
         request_headers: &HeaderMap,
+        cors_allow_credentials_origins: &[String],
     ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
         // - body + content-length
         let response = match self.body_kind {
@@ -55,6 +56,7 @@ impl ResponseHandler {
                 return internal_server_error_response(
                     &format!("failed to create response: {}", err),
                     request_headers,
+                    cors_allow_credentials_origins,
                 );
             }
         };
@@ -74,7 +76,9 @@ impl ResponseHandler {
         headers.insert(CONTENT_LENGTH, HeaderValue::from(content_length));
 
         // - the other default headers
-        for (header_key, header_value) in default_response_headers(request_headers).iter() {
+        for (header_key, header_value) in
+            default_response_headers(request_headers, cors_allow_credentials_origins).iter()
+        {
             headers.insert(header_key, header_value.to_owned());
         }
 
@@ -204,8 +208,21 @@ impl ResponseHandler {
     }
 }
 
-/// default response headers key-value pairs
-pub fn default_response_headers(request_headers: &HeaderMap) -> HeaderMap {
+/// default response headers key-value pairs.
+///
+/// `cors_allow_credentials_origins` is RFC 067's
+/// `[service].cors_allow_credentials_origins` — exact origin strings
+/// (beyond the implicitly-allowed loopback ones, see
+/// `is_credentialed_reflection_allowed` — private to this crate, not
+/// linked here since rustdoc's public docs can't resolve a private
+/// item) allowed credentialed reflection. Empty for a caller that has
+/// no config in scope (e.g. a fixed 204 preflight built with no
+/// request context) — degrading to the safe, non-credentialed path is
+/// correct there, never the reverse.
+pub fn default_response_headers(
+    request_headers: &HeaderMap,
+    cors_allow_credentials_origins: &[String],
+) -> HeaderMap {
     let mut header_map_src = Vec::with_capacity(DEFAULT_RESPONSE_HEADERS.len() + 1);
 
     // resource
@@ -217,8 +234,25 @@ pub fn default_response_headers(request_headers: &HeaderMap) -> HeaderMap {
     );
 
     // - access-control-allow-origin, vary
+    //
+    // RFC 067: a credentialed request (Cookie/Authorization present)
+    // only gets its Origin reflected — and Access-Control-Allow-Credentials:
+    // true — when that origin is allowed (see
+    // `is_credentialed_reflection_allowed`). An origin the operator
+    // never named gets exactly the same `origin = None` path a
+    // non-credentialed request takes below: `ACAO: *`, no credentials.
+    // The response is still served either way — refusing credentialed
+    // cross-origin *reads* of it is the browser's job, not this
+    // server's, and erroring here would also break the many requests
+    // that carry a `Cookie` incidentally and need no CORS at all.
     let origin = if is_likely_authenticated_request(request_headers) {
-        request_headers.get(ORIGIN).map(|x| x.to_owned())
+        request_headers
+            .get(ORIGIN)
+            .and_then(|value| value.to_str().ok())
+            .filter(|origin| {
+                is_credentialed_reflection_allowed(origin, cors_allow_credentials_origins)
+            })
+            .and_then(|origin| HeaderValue::from_str(origin).ok())
     } else {
         None
     };
@@ -273,4 +307,48 @@ pub fn default_response_headers(request_headers: &HeaderMap) -> HeaderMap {
 /// guess if the request is likely related to authentication
 fn is_likely_authenticated_request(request_headers: &HeaderMap) -> bool {
     request_headers.contains_key("cookie") || request_headers.contains_key("authorization")
+}
+
+/// RFC 067: whether `origin` gets credentialed CORS reflection.
+/// Loopback origins are allowed regardless of config (see
+/// [`is_implicit_loopback_origin`]); every other origin must appear,
+/// exactly, in `cors_allow_credentials_origins`.
+fn is_credentialed_reflection_allowed(
+    origin: &str,
+    cors_allow_credentials_origins: &[String],
+) -> bool {
+    is_implicit_loopback_origin(origin)
+        || cors_allow_credentials_origins
+            .iter()
+            .any(|allowed| allowed == origin)
+}
+
+/// RFC 067 § Design, "the convenience question": `http://localhost:*`
+/// and `http://127.0.0.1:*` are allowed credentialed reflection without
+/// any configuration — a page served from the developer's own machine
+/// is already inside the trust boundary the loopback bind assumes, so
+/// this keeps "front-end on :5173, mock on :3001" working untouched.
+///
+/// Deliberately a plain prefix-plus-suffix check, not a URL parser: the
+/// two exact hosts this recognises don't need one, and getting this
+/// wrong in the permissive direction is the whole class of bug this
+/// RFC exists to close, so the check is written to fail closed on
+/// anything not exactly `http://localhost[:<port>]` or
+/// `http://127.0.0.1[:<port>]` — in particular, `http://localhost.evil.example`
+/// does *not* match (the suffix after the prefix is neither empty nor
+/// `:<digits>`), and neither does `https://localhost` (a scheme
+/// mismatch): only what RFC 067's own examples specify.
+fn is_implicit_loopback_origin(origin: &str) -> bool {
+    for prefix in ["http://localhost", "http://127.0.0.1"] {
+        let Some(rest) = origin.strip_prefix(prefix) else {
+            continue;
+        };
+        if rest.is_empty() {
+            return true;
+        }
+        return rest
+            .strip_prefix(':')
+            .is_some_and(|port| !port.is_empty() && port.bytes().all(|b| b.is_ascii_digit()));
+    }
+    false
 }

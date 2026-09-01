@@ -5,6 +5,10 @@ pub const apimock_config::config::constant::LISTENER_DEFAULT_IP_ADDRESS: &str
 pub const apimock_config::config::constant::LISTENER_DEFAULT_PORT: u16
 pub const apimock_config::config::constant::PRINT_DELIMITER: &str
 pub const apimock_config::config::constant::SERVICE_DEFAULT_FALLBACK_RESPOND_DIR: &str
+pub const apimock_config::config::constant::SERVICE_DEFAULT_MAX_REQUEST_BODY_BYTES: u64
+pub const apimock_config::config::constant::SERVICE_DEFAULT_MIDDLEWARE_MAX_OPERATIONS: u64
+pub const apimock_config::config::constant::TLS_DEFAULT_HANDSHAKE_TIMEOUT_SECONDS: u64
+pub const apimock_config::config::constant::TLS_DEFAULT_MAX_CONNECTIONS: usize
 pub mod apimock_config::config::file_tree_config
 pub struct apimock_config::config::file_tree_config::FileTreeViewConfig
 pub apimock_config::config::file_tree_config::FileTreeViewConfig::builtin_excludes: bool
@@ -31,12 +35,14 @@ impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::file_tr
 impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::file_tree_config::FileTreeViewConfig
 pub mod apimock_config::config::listener_config
 pub mod apimock_config::config::listener_config::tls_config
-pub struct apimock_config::config::listener_config::tls_config::TlsConfig
+#[non_exhaustive] pub struct apimock_config::config::listener_config::tls_config::TlsConfig
 pub apimock_config::config::listener_config::tls_config::TlsConfig::cert: alloc::string::String
+pub apimock_config::config::listener_config::tls_config::TlsConfig::handshake_timeout_seconds: core::option::Option<u64>
 pub apimock_config::config::listener_config::tls_config::TlsConfig::key: alloc::string::String
+pub apimock_config::config::listener_config::tls_config::TlsConfig::max_connections: core::option::Option<usize>
 pub apimock_config::config::listener_config::tls_config::TlsConfig::port: core::option::Option<u16>
 impl apimock_config::config::listener_config::tls_config::TlsConfig
-pub fn apimock_config::config::listener_config::tls_config::TlsConfig::validate(&self) -> bool
+pub fn apimock_config::config::listener_config::tls_config::TlsConfig::validate(&self) -> core::result::Result<(), alloc::string::String>
 impl core::clone::Clone for apimock_config::config::listener_config::tls_config::TlsConfig
 pub fn apimock_config::config::listener_config::tls_config::TlsConfig::clone(&self) -> apimock_config::config::listener_config::tls_config::TlsConfig
 impl<'de> serde_core::de::Deserialize<'de> for apimock_config::config::listener_config::tls_config::TlsConfig
@@ -53,7 +59,7 @@ pub apimock_config::config::listener_config::ListenerConfig::ip_address: alloc::
 pub apimock_config::config::listener_config::ListenerConfig::port: u16
 pub apimock_config::config::listener_config::ListenerConfig::tls: core::option::Option<apimock_config::config::listener_config::tls_config::TlsConfig>
 impl apimock_config::config::listener_config::ListenerConfig
-pub fn apimock_config::config::listener_config::ListenerConfig::validate(&self) -> bool
+pub fn apimock_config::config::listener_config::ListenerConfig::validate(&self) -> core::result::Result<(), alloc::string::String>
 impl core::clone::Clone for apimock_config::config::listener_config::ListenerConfig
 pub fn apimock_config::config::listener_config::ListenerConfig::clone(&self) -> apimock_config::config::listener_config::ListenerConfig
 impl core::default::Default for apimock_config::config::listener_config::ListenerConfig
@@ -108,7 +114,10 @@ impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::config::log_con
 impl core::panic::unwind_safe::UnwindSafe for apimock_config::config::log_config::LogConfig
 pub mod apimock_config::config::service_config
 #[non_exhaustive] pub struct apimock_config::config::service_config::ServiceConfig
+pub apimock_config::config::service_config::ServiceConfig::cors_allow_credentials_origins: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub apimock_config::config::service_config::ServiceConfig::fallback_respond_dir: alloc::string::String
+pub apimock_config::config::service_config::ServiceConfig::max_request_body_bytes: core::option::Option<u64>
+pub apimock_config::config::service_config::ServiceConfig::middleware_max_operations: core::option::Option<u64>
 pub apimock_config::config::service_config::ServiceConfig::middlewares_file_paths: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub apimock_config::config::service_config::ServiceConfig::rule_sets: alloc::vec::Vec<apimock_routing::rule_set::RuleSet>
 pub apimock_config::config::service_config::ServiceConfig::rule_sets_file_paths: core::option::Option<alloc::vec::Vec<alloc::string::String>>
@@ -1592,7 +1601,7 @@ pub apimock_config::ListenerConfig::ip_address: alloc::string::String
 pub apimock_config::ListenerConfig::port: u16
 pub apimock_config::ListenerConfig::tls: core::option::Option<apimock_config::config::listener_config::tls_config::TlsConfig>
 impl apimock_config::config::listener_config::ListenerConfig
-pub fn apimock_config::config::listener_config::ListenerConfig::validate(&self) -> bool
+pub fn apimock_config::config::listener_config::ListenerConfig::validate(&self) -> core::result::Result<(), alloc::string::String>
 impl core::clone::Clone for apimock_config::config::listener_config::ListenerConfig
 pub fn apimock_config::config::listener_config::ListenerConfig::clone(&self) -> apimock_config::config::listener_config::ListenerConfig
 impl core::default::Default for apimock_config::config::listener_config::ListenerConfig
@@ -1754,7 +1763,10 @@ impl core::marker::UnsafeUnpin for apimock_config::view::SaveResult
 impl core::panic::unwind_safe::RefUnwindSafe for apimock_config::view::SaveResult
 impl core::panic::unwind_safe::UnwindSafe for apimock_config::view::SaveResult
 #[non_exhaustive] pub struct apimock_config::ServiceConfig
+pub apimock_config::ServiceConfig::cors_allow_credentials_origins: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub apimock_config::ServiceConfig::fallback_respond_dir: alloc::string::String
+pub apimock_config::ServiceConfig::max_request_body_bytes: core::option::Option<u64>
+pub apimock_config::ServiceConfig::middleware_max_operations: core::option::Option<u64>
 pub apimock_config::ServiceConfig::middlewares_file_paths: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub apimock_config::ServiceConfig::rule_sets: alloc::vec::Vec<apimock_routing::rule_set::RuleSet>
 pub apimock_config::ServiceConfig::rule_sets_file_paths: core::option::Option<alloc::vec::Vec<alloc::string::String>>

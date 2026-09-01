@@ -53,6 +53,28 @@ pub struct ServiceConfig {
 
     /// Filesystem directory served by the dyn-route fallback.
     pub fallback_respond_dir: String,
+
+    /// RFC 067: exact origin strings allowed credentialed CORS
+    /// reflection (`Access-Control-Allow-Origin: <origin>` +
+    /// `Access-Control-Allow-Credentials: true`) when a request carries
+    /// `Cookie` or `Authorization`. Empty by default — a loopback
+    /// origin (`http://localhost:*`, `http://127.0.0.1:*`) is allowed
+    /// implicitly regardless of this list; every other origin must be
+    /// named here or it gets the safe, non-credentialed
+    /// `Access-Control-Allow-Origin: *` instead. See
+    /// `apimock_server::response_handler` for the decision itself.
+    pub cors_allow_credentials_origins: Option<Vec<String>>,
+
+    /// RFC 068 S-02: maximum size of one request body, in bytes.
+    /// `None` uses
+    /// [`SERVICE_DEFAULT_MAX_REQUEST_BODY_BYTES`](super::constant::SERVICE_DEFAULT_MAX_REQUEST_BODY_BYTES).
+    /// A body over the limit is refused with 413 before it is buffered.
+    pub max_request_body_bytes: Option<u64>,
+
+    /// RFC 068 S-03: maximum Rhai operations one middleware evaluation
+    /// may perform before it's aborted. `None` uses
+    /// [`SERVICE_DEFAULT_MIDDLEWARE_MAX_OPERATIONS`](super::constant::SERVICE_DEFAULT_MIDDLEWARE_MAX_OPERATIONS).
+    pub middleware_max_operations: Option<u64>,
 }
 
 impl ServiceConfig {
@@ -124,6 +146,9 @@ impl Default for ServiceConfig {
             rule_sets: vec![],
             middlewares_file_paths: None,
             fallback_respond_dir: SERVICE_DEFAULT_FALLBACK_RESPOND_DIR.to_owned(),
+            cors_allow_credentials_origins: None,
+            max_request_body_bytes: None,
+            middleware_max_operations: None,
         }
     }
 }

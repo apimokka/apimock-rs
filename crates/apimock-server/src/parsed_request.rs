@@ -11,7 +11,7 @@
 use apimock_config::config::log_config::verbose_config::VerboseConfig;
 use apimock_routing::{ParsedRequest, util::http::normalize_url_path};
 use console::style;
-use http_body_util::BodyExt;
+use http_body_util::{BodyExt, LengthLimitError, Limited};
 use hyper::header::ORIGIN;
 use hyper::{Version, body::Incoming};
 use serde_json::{Value, to_string_pretty};
@@ -20,6 +20,31 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::http_util::content_type_is_application_json;
 use crate::trace::{REDACTED_HEADER_VALUE, TraceConfig};
+
+/// Failure building a `ParsedRequest` from an incoming request.
+///
+/// Split out from a bare `String` (RFC 068 S-02) so the caller can
+/// answer **413** for an oversized body specifically, rather than the
+/// generic 500 every other failure here gets — the client's mistake,
+/// not the server's.
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum ParsedRequestError {
+    /// The body exceeded `max_body_bytes`.
+    BodyTooLarge,
+    /// Any other failure — unchanged from this function's previous
+    /// bare-`String` error.
+    Other(String),
+}
+
+impl std::fmt::Display for ParsedRequestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BodyTooLarge => write!(f, "request body exceeded the configured size limit"),
+            Self::Other(reason) => write!(f, "{}", reason),
+        }
+    }
+}
 
 /// Consume an incoming hyper request into a `ParsedRequest` the matcher
 /// can use.
@@ -32,14 +57,28 @@ use crate::trace::{REDACTED_HEADER_VALUE, TraceConfig};
 /// warning and continue so the URL-path-only rules still apply. Only
 /// *claimed* JSON (`Content-Type: application/json`) that fails to
 /// parse becomes a hard `Err` — that is a real client bug.
+///
+/// # `max_body_bytes` (RFC 068 S-02)
+///
+/// The body used to be collected whole with no cap — the external
+/// audit measured one 256 MiB request taking the process from 9 MiB
+/// RSS to 462 MiB. `http_body_util::Limited` bounds how much of the
+/// body is ever buffered to (at most, just past) `max_body_bytes`
+/// before this returns `Err(BodyTooLarge)` instead of continuing to
+/// read — the caller answers 413 without the body ever being fully
+/// collected.
 pub async fn parsed_request_from(
     request: hyper::Request<Incoming>,
-) -> Result<ParsedRequest, String> {
+    max_body_bytes: usize,
+) -> Result<ParsedRequest, ParsedRequestError> {
     let (component_parts, body) = request.into_parts();
 
-    let body_bytes = match body.boxed().collect().await {
+    let body_bytes = match Limited::new(body, max_body_bytes).collect().await {
         Ok(x) => Some(x.to_bytes()),
         Err(err) => {
+            if err.downcast_ref::<LengthLimitError>().is_some() {
+                return Err(ParsedRequestError::BodyTooLarge);
+            }
             log::warn!("failed to collect request incoming body: {}", err);
             None
         }
@@ -59,10 +98,10 @@ pub async fn parsed_request_from(
         ) {
             // declared application/json but body didn't parse → hard error
             (Some(true), Err(err)) => {
-                return Err(format!(
+                return Err(ParsedRequestError::Other(format!(
                     "failed to get json value from request body: {}",
                     err
-                ));
+                )));
             }
             (Some(true), Ok(v)) => v,
             (_, Ok(v)) => {

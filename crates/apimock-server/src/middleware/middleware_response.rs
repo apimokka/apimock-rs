@@ -13,14 +13,22 @@ pub struct MiddlewareResponse {
     /// The middleware script's own directory, already canonicalised —
     /// see `MiddlewareHandler::confine_to`.
     pub confine_to: Option<PathBuf>,
+    /// RFC 067 — see `response_handler::default_response_headers`.
+    pub cors_allow_credentials_origins: Vec<String>,
 }
 
 impl MiddlewareResponse {
-    pub fn new(file_path: &str, request_headers: &HeaderMap, confine_to: Option<&Path>) -> Self {
+    pub fn new(
+        file_path: &str,
+        request_headers: &HeaderMap,
+        confine_to: Option<&Path>,
+        cors_allow_credentials_origins: &[String],
+    ) -> Self {
         MiddlewareResponse {
             file_path: file_path.to_owned(),
             request_headers: request_headers.to_owned(),
             confine_to: confine_to.map(Path::to_path_buf),
+            cors_allow_credentials_origins: cors_allow_credentials_origins.to_vec(),
         }
     }
 
@@ -44,6 +52,7 @@ impl MiddlewareResponse {
                     return Some(internal_server_error_response(
                         "failed to resolve middleware response file",
                         &self.request_headers,
+                        &self.cors_allow_credentials_origins,
                     ));
                 }
             };
@@ -59,6 +68,7 @@ impl MiddlewareResponse {
                     return Some(internal_server_error_response(
                         "middleware response file path is invalid",
                         &self.request_headers,
+                        &self.cors_allow_credentials_origins,
                     ));
                 }
             }
@@ -70,6 +80,7 @@ impl MiddlewareResponse {
                 None,
                 &self.request_headers,
                 self.confine_to.as_deref(),
+                &self.cors_allow_credentials_origins,
             )
             .file_content_response()
             .await,
@@ -87,6 +98,7 @@ impl MiddlewareResponse {
             None,
             &self.request_headers,
             Some(self.file_path.as_str()),
+            &self.cors_allow_credentials_origins,
         ))
     }
 
@@ -100,6 +112,7 @@ impl MiddlewareResponse {
             None,
             None,
             &self.request_headers,
+            &self.cors_allow_credentials_origins,
         ))
     }
 }
