@@ -5,7 +5,9 @@
 (round-robin), [072](../../accepted/072-header-matching-fails-closed.md)
 (header matching). All accepted 2026-09-01.
 **Milestone.** Next **minor** — see § 1.
-**Baseline.** `main` @ `5d9e5bc`, after tranche 1.
+**Baseline.** `main` @ `ef9dac6` — tranche 1 is merged. It touched no
+source file this tranche needs (only `response-headers.md`), so there is
+no conflict to resolve.
 
 ---
 
@@ -71,6 +73,29 @@ validators diverged in precisely this way.
 unreadable is neither "matching" nor "absent". The RFC flags this as
 unresolved. Pick an answer, document it, test it; do not let it fall out
 of the implementation.
+
+## 2a. A trap tranche 1 hit, which applies squarely here
+
+All three of this tranche's fixes need **config fixtures**, and tranche 1
+lost a CI run to exactly that.
+
+Their new tests generated a config file containing a real filesystem
+path, written into a TOML double-quoted string. On Windows that path is
+backslash-separated, and **TOML treats `\` as an escape introducer** —
+so `\A`, or `\U` not followed by eight hex digits, makes the generated
+`apimock.toml` unparseable. The test then failed with a config-parse
+error *before its own logic ran*, which reads as a behaviour failure and
+is not one.
+
+They fixed it with a helper normalising to forward slashes (Windows
+accepts those as separators too) and applied it at both call sites.
+
+**Use that helper rather than rediscovering this.** And note the shape
+of the lesson: a fixture that cannot load makes a test prove nothing
+while still going green or red for the wrong reason. That has now
+happened three times in this project — twice to me, once to tranche 1.
+**When a test fails, check the fixture parsed before you debug the
+behaviour.**
 
 ## 3. Verified for you
 
