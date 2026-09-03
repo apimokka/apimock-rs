@@ -495,7 +495,6 @@ pub apimock_routing::rule_set::RuleSet::file_path: alloc::string::String
 pub apimock_routing::rule_set::RuleSet::guard: core::option::Option<apimock_routing::rule_set::guard::Guard>
 pub apimock_routing::rule_set::RuleSet::prefix: core::option::Option<apimock_routing::rule_set::prefix::Prefix>
 pub apimock_routing::rule_set::RuleSet::resolved_respond_dir: alloc::string::String
-pub apimock_routing::rule_set::RuleSet::round_robin_counters: alloc::sync::Arc<std::sync::poison::mutex::Mutex<std::collections::hash::map::HashMap<alloc::vec::Vec<usize>, usize>>>
 pub apimock_routing::rule_set::RuleSet::rules: alloc::vec::Vec<apimock_routing::rule_set::rule::Rule>
 pub apimock_routing::rule_set::RuleSet::strategy: core::option::Option<apimock_routing::strategy::Strategy>
 impl apimock_routing::rule_set::RuleSet
@@ -1320,7 +1319,6 @@ pub apimock_routing::RuleSet::file_path: alloc::string::String
 pub apimock_routing::RuleSet::guard: core::option::Option<apimock_routing::rule_set::guard::Guard>
 pub apimock_routing::RuleSet::prefix: core::option::Option<apimock_routing::rule_set::prefix::Prefix>
 pub apimock_routing::RuleSet::resolved_respond_dir: alloc::string::String
-pub apimock_routing::RuleSet::round_robin_counters: alloc::sync::Arc<std::sync::poison::mutex::Mutex<std::collections::hash::map::HashMap<alloc::vec::Vec<usize>, usize>>>
 pub apimock_routing::RuleSet::rules: alloc::vec::Vec<apimock_routing::rule_set::rule::Rule>
 pub apimock_routing::RuleSet::strategy: core::option::Option<apimock_routing::strategy::Strategy>
 impl apimock_routing::rule_set::RuleSet

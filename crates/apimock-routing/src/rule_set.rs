@@ -95,12 +95,22 @@ pub struct RuleSet {
     #[serde(skip)]
     pub file_path: String,
     /// Per-match-group round-robin counters (RFC 070). Shared across
-    /// clones via `Arc`. See `RoundRobinCounters`'s own doc comment
-    /// (private to this crate; not linked here since rustdoc's public
-    /// docs can't resolve a private item) for the key and the
-    /// bounded-growth argument.
+    /// clones via `Arc`. See `RoundRobinCounters`'s own doc comment for
+    /// the key and the bounded-growth argument.
+    ///
+    /// # Private, deliberately (REVIEW-001, `audit-t2-silent-wrongness`)
+    ///
+    /// This field used to be `pub` (as `round_robin_counter`, a plain
+    /// `Arc<AtomicUsize>`) purely because `RuleSet` is otherwise a plain
+    /// data struct — not because anything outside this crate ever read
+    /// or wrote it (checked: nothing did). RFC 070's fix could not keep
+    /// the old type (one `AtomicUsize` cannot express per-group state),
+    /// so the field's *type* was always going to change regardless;
+    /// making it private at the same time removes internal scheduling
+    /// state from the public API entirely, rather than replacing one
+    /// public representation with another and calling that additive.
     #[serde(skip, default = "default_round_robin_counters")]
-    pub round_robin_counters: RoundRobinCounters,
+    round_robin_counters: RoundRobinCounters,
     /// The response directory `Respond::file_path` resolves against,
     /// computed once by `RuleSet::new` (RFC 058). Never deserialised,
     /// never written back to `prefix.respond_dir_prefix` — see
