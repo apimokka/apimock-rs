@@ -11,13 +11,15 @@ this file and its `SUMMARY.md` entry to match whatever the release
 process actually settles on.
 
 Three RFCs land here so far, from the external audit's second
-tranche — each is a **fix that changes what an existing setup does**,
-which is why this is a minor, not a patch:
+tranche. Each is a **fix that changes what an existing setup does**,
+which is why this is a minor, not a patch — and RFC 070 additionally
+removes a public field, which affects library consumers only:
 
 | RFC | What breaks |
 |---|---|
 | [069](#config-an-unknown-key-in-a-rule-condition-or-respond-block-now-fails-to-load) | A config that loads today stops loading |
 | [070](#round_robin-now-rotates-per-match-group-not-per-rule-set) | A `round_robin` rule set returns a different sequence |
+| [070](#library-api-a-public-field-on-ruleset-is-removed) | *Library consumers only:* a public field on `RuleSet` is removed |
 | [072](#header-matching-now-fails-closed-on-non-utf-8-values) | A header condition that passes today starts failing |
 
 Every one of these is a genuine correctness fix for behaviour the
@@ -95,6 +97,42 @@ matching-behaviour correction, not a new setting. If something
 downstream was asserting on the old (broken) sequence specifically,
 that assertion needs updating; nothing could have been correctly
 depending on it, since the old sequence was undocumented and wrong.
+
+## Library API: a public field on `RuleSet` is removed
+
+**RFC 070 — library consumers only.** This section does not affect
+running `apimock` as a server, or any configuration. It matters only
+if you depend on the `apimock-routing` crate directly.
+
+`RuleSet` carried its round-robin position as a public field:
+
+```rust
+pub round_robin_counter: Arc<AtomicUsize>,
+```
+
+Per-group rotation (above) cannot be expressed by a single counter, so
+that state is now a map keyed by the matched rule set — and it is
+**private**. The public field is removed, and no replacement field
+takes its place:
+
+```rust
+// 6.0.0
+let n = rule_set.round_robin_counter.load(Ordering::Relaxed);
+
+// 6.1.0 — no equivalent: the rotation state is internal
+```
+
+**If this breaks your build, please tell us.** The field held
+`RuleSet`'s own scheduling bookkeeping and was public only because
+`RuleSet` is a plain data struct. It appears nowhere outside
+`apimock-routing` in this workspace and we know of no reason to read
+it — but if you had one, we would rather hear it than assume.
+
+This is a breaking change to the public API within a major version.
+Those are rare and we avoid them; the project does not promise they
+are impossible. What it does promise is that none of them reaches a
+release undeclared — see
+[API stability](../library/api-stability.md).
 
 ## Header matching now fails closed on non-UTF-8 values
 
