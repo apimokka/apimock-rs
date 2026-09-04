@@ -155,7 +155,12 @@ approves *code*; it never approves a release action.
 > jobs, adding or removing a published artefact, or touching
 > `id-token`/registry configuration does not — those stay owner-only.
 
-> ### Amendment 3 — 2026-09-01: a direct push to `main` is verified too
+> ### Amendment 3 — adopted 2026-09-04: a direct push to `main` is verified too
+>
+> **Adopted with RFC 080's acceptance** (2026-09-04), which argued that
+> under trunk-based development this stops being advisory: with no
+> branch to absorb a red build, an unverified push is how `main` goes
+> red and stays red. Proposed 2026-09-01; the text below is unchanged.
 >
 > § 1's **Green** precondition governs merges. § 6 permits the architect
 > to commit documents straight to `main`. Nothing covered the gap, and
@@ -262,6 +267,42 @@ carry code, and the branch is what gets a CI run before merging — the
 **Green** precondition, which has caught real defects (a Windows-only
 test failure on RFC 065's first push). That is branch isolation earning
 its keep, which is precisely what my own document commits were not.
+
+> ### Amendment 4 — adopted 2026-09-04: RFC 080 supersedes the branching practice
+>
+> [RFC 080](../accepted/080-trunk-based-development.md) adopts
+> **trunk-based development**: work lands on `main` directly, with no
+> implementation branch, except for changes that can behave differently
+> on Windows or macOS — those keep a short-lived branch, because only
+> CI's `test` job is matrixed and the development machine is Linux.
+>
+> This RFC's Non-goals declined to choose a branching model, so 080 is
+> a new decision rather than a contradiction of this one. **Everything
+> here about *who* moves code survives unchanged.** Specifically:
+>
+> - **§ 1** — the disposition-then-proceed rule stands; "merges its own
+>   implementation branch" now reads "commits to `main`". The
+>   preconditions (Reviewed / Green / Clean / Verified / Reported) are
+>   unchanged, with **Clean** becoming a `git pull --ff-only` before
+>   pushing rather than a merge-or-rebase decision.
+> - **§ 2** — untouched. The release line is still not the dev team's.
+> - **§ 3** — the shared-tree hazard shrinks but does not vanish:
+>   concurrent uncommitted edits still collide. With one branch, the
+>   `HEAD`-moving class of failure — both recorded incidents — cannot
+>   occur.
+> - **§ 4** — untouched, and now load-bearing. Force-pushing `main` was
+>   already prohibited outright; it is the rule standing between a
+>   mistake and rewritten shared history, and must not be softened for
+>   convenience.
+> - **§ 5** — applies to 080's carve-out branches only.
+> - **§ 6** — untouched, and now carries Amendment 3 as binding.
+>
+> **This document's own evidence argued for 080's carve-out** before
+> 080 existed: the closing note above records a Windows-only test
+> failure caught on RFC 065's first push, "branch isolation earning its
+> keep." That is exactly the case 080 § 3 preserves, and the only case
+> it preserves.
+
 
 ## Unresolved questions
 

@@ -1,6 +1,7 @@
 # RFC 080 — Trunk-based development: `main` is the working branch
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — owner approved 2026-09-04, carve-out kept as
+written. Adopts RFC 066 Amendment 3 with it (§ 2).
 **Tracks.** Process. Supersedes RFC 066's implicit branching practice;
 RFC 066's *who may move code* rules survive unchanged.
 **Touches.** `rfcs/done/066-branching-and-merge-policy.md` (§ 1, § 3,
@@ -122,6 +123,11 @@ local run could have caught:
 - RFC 075's case-sensitivity question — macOS APFS defaults to
   case-insensitive; Linux is the case-sensitive outlier, and the local
   machine is the outlier.
+- **RFC 066's own closing note**, written before this RFC existed:
+  the **Green** precondition *"has caught real defects (a Windows-only
+  test failure on RFC 065's first push). That is branch isolation
+  earning its keep."* That sentence is the carve-out, argued by the
+  document this RFC supersedes.
 
 **So: use a short-lived branch when a change plausibly touches**
 filesystem paths, filename case, line endings, file IO, or TLS
@@ -172,10 +178,14 @@ where the local gate set is known to be blind.
 
 ## Unresolved questions
 
-1. **The carve-out in § 3** — keep, or go fully single-branch and accept
-   occasional Windows/macOS breakage on `main`? My recommendation is
-   keep; the owner may reasonably weigh it differently, since the cost
-   is a revert rather than anything lost.
-2. **Whether to adopt RFC 066 Amendment 3 as part of this.** My
-   recommendation is yes, and that it becomes binding rather than
-   advisory.
+1. ~~**The carve-out in § 3** — keep, or go fully single-branch and
+   accept occasional Windows/macOS breakage on `main`?~~ ✅ **Resolved
+   on acceptance 2026-09-04** — kept as written. Flagged here in plain
+   sight rather than assumed: the owner accepted without striking it,
+   and the recommendation stood inside the accepted document. If only
+   §§ 1–2 and 4 were meant and the carve-out should go, say so and § 3
+   comes back out.
+2. ~~**Whether to adopt RFC 066 Amendment 3 as part of this.**~~ ✅
+   **Resolved on acceptance 2026-09-04** — adopted, and binding rather
+   than advisory. Recorded as RFC 066 Amendment 3's own status line and
+   in Amendment 4.
