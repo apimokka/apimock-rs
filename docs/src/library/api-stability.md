@@ -1,12 +1,29 @@
 # API stability — what we promise, and what enforces it
 
-## The promise
+## What we promise
 
-**Within 6.x, the public API is additive-only.** A signature that
-compiles against 6.0.0 will compile against every later 6.x.
+**No public API change reaches a release undeclared.** Every change to
+every crate's public surface is detected by CI, recorded in a
+checked-in baseline, and written up in the release notes — and, when it
+needs steps from you, in a migration guide.
 
-That is not a good intention. As of 6.0.0 it is **mechanically
-enforced**.
+That is deliberately *not* "nothing will ever break within 6.x". Inside
+a major version we avoid breaking changes and they are rare, but the
+project does not claim they are impossible, and no CI job could enforce
+such a claim. What is mechanically enforced is that a break cannot
+happen **quietly**.
+
+**How a change reaches you, in order:**
+
+1. **The compiler, first, where it can.** `#[non_exhaustive]` types and
+   boxed error variants make a whole class of change a non-event
+   (RFC 052, RFC 041). Where a removal has a migration path worth
+   warning about, `#[deprecated]` warns you a release ahead.
+2. **The baseline.** The change is declared in
+   `crates/<name>/public-api.txt` — `git log` over that file is the
+   API's changelog, generated rather than hand-maintained.
+3. **The release notes and migration guide**, which is where you meet
+   it as prose rather than as a compiler error.
 
 ## The gate (RFC 039)
 
@@ -24,8 +41,11 @@ from the checked-in file.** Nothing auto-updates: a commit that changes
 the API must contain the baseline change, which puts the API diff in
 front of a reviewer in the pull request.
 
-**Additive changes fail too**, until the baseline is declared. That is
-deliberate — additive-only means *declared*, not *unchecked*.
+**Purely additive changes fail too**, until the baseline is updated.
+That is deliberate: the gate's job is to make every change to the
+surface *declared*, not to judge which kind of change it is. Deciding
+whether a break is acceptable is semver's job and the maintainers' —
+see RFC 039's own non-goals.
 
 **Two consequences for you, both good:**
 
@@ -90,7 +110,10 @@ The error types you will meet: `WorkspaceError`, `ApplyError`,
 
 ## Semver, concretely
 
-- **6.x** — additive only, gate-enforced. Upgrade freely.
+- **6.x** — breaking changes are avoided and rare. Any that occur are
+  declared in the baseline, documented in that version's migration
+  guide, and deprecation-warned first where that is practical. Upgrade
+  with the release notes to hand.
 - **7.0** — may break. There is already one known candidate; see
   [`06-known-gaps.md`](./known-limitations.md) § 1.
 - The four crates are **always published together at the same

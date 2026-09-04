@@ -27,9 +27,9 @@ Depend on **`apimock-config`** and **`apimock-server`**;
 `Workspace::load`, render from `snapshot()`, mutate with
 `apply(EditCommand)`, surface problems from `validate()`, preview with
 `preview_changes()`, commit with `save()`. Run the mock with
-`apimock_server::server::Server`. Everything here is covered by an
-additive-only API gate as of 6.0.0, so what compiles today keeps
-compiling across 6.x.
+`apimock_server::server::Server`. Everything here is covered by an API
+declaration gate as of 6.0.0: no change to these surfaces reaches a
+release without appearing in the baseline and the release notes.
 
 ## Read this before relying on anything
 
