@@ -10,10 +10,11 @@ write its migration note as it ships rather than at the end. Rename
 this file and its `SUMMARY.md` entry to match whatever the release
 process actually settles on.
 
-Three RFCs land here so far, from the external audit's second
-tranche. Each is a **fix that changes what an existing setup does**,
-which is why this is a minor, not a patch — and RFC 070 additionally
-removes a public field, which affects library consumers only:
+Six RFCs land here so far, from the external audit's second and third
+tranches. Each is a **fix that changes what an existing setup does**,
+which is why this is a minor, not a patch — RFC 070 and RFC 071
+additionally change the public API, which affects library consumers
+only:
 
 | RFC | What breaks |
 |---|---|
@@ -21,6 +22,8 @@ removes a public field, which affects library consumers only:
 | [070](#round_robin-now-rotates-per-match-group-not-per-rule-set) | A `round_robin` rule set returns a different sequence |
 | [070](#library-api-a-public-field-on-ruleset-is-removed) | *Library consumers only:* a public field on `RuleSet` is removed |
 | [072](#header-matching-now-fails-closed-on-non-utf-8-values) | A header condition that passes today starts failing |
+| [071](#library-api-serverapp_state-is-now-shared-not-cloned) | *Library consumers only:* `Server::app_state`'s type changes, `AppState` loses `Clone` |
+| [077](#a-narrow-disclosed-precedence-change-in-the-zero-config-fallback) | A contrived directory layout could serve a different file (see below — almost certainly doesn't apply to you) |
 
 Every one of these is a genuine correctness fix for behaviour the
 external audit found; none is a style or convenience change. If your
@@ -174,11 +177,80 @@ happens to not be valid UTF-8, that rule now correctly refuses it.**
 This was already a bypass of whatever the condition was gating; there
 is no supported way to opt back into the old behaviour, by design.
 
+## Library API: `Server::app_state` is now shared, not cloned
+
+**RFC 071 — library consumers only.** This section does not affect
+running `apimock` as a server, or any configuration.
+
+Every request used to clone the whole `AppState` (and therefore the
+whole `Config`, rule sets included) out from behind a lock — cost
+proportional to configuration size, on every request, serialised
+through that lock. `AppState` is now held once and shared:
+
+```rust
+// 6.0.0
+pub struct Server {
+    pub app_state: AppState,
+    // ...
+}
+
+// 6.1.0
+pub struct Server {
+    pub app_state: std::sync::Arc<AppState>,
+    // ...
+}
+```
+
+`apimock_server::service`'s second parameter changes the same way
+(`Arc<Mutex<AppState>>` → `Arc<AppState>`), and `AppState` no longer
+implements `Clone` — nothing needs to clone it any more, and removing
+the impl closes the door on silently reintroducing the per-request
+clone this RFC exists to remove. `AppState::config`'s field type and
+`AppState::new`'s constructor signature are **unchanged** — every
+existing read through those was already by reference, so only the
+handle around `AppState` needed to change, not `AppState` itself.
+
+**If this breaks your build**, replace an owned `AppState` (e.g. from
+cloning `Server::app_state` before this change) with an `Arc<AppState>`
+and read its fields through the `Arc` rather than a lock.
+
+This is a breaking change to the public API within a major version, in
+the same sense as RFC 070's field removal above — declared here and in
+the baseline, not undeclared. See
+[API stability](../library/api-stability.md).
+
+## A narrow, disclosed precedence change in the zero-config fallback
+
+**RFC 077.** The fallback `respond_dir` used to resolve a request by
+listing the whole directory on every request, even when the exact file
+already existed. It now tries the exact path, then extension inference
+(`/hello` → `hello.json`, the shape this zero-config mode exists for)
+before ever listing the directory — the listing is now reached only for
+a case mismatch (e.g. a URL that canonicalised differently than the
+filesystem did).
+
+This is behaviour-identical for every configuration we could construct
+a test for. It changes outcome in exactly one contrived case: a
+directory containing **both** a bare, differently-cased file (e.g.
+`FOO`, no extension) **and** an extension match for the same request
+(e.g. `foo.json`), where the request has no extension. Before, the
+bare differently-cased file won (found by the listing, which ran
+first); now, the extension-inferred file wins (found by the cheaper
+stat, which now runs first). Nothing in this project's own test corpus
+or examples has ever exercised this layout.
+
+**If you don't keep both a bare, extension-less file and an
+extension-inference-eligible file with the same name in the same
+fallback directory, this does not affect you.**
+
 ## What isn't changing
 
 Every other strategy (`first_match`, `priority`, `weighted_random`,
 `uniform_random`) is unchanged — the audit found no defect in any of
 them, and RFC 070 doesn't touch them. Header matching for a value that
 *is* valid UTF-8 is unchanged — RFC 072 only closes the non-UTF-8 gap.
-No config setting is required to get any of these three fixes; all
-three are corrections to existing behaviour, not new opt-in features.
+File content-type detection (text vs. binary) is unchanged — RFC 077's
+P-05 removed a redundant second file read but kept the exact same
+UTF-8-validity decision. No config setting is required to get any of
+these fixes; all are corrections to existing behaviour or internal
+performance work, not new opt-in features.

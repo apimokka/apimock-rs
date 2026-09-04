@@ -349,8 +349,6 @@ pub apimock_server::server::AppState::middlewares: apimock_server::middleware::L
 pub apimock_server::server::AppState::tracer: apimock_server::trace::TraceEmitter
 impl apimock_server::server::AppState
 pub fn apimock_server::server::AppState::new(apimock_config::config::Config, apimock_server::middleware::LoadedMiddlewares, apimock_server::trace::TraceEmitter) -> Self
-impl core::clone::Clone for apimock_server::server::AppState
-pub fn apimock_server::server::AppState::clone(&self) -> apimock_server::server::AppState
 impl core::marker::Freeze for apimock_server::server::AppState
 impl core::marker::Send for apimock_server::server::AppState
 impl core::marker::Sync for apimock_server::server::AppState
@@ -359,7 +357,7 @@ impl core::marker::UnsafeUnpin for apimock_server::server::AppState
 impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::server::AppState
 impl !core::panic::unwind_safe::UnwindSafe for apimock_server::server::AppState
 #[non_exhaustive] pub struct apimock_server::server::Server
-pub apimock_server::server::Server::app_state: apimock_server::server::AppState
+pub apimock_server::server::Server::app_state: alloc::sync::Arc<apimock_server::server::AppState>
 pub apimock_server::server::Server::http_addr: core::option::Option<core::net::socket_addr::SocketAddr>
 pub apimock_server::server::Server::https_addr: core::option::Option<core::net::socket_addr::SocketAddr>
 impl apimock_server::server::Server
@@ -410,7 +408,7 @@ impl core::marker::UnsafeUnpin for apimock_server::control::ServerHandle
 impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerHandle
 impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerHandle
 pub fn apimock_server::server::handle_options(&http::header::map::HeaderMap, &[alloc::string::String]) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
-pub async fn apimock_server::server::service(http::request::Request<hyper::body::incoming::Incoming>, alloc::sync::Arc<tokio::sync::mutex::Mutex<apimock_server::server::AppState>>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub async fn apimock_server::server::service(http::request::Request<hyper::body::incoming::Incoming>, alloc::sync::Arc<apimock_server::server::AppState>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub mod apimock_server::tls
 pub struct apimock_server::tls::ReloadableCertResolver
 impl apimock_server::tls::ReloadableCertResolver
@@ -720,8 +718,6 @@ pub apimock_server::AppState::middlewares: apimock_server::middleware::LoadedMid
 pub apimock_server::AppState::tracer: apimock_server::trace::TraceEmitter
 impl apimock_server::server::AppState
 pub fn apimock_server::server::AppState::new(apimock_config::config::Config, apimock_server::middleware::LoadedMiddlewares, apimock_server::trace::TraceEmitter) -> Self
-impl core::clone::Clone for apimock_server::server::AppState
-pub fn apimock_server::server::AppState::clone(&self) -> apimock_server::server::AppState
 impl core::marker::Freeze for apimock_server::server::AppState
 impl core::marker::Send for apimock_server::server::AppState
 impl core::marker::Sync for apimock_server::server::AppState
@@ -764,7 +760,7 @@ impl core::marker::UnsafeUnpin for apimock_server::middleware::middleware_handle
 impl !core::panic::unwind_safe::RefUnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
 impl !core::panic::unwind_safe::UnwindSafe for apimock_server::middleware::middleware_handler::MiddlewareHandler
 #[non_exhaustive] pub struct apimock_server::Server
-pub apimock_server::Server::app_state: apimock_server::server::AppState
+pub apimock_server::Server::app_state: alloc::sync::Arc<apimock_server::server::AppState>
 pub apimock_server::Server::http_addr: core::option::Option<core::net::socket_addr::SocketAddr>
 pub apimock_server::Server::https_addr: core::option::Option<core::net::socket_addr::SocketAddr>
 impl apimock_server::server::Server
@@ -814,5 +810,5 @@ impl core::marker::Unpin for apimock_server::control::ServerHandle
 impl core::marker::UnsafeUnpin for apimock_server::control::ServerHandle
 impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::control::ServerHandle
 impl core::panic::unwind_safe::UnwindSafe for apimock_server::control::ServerHandle
-pub async fn apimock_server::service(http::request::Request<hyper::body::incoming::Incoming>, alloc::sync::Arc<tokio::sync::mutex::Mutex<apimock_server::server::AppState>>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
+pub async fn apimock_server::service(http::request::Request<hyper::body::incoming::Incoming>, alloc::sync::Arc<apimock_server::server::AppState>) -> core::result::Result<http::response::Response<apimock_server::types::BoxBody>, http::error::Error>
 pub type apimock_server::ServerResult<T> = core::result::Result<T, apimock_server::error::ServerError>

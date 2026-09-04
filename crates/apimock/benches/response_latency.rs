@@ -32,10 +32,22 @@
 //! file from cache (best-effort) before each sample, `warm_file` does
 //! not. Operators debugging "why is my mock slow on the first hit?"
 //! can read those numbers directly.
+//!
+//! # Rule-count and directory-size scaling (RFC 071 / RFC 077 P-06)
+//!
+//! `bench_response_latency` above holds configuration size fixed and
+//! varies response *kind*. `bench_rule_scaling` and
+//! `bench_directory_scaling` instead hold the request fixed (a
+//! non-matching URL; an existing file) and vary configuration size —
+//! that is the shape neither this bench nor `routing.rs` covered before,
+//! and the shape RFC 071's per-request `Config` clone and RFC 077 P-06's
+//! per-request directory listing both live in. Each rule/file count gets
+//! its own server, cached the same way the shared `server()` is.
 
+use std::collections::HashMap;
 use std::hint::black_box;
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use apimock::{App, EnvArgs};
@@ -197,6 +209,158 @@ fn pick_port() -> u16 {
     port
 }
 
+/// Cache of one server per rule count, keyed the same way `SERVER` caches
+/// the single default one. `&'static` handles leak like `prepare_fixtures`
+/// already does for its own tempdir.
+static RULE_SCALING_SERVERS: OnceLock<Mutex<HashMap<usize, &'static BenchServer>>> =
+    OnceLock::new();
+
+/// Bring up (or reuse) a server whose rule set has exactly `rule_count`
+/// rules, none of which match `/does-not-exist` — the probe path used by
+/// `bench_rule_scaling`. This is RFC 071's shape: cost proportional to
+/// configuration size on a request that does no matching work at all,
+/// which is exactly what a per-request `Config` clone would be sensitive
+/// to and `find_matched` alone (see `routing.rs`) would not reveal.
+fn rule_scaling_server(rule_count: usize) -> &'static BenchServer {
+    let cache = RULE_SCALING_SERVERS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut guard = cache.lock().expect("rule scaling server cache lock");
+    if let Some(server) = guard.get(&rule_count) {
+        return server;
+    }
+
+    let dir = Box::leak(Box::new(
+        tempfile::tempdir().expect("tempdir for rule-scaling fixtures"),
+    ));
+    let fallback_dir = dir.path().join("fallback");
+    std::fs::create_dir_all(&fallback_dir).expect("mkdir fallback");
+
+    let rule_set_path = dir.path().join("rules.toml");
+    let mut rule_set_body = String::with_capacity(rule_count * 64);
+    for i in 0..rule_count {
+        rule_set_body.push_str(&format!(
+            "[[rules]]\nwhen.request.url_path = \"/rule-{i}\"\nrespond = {{ status = 200 }}\n\n"
+        ));
+    }
+    std::fs::write(&rule_set_path, rule_set_body).expect("write rules.toml");
+
+    let config_path = dir.path().join("apimock.toml");
+    std::fs::write(
+        &config_path,
+        format!(
+            "[listener]\n\
+             ip_address = \"127.0.0.1\"\n\
+             port = 0\n\
+             \n\
+             [log]\n\
+             verbose = {{ header = false, body = false }}\n\
+             \n\
+             [service]\n\
+             rule_sets = [\"{}\"]\n\
+             fallback_respond_dir = \"{}\"\n",
+            rule_set_path.file_name().unwrap().to_string_lossy(),
+            fallback_dir.file_name().unwrap().to_string_lossy(),
+        ),
+    )
+    .expect("write apimock.toml");
+
+    let port = pick_port();
+    let server: &'static BenchServer = Box::leak(Box::new(start_server(config_path, port)));
+    guard.insert(rule_count, server);
+    server
+}
+
+/// Cache of one server per fallback-directory file count, mirroring
+/// `RULE_SCALING_SERVERS`.
+static DIRECTORY_SCALING_SERVERS: OnceLock<Mutex<HashMap<usize, &'static BenchServer>>> =
+    OnceLock::new();
+
+/// Bring up (or reuse) a server whose dyn-route fallback directory holds
+/// exactly `file_count` files, and whose first file (`file-0.json`) is
+/// requested by `bench_directory_scaling`. This is RFC 077 P-06's shape:
+/// before the fix, `dyn_route_content` lists the whole directory on every
+/// request even to serve a single known file, so latency should scale
+/// with `file_count` unless that per-request listing has been removed.
+fn dyn_route_scaling_server(file_count: usize) -> &'static BenchServer {
+    let cache = DIRECTORY_SCALING_SERVERS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut guard = cache.lock().expect("directory scaling server cache lock");
+    if let Some(server) = guard.get(&file_count) {
+        return server;
+    }
+
+    let dir = Box::leak(Box::new(
+        tempfile::tempdir().expect("tempdir for directory-scaling fixtures"),
+    ));
+    let fallback_dir = dir.path().join("fallback");
+    std::fs::create_dir_all(&fallback_dir).expect("mkdir fallback");
+
+    for i in 0..file_count.max(1) {
+        std::fs::write(
+            fallback_dir.join(format!("file-{i}.json")),
+            format!("{{\"i\":{i}}}"),
+        )
+        .expect("write fallback fixture file");
+    }
+
+    let config_path = dir.path().join("apimock.toml");
+    std::fs::write(
+        &config_path,
+        format!(
+            "[listener]\n\
+             ip_address = \"127.0.0.1\"\n\
+             port = 0\n\
+             \n\
+             [log]\n\
+             verbose = {{ header = false, body = false }}\n\
+             \n\
+             [service]\n\
+             fallback_respond_dir = \"{}\"\n",
+            fallback_dir.file_name().unwrap().to_string_lossy(),
+        ),
+    )
+    .expect("write apimock.toml");
+
+    let port = pick_port();
+    let server: &'static BenchServer = Box::leak(Box::new(start_server(config_path, port)));
+    guard.insert(file_count, server);
+    server
+}
+
+/// Start a bench server for an already-written config at `config_path`,
+/// listening on `port`. Factored out of `server()`'s init closure so the
+/// rule-count and directory-size caches above can reuse it without
+/// duplicating the tokio-runtime/App::new/settle-time dance.
+fn start_server(config_path: PathBuf, port: u16) -> BenchServer {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .expect("build tokio runtime for bench server");
+
+    let mut env_args = EnvArgs::empty();
+    env_args.config_file_path = Some(config_path.to_string_lossy().into_owned());
+    env_args.port = Some(port);
+
+    rt.spawn(async move {
+        let app = App::new(&env_args, None, false)
+            .await
+            .expect("bench server App::new");
+        app.server.start().await;
+    });
+
+    // See `server()`'s matching comment: 400ms matches the integration
+    // harness and has been stable in CI.
+    std::thread::sleep(Duration::from_millis(400));
+
+    BenchServer {
+        base_url: format!("http://127.0.0.1:{}", port),
+        fallback_dir: config_path
+            .parent()
+            .expect("config path has a parent dir")
+            .join("fallback"),
+        rt,
+    }
+}
+
 fn bench_response_latency(c: &mut Criterion) {
     let server = server();
 
@@ -294,7 +458,82 @@ fn bench_response_latency(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_response_latency);
+/// RFC 071's shape: a request that matches none of the configured rules,
+/// measured at a small and a large rule count. Before the fix, the cost
+/// is dominated by cloning `Config` (and therefore the whole rule set)
+/// once per request, so latency should grow with rule count even though
+/// the matcher does the same (trivial, all-miss) amount of work either
+/// way. After the fix, these two bars should be flat within noise.
+fn bench_rule_scaling(c: &mut Criterion) {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .expect("reqwest client");
+
+    let mut group = c.benchmark_group("rule_scaling");
+    group.throughput(Throughput::Elements(1));
+    group.sample_size(50);
+    group.measurement_time(Duration::from_secs(3));
+
+    for &rule_count in &[1usize, 2_500] {
+        let server = rule_scaling_server(rule_count);
+        group.bench_function(format!("non_matching_request/{rule_count}_rules"), |b| {
+            b.to_async(&server.rt).iter(|| async {
+                let resp = client
+                    .get(format!("{}/does-not-exist", server.base_url))
+                    .send()
+                    .await
+                    .expect("GET /does-not-exist");
+                let _ = resp.bytes().await;
+            });
+        });
+    }
+
+    group.finish();
+}
+
+/// RFC 077 P-06's shape: a request for a file that exists, measured
+/// against a fallback directory holding a small and a large number of
+/// files. Before the fix, `dyn_route_content` lists the whole directory
+/// on every request regardless of whether the candidate path can be
+/// `stat`-ed directly, so latency should grow with file count. After the
+/// fix, these two bars should be flat within noise — the assertion the
+/// handoff notes does not exist yet.
+fn bench_directory_scaling(c: &mut Criterion) {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .expect("reqwest client");
+
+    let mut group = c.benchmark_group("directory_scaling");
+    group.throughput(Throughput::Elements(1));
+    group.sample_size(50);
+    group.measurement_time(Duration::from_secs(3));
+
+    for &file_count in &[1usize, 2_500] {
+        let server = dyn_route_scaling_server(file_count);
+        group.bench_function(format!("existing_file/{file_count}_files"), |b| {
+            b.to_async(&server.rt).iter(|| async {
+                let resp = client
+                    .get(format!("{}/file-0", server.base_url))
+                    .send()
+                    .await
+                    .expect("GET /file-0");
+                let bytes = resp.bytes().await.expect("body");
+                black_box(bytes);
+            });
+        });
+    }
+
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    bench_response_latency,
+    bench_rule_scaling,
+    bench_directory_scaling
+);
 criterion_main!(benches);
 
 /// No-op `log::Log` so the benched server process doesn't flood stdout

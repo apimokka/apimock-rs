@@ -42,8 +42,22 @@ pub fn normalize_url_path(url_path: &str, url_path_prefix: Option<&str>) -> Stri
     // legitimate in a rule's own `url_path` either, so dropping it
     // outright, without collapsing whatever segment preceded it, is
     // sufficient here and simpler than a real resolver.
-    let stripped: Vec<&str> = trimmed.split('/').filter(|seg| *seg != "..").collect();
-    format!("/{}", stripped.join("/"))
+    //
+    // RFC 077 P-09: build the result directly instead of collecting an
+    // intermediate `Vec<&str>`, `.join`-ing it, and `format!`-wrapping
+    // that join — same segments, same order, one allocation instead of
+    // three.
+    let mut result = String::with_capacity(trimmed.len() + 1);
+    result.push('/');
+    let mut segments = trimmed.split('/').filter(|seg| *seg != "..");
+    if let Some(first) = segments.next() {
+        result.push_str(first);
+        for seg in segments {
+            result.push('/');
+            result.push_str(seg);
+        }
+    }
+    result
 }
 
 #[cfg(test)]

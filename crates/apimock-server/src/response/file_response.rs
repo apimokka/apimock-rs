@@ -128,43 +128,36 @@ impl FileResponse {
         };
         self.file_path = file_path.clone();
 
-        // read file as text file in non-blocking task
-        let file_path_to_read_text_file = file_path.clone();
-        let content =
-            task::spawn_blocking(move || fs::read_to_string(file_path_to_read_text_file)).await;
+        // RFC 077 P-05: read the file's bytes once, then decide
+        // text-vs-binary from the bytes already in hand — this used to
+        // be two blocking reads (`read_to_string`, and on its failure a
+        // second `read` of the same file for the binary fallback).
+        // `String::from_utf8` reproduces exactly the same dispatch
+        // `read_to_string`'s success/failure did (it fails on the same
+        // input `read_to_string` would have failed to decode), so the
+        // detection RFC 065's review pinned as load-bearing is
+        // unchanged — see the tests below, written before this diff.
+        let file_path_to_read = file_path.clone();
+        let content = task::spawn_blocking(move || fs::read(file_path_to_read)).await;
 
         match content {
-            Ok(Ok(content)) => {
-                self.text_content = Some(content);
-                self.text_file_content_response()
-            }
-            Ok(Err(_)) => {
-                // read file as binary in non-blocking task
-                let file_path_to_read_binary = file_path.clone();
-                let content =
-                    task::spawn_blocking(move || fs::read(file_path_to_read_binary)).await;
-                match content {
-                    Ok(Ok(content)) => {
-                        self.binary_content = Some(content);
-                        self.binary_content_type_response()
-                    }
-                    Ok(Err(err)) => {
-                        log::error!("failed to read file ({}): {}", self.file_path, err);
-                        internal_server_error_response(
-                            "failed to read response file",
-                            &self.request_headers,
-                            &self.cors_allow_credentials_origins,
-                        )
-                    }
-                    Err(err) => {
-                        log::error!("async task failed ({}): {}", self.file_path, err);
-                        internal_server_error_response(
-                            "failed to read response file",
-                            &self.request_headers,
-                            &self.cors_allow_credentials_origins,
-                        )
-                    }
+            Ok(Ok(bytes)) => match String::from_utf8(bytes) {
+                Ok(text) => {
+                    self.text_content = Some(text);
+                    self.text_file_content_response()
                 }
+                Err(err) => {
+                    self.binary_content = Some(err.into_bytes());
+                    self.binary_content_type_response()
+                }
+            },
+            Ok(Err(err)) => {
+                log::error!("failed to read file ({}): {}", self.file_path, err);
+                internal_server_error_response(
+                    "failed to read response file",
+                    &self.request_headers,
+                    &self.cors_allow_credentials_origins,
+                )
             }
             Err(err) => {
                 log::error!("async task failed ({}): {}", self.file_path, err);
@@ -319,5 +312,84 @@ impl FileResponse {
             .with_binary_body(content, Some(content_type))
             .with_custom_headers(self.custom_headers.as_ref())
             .into_response(&self.request_headers, &self.cors_allow_credentials_origins)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! RFC 077 P-05: pinned *before* the read-twice-into-one-read
+    //! refactor, per the tranche handoff. The dispatch between
+    //! `text_file_content_response` and `binary_content_type_response`
+    //! is decided by whether the file's bytes are valid UTF-8 — RFC
+    //! 065's review established this as load-bearing — never by the
+    //! file's extension. Both tests below deliberately mismatch
+    //! extension against content to make that point unambiguous: a
+    //! `.txt` file of invalid-UTF-8 bytes must still be served binary,
+    //! and a `.bin` file of valid-UTF-8 bytes must still be served text.
+    use hyper::HeaderMap;
+
+    use super::*;
+    use crate::response::confine::canonical_dir;
+
+    #[tokio::test]
+    async fn invalid_utf8_bytes_are_served_as_binary_regardless_of_a_text_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let bytes: &[u8] = &[0xFF, 0xFE, 0x00, 0x01, 0x02];
+        let file_path = dir.path().join("weird.txt");
+        std::fs::write(&file_path, bytes).unwrap();
+        let confine_to = canonical_dir(dir.path().to_str().unwrap());
+
+        let mut file_response = FileResponse::new(
+            file_path.to_str().unwrap(),
+            None,
+            &HeaderMap::new(),
+            confine_to.as_deref(),
+            &[],
+        );
+        let response = file_response.file_content_response().await.unwrap();
+
+        assert_eq!(response.status(), hyper::StatusCode::OK);
+        assert_eq!(
+            response.headers().get("content-type").unwrap(),
+            "application/octet-stream",
+            "invalid-UTF-8 bytes must take the binary path even though the \
+             extension says .txt"
+        );
+        let body = http_body_util::BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
+        assert_eq!(body.as_ref(), bytes, "binary bytes must round-trip exactly");
+    }
+
+    #[tokio::test]
+    async fn valid_utf8_bytes_are_served_as_text_regardless_of_a_binary_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let text = "hello, this is plain text";
+        let file_path = dir.path().join("weird.bin");
+        std::fs::write(&file_path, text).unwrap();
+        let confine_to = canonical_dir(dir.path().to_str().unwrap());
+
+        let mut file_response = FileResponse::new(
+            file_path.to_str().unwrap(),
+            None,
+            &HeaderMap::new(),
+            confine_to.as_deref(),
+            &[],
+        );
+        let response = file_response.file_content_response().await.unwrap();
+
+        assert_eq!(response.status(), hyper::StatusCode::OK);
+        assert_eq!(
+            response.headers().get("content-type").unwrap(),
+            "text/plain; charset=utf-8",
+            "valid-UTF-8 bytes must take the text path even though the \
+             extension says .bin"
+        );
+        let body = http_body_util::BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
+        assert_eq!(body.as_ref(), text.as_bytes());
     }
 }

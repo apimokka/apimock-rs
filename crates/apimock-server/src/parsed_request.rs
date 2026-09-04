@@ -92,10 +92,12 @@ pub async fn parsed_request_from(
             .expect("body_bytes presence checked by has_body");
         let raw_body_json = serde_json::from_slice::<Option<Value>>(bytes);
 
-        match (
-            content_type_is_application_json(&component_parts.headers),
-            raw_body_json,
-        ) {
+        // RFC 077 P-09: hoisted so the header lookup happens once per
+        // request instead of once per match arm below.
+        let content_type_is_application_json =
+            content_type_is_application_json(&component_parts.headers);
+
+        match (content_type_is_application_json, raw_body_json) {
             // declared application/json but body didn't parse → hard error
             (Some(true), Err(err)) => {
                 return Err(ParsedRequestError::Other(format!(
@@ -105,12 +107,9 @@ pub async fn parsed_request_from(
             }
             (Some(true), Ok(v)) => v,
             (_, Ok(v)) => {
-                if matches!(
-                    content_type_is_application_json(&component_parts.headers),
-                    Some(false)
-                ) {
+                if matches!(content_type_is_application_json, Some(false)) {
                     log::warn!("request has body but its content-type is not application/json");
-                } else if content_type_is_application_json(&component_parts.headers).is_none() {
+                } else if content_type_is_application_json.is_none() {
                     log::warn!("request has body but doesn't have content-type");
                 }
                 v

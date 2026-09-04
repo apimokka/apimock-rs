@@ -31,7 +31,7 @@ use hyper_util::{
     server::conn::auto::Builder,
 };
 use tokio::net::TcpListener;
-use tokio::sync::{Mutex, Semaphore};
+use tokio::sync::Semaphore;
 use tokio_rustls::TlsAcceptor;
 
 use std::net::{SocketAddr, ToSocketAddrs};
@@ -56,8 +56,19 @@ use crate::{
 pub use crate::control::{ReloadHint, ServerControl, ServerHandle, ServerState};
 use crate::trace::{Outcome, RequestSummary, TraceEmitter};
 
-/// Shared state cloned into each per-request task.
-#[derive(Clone)]
+/// Shared state, held once and read by reference from each per-request
+/// task via `Arc<AppState>` — see [`Server::app_state`].
+///
+/// # RFC 071: no `Clone`, deliberately
+///
+/// Before RFC 071, `Server::app_state` was a plain `AppState` behind
+/// `Arc<Mutex<_>>`, and `service()` called `.lock().await.clone()` once
+/// per request — an `O(config size)` deep clone (rule sets included) on
+/// every request, serialised through the lock. Neither half is needed:
+/// nothing mutates `AppState` after startup (see the interior-mutability
+/// note on `Server::app_state`), so a plain `Arc` shares it, and removing
+/// `Clone` here closes the door on silently reintroducing the per-request
+/// deep clone this RFC exists to remove.
 #[non_exhaustive]
 pub struct AppState {
     pub config: Config,
@@ -95,7 +106,11 @@ impl AppState {
 /// HTTP(S) server.
 #[non_exhaustive]
 pub struct Server {
-    pub app_state: AppState,
+    /// RFC 071: shared via `Arc`, not cloned per request. HTTP and HTTPS
+    /// listeners each hold a clone of this `Arc` (a pointer bump, not a
+    /// clone of `AppState`'s contents) rather than each keeping its own
+    /// independent copy of the state as before.
+    pub app_state: Arc<AppState>,
     pub http_addr: Option<SocketAddr>,
     pub https_addr: Option<SocketAddr>,
     /// TLS material, loaded and built once at construction — see
@@ -172,7 +187,7 @@ impl Server {
             http_addr,
             https_addr,
             https_tls,
-            app_state: AppState::new(config, middlewares, TraceEmitter::new()),
+            app_state: Arc::new(AppState::new(config, middlewares, TraceEmitter::new())),
         })
     }
 
@@ -222,7 +237,7 @@ impl Server {
             );
         }
 
-        let app_state = Arc::new(Mutex::new(self.app_state.clone()));
+        let app_state = Arc::clone(&self.app_state);
         loop {
             let (stream, _) = match listener.accept().await {
                 Ok(pair) => pair,
@@ -233,7 +248,7 @@ impl Server {
             };
             let io = TokioIo::new(stream);
 
-            let app_state = app_state.clone();
+            let app_state = Arc::clone(&app_state);
             tokio::task::spawn(async move {
                 if let Err(err) = Builder::new(TokioExecutor::new())
                     .serve_connection(
@@ -312,7 +327,7 @@ impl Server {
             ));
         let connection_slots = Arc::new(Semaphore::new(max_connections));
 
-        let app_state = Arc::new(Mutex::new(self.app_state.clone()));
+        let app_state = Arc::clone(&self.app_state);
         loop {
             let (stream, _) = match listener.accept().await {
                 Ok(pair) => pair,
@@ -328,7 +343,7 @@ impl Server {
                 continue;
             };
             let acceptor = acceptor.clone();
-            let app_state = app_state.clone();
+            let app_state = Arc::clone(&app_state);
 
             tokio::spawn(async move {
                 let _permit = permit; // held for the connection's lifetime
@@ -446,23 +461,19 @@ fn resolve_listener(addr_str: Option<&str>) -> ServerResult<Option<SocketAddr>> 
 /// `respond_response` and `dyn_route_content` for each step's details.
 pub async fn service(
     request: hyper::Request<body::Incoming>,
-    app_state: Arc<Mutex<AppState>>,
+    app_state: Arc<AppState>,
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     let request_headers = request.headers().clone();
 
-    // Locked here, before the OPTIONS early return (moved up twice now:
-    // first for RFC 068 S-02's body limit, then here for RFC 067 —
-    // `cors_allow_credentials_origins` is config too, and an OPTIONS
-    // preflight needs the real CORS decision exactly like every other
-    // response does, not the empty-list default a caller with no config
-    // in scope gets).
-    let shared_app_state = { app_state.lock().await.clone() };
-
-    let config = shared_app_state.config;
-    let middlewares = shared_app_state.middlewares;
-    let tracer = shared_app_state.tracer;
-    let canonical_fallback_respond_dir = shared_app_state.canonical_fallback_respond_dir;
-    let canonical_rule_set_respond_dirs = shared_app_state.canonical_rule_set_respond_dirs;
+    // RFC 071: fields read through the shared `Arc` rather than cloned
+    // out of a lock-guarded owned copy — see `AppState`'s doc comment.
+    // `cors_allow_credentials_origins` still needs an owned `Vec<String>`
+    // below (moved twice — the OPTIONS early return, and payload/ISE
+    // error responses) so it's cloned once here as before; everything
+    // else is used by reference for the rest of this function.
+    let config = &app_state.config;
+    let middlewares = &app_state.middlewares;
+    let tracer = &app_state.tracer;
 
     let cors_allow_credentials_origins = config
         .service
@@ -514,7 +525,7 @@ pub async fn service(
     );
 
     if let Some(response) = middleware_response(
-        &middlewares,
+        middlewares,
         &parsed_request,
         &cors_allow_credentials_origins,
     )
@@ -524,9 +535,9 @@ pub async fn service(
     }
 
     if let Some(response) = rule_set_response(
-        &config,
+        config,
         &parsed_request,
-        canonical_rule_set_respond_dirs.as_slice(),
+        app_state.canonical_rule_set_respond_dirs.as_slice(),
         &cors_allow_credentials_origins,
     )
     .await
@@ -561,7 +572,7 @@ pub async fn service(
         parsed_request.url_path.as_str(),
         config.service.fallback_respond_dir.as_str(),
         &request_headers,
-        canonical_fallback_respond_dir.as_deref(),
+        app_state.canonical_fallback_respond_dir.as_deref(),
         &cors_allow_credentials_origins,
     )
     .await
