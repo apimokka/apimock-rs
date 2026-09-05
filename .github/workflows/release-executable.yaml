@@ -259,3 +259,82 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload ${{ env.TAG }} ${RELEASE_ASSET_FILENAME}
+
+  # RFC 081 § 3: move the two checks `RELEASING.md` asked a human to make
+  # before clicking Publish into CI, running after every asset is attached
+  # and before any human or agent sees a publishable draft. Binds on every
+  # tier — this is not a Tier A convenience.
+  #
+  # A green run here proves nothing on its own (it is green on every
+  # correct release, forever); what makes it worth having is that it
+  # fails, loudly, the moment either check stops holding. See the review
+  # package for both failure modes demonstrated on a throwaway tag.
+  assert-draft-release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Exactly the five expected assets are present
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Names, not a hard-coded version: the shape is the five
+          # `build` matrix legs (name + archive extension), unchanged
+          # since RFC 044; the tag is substituted in, same as `build`
+          # itself does when it names the asset it uploads.
+          EXPECTED_ASSET_NAMES_ARR=(
+            "${{ env.PRODUCT_BASENAME }}@Linux-aarch64-musl-${{ env.TAG }}.tar.gz"
+            "${{ env.PRODUCT_BASENAME }}@Linux-x64-gnu-${{ env.TAG }}.tar.gz"
+            "${{ env.PRODUCT_BASENAME }}@Linux-x64-musl-${{ env.TAG }}.tar.gz"
+            "${{ env.PRODUCT_BASENAME }}@macOS-aarch64-${{ env.TAG }}.zip"
+            "${{ env.PRODUCT_BASENAME }}@Windows-x64-${{ env.TAG }}.zip"
+          )
+          EXPECTED_ASSET_NAMES=$(printf '%s\n' "${EXPECTED_ASSET_NAMES_ARR[@]}" | sort)
+
+          ACTUAL_ASSET_NAMES=$(gh release view "${{ env.TAG }}" --json assets -q '.assets[].name' | sort)
+
+          if [ "$EXPECTED_ASSET_NAMES" != "$ACTUAL_ASSET_NAMES" ]; then
+            echo "::error::Draft release for ${{ env.TAG }} does not carry exactly the five expected assets"
+            echo "--- missing (expected, not present) ---"
+            comm -23 <(printf '%s\n' "$EXPECTED_ASSET_NAMES") <(printf '%s\n' "$ACTUAL_ASSET_NAMES")
+            echo "--- unexpected (present, not expected) ---"
+            comm -13 <(printf '%s\n' "$EXPECTED_ASSET_NAMES") <(printf '%s\n' "$ACTUAL_ASSET_NAMES")
+            exit 1
+          fi
+          echo "All five expected assets are present."
+
+      - name: Release notes match CHANGELOG.md exactly
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Re-extraction, not re-implementation: the same script
+          # `create-draft-release` uses to build the notes in the first
+          # place — comparing against a second, independent parser would
+          # be the defect this check exists to catch, not a fix for it.
+          EXPECTED_NOTES=$(bash .github/workflows/scripts/extract-changelog-section.sh "${{ env.TAG }}" CHANGELOG.md)
+          ACTUAL_NOTES=$(gh release view "${{ env.TAG }}" --json body -q '.body')
+
+          # Command substitution strips *all* trailing newlines on both
+          # sides — needed because `gh release create --notes-file`
+          # round-trips through the API with one trailing newline added
+          # that the extraction script never produced. Verified directly
+          # against the real 6.1.0 draft before writing this: every byte
+          # up to that point already matched. Everything else here is a
+          # strict, unmodified comparison.
+          if [ -z "$ACTUAL_NOTES" ]; then
+            echo "::error::Draft release notes for ${{ env.TAG }} are empty"
+            exit 1
+          fi
+
+          if [ "$EXPECTED_NOTES" != "$ACTUAL_NOTES" ]; then
+            echo "::error::Draft release notes for ${{ env.TAG }} do not match CHANGELOG.md's section for this tag"
+            diff -u <(printf '%s' "$EXPECTED_NOTES") <(printf '%s' "$ACTUAL_NOTES") || true
+            exit 1
+          fi
+          echo "Release notes match CHANGELOG.md's section for ${{ env.TAG }} exactly."
