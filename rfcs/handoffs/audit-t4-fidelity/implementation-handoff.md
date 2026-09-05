@@ -4,18 +4,37 @@
 (URL path), [076](../../accepted/076-serve-responses-as-written.md)
 (JSON bytes). Accepted 2026-09-01.
 **Milestone.** Next minor.
-**Baseline.** `main` @ `761bdb2` **or later — cut from `main`'s head.**
-Every commit after `761bdb2` is this handoff's own prose; there is no
-source change between that commit and the head you will cut from, so
-the drift is real but empty. (Saying it this way because the stated
-baseline has arrived stale on the last three tranches, and a document
-cannot name the commit that contains it.)
+**Baseline.** **`main`'s head — cut from it, whatever it is when you
+start.** No hash is pinned here on purpose: the stated baseline arrived
+stale on the last three tranches, and a document cannot name the commit
+that contains it.
+
+A previous draft of this line tried to solve that with a guarantee —
+"every commit after `761bdb2` is this handoff's own prose, no source
+change" — which was true when written and false within the day. Two
+things have landed since, neither touching 075 or 076's surface, both
+worth knowing:
+
+- **The version is now `6.1.0`** and tagged; tranches 1–3 shipped in it.
+  Its draft release may still be pending when you start. Do not touch
+  it, and note RFC 066 § 2 still forbids version-number commits and tags
+  — that has not changed.
+- **`release-executable.yaml` gained an `assert-draft-release` job**
+  (RFC 081 § 3). Irrelevant to this work; mentioned so a `git log` on
+  the workflows directory does not look like something you broke.
 
 Tranches 1–3 are merged; § 2a below is a consequence of tranche 3 that
-did not exist when this handoff was drafted. § 2 and § 2a's numbers
-were measured at `c98013a`; the only source-adjacent commit since
-(`f5f821e`) changed a doc comment and the migration guide's wording —
-no code, no test behaviour — so they still hold.
+did not exist when this handoff was drafted.
+
+§ 2 and § 2a's numbers were measured at `c98013a`. They still hold:
+`git diff c98013a..main -- crates/` touches exactly one file,
+`apimock-server/src/dyn_route.rs`, and only a `///` doc comment inside
+its test module — no code, no test behaviour. Checked just now rather
+than asserted; a first attempt at this sentence claimed the diff was
+empty, which it is not.
+
+Re-measure anyway if anything looks off. It is one command, and the
+baseline claim in this handoff has now been wrong three times.
 **Branch.** **Take one.** RFC 080 made `main` the working branch, but
 its § 3 carve-out keeps a short-lived branch for anything that can
 behave differently on Windows or macOS. This tranche is *entirely*
