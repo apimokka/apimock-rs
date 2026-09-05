@@ -23,7 +23,7 @@ only:
 | [070](#library-api-a-public-field-on-ruleset-is-removed) | *Library consumers only:* a public field on `RuleSet` is removed |
 | [072](#header-matching-now-fails-closed-on-non-utf-8-values) | A header condition that passes today starts failing |
 | [071](#library-api-serverapp_state-is-now-shared-not-cloned) | *Library consumers only:* `Server::app_state`'s type changes, `AppState` loses `Clone` |
-| [077](#a-narrow-disclosed-precedence-change-in-the-zero-config-fallback) | A contrived directory layout could serve a different file (see below — almost certainly doesn't apply to you) |
+| [077](#a-narrow-disclosed-precedence-change-in-the-zero-config-fallback) | A contrived directory layout could serve a different file, **on a case-sensitive filesystem only** (see below — almost certainly doesn't apply to you) |
 
 Every one of these is a genuine correctness fix for behaviour the
 external audit found; none is a style or convenience change. If your
@@ -230,18 +230,33 @@ a case mismatch (e.g. a URL that canonicalised differently than the
 filesystem did).
 
 This is behaviour-identical for every configuration we could construct
-a test for. It changes outcome in exactly one contrived case: a
-directory containing **both** a bare, differently-cased file (e.g.
-`FOO`, no extension) **and** an extension match for the same request
-(e.g. `foo.json`), where the request has no extension. Before, the
-bare differently-cased file won (found by the listing, which ran
-first); now, the extension-inferred file wins (found by the cheaper
-stat, which now runs first). Nothing in this project's own test corpus
-or examples has ever exercised this layout.
+a test for, **and the one exception it has depends on the filesystem's
+own case sensitivity, not only on the directory layout**: a directory
+containing **both** a bare, differently-cased file (e.g. `FOO`, no
+extension) **and** an extension match for the same request (e.g.
+`foo.json`), where the request has no extension.
+
+- **Case-sensitive filesystem (Linux, the usual case for a server
+  deployment):** before, the bare differently-cased file won (found by
+  the listing, which ran first); now, the extension-inferred file wins
+  (found by the cheaper stat, which now runs first). This is the actual
+  behaviour change.
+- **Case-insensitive filesystem (macOS APFS by default, Windows NTFS by
+  default):** the new exact-path stat for the extension-less request
+  already resolves to the differently-cased file at the OS level, so
+  the bare file wins on both sides of this change — **no behaviour
+  change there**, even for this exact layout.
+
+Nothing in this project's own test corpus or examples has ever
+exercised this layout; a dedicated test
+(`bare_differently_cased_file_vs_extension_match_resolves_per_filesystem_case_sensitivity`
+in `dyn_route.rs`) now pins both outcomes, detecting the running
+filesystem's actual case sensitivity rather than assuming it from the
+OS, and CI's three-platform matrix confirms both branches occur.
 
 **If you don't keep both a bare, extension-less file and an
 extension-inference-eligible file with the same name in the same
-fallback directory, this does not affect you.**
+fallback directory, this does not affect you on any platform.**
 
 ## What isn't changing
 

@@ -268,6 +268,16 @@ mod tests {
         assert_eq!(response.status(), hyper::StatusCode::NOT_FOUND);
     }
 
+    /// Read a response body to bytes, for tests that need to confirm
+    /// *which* file was served, not only that something 200'd.
+    async fn body_bytes(response: hyper::Response<crate::types::BoxBody>) -> Vec<u8> {
+        http_body_util::BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec()
+    }
+
     /// RFC 077 P-06: the common case — request path matches a file's
     /// name and case exactly — resolves via the fast stat path, never
     /// touching the case-insensitive listing fallback.
@@ -288,6 +298,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(response.status(), hyper::StatusCode::OK);
+        assert_eq!(body_bytes(response).await, b"{\"ok\":true}");
     }
 
     /// RFC 077 P-06: extension inference (`/hello` -> `hello.json`) — the
@@ -310,6 +321,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(response.status(), hyper::StatusCode::OK);
+        assert_eq!(body_bytes(response).await, b"{\"ok\":true}");
     }
 
     /// RFC 077 P-06: a case mismatch (`/Hello.JSON` against a file
@@ -333,6 +345,71 @@ mod tests {
         .unwrap();
 
         assert_eq!(response.status(), hyper::StatusCode::OK);
+        assert_eq!(body_bytes(response).await, b"{\"ok\":true}");
+    }
+
+    /// REVIEW-001 F-01: the disclosed P-06 precedence change (exact-path
+    /// stat + extension inference now run before the case-insensitive
+    /// listing) is platform-dependent, not universal — a directory
+    /// holding both a bare, differently-cased file (`FOO`) and an
+    /// extension match (`foo.json`) for the same extension-less request
+    /// (`/foo`) resolves differently depending on whether the
+    /// filesystem's own `stat` is case-sensitive:
+    ///
+    /// - Case-sensitive (Linux, the outlier): the exact-path stat for
+    ///   the literal `foo` misses `FOO` entirely, so extension inference
+    ///   (which now runs first) finds `foo.json` — the disclosed change.
+    /// - Case-insensitive (macOS APFS default, Windows NTFS default):
+    ///   the exact-path stat for `foo` *is* `FOO` at the OS level, so the
+    ///   bare file wins here too, same as before this fix — no change.
+    ///
+    /// Detected at runtime against this test's own directory (not
+    /// assumed from `cfg!(target_os)`, which can be wrong — a
+    /// case-sensitive APFS volume or a case-insensitive Linux mount both
+    /// exist) so this test states what actually happened rather than
+    /// what platform it ran on, and CI's three-OS matrix is what
+    /// confirms both branches actually occur.
+    #[tokio::test]
+    async fn bare_differently_cased_file_vs_extension_match_resolves_per_filesystem_case_sensitivity()
+     {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("FOO"), "BARE-FILE-CONTENT").unwrap();
+        std::fs::write(dir.path().join("foo.json"), "{\"extension\":\"inferred\"}").unwrap();
+
+        let filesystem_is_case_insensitive = dir.path().join("foo").is_file();
+
+        let confine_to = canonical_dir(dir.path().to_str().unwrap());
+
+        let response = dyn_route_content(
+            "/foo",
+            dir.path().to_str().unwrap(),
+            &HeaderMap::new(),
+            confine_to.as_deref(),
+            &[],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(response.status(), hyper::StatusCode::OK);
+        let body = body_bytes(response).await;
+
+        if filesystem_is_case_insensitive {
+            assert_eq!(
+                body, b"BARE-FILE-CONTENT",
+                "case-insensitive filesystem: the exact-path stat for \
+                 \"foo\" already resolves to \"FOO\" at the OS level, so \
+                 the bare file should still win, unchanged from before \
+                 this fix"
+            );
+        } else {
+            assert_eq!(
+                body, b"{\"extension\":\"inferred\"}",
+                "case-sensitive filesystem: the exact-path stat for \
+                 \"foo\" misses \"FOO\", so extension inference (which \
+                 now runs before the listing) should resolve to \
+                 \"foo.json\" — the disclosed precedence change"
+            );
+        }
     }
 
     /// A directory with no matching file at all — every path (exact
