@@ -4,9 +4,12 @@
 (URL path), [076](../../accepted/076-serve-responses-as-written.md)
 (JSON bytes). Accepted 2026-09-01.
 **Milestone.** Next minor.
-**Baseline.** `main` @ `c98013a` (tranches 1–3 merged; § 2a below is a
-consequence of tranche 3 that did not exist when this handoff was
-drafted).
+**Baseline.** `main` @ `761bdb2` — this handoff's own refresh commit.
+Tranches 1–3 are merged; § 2a below is a consequence of tranche 3 that
+did not exist when this handoff was drafted. § 2 and § 2a's numbers
+were measured at `c98013a`; the only commit between that and the
+baseline (`f5f821e`) changed a doc comment and the migration guide's
+wording, no code or test behaviour, so they still hold.
 **Branch.** **Take one.** RFC 080 made `main` the working branch, but
 its § 3 carve-out keeps a short-lived branch for anything that can
 behave differently on Windows or macOS. This tranche is *entirely*
