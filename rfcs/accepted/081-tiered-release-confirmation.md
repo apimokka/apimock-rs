@@ -28,8 +28,10 @@ Replace that blanket rule with two tiers:
 - **Tier B** — the owner publishes. Everything else.
 
 And **move the checks a human currently performs by eye into CI**, as a
-job that runs before any draft becomes publishable. The net effect is
-*less* ceremony and *more* enforcement.
+job that turns either failure into a red build phase on the tag — paired
+with a precondition that a draft is not published until that phase is
+green (Amendment 1 B). The net effect is *less* ceremony and *more*
+enforcement.
 
 ## Motivation
 
@@ -114,7 +116,7 @@ A release is **Tier A** when **all four** hold:
 | test | read from |
 |---|---|
 | The CHANGELOG entry has no `### Security` section | `CHANGELOG.md` |
-| No `crates/*/public-api.txt` changed since the previous release tag | `git diff <prev-tag>..<tag>` |
+| No `crates/*/public-api.txt` changed since the previous release tag — **and the baselines exist at both tags; absence is not a pass** (Amendment 1 A) | `git diff <prev-tag>..<tag>` |
 | No new or lowered default that can refuse a previously-accepted request or connection | the CHANGELOG's Added/Changed sections |
 | The major component did not change | the version |
 
@@ -139,8 +141,14 @@ easier.
 ### 3. CI asserts what the human eyeballed
 
 Add a final job to `release-executable.yaml`, `needs: [build]`, after
-every asset is attached and before any human or agent sees a
-publishable draft:
+every asset is attached and before anyone *should* publish the draft:
+
+> **Corrected by Amendment 1 B.** This section originally said "before
+> any human or agent sees a publishable draft." That is false — the
+> draft is created before `build` and is publishable while this job is
+> still running. The job cannot block the transition; it fails the
+> build phase loudly. Hence Amendment 1 B's precondition: **the build
+> phase must be green on the tag before the draft may be published.**
 
 - **Exactly the five expected assets are present**, named for the tag:
   `Linux-aarch64-musl`, `Linux-x64-gnu`, `Linux-x64-musl` (`.tar.gz`),
@@ -148,10 +156,13 @@ publishable draft:
 - **The release notes are non-empty and byte-identical** to the
   `CHANGELOG.md` section for this tag.
 
-If either fails, the build phase fails. A draft short an asset — the
-case `RELEASING.md` warns about, where "publishing triggers npm/crates.io
-regardless of whether every target succeeded" — becomes unreachable
-rather than merely discouraged.
+If either fails, the build phase fails — **red, on the tag, before the
+release is fit to publish**. A draft short an asset is the case
+`RELEASING.md` warns about, where "publishing triggers npm/crates.io
+regardless of whether every target succeeded"; that case now announces
+itself instead of relying on someone counting. Combined with
+Amendment 1 B's precondition — do not publish until the build phase is
+green — it is what stops such a draft reaching the registries.
 
 **This is stricter than today for every tier**, including Tier B.
 
@@ -198,6 +209,79 @@ narrowing is.
 | The architect publishes its own inaccurate notes | Unchanged from today for Tier A's content, which by definition has no security claims and no API change — the two places notes have actually been wrong here. Tier B, where they could be, still needs the owner. |
 | Tiering becomes an argument each release | § 2's tests read existing artifacts, and § 5 requires them reported. |
 | The new CI job blocks a legitimate release | It only asserts asset count and notes-match — both fixable by re-running the build phase, neither reachable after publish. |
+
+## Amendment 1 — adopted 2026-09-06: two of this RFC's own claims were wrong
+
+Both found by the § Testing dry-run classification, in the review of
+§ 3's implementation
+(`.git-exclude/reviewed/081-tiered-release-confirmation/REVIEW-001.md`).
+The exercise existed to test these tests; it did.
+
+### A. T2 must require the baselines to *exist*, not merely to be unchanged
+
+**§ 2's second test as written can pass without checking anything.**
+`crates/*/public-api.txt` was added in `1b7ebec` on 2026-08-31 — *after*
+6.0.0 was tagged on 2026-08-28. So for 6.0.0 and 5.19.1,
+
+```
+git diff <prev-tag>..<tag> -- 'crates/*/public-api.txt'
+```
+
+is empty because **the files did not exist at either tag**, not because
+the public API held still. 6.0.0's own CHANGELOG documents real
+breaking library changes across that boundary — six types becoming
+`#[non_exhaustive]`, error variants boxed — that this test therefore
+could not have seen. Read literally it *passes*; read for what it is
+trying to establish it is **not applicable**.
+
+**T2 is amended to:**
+
+> No `crates/*/public-api.txt` changed since the previous release tag —
+> **and the baselines exist at both tags**. If they are absent at
+> either, the test is *not applicable*, which resolves to **Tier B**.
+> Absence is never a pass.
+
+In practice this changes nothing going forward: every release from
+6.1.0 on carries the baselines. It is amended anyway, because "it
+closes on its own" is exactly what would have been said about RFC 039's
+gate, and this is the same defect — **a check whose name asserts more
+than its mechanism delivers**. Finding it in the RFC written to tighten
+release confirmation is the reason it is written down rather than
+quietly patched.
+
+### B. § 3's job cannot prevent an early publish, and § 3 said it could
+
+`release-executable.yaml`'s job order is:
+
+```
+version-consistency-check + quality-gate → create-draft-release → build → assert-draft-release
+```
+
+The draft is created **before** `build`, so it exists and is publishable
+while `build` and `assert-draft-release` are still running. § 3's claim
+that the job runs *"before any human or agent sees a publishable
+draft"* is **false**. It runs before anyone *should* publish — a
+different thing. The job fails the build phase loudly; it cannot block
+the transition, and no placement inside that workflow could make it.
+
+Under the pre-081 rule this was academic: the owner published, after the
+build finished. **Under Tier A it is not** — there is no second party,
+so an architect publishing on sight of a draft, or without checking the
+build phase, bypasses the assertion entirely.
+
+**Therefore, a precondition on publishing, both tiers:**
+
+> **The build phase must be green on the tag before the draft may be
+> published.** Confirm the run, by id, on the tag being published — not
+> that "a green run exists". A draft is publishable from
+> `create-draft-release` onward, which is well before anything has been
+> asserted about it.
+
+This is RFC 066 Amendment 3's discipline — verify the run, never assume
+it — applied to the release path, and it is what makes § 3's job
+load-bearing rather than advisory. Mirrored into `RELEASING.md` § "The
+draft — who publishes it, and what to check".
+
 
 ## Unresolved questions
 

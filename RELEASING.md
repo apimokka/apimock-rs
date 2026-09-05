@@ -17,7 +17,9 @@ CI:     build 5 targets, attach every asset to the draft
 CI:     assert 5 assets present and notes == CHANGELOG section
         ↑ fails the build phase if either is wrong (RFC 081 § 3)
   ?:    publish the draft — Tier A: the architect may; Tier B: the owner
-        ↑ see "The draft — who publishes it" below
+        ↑ only once the build phase is GREEN on the tag — the draft has
+          been publishable since "create a DRAFT Release", long before
+          anything was asserted about it. See below.
 CI:     npm publish (3 platform packages, then the core package)
 CI:     cargo publish --workspace (4 crates, dependency order)
 CI:     verify published artifacts against the Release assets
@@ -151,7 +153,7 @@ A release is **Tier A** when **all four** hold:
 | test | read from |
 |---|---|
 | No `### Security` section in its CHANGELOG entry | `CHANGELOG.md` |
-| No `crates/*/public-api.txt` changed since the previous release tag | `git diff <prev-tag>..<tag> -- 'crates/*/public-api.txt'` |
+| No `crates/*/public-api.txt` changed since the previous release tag, **and the baselines exist at both tags** — absence is *not applicable* → Tier B, never a pass | `git diff <prev-tag>..<tag> -- 'crates/*/public-api.txt'` |
 | No new or lowered default that can refuse a previously-accepted request or connection | the CHANGELOG's Added/Changed sections |
 | The major component did not change | the version |
 
@@ -165,6 +167,21 @@ refuse something, it can.
 
 Classify explicitly. A Tier A release that turns out to have been
 Tier B is a process failure to report, not to quietly correct.
+
+### Before publishing, on either tier
+
+**The build phase must be green on the tag.** Confirm the run by id, on
+the tag being published — not that "a green run exists".
+
+This is not a formality. `create-draft-release` runs **before** `build`,
+so the draft exists and is publishable from that moment — well before
+`assert-draft-release` has said anything about it. The job below fails
+the build phase loudly; it cannot block the publish transition. Under
+Tier B the owner is a second pair of eyes; under **Tier A there is
+none**, so this check is the only thing standing between a failed
+assertion and the registries.
+
+Same discipline as RFC 066 Amendment 3: verify the run, never assume it.
 
 ### What to check
 
