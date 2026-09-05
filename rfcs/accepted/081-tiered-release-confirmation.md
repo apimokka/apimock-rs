@@ -1,6 +1,7 @@
 # RFC 081 — Tiered release confirmation: automate the eyeballing, keep the judgement
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted** — owner approved 2026-09-06. Both unresolved
+questions resolved on acceptance; see below.
 **Tracks.** Process / release. Amends
 [RFC 066](../done/066-branching-and-merge-policy.md) § 2 and
 `RELEASING.md`.
@@ -200,16 +201,19 @@ narrowing is.
 
 ## Unresolved questions
 
-1. **Should Tier A require any second party at all?** As written it does
-   not. An alternative is a 24-hour draft cooling-off before the
-   architect may publish, which costs a day and catches nothing a
-   machine would not. My recommendation is no; flagged because it is
-   the obvious middle option and the owner may weigh irreversibility
-   more heavily than I do.
-2. **Should the § 3 job also assert the tag is signed?** Nothing
-   enforces it today. Checked rather than assumed: of 169 tags, **123
-   are signed and 46 are not** — every unsigned one is from `0.9.0`
-   through `2.9.4`, so signing has been universal since 3.x and
-   includes 6.1.0. An assertion would therefore pass on everything
-   current while making an old habit a rule. Cheap to add; out of scope
-   here unless the owner wants it folded in.
+1. ~~**Should Tier A require any second party at all?**~~ ✅ **Resolved
+   on acceptance 2026-09-06 — no.** The recommendation stood inside the
+   accepted document, so Tier A needs no second party and no
+   cooling-off. Flagged in plain sight rather than assumed: if you
+   meant to accept the tiering but wanted a cooling-off, say so and it
+   goes in.
+2. ~~**Should the § 3 job also assert the tag is signed?**~~ ✅
+   **Resolved on acceptance 2026-09-06 — not folded in.** It was
+   offered as "out of scope unless the owner wants it," and no
+   instruction came, so it stays out. Recorded here rather than
+   dropped, because the finding behind it stands: nothing enforces tag
+   signing. Of 169 tags, **123 are signed and 46 are not** — every
+   unsigned one is from `0.9.0` through `2.9.4`, so signing has been
+   universal since 3.x and includes 6.1.0. An assertion would pass on
+   everything current while turning an old habit into a rule. Worth a
+   one-line RFC of its own whenever it comes up.

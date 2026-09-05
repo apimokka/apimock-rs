@@ -9,24 +9,32 @@ does not repeat that list.
 ## The flow
 
 ```
-you:  ./version.sh --update X.Y.Z, update CHANGELOG.md, commit, push main
-you:  git tag X.Y.Z && git push origin X.Y.Z        ← the only release trigger
-CI:   version-consistency-check, quality-gate
-CI:   create a DRAFT Release, notes from CHANGELOG.md
-CI:   build 5 targets, attach every asset to the draft
-you:  open the draft on GitHub, check it, click "Publish"
-CI:   npm publish (3 platform packages, then the core package)
-CI:   cargo publish --workspace (4 crates, dependency order)
-CI:   verify published artifacts against the Release assets
+owner:  ./version.sh --update X.Y.Z, update CHANGELOG.md, commit, push main
+owner:  git tag X.Y.Z && git push origin X.Y.Z      ← the only release trigger
+CI:     version-consistency-check, quality-gate
+CI:     create a DRAFT Release, notes from CHANGELOG.md
+CI:     build 5 targets, attach every asset to the draft
+CI:     assert 5 assets present and notes == CHANGELOG section
+        ↑ fails the build phase if either is wrong (RFC 081 § 3)
+  ?:    publish the draft — Tier A: the architect may; Tier B: the owner
+        ↑ see "The draft — who publishes it" below
+CI:     npm publish (3 platform packages, then the core package)
+CI:     cargo publish --workspace (4 crates, dependency order)
+CI:     verify published artifacts against the Release assets
 ```
 
-The tag push is the only thing you trigger directly. Everything from
-"create a DRAFT Release" onward is `release-executable.yaml`
-(`.github/workflows/release-executable.yaml`); everything from
-"click Publish" onward is `release-publish.yaml`
-(`.github/workflows/release-publish.yaml`). The draft is not visible to
-anyone outside the repository until you publish it — nothing is public,
-and nothing is published to either registry, until that click.
+The tag push is the only thing triggered directly, and it stays the
+owner's under RFC 066 § 2 — Tier A loosens *publish*, never *cut*, so a
+release cannot begin without the owner regardless of tier.
+
+Everything from "create a DRAFT Release" onward is
+`release-executable.yaml` (`.github/workflows/release-executable.yaml`);
+everything from the publish transition onward is `release-publish.yaml`
+(`.github/workflows/release-publish.yaml`).
+
+The draft is not visible to anyone outside the repository until it is
+published — nothing is public, and nothing reaches either registry,
+until that transition.
 
 ## Before tagging
 
@@ -129,7 +137,36 @@ substitute.
 If either fails, no draft Release is created and nothing downstream
 runs.
 
-## The draft — what to check before clicking Publish
+## The draft — who publishes it, and what to check
+
+### Who publishes (RFC 081, RFC 066 Amendment 5)
+
+Publishing means **causing the draft→published transition** by any means
+— the GitHub UI, `gh release edit <tag> --draft=false`, or the API.
+`release-publish.yaml` has no `push:` trigger; that transition is the
+only thing that fires it.
+
+A release is **Tier A** when **all four** hold:
+
+| test | read from |
+|---|---|
+| No `### Security` section in its CHANGELOG entry | `CHANGELOG.md` |
+| No `crates/*/public-api.txt` changed since the previous release tag | `git diff <prev-tag>..<tag> -- 'crates/*/public-api.txt'` |
+| No new or lowered default that can refuse a previously-accepted request or connection | the CHANGELOG's Added/Changed sections |
+| The major component did not change | the version |
+
+- **Tier A** — the architect may publish, and states the four results
+  in the release record **before** doing so.
+- **Tier B** — anything else. The owner publishes, as before.
+
+The third test is the only judgement in the set, and it is worded to
+fail **towards Tier B**: if you are unsure whether a new default can
+refuse something, it can.
+
+Classify explicitly. A Tier A release that turns out to have been
+Tier B is a process failure to report, not to quietly correct.
+
+### What to check
 
 - **Release notes** are the CHANGELOG section verbatim. If they read
   wrong, the CHANGELOG entry was wrong when tagged — the fix is a new
@@ -142,8 +179,17 @@ runs.
   publishing triggers npm/crates.io regardless of whether every target
   succeeded.
 
-Publishing is the only human confirmation point in the whole flow.
-Nothing before it is public; nothing after it is reversible.
+Both of the above are **also asserted in CI**, by a job at the end of
+`release-executable.yaml` that runs after every asset is attached and
+fails the build phase if either is wrong (RFC 081 § 3). That binds on
+both tiers — it is not a Tier A convenience. Read the list above as
+what the machine already checked, not as the only thing standing
+between a bad draft and the registries.
+
+Publishing remains the last point at which anything is reversible.
+Nothing before it is public; nothing after it can be withdrawn —
+crates.io has no unpublish, only yank, and the version number is
+consumed permanently either way.
 
 ## npm publish order
 

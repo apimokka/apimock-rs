@@ -119,6 +119,43 @@ architect's for minor/patch, and the publish path has failed three times
 in ways only visible during a live release. A review disposition
 approves *code*; it never approves a release action.
 
+> ### Amendment 5 — adopted 2026-09-06: RFC 081 tiers the publish step
+>
+> [RFC 081](../accepted/081-tiered-release-confirmation.md) replaces
+> § 2's blanket publish prohibition with two tiers. The clause
+>
+> > Publishing to crates.io or npm, or dispatching a workflow that does
+>
+> now reads
+>
+> > Publishing to crates.io or npm, or causing the draft→published
+> > transition that dispatches a workflow that does — **except for a
+> > Tier A release as defined in RFC 081 § 2**, which the architect may
+> > publish, reporting the classification.
+>
+> **Tier A** is a release where all four of RFC 081 § 2's tests hold: no
+> `### Security` section in its CHANGELOG entry, no `crates/*/public-api.txt`
+> change since the previous release tag, no new or lowered default that
+> can refuse a previously-accepted request or connection, and no major
+> bump. Anything else is **Tier B** and is the owner's to publish, as
+> before.
+>
+> **Nothing else in § 2 moves.** Tags, `release/*`, version-number
+> commits and the publisher-bound filename rule all stand, and
+> Amendment 2's wait/retry carve-out is untouched. In particular the
+> **tag** remains owner-instructed: Tier A loosens *publish*, not *cut*,
+> so a release still cannot begin without the owner.
+>
+> **Why.** The owner asked whether the publish click was necessary at
+> all, given green CI. Largely it was not — it has never caught anything
+> here; both real release failures (6.0.0's npm propagation race, and
+> publisher records binding to a workflow filename) happened after it or
+> upstream of it. What it protects is narrower: whether the release
+> should happen *now*, whether the notes are *true*, and the fact that
+> crates.io has no unpublish. RFC 081 keeps the gate exactly there and
+> moves the asset/notes eyeballing into CI, where it binds on both
+> tiers.
+
 > ### Amendment 2 — adopted 2026-08-30: a wait/retry carve-out for the publish workflow
 >
 > **Adopted — owner approved 2026-08-30.** § 2's clause *"editing a
