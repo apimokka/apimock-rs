@@ -35,7 +35,7 @@ members = [
 # Shared across every crate in the workspace so version / license / edition
 # don't drift between the members.
 [workspace.package]
-version = "0.0.0-rfc081-test"
+version = "6.1.0"
 edition       = "2024"
 rust-version  = "1.91.0"
 license       = "Apache-2.0"
@@ -49,9 +49,9 @@ keywords      = ["http", "api", "mock", "testing"]
 [workspace.dependencies]
 # The three responsibility-split member crates. The façade re-exports
 # their public surface and otherwise stays as thin as possible.
-apimock-config              = { version = "0.0.0-rfc081-test", path = "crates/apimock-config" }
-apimock-routing             = { version = "0.0.0-rfc081-test", path = "crates/apimock-routing" }
-apimock-server              = { version = "0.0.0-rfc081-test", path = "crates/apimock-server" }
+apimock-config              = { version = "6.1.0", path = "crates/apimock-config" }
+apimock-routing             = { version = "6.1.0", path = "crates/apimock-routing" }
+apimock-server              = { version = "6.1.0", path = "crates/apimock-server" }
 
 tokio                       = { version = "1.44", features = ["full"] }
 hyper                       = { version = "1", features = ["server", "http1", "http2"] }
