@@ -1,14 +1,13 @@
 # Migrating to 6.1.0
 
-**Filename and version number are a placeholder** — no release number
-has been decided for this cycle yet; RFC 066 § 2 keeps that decision
-outside this page's author entirely (versions, tags, and publishing
-are never touched without explicit instruction). `6.1.0` is written
-here only as "the next minor after 6.0.0," to give the entries below
-somewhere to live as they land, per each RFC's own instruction to
-write its migration note as it ships rather than at the end. Rename
-this file and its `SUMMARY.md` entry to match whatever the release
-process actually settles on.
+Everything on this page ships in **6.1.0**. It is a minor release — no
+feature is removed — but it is not a no-op upgrade: several fixes
+change what an existing setup *does*, three add a setting you may want
+to adjust, and one (RFC 069) will refuse to load a config that loads
+today, if that config contains a mistyped key.
+
+**Read the table first.** If none of its rows describes your setup, the
+upgrade is uneventful.
 
 Nine RFCs land here, from all three completed tranches of the external
 audit. Each is a **fix that changes what an existing setup does**,

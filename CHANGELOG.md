@@ -5,6 +5,95 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.1.0] - 2026-09-05
+
+**What an external audit found, fixed.** An independent architect
+reviewed the specification and the codebase in September 2026. This
+release carries the first three tranches of the result: the security
+and availability findings, the cases where apimock was silently doing
+the wrong thing, and the per-request work that made latency grow with
+the size of your configuration.
+
+Three of these change what a working setup does, and one refuses a
+config that loads today. None is a feature change — each is a case
+where the previous behaviour was wrong.
+
+**Migrating:** [`docs/src/guides/migrating-to-6-1.md`](https://apimokka.github.io/apimock-rs/guides/migrating-to-6-1.html)
+covers every one, with the symptom you would see and what to set. The
+CORS change is the one most likely to affect you.
+
+### Security
+
+- **CORS no longer reflects an arbitrary origin with credentials.** A
+  request carrying `Cookie` or `Authorization` used to have its
+  `Origin` reflected verbatim into `Access-Control-Allow-Origin` with
+  `Access-Control-Allow-Credentials: true` — any origin, no allowlist,
+  not configurable. `http://localhost:*` and `http://127.0.0.1:*` are
+  now always allowed; anything else must be listed in
+  `[service].cors_allow_credentials_origins`. Binding to `127.0.0.1`
+  was never a mitigation: the dangerous request comes from your own
+  browser, on any page you visit. *(The audit's highest-ranked
+  finding.)*
+- **A header condition now fails closed.** A `when.request.headers`
+  condition tested against a header value that is not valid UTF-8 used
+  to match **unconditionally**, whatever the operator — a gate that
+  could not read its input was silently opening. It now does not match.
+  `exists`/`absent` are unaffected: they check presence without
+  decoding.
+
+### Added
+
+- `[service].cors_allow_credentials_origins` — exact origins allowed
+  credentialed CORS reflection. Default empty.
+- `[service].max_request_body_bytes` — default 32 MiB. A larger body is
+  refused with `413` before it is buffered.
+- `[service].middleware_max_operations` — default 10,000,000. A Rhai
+  middleware evaluation is aborted past this.
+- `[listener.tls].handshake_timeout_seconds` — default 10. An
+  incomplete handshake is dropped rather than held open.
+- `[listener.tls].max_connections` — default 256.
+- Benchmarks covering request latency against configuration size and
+  against fallback-directory size — the two shapes whose cost was
+  previously invisible to the suite.
+
+### Changed
+
+- **An unknown key in a rule, condition, or `respond` block fails to
+  load**, naming the key and suggesting the field you likely meant. It
+  used to be silently discarded, which made a rule match *more*
+  requests than it was written to. Root `apimock.toml` sections are
+  unaffected for now.
+- **The zero-config fallback resolves a request with bounded `stat`s
+  before listing the directory.** One narrow, documented precedence
+  change, on case-sensitive filesystems only — see the migration guide.
+- **Library:** `Server::app_state` is now `Arc<AppState>`, `service()`
+  takes `Arc<AppState>`, and `AppState` no longer derives `Clone`.
+  `AppState::config` and `AppState::new` are unchanged.
+
+### Fixed
+
+- **`round_robin` rotates per match group, not per rule set.** A rule
+  set serving more than one distinct request shape kept a single
+  counter, so for some shapes it never rotated at all.
+- **Request latency no longer grows with configuration size.** Every
+  request deep-cloned the whole application state under a mutex.
+  Measured end-to-end at 2,500 rules on a request matching nothing:
+  **11.1× → 1.3×** relative to a single rule, with the mutex removed so
+  requests are no longer serialised through it.
+- **Fallback-directory latency no longer grows with file count.** The
+  whole directory was listed on every request. At 2,500 files:
+  **13.0× → 1.03×**.
+- Redundant per-request work removed: a second file read, two
+  allocations per HTTP-method comparison, and repeated content-type
+  detection.
+
+### Removed
+
+- **Library:** `RuleSet::round_robin_counter`. Per-group rotation
+  cannot be expressed by one counter; the replacement state is private.
+  If you were reading this field, please open an issue — we know of no
+  reason to, and would rather hear it than assume.
+
 ## [6.0.0] - 2026-08-28
 
 **A CLI you can drive from a script.** 5.x had one way in: start a
