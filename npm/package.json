@@ -1,6 +1,6 @@
 {
   "name": "apimock-rs",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "description": "HTTP(S) mock server. Drop JSON files into a folder and your API immediately exists.",
   "author": "nabbisen",
   "license": "Apache-2.0",
@@ -19,9 +19,9 @@
     "postinstall": "node postinstall.js"
   },
   "optionalDependencies": {
-    "@apimock-rs/bin-linux-x64-gnu": "6.0.0",
-    "@apimock-rs/bin-darwin-arm64": "6.0.0",
-    "@apimock-rs/bin-win32-x64-msvc": "6.0.0"
+    "@apimock-rs/bin-linux-x64-gnu": "6.1.0",
+    "@apimock-rs/bin-darwin-arm64": "6.1.0",
+    "@apimock-rs/bin-win32-x64-msvc": "6.1.0"
   },
   "keywords": [
     "api",
