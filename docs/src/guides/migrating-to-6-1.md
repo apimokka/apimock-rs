@@ -252,7 +252,12 @@ exercised this layout; a dedicated test
 (`bare_differently_cased_file_vs_extension_match_resolves_per_filesystem_case_sensitivity`
 in `dyn_route.rs`) now pins both outcomes, detecting the running
 filesystem's actual case sensitivity rather than assuming it from the
-OS, and CI's three-platform matrix confirms both branches occur.
+OS. CI's three-platform matrix runs it on Linux, macOS, and Windows and
+all three pass, which is consistent with both branches occurring
+(GitHub's macOS and Windows runners default to case-insensitive
+filesystems) — though the test itself, passing under whichever branch
+a given runner takes, doesn't directly prove which branch each one
+ran.
 
 **If you don't keep both a bare, extension-less file and an
 extension-inference-eligible file with the same name in the same

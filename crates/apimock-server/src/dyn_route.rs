@@ -367,8 +367,11 @@ mod tests {
     /// assumed from `cfg!(target_os)`, which can be wrong — a
     /// case-sensitive APFS volume or a case-insensitive Linux mount both
     /// exist) so this test states what actually happened rather than
-    /// what platform it ran on, and CI's three-OS matrix is what
-    /// confirms both branches actually occur.
+    /// what platform it ran on. CI's three-OS matrix passing on Linux,
+    /// macOS, and Windows is consistent with both branches occurring
+    /// (the latter two default to case-insensitive filesystems) — the
+    /// test itself, passing either way, doesn't print or otherwise
+    /// prove which branch a given runner actually took.
     #[tokio::test]
     async fn bare_differently_cased_file_vs_extension_match_resolves_per_filesystem_case_sensitivity()
      {
