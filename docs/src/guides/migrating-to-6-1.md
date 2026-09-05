@@ -10,14 +10,17 @@ write its migration note as it ships rather than at the end. Rename
 this file and its `SUMMARY.md` entry to match whatever the release
 process actually settles on.
 
-Six RFCs land here so far, from the external audit's second and third
-tranches. Each is a **fix that changes what an existing setup does**,
+Nine RFCs land here, from all three completed tranches of the external
+audit. Each is a **fix that changes what an existing setup does**,
 which is why this is a minor, not a patch — RFC 070 and RFC 071
 additionally change the public API, which affects library consumers
 only:
 
 | RFC | What breaks |
 |---|---|
+| [067](#cors-credentialed-cross-origin-requests-need-an-allowlist-now) | **Most likely to affect you.** A credentialed cross-origin request from a non-localhost origin stops being allowed unless you list it |
+| [068](#new-limits-on-what-one-request-can-consume) | A request body over 32 MiB is refused with `413`; a Rhai middleware script is aborted after 10,000,000 operations |
+| [074](#new-limits-on-tls-handshakes-and-connections) | An incomplete TLS handshake is dropped after 10s; concurrent TLS connections are capped at 256 |
 | [069](#config-an-unknown-key-in-a-rule-condition-or-respond-block-now-fails-to-load) | A config that loads today stops loading |
 | [070](#round_robin-now-rotates-per-match-group-not-per-rule-set) | A `round_robin` rule set returns a different sequence |
 | [070](#library-api-a-public-field-on-ruleset-is-removed) | *Library consumers only:* a public field on `RuleSet` is removed |
@@ -29,6 +32,96 @@ Every one of these is a genuine correctness fix for behaviour the
 external audit found; none is a style or convenience change. If your
 setup changes under one of them, it was already answering incorrectly
 — see each RFC for the reproduction.
+
+## CORS: credentialed cross-origin requests need an allowlist now
+
+**RFC 067 — the audit's highest-ranked security finding, and the change
+most likely to affect you.**
+
+Before, when a request carried a `Cookie` or `Authorization` header,
+apimock reflected its `Origin` back verbatim in
+`Access-Control-Allow-Origin` **and** set
+`Access-Control-Allow-Credentials: true` — for *any* origin, with no
+allowlist and no way to turn it off:
+
+```
+$ curl -H 'Origin: https://evil.example' -H 'Cookie: session=abc' …
+access-control-allow-credentials: true
+access-control-allow-origin: https://evil.example    # before: any origin
+```
+
+That is the textbook CORS misconfiguration. Binding to `127.0.0.1` was
+never a mitigation for it: the dangerous request comes from your own
+browser, on any page you happen to visit, aimed at your own loopback
+listener.
+
+**Now:** `http://localhost:*` and `http://127.0.0.1:*` are always
+allowed. Any other origin must be listed explicitly:
+
+```toml
+[service]
+cors_allow_credentials_origins = ["https://app.example.com"]
+```
+
+The default is empty. Requests without `Cookie` or `Authorization` are
+unaffected — they still get the safe `Access-Control-Allow-Origin: *`
+with no credentials.
+
+**If a browser-based setup stops working after upgrading, this is the
+first thing to check.** The symptom is a CORS failure in the browser
+console on a credentialed request, from a page served somewhere other
+than localhost. Add that origin to the list. See
+[Response headers](../reference/response-headers.md#cors--origin-and-credentials).
+
+## New limits on what one request can consume
+
+**RFC 068.** Two resources were unbounded and reachable by a single
+request. Both now have a default limit, and both are configurable.
+
+**Request bodies — `413` over 32 MiB.** Bodies were buffered whole with
+no cap; the audit measured one 256 MiB request taking the process from
+9 MiB to 462 MiB of RSS. A body over the limit is now refused with
+`413` *before* it is buffered:
+
+```toml
+[service]
+max_request_body_bytes = 33554432   # the default, 32 MiB
+```
+
+**Rhai middleware — aborted after 10,000,000 operations.** A script
+that did not terminate wedged a tokio worker permanently; a few wedged
+the server. Scripts now run under an operation limit:
+
+```toml
+[service]
+middleware_max_operations = 10000000   # the default
+```
+
+Both defaults are deliberately generous — normal use should never reach
+either. **If you legitimately post bodies larger than 32 MiB, or run a
+deliberately heavy script, raise the limit rather than working around
+it.**
+
+## New limits on TLS handshakes and connections
+
+**RFC 074.** Two more unbounded resources, on the HTTPS path only —
+these do not affect a plain-HTTP listener.
+
+```toml
+[listener.tls]
+handshake_timeout_seconds = 10   # the default
+max_connections = 256            # the default
+```
+
+An incomplete TLS handshake is now dropped after the timeout rather
+than held open indefinitely, and concurrent TLS connections are capped.
+A client that opens a connection and never completes the handshake can
+no longer accumulate.
+
+**If you drive HTTPS with more than 256 concurrent connections, raise
+`max_connections`.** RFC 074 also makes TLS failures loud rather than
+silent — if you were unknowingly running with a TLS problem, you will
+now hear about it at startup instead of discovering it later.
 
 ## Config: an unknown key in a rule, condition, or respond block now fails to load
 
@@ -271,6 +364,11 @@ them, and RFC 070 doesn't touch them. Header matching for a value that
 *is* valid UTF-8 is unchanged — RFC 072 only closes the non-UTF-8 gap.
 File content-type detection (text vs. binary) is unchanged — RFC 077's
 P-05 removed a redundant second file read but kept the exact same
-UTF-8-validity decision. No config setting is required to get any of
-these fixes; all are corrections to existing behaviour or internal
-performance work, not new opt-in features.
+UTF-8-validity decision.
+
+**No config setting is required to *get* any of these fixes** — they
+are corrections to existing behaviour, or internal performance work,
+not opt-in features. Tranche 1's three (RFCs 067, 068, 074) do add
+settings, but only so you can **raise a limit or widen an allowlist**
+if its default is too strict for you; leaving them unset gives you the
+safe default, which is the point of the fix.
