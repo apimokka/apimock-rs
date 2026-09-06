@@ -22,13 +22,25 @@ easy to decline. These are worth doing because of what they cost a
 *reader* — including the next auditor, and the GUI team now reading this
 API:
 
-- **F-10 / M-04e** — three public `validate()` methods that are no-ops
-  (`rule_set.rs:343`, `guard.rs:10`, `default_respond.rs:9`). A caller
-  reasonably assumes calling them means something. One of them,
-  `RuleSet::validate()`, is public API a consumer can reach.
-- **M-04d** — dead public API: `bad_request_response` is never called
-  (and RFC 068 has a use for it), plus unused items in `tls.rs` and
-  `control.rs`.
+- **F-10 / M-04e** — public `validate()` methods that are no-ops. A
+  caller reasonably assumes calling them means something, and one,
+  `RuleSet::validate()`, is public API a consumer can reach. Find them
+  with
+  `grep -rn -A2 "pub fn validate(&self) -> bool" crates/apimock-routing/src/ | grep -B1 "true$"`
+  rather than from a list here — **the list this RFC originally carried
+  was wrong twice over**: it said "three", naming
+  `rule_set.rs:343`, `guard.rs:10`, `default_respond.rs:9`, when the
+  grep returns **four** (`url_path.rs` was missed), every line number
+  has since moved, and one path was wrong.
+  **`guard.rs`'s is out of scope** — see Non-goals below, which exempt
+  `[guard]` explicitly; it was named here in error. The decision covers
+  the other three.
+- **M-04d** — dead public API: `bad_request_response` is never called,
+  plus unused items in `tls.rs` and `control.rs`.
+  *(Corrected 2026-09-07: this originally read "and RFC 068 has a use
+  for it". RFC 068 shipped in tranche 1 and added
+  `payload_too_large_response` for its 413 instead, so that use never
+  materialised. It remains uncalled; audit F-09 still wants a caller.)*
 - **M-04c** — `let http_method_validate = true;`, a binding that is
   always true and therefore a branch that never varies.
 - **M-04a** — `let _ = Path::new(dir_prefix);` — a statement with no
