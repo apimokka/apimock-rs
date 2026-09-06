@@ -62,6 +62,7 @@ use std::sync::{
 };
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use apimock_routing::util::http::percent_decode_url_path;
 use serde::Serialize;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::broadcast;
@@ -307,18 +308,41 @@ impl TraceConfig {
 
     /// Redact a raw query string per this config's policy (RFC 073
     /// S-05) — `?token=secret&page=2` becomes `?token=[redacted]&page=2`.
-    /// Parameter names and their order are preserved, including any
-    /// percent-encoding in the original string (this is a display-time
-    /// transform, not a re-parse of the request — nothing here is used
-    /// for matching); only a matched parameter's value is replaced with
-    /// [`REDACTED_HEADER_VALUE`], the same marker header redaction uses.
-    /// A key with no `=` (a bare flag parameter) is left alone — there
-    /// is no value to redact and the key itself is never secret content.
+    /// Parameter names and their order are preserved verbatim in the
+    /// output, including any percent-encoding in the original string
+    /// (this is a display-time transform, not a re-parse of the
+    /// request — nothing here is used for matching); only a matched
+    /// parameter's value is replaced with [`REDACTED_HEADER_VALUE`],
+    /// the same marker header redaction uses. A key with no `=` (a bare
+    /// flag parameter) is left alone — there is no value to redact and
+    /// the key itself is never secret content.
+    ///
+    /// # REVIEW-001 F-01: the *key* is decoded before the denylist
+    /// # check, even though the printed key stays as written
+    ///
+    /// A client can percent-encode ASCII in a parameter name
+    /// (`%74oken` decodes to `token`) — unusual, but not invalid, and
+    /// the whole point of this method is to not depend on an attacker
+    /// (or just an unusual client) spelling the name the way the
+    /// denylist expects. `percent_decode_url_path` (RFC 075,
+    /// `apimock-routing`) decodes *only* the copy used for the
+    /// `is_redacted_key` check; the key actually written to the output
+    /// is the original, unmodified slice, so a legitimately
+    /// percent-encoded name that happens to look like `token` still
+    /// displays as it was sent — only the *value* changes when it
+    /// matches. This mirrors why the ordering matters at all in RFC
+    /// 075 F-03: checking the undecoded form is the same class of
+    /// bypass as never decoding at all.
+    ///
+    /// JSON body keys (`redact_json_value`, below) don't need this:
+    /// JSON keys aren't percent-encoded on the wire — a key is a JSON
+    /// string, not a URI component — so there is no undecoded form to
+    /// bypass through.
     pub(crate) fn redact_query_string(&self, query: &str) -> String {
         query
             .split('&')
             .map(|pair| match pair.split_once('=') {
-                Some((key, _value)) if self.is_redacted_key(key) => {
+                Some((key, _value)) if self.is_redacted_key(&percent_decode_url_path(key)) => {
                     format!("{key}={REDACTED_HEADER_VALUE}")
                 }
                 _ => pair.to_string(),
@@ -372,8 +396,26 @@ impl TraceConfig {
 /// module's own tests; `Middleware` is new, added because no existing
 /// shape fit a middleware match (its own script path, not a rule-set
 /// index, is what identifies which one answered).
+///
+/// # `#[non_exhaustive]` — added in the same change that added `Middleware`
+/// # (REVIEW-001 F-02)
+///
+/// Adding `Middleware` here breaks any consumer with an exhaustive
+/// `match` on `Outcome`, regardless of what the public-API baseline
+/// diff shows — a new-variant addition is "additive" in the sense that
+/// tool tracks (a new pub item exists), not in the sense that matters
+/// to semver (a consumer's exhaustive match stops compiling). `Outcome`
+/// was the one public enum in this crate not already carrying this
+/// attribute — `ReloadHint`, `ServerState`, `ServerError`,
+/// `ServerErrorKind` and `TlsKind` all have it; RFC 052 (which added it
+/// to five *other* types) never considered `Outcome`, so this gap
+/// pre-dates this tranche and simply hadn't been triggered by an actual
+/// variant addition yet. Since this change breaks exhaustive matchers
+/// either way, marking it now means every *future* variant is free —
+/// the same reasoning RFC 052 used for the five types it covered.
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum Outcome {
     Matched {
         rule_set_index: usize,
@@ -1300,6 +1342,26 @@ mod tests {
         let config = TraceConfig::default();
         let redacted = config.redact_query_string("verbose&token=secret");
         assert_eq!(redacted, "verbose&token=[redacted]");
+    }
+
+    /// A denylist match is case-insensitive regardless of how the key
+    /// arrived.
+    #[test]
+    fn a_query_string_key_is_matched_case_insensitively() {
+        let config = TraceConfig::default();
+        let redacted = config.redact_query_string("TOKEN=secret");
+        assert_eq!(redacted, "TOKEN=[redacted]");
+    }
+
+    /// REVIEW-001 F-01: a percent-encoded key must not bypass the
+    /// denylist. `%74oken` decodes to `token` — the value still gets
+    /// redacted, but the key is printed exactly as it arrived (not
+    /// decoded), since only the *value* is ever supposed to change.
+    #[test]
+    fn a_percent_encoded_query_key_does_not_bypass_redaction() {
+        let config = TraceConfig::default();
+        let redacted = config.redact_query_string("%74oken=secret");
+        assert_eq!(redacted, "%74oken=[redacted]");
     }
 
     /// The tranche 5 handoff's other acceptance example: a secret in a

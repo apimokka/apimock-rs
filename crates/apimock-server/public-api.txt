@@ -464,7 +464,7 @@ impl core::marker::Unpin for apimock_server::trace::HeaderRedactionMode
 impl core::marker::UnsafeUnpin for apimock_server::trace::HeaderRedactionMode
 impl core::panic::unwind_safe::RefUnwindSafe for apimock_server::trace::HeaderRedactionMode
 impl core::panic::unwind_safe::UnwindSafe for apimock_server::trace::HeaderRedactionMode
-pub enum apimock_server::trace::Outcome
+#[non_exhaustive] pub enum apimock_server::trace::Outcome
 pub apimock_server::trace::Outcome::Error
 pub apimock_server::trace::Outcome::Error::kind: alloc::string::String
 pub apimock_server::trace::Outcome::Error::message: alloc::string::String

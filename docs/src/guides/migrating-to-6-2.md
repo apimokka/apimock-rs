@@ -21,7 +21,7 @@ patch:
 | [075](#a-rule-sets-url_path-prefix-now-matches-at-a-segment-boundary) | A rule set scoped to a prefix like `/api` stops matching a similarly-spelled sibling path like `/apiv2` |
 | [076](#json-files-are-now-served-exactly-as-written) | A `.json` `file_path` response is no longer minified or key-reordered |
 | [076](#library-api-the---format-json-envelope-field-order-changed) | *Library and script consumers only:* `--format json`'s field order changed from alphabetical to `schema`, `apimock`, `result`/`error` |
-| [073](#the-live-match-feed-now-reports-what-actually-happened) | *Library consumers of `apimock_server::trace` only:* every trace event used to report the wrong outcome; a new `Outcome::Middleware` variant needs handling in an exhaustive match |
+| [073](#the-live-match-feed-now-reports-what-actually-happened) | *Library consumers of `apimock_server::trace` only:* every trace event used to report the wrong outcome; a new `Outcome::Middleware` variant needs handling in an exhaustive match, and `Outcome` is now `#[non_exhaustive]` |
 | [073](#verbose-logging-and-the-trace-channel-now-redact-query-strings-and-body-keys-too) | A query-string value or JSON body field matching the (now broader) credential denylist prints as `[redacted]` where it used to print verbatim |
 | [079](#a-few-internal-behaviours-that-were-never-real-are-gone) | `HttpMethod`'s `Display` output changed from a sentence to a bare value |
 
@@ -216,6 +216,16 @@ else in the enum's shape changed. If your consumer only reads specific
 fields (`event["outcome"]["type"]`, say), this only affects you insofar
 as the `type`/`status` values you now receive are the real ones instead
 of always `"miss"`/`0`.
+
+**`Outcome` is now `#[non_exhaustive]`.** Adding `Middleware` already
+broke an exhaustive match, so the enum is marked `#[non_exhaustive]` in
+the same change — every *future* variant this project adds will be
+free (a compile-time non-issue for a `match` that already carries a
+wildcard arm), rather than repeating this exact break at the next
+addition. **If you match on `Outcome` exhaustively today, this change
+requires a `_ => ...` (or equivalent) arm regardless of whether you
+also need to handle `Middleware` specifically** — the compiler will
+point at the exact match expression either way.
 
 ## Verbose logging and the trace channel now redact query strings and body keys too
 
