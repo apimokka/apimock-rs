@@ -38,8 +38,16 @@ impl HttpMethod {
 }
 
 impl std::fmt::Display for HttpMethod {
+    /// RFC 079 M-09: this used to render `"HTTP Method is GET"` — a
+    /// sentence, not a value, which produced nonsense wherever it was
+    /// interpolated (`Request`'s own `Display` joins each present
+    /// condition's rendering with `" && "`, so a rule condition summary
+    /// would read `... && HTTP Method is GET && ...`). Renders like
+    /// this module's sibling conditions instead — `url_path`'s own
+    /// `Display` is `` url_path`{value}` ``; this is `` method`{value}` ``,
+    /// the same shape with the TOML key name that identifies it.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "HTTP Method is {}", self.as_str())
+        write!(f, "method`{}`", self.as_str())
     }
 }
 
@@ -71,5 +79,15 @@ mod tests {
     fn does_not_match_a_different_method() {
         assert!(!HttpMethod::Get.is_match(&Method::POST));
         assert!(!HttpMethod::Put.is_match(&Method::DELETE));
+    }
+
+    /// RFC 079 M-09: renders the method value, not a sentence — pins
+    /// the fix so `HTTP Method is GET` (nonsense once interpolated into
+    /// `Request`'s own composed `Display`) can't come back.
+    #[test]
+    fn display_renders_the_method_value_not_a_sentence() {
+        assert_eq!(format!("{}", HttpMethod::Get), "method`GET`");
+        assert_eq!(format!("{}", HttpMethod::Post), "method`POST`");
+        assert!(!format!("{}", HttpMethod::Delete).contains("HTTP Method is"));
     }
 }

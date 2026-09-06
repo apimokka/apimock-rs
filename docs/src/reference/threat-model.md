@@ -144,18 +144,42 @@ write-path confinement above doesn't apply to it the way it applies to
 local read, used only to build a synthetic request for `apimock get`'s
 own dry-run matching — never anything the server itself touches.)
 
-**Verbose header logging redacts; verbose body logging does not, yet.**
-`log.verbose.header` (default off) prints every request header, with
-anything matching the credential-shaped denylist (`authorization`,
-`cookie`, `set-cookie`, `proxy-authorization`, `x-api-key`, or a
-configured allowlist/denylist) replaced with a redacted marker — RFC 051.
-**`log.verbose.body`, independently gated and also default off, prints
-the raw query string and the full JSON body with no redaction at all.**
-RFC 051 flagged this itself (its own Unresolved Question 2) and
-deliberately left it for a later RFC rather than scope-creeping into it.
-Stated here so it isn't only findable by reading that RFC: turning on
-body logging can put credentials or other sensitive body fields on the
-console, verbatim, today.
+**Verbose logging redacts headers, query strings and body keys alike —
+RFC 073 S-05.** `log.verbose.header` (default off) prints every request
+header, with anything matching the credential-shaped denylist
+(`authorization`, `cookie`, `set-cookie`, `proxy-authorization`,
+`x-api-key`, `token`, `access_token`, `refresh_token`, `password`,
+`secret`, `client_secret`, `api_key`, or a configured
+allowlist/denylist) replaced with a redacted marker — RFC 051.
+`log.verbose.body`, independently gated and also default off, used to
+print the raw query string and the full JSON body with **no redaction
+at all** — RFC 051 flagged this itself (its own Unresolved Question 2)
+and deliberately left it for a later RFC rather than scope-creeping
+into it. **RFC 073 closes that gap**: the same denylist/allowlist that
+already governed headers now governs a query-string parameter's value
+(`?token=secret` → `?token=[redacted]`) and a JSON body's object keys,
+recursively (`{"password": "hunter2"}` → `{"password": "[redacted]"}`,
+however deeply nested) — one policy, applied wherever a name-value pair
+can leave the process, not a separate list per surface. This also
+covers the trace channel's own `capture_body` (RFC 023), not only the
+console: an out-of-process subscriber over the UDS/TCP transport
+receives the same redacted body a verbose console log would show, not
+the raw one.
+
+**The trace transport is not authenticated (RFC 073).** A Unix-domain
+socket subscriber connects with owner-only (`0600`) filesystem
+permissions since RFC 073 — the socket file used to inherit whatever
+the process umask produced, often readable by any local user. That
+permission restriction has no Windows equivalent (the UDS transport is
+Unix-only; Windows always uses TCP) and the TCP transport itself has
+**no login, token, or allowlist of any kind** — anything that can open
+a connection to the configured address receives the live request trace
+feed. apimock only warns (loudly, at startup) if the configured address
+isn't loopback; it does not refuse to bind one, since an operator may
+have a real reason this process can't see. Bind the TCP trace transport
+to loopback, or prefer the Unix-socket transport wherever the platform
+supports it, the same way the server's own listener defaults to
+loopback for the same reason (see the Non-goals section above).
 
 **Credentialed CORS reflection is allowed, but only for a named or
 loopback origin (RFC 067).** When a request carries `Cookie` or
@@ -304,8 +328,12 @@ network I/O already in every request.
   solvable inside the CLI — apimock's obligation is not to *amplify* it:
   no shell evaluation of arguments, no implicit writes, and destructive
   operations stay explicit rather than inferred. Unchanged by this RFC.
-- **Secret leakage through verbose output** — see body logging, above;
-  partially addressed (headers), not fully.
+- **Secret leakage through verbose output** — see the redaction section
+  above; addressed (RFC 073 extended header redaction to query strings
+  and body keys). Not a claim that every possible secret shape is
+  caught — the denylist is name-based, so a value under an
+  unanticipated key still prints, the same fail-open trade-off RFC 040
+  already made for headers.
 - **Symlink / TOCTOU on a configuration write** — `set`'s atomic
   write-then-rename (RFC 056) and external-change detection (RFC 024,
   042) cover the write side; nothing here re-litigates that.

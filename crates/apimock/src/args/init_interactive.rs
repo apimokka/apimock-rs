@@ -27,7 +27,6 @@
 //! detect this and silently take defaults, preserving the contract.
 
 use std::io::{self, BufRead, IsTerminal, Write};
-use std::path::Path;
 
 use super::constant::{
     DEFAULT_CONFIG_FILE_PATH, DEFAULT_MIDDLEWARE_FILE_PATH, DEFAULT_RULE_SET_FILE_PATH,
@@ -302,8 +301,6 @@ pub fn print_summary(answers: &InitAnswers) {
             DEFAULT_CONFIG_FILE_PATH,
         );
     }
-    // Prevent an unused-import warning when the Path use below moves.
-    let _ = Path::new(DEFAULT_CONFIG_FILE_PATH);
 }
 
 #[cfg(test)]

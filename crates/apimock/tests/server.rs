@@ -6,6 +6,8 @@ mod resource_bounds;
 mod response;
 #[path = "server/routing.rs"]
 mod routing;
+#[path = "server/trace.rs"]
+mod trace;
 #[path = "util.rs"]
 pub mod util;
 

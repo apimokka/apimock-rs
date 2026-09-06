@@ -423,7 +423,23 @@ impl RuleSet {
         }
     }
 
-    /// validate
+    /// Intentionally trivial — always `true` (RFC 079 F-10/M-04e).
+    ///
+    /// `RuleSet` has no field of its own that isn't already checked
+    /// somewhere more specific: `[prefix]` has `Prefix::validate`,
+    /// `[default]` has `DefaultRespond::validate`, each rule has its own
+    /// `Rule::validate`, all of which this crate's own
+    /// `ServiceConfig::validate`/`RuleSet` construction path already
+    /// calls. There is nothing left at *this* level to check today.
+    /// Kept (not removed) because this is public API a consumer could
+    /// call directly, and because a future field on `RuleSet` itself —
+    /// not delegated to one of the above — would want exactly this slot
+    /// to grow real logic in, rather than needing a new method added
+    /// and wired in from scratch. Documented here rather than silently
+    /// implying it checks something it doesn't; see RFC 079 § 2 for the
+    /// decision this reflects (keep-and-document over remove, since
+    /// 6.x's own additive baseline hasn't been asked to absorb this
+    /// removal and removal buys little).
     pub fn validate(&self) -> bool {
         true
     }
@@ -443,6 +459,13 @@ impl RuleSet {
 }
 
 impl std::fmt::Display for RuleSet {
+    /// RFC 079 M-03a: every `let _ = write!(f, ...)` in a `Display` impl
+    /// across this workspace discards a `fmt::Result` deliberately —
+    /// `apimock_config::Config`'s own `Display` (the other crate this
+    /// pattern spans) carries the full reasoning, not repeated at each
+    /// of the ~30 sites: writing to the `Formatter` `format!`/
+    /// `.to_string()`/`println!` hand this project can't actually fail,
+    /// so there's nothing a per-site `if let Err(...)` would ever catch.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(x) = self.prefix.as_ref() {
             let _ = write!(f, "{}", x);

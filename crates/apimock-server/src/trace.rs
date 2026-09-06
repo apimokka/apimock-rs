@@ -25,13 +25,30 @@
 //!
 //! # Back-pressure
 //!
-//! The broadcast channel is bounded by [`TRACE_CHANNEL_CAPACITY`]. When
-//! the channel is full, `emit` drops the event and increments an internal
-//! counter; the count is reported as `dropped_count` on the next event.
+//! RFC 073 S-06/D-02: this section used to describe a mechanism
+//! `tokio::sync::broadcast` does not have — `Sender::send` only fails
+//! when there are **no receivers at all**, never because the channel is
+//! "full" (a full channel instead evicts the oldest unread event for
+//! whichever receiver is slowest, which is a *per-receiver* event, not
+//! a send-time one). What's true now, and implemented to match:
 //!
-//! Slow out-of-process subscribers receive a `RecvError::Lagged` from the
-//! broadcast channel; the gap is reported in the next JSON line via
-//! `dropped_count`.
+//! - [`TraceEmitter::emit`] increments a **shared** counter only when
+//!   `send` fails outright (no receiver existed at that moment) — rare,
+//!   and not what "back-pressure" usually means here.
+//! - A slow **out-of-process** subscriber (UDS/TCP, via
+//!   [`TraceTransport::accept_loop`]) gets `RecvError::Lagged(n)` on its
+//!   own [`broadcast::Receiver`] when it falls behind by more than
+//!   [`TRACE_CHANNEL_CAPACITY`] events; `n` is accumulated **per
+//!   subscriber** and added to `dropped_count` on that subscriber's next
+//!   forwarded event — see `forward_events`'s doc comment. Two
+//!   independently-lagging subscribers each see their own true count,
+//!   not each other's.
+//! - A direct **in-process** subscriber (calling [`TraceEmitter::subscribe`]
+//!   itself, bypassing the transport) gets the same `RecvError::Lagged`
+//!   from its own receiver and is responsible for folding it into
+//!   `dropped_count` the same way, since this crate has no way to patch
+//!   an event already broadcast to that caller's receiver — see
+//!   `subscribe`'s own doc comment.
 //!
 //! # Subscriber cap
 //!
@@ -144,8 +161,25 @@ impl RequestSummary {
 /// "the request never sent this header" — only the value differs.
 pub const REDACTED_HEADER_VALUE: &str = "[redacted]";
 
-/// Built-in denylist of well-known credential-bearing request headers,
-/// applied by default (RFC 040 Q1). Compared case-insensitively.
+/// Built-in denylist of well-known credential-bearing names, applied by
+/// default (RFC 040 Q1). Compared case-insensitively.
+///
+/// # RFC 073 S-05: also the query-string and body-key denylist now
+///
+/// Originally header names only. `TraceConfig::header_denylist` (and
+/// `is_redacted_key`, below) now gate query-string parameter names and
+/// JSON request-body object keys too — one policy, one list, wherever
+/// a name-value pair leaves the process (a header, a query parameter,
+/// or a body field), rather than a second, parallel config surface for
+/// the same idea. The field/const names stay header-branded (renaming
+/// an already-public field is a bigger break than this RFC's fix
+/// needs), but the *scope* is broader than the name suggests — this
+/// comment, and `is_redacted_key`'s, are where that's said plainly.
+/// Entries added for this: `token`, `access_token`, `refresh_token`,
+/// `password`, `secret`, `client_secret`, `api_key` — none of which is
+/// a header name a request would ever send, but all of which are
+/// common query-parameter and body-field names for the same kind of
+/// value `authorization`/`x-api-key` already cover as headers.
 ///
 /// `set-cookie` is a *response* header and can never appear on a
 /// request, so it never matches here — kept anyway because RFC 040's
@@ -158,18 +192,27 @@ pub const DEFAULT_HEADER_DENYLIST: &[&str] = &[
     "set-cookie",
     "proxy-authorization",
     "x-api-key",
+    "token",
+    "access_token",
+    "refresh_token",
+    "password",
+    "secret",
+    "client_secret",
+    "api_key",
 ];
 
-/// Which request headers get redacted before a trace event is built
-/// (RFC 040 Q1).
+/// Which names get redacted before a trace event is built, or before a
+/// verbose console log line is printed (RFC 040 Q1, extended by RFC 073
+/// S-05 to query-string parameters and JSON body keys — see
+/// `DEFAULT_HEADER_DENYLIST`'s doc comment).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HeaderRedactionMode {
-    /// Redact headers named in `TraceConfig::header_denylist`; capture
-    /// everything else. Fails open on an unanticipated header name —
+    /// Redact names in `TraceConfig::header_denylist`; capture
+    /// everything else. Fails open on an unanticipated name —
     /// accepted deliberately, see RFC 040's Risks table.
     Denylist,
-    /// Capture only headers named in `TraceConfig::header_allowlist`;
-    /// redact everything else. Fails closed.
+    /// Capture only names in `TraceConfig::header_allowlist`; redact
+    /// everything else. Fails closed.
     Allowlist,
 }
 
@@ -187,15 +230,20 @@ pub struct TraceConfig {
     /// Maximum serialised body size in bytes. Bodies larger than this
     /// are omitted and `body_truncated = true` is set. Default: 8 192.
     pub max_body_bytes: usize,
-    /// Denylist or allowlist by default. Default: `Denylist`.
+    /// Denylist or allowlist by default. Default: `Denylist`. Governs
+    /// headers, query-string parameters, and JSON body keys alike (RFC
+    /// 073 S-05) — see `DEFAULT_HEADER_DENYLIST`'s doc comment.
     pub header_redaction: HeaderRedactionMode,
-    /// Header names redacted when `header_redaction` is `Denylist`.
-    /// Compared case-insensitively. Default: [`DEFAULT_HEADER_DENYLIST`].
+    /// Names redacted when `header_redaction` is `Denylist` — header
+    /// names, query-string parameter names, and JSON body object keys
+    /// alike (RFC 073 S-05). Compared case-insensitively. Default:
+    /// [`DEFAULT_HEADER_DENYLIST`].
     pub header_denylist: Vec<String>,
-    /// Header names captured when `header_redaction` is `Allowlist`;
-    /// every other header is redacted. Compared case-insensitively.
-    /// Default: empty, i.e. allowlist mode redacts everything until
-    /// configured — the safe direction for a fail-closed mode.
+    /// Names captured when `header_redaction` is `Allowlist`; every
+    /// other name (header, query parameter, or body key) is redacted.
+    /// Compared case-insensitively. Default: empty, i.e. allowlist mode
+    /// redacts everything until configured — the safe direction for a
+    /// fail-closed mode.
     pub header_allowlist: Vec<String>,
 }
 
@@ -216,12 +264,19 @@ impl Default for TraceConfig {
 
 impl TraceConfig {
     /// Whether `name` is redacted under this config's policy
-    /// (case-insensitive). The single definition behind both places a
-    /// request header can leave the process: the trace channel
-    /// (`redact_headers`, below) and verbose console logging
-    /// (`capture_in_log` in `parsed_request.rs`, RFC 051) — one policy,
-    /// shared by reference, not copied.
-    pub(crate) fn is_header_redacted(&self, name: &str) -> bool {
+    /// (case-insensitive). The single definition behind every place a
+    /// name-value pair can leave the process: a request header
+    /// (`redact_headers`, below), a query-string parameter
+    /// (`redact_query_string`), a JSON body key (`redact_json_value`),
+    /// and verbose console logging (`render_request_log` in
+    /// `parsed_request.rs`, RFC 051/073) — one policy, shared by
+    /// reference, not copied or reimplemented per call site.
+    ///
+    /// Named for what it does, not for headers specifically (RFC 073
+    /// S-05 extended this from a header-only check) — see
+    /// `DEFAULT_HEADER_DENYLIST`'s doc comment for why the *fields*
+    /// stay header-branded regardless.
+    pub(crate) fn is_redacted_key(&self, name: &str) -> bool {
         match self.header_redaction {
             HeaderRedactionMode::Denylist => self
                 .header_denylist
@@ -241,7 +296,7 @@ impl TraceConfig {
         headers
             .into_iter()
             .map(|(name, value)| {
-                if self.is_header_redacted(&name) {
+                if self.is_redacted_key(&name) {
                     (name, REDACTED_HEADER_VALUE.to_string())
                 } else {
                     (name, value)
@@ -249,15 +304,89 @@ impl TraceConfig {
             })
             .collect()
     }
+
+    /// Redact a raw query string per this config's policy (RFC 073
+    /// S-05) — `?token=secret&page=2` becomes `?token=[redacted]&page=2`.
+    /// Parameter names and their order are preserved, including any
+    /// percent-encoding in the original string (this is a display-time
+    /// transform, not a re-parse of the request — nothing here is used
+    /// for matching); only a matched parameter's value is replaced with
+    /// [`REDACTED_HEADER_VALUE`], the same marker header redaction uses.
+    /// A key with no `=` (a bare flag parameter) is left alone — there
+    /// is no value to redact and the key itself is never secret content.
+    pub(crate) fn redact_query_string(&self, query: &str) -> String {
+        query
+            .split('&')
+            .map(|pair| match pair.split_once('=') {
+                Some((key, _value)) if self.is_redacted_key(key) => {
+                    format!("{key}={REDACTED_HEADER_VALUE}")
+                }
+                _ => pair.to_string(),
+            })
+            .collect::<Vec<String>>()
+            .join("&")
+    }
+
+    /// Redact a JSON body per this config's policy (RFC 073 S-05),
+    /// recursively — a secret nested inside an object is just as real a
+    /// leak as one at the top level. For each object encountered, a key
+    /// matching the denylist/allowlist has its **value** replaced with
+    /// [`REDACTED_HEADER_VALUE`] (the key itself stays, same
+    /// mark-don't-omit convention as header redaction); a key that
+    /// isn't redacted is recursed into, so a secret nested under a
+    /// non-secret-named parent is still caught. Arrays are walked
+    /// element-wise. A scalar (string/number/bool/null) has nothing to
+    /// redact by itself — only an object's *keys* name what a value is,
+    /// which is what redaction here keys off of.
+    pub(crate) fn redact_json_value(&self, value: &serde_json::Value) -> serde_json::Value {
+        match value {
+            serde_json::Value::Object(map) => serde_json::Value::Object(
+                map.iter()
+                    .map(|(key, val)| {
+                        let redacted_val = if self.is_redacted_key(key) {
+                            serde_json::Value::String(REDACTED_HEADER_VALUE.to_string())
+                        } else {
+                            self.redact_json_value(val)
+                        };
+                        (key.clone(), redacted_val)
+                    })
+                    .collect(),
+            ),
+            serde_json::Value::Array(items) => {
+                serde_json::Value::Array(items.iter().map(|v| self.redact_json_value(v)).collect())
+            }
+            scalar => scalar.clone(),
+        }
+    }
 }
 
 /// What the server decided to do with the request.
+///
+/// # RFC 073 F-08: every variant here must actually be emitted
+///
+/// Before this RFC, `server.rs` emitted `Miss { status: 0 }` for
+/// *every* request regardless of outcome — the correct index was
+/// computed and discarded — and nothing was emitted at all for a
+/// middleware match, a dyn-route fallback file, or a genuine 404.
+/// `Fallback` and `Miss` already existed but were unused outside this
+/// module's own tests; `Middleware` is new, added because no existing
+/// shape fit a middleware match (its own script path, not a rule-set
+/// index, is what identifies which one answered).
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Outcome {
     Matched {
         rule_set_index: usize,
         rule_index: usize,
+    },
+    /// A Rhai middleware handled the request. `file_path` is the
+    /// matched middleware script's own path (`MiddlewareHandler::file_path`),
+    /// mirroring `Fallback`'s use of a path over an index for the same
+    /// reason: it identifies *which* handler answered without requiring
+    /// a consumer to also have the server's own middleware list on hand.
+    Middleware {
+        file_path: String,
+        status: u16,
     },
     Fallback {
         file_path: String,
@@ -302,12 +431,39 @@ impl TraceEmitter {
     }
 
     /// Subscribe to the event stream (in-process).
+    ///
+    /// # A direct subscriber owns its own lag accounting
+    ///
+    /// This is a plain `tokio::sync::broadcast::Receiver` — if this
+    /// caller's own `recv()` loop falls behind by more than
+    /// [`TRACE_CHANNEL_CAPACITY`] events, it gets `RecvError::Lagged(n)`
+    /// the same way `TraceTransport::forward_events` does internally
+    /// for the UDS/TCP transport. This crate cannot fold that `n` into
+    /// `dropped_count` on this caller's behalf — an event is broadcast
+    /// once and already in flight to every receiver by the time any one
+    /// of them lags, so nothing can retroactively patch the copy this
+    /// receiver eventually reads. A caller that wants an honest
+    /// `dropped_count` (rather than a stale one from a rarer, shared
+    /// counter — see this module's own doc comment on back-pressure)
+    /// should accumulate `n` itself across `Lagged` and account for it
+    /// however it reports events onward, the same way `forward_events`
+    /// does for its own two transports.
     pub fn subscribe(&self) -> broadcast::Receiver<MatchTraceEvent> {
         self.sender.subscribe()
     }
 
     /// Attach body JSON to a `RequestSummary` according to this emitter's
     /// `TraceConfig`. Call before `emit` when the request body is available.
+    ///
+    /// # RFC 073 S-05: the captured body is redacted, not raw
+    ///
+    /// This is the trace *channel*'s own body capture — it reaches
+    /// out-of-process subscribers over the UDS/TCP transport, not just
+    /// a local terminal, so leaving it unredacted here would be at
+    /// least as serious a leak as the verbose-console-log one this RFC
+    /// also fixes. Redaction runs before the size check, so the size
+    /// cap applies to what is actually stored (post-redaction), not to
+    /// the original.
     pub fn enrich_with_body(
         &self,
         summary: &mut RequestSummary,
@@ -319,10 +475,11 @@ impl TraceEmitter {
         match body_json {
             None => {} // non-JSON or empty body — leave body_json = None
             Some(v) => {
+                let redacted = self.config.redact_json_value(v);
                 // Check serialised size against the cap.
-                match serde_json::to_string(v) {
+                match serde_json::to_string(&redacted) {
                     Ok(s) if s.len() <= self.config.max_body_bytes => {
-                        summary.body_json = Some(v.clone());
+                        summary.body_json = Some(redacted);
                     }
                     Ok(_) => {
                         summary.body_truncated = true;
@@ -416,6 +573,17 @@ impl TraceTransport {
 
     // ── TCP accept loop ───────────────────────────────────────────────
 
+    /// # RFC 073: this transport has no authentication
+    ///
+    /// Anything that can open a TCP connection to `addr` receives the
+    /// live request trace feed — there is no login, token, or
+    /// allowlist. A non-loopback `addr` is a documentation ask this RFC
+    /// cannot enforce (an operator may have a real reason this process
+    /// doesn't know), so this only warns loudly rather than refusing to
+    /// bind — see `docs/src/reference/threat-model.md`'s trace-transport
+    /// section for the full statement, and prefer the Unix-socket
+    /// transport (restrictive permissions, RFC 073) wherever the
+    /// platform supports it.
     async fn tcp_accept_loop(addr: String, emitter: TraceEmitter) {
         let listener = match tokio::net::TcpListener::bind(&addr).await {
             Ok(l) => {
@@ -424,6 +592,14 @@ impl TraceTransport {
                     .map(|a| a.to_string())
                     .unwrap_or_else(|_| addr.clone());
                 log::info!("trace transport: TCP listening on {}", bound);
+                if !l.local_addr().map(|a| a.ip().is_loopback()).unwrap_or(true) {
+                    log::warn!(
+                        "trace transport: TCP listening on a non-loopback address ({}) — \
+                         this transport has no authentication; anything that can reach it \
+                         receives the live request trace feed",
+                        bound
+                    );
+                }
                 l
             }
             Err(e) => {
@@ -439,13 +615,11 @@ impl TraceTransport {
                     let count = active.fetch_add(1, Ordering::Relaxed) + 1;
                     if count > MAX_SUBSCRIBERS {
                         active.fetch_sub(1, Ordering::Relaxed);
-                        let active_clone = active.clone();
                         tokio::spawn(async move {
                             let (_, mut writer) = tokio::io::split(stream);
                             let _ = writer
                                 .write_all(b"{\"error\":\"max_subscribers_reached\"}\n")
                                 .await;
-                            drop(active_clone);
                         });
                         continue;
                     }
@@ -469,13 +643,36 @@ impl TraceTransport {
 
     // ── UDS accept loop (Unix only) ───────────────────────────────────
 
+    /// # RFC 073: restrictive permissions, owner-only
+    ///
+    /// `UnixListener::bind` creates the socket file with permissions
+    /// governed by the process umask — often group/world-readable in a
+    /// default shell configuration, which would let any other local
+    /// user connect and receive the live request trace feed. Set to
+    /// `0600` (owner read/write only) immediately after binding, before
+    /// the accept loop starts, so there is no window where the socket
+    /// exists at its umask-derived permissions. This has no Windows
+    /// equivalent — the UDS transport is `#[cfg(unix)]` only; Windows
+    /// always uses the TCP transport, which this crate cannot restrict
+    /// the same way (see `tcp_accept_loop`'s own doc comment).
     #[cfg(unix)]
     async fn uds_accept_loop(path: String, emitter: TraceEmitter) {
+        use std::os::unix::fs::PermissionsExt;
+
         // Remove stale socket file from a previous run.
         let _ = std::fs::remove_file(&path);
 
         let listener = match tokio::net::UnixListener::bind(&path) {
             Ok(l) => {
+                if let Err(e) =
+                    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+                {
+                    log::error!(
+                        "trace transport: failed to restrict UDS permissions on {}: {}",
+                        path,
+                        e
+                    );
+                }
                 log::info!("trace transport: UDS listening at {}", path);
                 l
             }
@@ -522,22 +719,39 @@ impl TraceTransport {
 
     /// Read events from `rx` and write each as a JSON line to `writer`
     /// until the connection closes or the channel is closed.
+    ///
+    /// # RFC 073 S-06/D-02: `dropped_count` is patched per subscriber
+    ///
+    /// `event.dropped_count`, as built by `TraceEmitter::emit`, only
+    /// ever reflects the rare shared no-receivers counter — it cannot
+    /// know about *this* lag, since a lag is detected on this
+    /// subscriber's own `Receiver`, after the event was already
+    /// broadcast identically to everyone. `lagged_events` accumulates
+    /// `n` from every `Lagged` this subscriber's own receiver reports,
+    /// and is folded into the next event this loop actually forwards
+    /// (each subscriber gets its own `Clone` of the event from
+    /// `broadcast`, so mutating it here affects only this subscriber's
+    /// own JSON line) — then reset, so a later event isn't charged for
+    /// a gap already reported.
     async fn forward_events<W>(mut writer: W, mut rx: broadcast::Receiver<MatchTraceEvent>)
     where
         W: tokio::io::AsyncWrite + Unpin,
     {
+        let mut lagged_events: u32 = 0;
         loop {
-            let event = match rx.recv().await {
+            let mut event = match rx.recv().await {
                 Ok(e) => e,
                 Err(broadcast::error::RecvError::Lagged(n)) => {
-                    // Receiver was too slow; `n` events were dropped.
-                    // The next event will carry `dropped_count` so the
-                    // subscriber can detect the gap. Continue.
+                    lagged_events =
+                        lagged_events.saturating_add(u32::try_from(n).unwrap_or(u32::MAX));
                     log::debug!("trace: subscriber lagged, {} events dropped", n);
                     continue;
                 }
                 Err(broadcast::error::RecvError::Closed) => break,
             };
+
+            event.dropped_count = event.dropped_count.saturating_add(lagged_events);
+            lagged_events = 0;
 
             let mut line = match serde_json::to_string(&event) {
                 Ok(s) => s,
@@ -726,6 +940,47 @@ mod tests {
         assert_eq!(value["request"]["url_path"], "/ping");
         assert_eq!(value["outcome"]["type"], "miss");
         assert_eq!(value["schema_version"], 1);
+    }
+
+    fn dummy_summary() -> RequestSummary {
+        RequestSummary {
+            method: "GET".into(),
+            url_path: "/".into(),
+            headers: vec![],
+            body_json: None,
+            body_truncated: false,
+            body_len: None,
+        }
+    }
+
+    /// RFC 073 S-06/D-02: a subscriber that falls behind by more than
+    /// the channel's capacity gets a nonzero `dropped_count` on the
+    /// next event it actually receives — the documented back-pressure
+    /// behaviour, implemented rather than only described. Overflowing
+    /// the channel before this subscriber ever reads anything, then
+    /// dropping the emitter (closing the channel) so `forward_events`
+    /// drains the remaining buffered events and terminates on `Closed`
+    /// rather than hanging forever waiting for one more.
+    #[tokio::test]
+    async fn a_lagging_subscriber_reports_dropped_count_on_its_next_event() {
+        let emitter = TraceEmitter::new();
+        let rx = emitter.subscribe();
+
+        for _ in 0..(TRACE_CHANNEL_CAPACITY + 10) {
+            emitter.emit(0, 0, dummy_summary(), Outcome::Miss { status: 404 });
+        }
+        drop(emitter);
+
+        let mut buf: Vec<u8> = Vec::new();
+        TraceTransport::forward_events(&mut buf, rx).await;
+
+        let text = String::from_utf8(buf).expect("valid utf8");
+        let first_line = text.lines().next().expect("at least one forwarded event");
+        let event: serde_json::Value = serde_json::from_str(first_line).expect("valid JSON");
+        assert!(
+            event["dropped_count"].as_u64().unwrap_or(0) > 0,
+            "the first event surviving a lag must report it: {first_line}"
+        );
     }
 
     // ── RFC 023: body capture tests ───────────────────────────────────
@@ -1015,5 +1270,147 @@ mod tests {
             !json.contains("username") && !json.contains("hunter2"),
             "no fragment of a body — captured or not — should appear: {json}"
         );
+    }
+
+    // ── RFC 073 S-05: query-string and body redaction ────────────────
+
+    /// The tranche 5 handoff's own acceptance example: a secret in a
+    /// query parameter is redacted the same way a header is, under the
+    /// broadened default denylist.
+    #[test]
+    fn a_query_string_token_is_redacted_by_default() {
+        let config = TraceConfig::default();
+        let redacted = config.redact_query_string("token=secret&page=2");
+        assert_eq!(redacted, "token=[redacted]&page=2");
+    }
+
+    /// A parameter name not on the denylist survives untouched, and
+    /// parameter order is preserved.
+    #[test]
+    fn a_non_denied_query_parameter_survives() {
+        let config = TraceConfig::default();
+        let redacted = config.redact_query_string("page=2&access_token=abc123&sort=asc");
+        assert_eq!(redacted, "page=2&access_token=[redacted]&sort=asc");
+    }
+
+    /// A bare flag parameter (no `=`) has nothing to redact and is left
+    /// alone, even if its name happens to match the denylist.
+    #[test]
+    fn a_bare_flag_parameter_is_left_alone() {
+        let config = TraceConfig::default();
+        let redacted = config.redact_query_string("verbose&token=secret");
+        assert_eq!(redacted, "verbose&token=[redacted]");
+    }
+
+    /// The tranche 5 handoff's other acceptance example: a secret in a
+    /// JSON body is redacted, by key, the same way a header is.
+    #[test]
+    fn a_top_level_body_secret_is_redacted_by_default() {
+        let config = TraceConfig::default();
+        let body = serde_json::json!({"username": "alice", "password": "hunter2"});
+        let redacted = config.redact_json_value(&body);
+        assert_eq!(redacted["username"], "alice");
+        assert_eq!(redacted["password"], REDACTED_HEADER_VALUE);
+    }
+
+    /// A secret nested under a non-secret-named parent is still caught
+    /// — redaction recurses into objects it doesn't itself redact.
+    #[test]
+    fn a_nested_body_secret_is_redacted_too() {
+        let config = TraceConfig::default();
+        let body = serde_json::json!({
+            "user": {"name": "alice", "api_key": "sk-live-very-secret"},
+            "items": [{"id": 1}, {"token": "should-not-appear"}],
+        });
+        let redacted = config.redact_json_value(&body);
+        assert_eq!(redacted["user"]["name"], "alice");
+        assert_eq!(redacted["user"]["api_key"], REDACTED_HEADER_VALUE);
+        assert_eq!(redacted["items"][0]["id"], 1);
+        assert_eq!(redacted["items"][1]["token"], REDACTED_HEADER_VALUE);
+
+        let json = serde_json::to_string(&redacted).unwrap();
+        assert!(
+            !json.contains("sk-live-very-secret") && !json.contains("should-not-appear"),
+            "no redacted value should survive serialisation: {json}"
+        );
+    }
+
+    /// RFC 073 S-05's actual delivery mechanism for the trace channel:
+    /// `enrich_with_body` — not just the standalone `redact_json_value`
+    /// helper — redacts before storing, so a subscriber over the
+    /// UDS/TCP transport never receives the raw secret either.
+    #[test]
+    fn enrich_with_body_redacts_a_captured_body() {
+        let emitter = TraceEmitter::with_config(TraceConfig {
+            capture_body: true,
+            ..Default::default()
+        });
+        let mut summary = dummy_summary();
+        let body = serde_json::json!({"action": "login", "password": "hunter2"});
+        emitter.enrich_with_body(&mut summary, Some(&body));
+
+        let captured = summary.body_json.expect("body should be captured");
+        assert_eq!(captured["action"], "login");
+        assert_eq!(captured["password"], REDACTED_HEADER_VALUE);
+    }
+
+    /// `Outcome::Middleware` (RFC 073 F-08) serialises with a
+    /// discriminated `type` tag like every other variant, carrying the
+    /// matched middleware script's own path.
+    #[test]
+    fn outcome_middleware_serialises_with_file_path_and_status() {
+        let outcome = Outcome::Middleware {
+            file_path: "middleware/auth.rhai".into(),
+            status: 200,
+        };
+        let json = serde_json::to_string(&outcome).unwrap();
+        assert!(json.contains("\"type\":\"middleware\""), "json was: {json}");
+        assert!(
+            json.contains("\"file_path\":\"middleware/auth.rhai\""),
+            "json was: {json}"
+        );
+        assert!(json.contains("\"status\":200"), "json was: {json}");
+    }
+
+    /// RFC 073: the UDS socket file is created owner-only (`0600`), not
+    /// left at whatever the process umask would otherwise produce.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn uds_socket_is_created_with_owner_only_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("trace.sock").to_str().unwrap().to_owned();
+        let emitter = TraceEmitter::new();
+
+        let accept_loop = tokio::spawn(TraceTransport::accept_loop(
+            TraceTransportConfig::Uds { path: path.clone() },
+            emitter,
+        ));
+
+        // The accept loop sets permissions synchronously, right after
+        // bind, before its first `accept().await` — poll for the file
+        // to exist rather than a fixed sleep, since scheduling order
+        // between this test task and the spawned one isn't guaranteed.
+        let deadline = std::time::Instant::now() + Duration::from_secs(2);
+        while !std::path::Path::new(&path).exists() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "socket never appeared"
+            );
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+
+        let mode = std::fs::metadata(&path)
+            .expect("stat socket")
+            .permissions()
+            .mode();
+        assert_eq!(
+            mode & 0o777,
+            0o600,
+            "socket permissions should be owner-only, got {mode:o}"
+        );
+
+        accept_loop.abort();
     }
 }

@@ -7,7 +7,18 @@ pub struct DefaultRespond {
 }
 
 impl DefaultRespond {
-    /// validate
+    /// Intentionally trivial — always `true` (RFC 079 F-10/M-04e).
+    ///
+    /// `delay_response_milliseconds` is a plain `Option<u32>` — `serde`
+    /// already rejects a value that doesn't fit at deserialise time,
+    /// and any `u32` that does fit is a meaningful delay in
+    /// milliseconds, so there is no further constraint to check here.
+    /// Kept (not removed), same reasoning as `RuleSet::validate`'s own
+    /// doc comment: called from `ServiceConfig::validate`'s loop today,
+    /// and the natural place a future field on this struct would want
+    /// real validation added, rather than a new method wired in from
+    /// scratch. See RFC 079 § 2 for the keep-and-document decision this
+    /// reflects.
     pub fn validate(&self) -> bool {
         true
     }

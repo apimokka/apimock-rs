@@ -90,6 +90,20 @@ more likely than a CLI to have that on a shared screen, or in a
 screenshot in a bug report. **Decide your defaults deliberately.** We
 would suggest starting redacted and letting the user opt in.
 
+**RFC 073 fixed two things worth knowing if you built against an
+earlier version.** Before it, every event's `outcome` reported
+`Miss { status: 0 }` regardless of what actually happened — a matched
+rule, a middleware response and a genuine 404 were indistinguishable.
+Every response path now emits the outcome that actually occurred
+(`Matched`, the new `Middleware`, `Fallback`, or `Miss`) — if you match
+on `Outcome` exhaustively, the new `Middleware` variant needs handling.
+Separately, `header_denylist`/`header_allowlist`/`header_redaction` now
+also govern query-string parameter values and JSON body object keys
+(recursively), not headers alone — the same redaction, applied
+everywhere a name-value pair can leave the process, so a captured body
+(`capture_body`) reaching your subscriber is redacted the same way a
+verbose console log line would be.
+
 `AppState::new(Config, LoadedMiddlewares, TraceEmitter)` is where the
 emitter is wired in.
 

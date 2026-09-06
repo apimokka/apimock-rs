@@ -48,7 +48,20 @@ impl UrlPath {
         }
     }
 
-    /// validate (ok when deserialization is successful)
+    /// Intentionally trivial — always `true` (RFC 079 F-10/M-04e, found
+    /// by the tranche 5 handoff's own refresh — the original RFC 079
+    /// text named three of these four; this one was missed).
+    ///
+    /// `value` is a plain `String` (any value deserialises) and `op` is
+    /// a `RuleOp` enum `serde` already restricts to a valid variant, so
+    /// there is nothing left to check once deserialisation succeeds —
+    /// which is what this method's original one-line comment already
+    /// said, just without saying *why* that makes `true` the only
+    /// answer. Kept (not removed), same reasoning as `RuleSet::validate`
+    /// and `DefaultRespond::validate`'s own doc comments — called from
+    /// `Request::validate` today, and the natural place a future
+    /// constraint on `UrlPath` would grow into. See RFC 079 § 2 for the
+    /// keep-and-document decision this reflects.
     pub fn validate(&self) -> bool {
         true
     }

@@ -1,0 +1,7 @@
+[[rules]]
+when.request.url_path = "/rule-b-other"
+respond = { text = "should not match in this test" }
+
+[[rules]]
+when.request.url_path = "/rule-b"
+respond = { text = "rule-b matched" }

@@ -474,6 +474,9 @@ pub apimock_server::trace::Outcome::Fallback::status: u16
 pub apimock_server::trace::Outcome::Matched
 pub apimock_server::trace::Outcome::Matched::rule_index: usize
 pub apimock_server::trace::Outcome::Matched::rule_set_index: usize
+pub apimock_server::trace::Outcome::Middleware
+pub apimock_server::trace::Outcome::Middleware::file_path: alloc::string::String
+pub apimock_server::trace::Outcome::Middleware::status: u16
 pub apimock_server::trace::Outcome::Miss
 pub apimock_server::trace::Outcome::Miss::status: u16
 impl core::clone::Clone for apimock_server::trace::Outcome

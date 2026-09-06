@@ -82,10 +82,6 @@ pub async fn respond_response(
             );
         };
 
-        // dir_prefix is used only for the file-not-found message above;
-        // the actual read happens against the resolved full_file_path.
-        let _ = Path::new(dir_prefix);
-
         return FileResponse::new_with_csv_records_jsonpath(
             full_file_path.as_str(),
             respond.headers.as_ref(),

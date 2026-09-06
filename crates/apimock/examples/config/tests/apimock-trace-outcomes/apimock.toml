@@ -1,0 +1,10 @@
+[listener]
+ip_address = "127.0.0.1"
+port = 0
+[service]
+middlewares = ["apimock-middleware.rhai"]
+rule_sets = [
+    "rule-set-a.toml",
+    "rule-set-b.toml",
+]
+fallback_respond_dir = "@respond-dir"

@@ -39,7 +39,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::{
-    dyn_route::dyn_route_content,
+    dyn_route::dyn_route_content_traced,
     error::{ServerError, ServerResult},
     middleware::LoadedMiddlewares,
     parsed_request::{ParsedRequestError, capture_in_log_with_trace_config, parsed_request_from},
@@ -524,17 +524,53 @@ pub async fn service(
         &tracer.config,
     );
 
-    if let Some(response) = middleware_response(
+    // RFC 073 F-08: built once, consumed by whichever single dispatch
+    // branch below actually answers the request. Before this fix, only
+    // the rule-set-match branch emitted anything, and it emitted the
+    // wrong `Outcome` — every response path now reports what it
+    // actually did.
+    let trace_summary = if tracer.has_subscribers() {
+        let headers = parsed_request
+            .component_parts
+            .headers
+            .iter()
+            .filter_map(|(k, v)| v.to_str().ok().map(|v| (k.to_string(), v.to_owned())))
+            .collect();
+        let mut summary = RequestSummary::new(
+            parsed_request.component_parts.method.to_string(),
+            parsed_request.url_path.clone(),
+            headers,
+            parsed_request.body_len,
+            &tracer.config,
+        );
+        tracer.enrich_with_body(&mut summary, parsed_request.body_json.as_ref());
+        Some(summary)
+    } else {
+        None
+    };
+
+    if let Some((middleware_file_path, response)) = middleware_response(
         middlewares,
         &parsed_request,
         &cors_allow_credentials_origins,
     )
     .await
     {
+        let status = response_status_or(&response, 500);
+        emit_trace_event(
+            tracer,
+            received_at_ms,
+            start,
+            trace_summary,
+            Outcome::Middleware {
+                file_path: middleware_file_path,
+                status,
+            },
+        );
         return response;
     }
 
-    if let Some(response) = rule_set_response(
+    if let Some((rule_set_idx, rule_idx, response)) = rule_set_response(
         config,
         &parsed_request,
         app_state.canonical_rule_set_respond_dirs.as_slice(),
@@ -542,48 +578,91 @@ pub async fn service(
     )
     .await
     {
-        // Emit trace event on match.
-        if tracer.has_subscribers() {
-            let headers = parsed_request
-                .component_parts
-                .headers
-                .iter()
-                .filter_map(|(k, v)| v.to_str().ok().map(|v| (k.to_string(), v.to_owned())))
-                .collect();
-            let mut summary = RequestSummary::new(
-                parsed_request.component_parts.method.to_string(),
-                parsed_request.url_path.clone(),
-                headers,
-                parsed_request.body_len,
-                &tracer.config,
-            );
-            tracer.enrich_with_body(&mut summary, parsed_request.body_json.as_ref());
-            tracer.emit(
-                received_at_ms,
-                start.elapsed().as_millis() as u32,
-                summary,
-                Outcome::Miss { status: 0 }, // coarse-grained; fine-grained tracing is a future pass
-            );
-        }
+        emit_trace_event(
+            tracer,
+            received_at_ms,
+            start,
+            trace_summary,
+            Outcome::Matched {
+                rule_set_index: rule_set_idx,
+                rule_index: rule_idx,
+            },
+        );
         return response;
     }
 
-    dyn_route_content(
+    let (dyn_route_response, resolved_file_path) = dyn_route_content_traced(
         parsed_request.url_path.as_str(),
         config.service.fallback_respond_dir.as_str(),
         &request_headers,
         app_state.canonical_fallback_respond_dir.as_deref(),
         &cors_allow_credentials_origins,
     )
-    .await
+    .await;
+
+    let status = response_status_or(&dyn_route_response, 500);
+    // A resolved path can still answer 404 (e.g. RFC 063 confinement, or
+    // a directory candidate with no index.* inside it) — `status` is
+    // what decides `Fallback` vs `Miss`, not merely whether a candidate
+    // was located internally, so this can't claim a file was served
+    // when the actual response says otherwise.
+    let outcome = match resolved_file_path {
+        Some(file_path) if status != 404 => Outcome::Fallback { file_path, status },
+        _ => Outcome::Miss { status },
+    };
+    emit_trace_event(tracer, received_at_ms, start, trace_summary, outcome);
+
+    dyn_route_response
+}
+
+/// The status code of a response that was actually built, or `fallback`
+/// when construction itself failed (a `hyper::http::Error` — malformed
+/// headers or similar; essentially unreachable given how every response
+/// builder in this crate is used, but the trace event still needs some
+/// status to report rather than silently skipping the outcome).
+fn response_status_or(
+    response: &Result<hyper::Response<BoxBody>, hyper::http::Error>,
+    fallback: u16,
+) -> u16 {
+    response
+        .as_ref()
+        .map(|r| r.status().as_u16())
+        .unwrap_or(fallback)
+}
+
+/// Emit one trace event, if any subscriber exists to receive it
+/// (`trace_summary` is `None` otherwise — built once per request in
+/// [`service`], consumed by whichever single dispatch branch there
+/// actually answers).
+fn emit_trace_event(
+    tracer: &TraceEmitter,
+    received_at_ms: u64,
+    start: std::time::Instant,
+    trace_summary: Option<RequestSummary>,
+    outcome: Outcome,
+) {
+    if let Some(summary) = trace_summary {
+        tracer.emit(
+            received_at_ms,
+            start.elapsed().as_millis() as u32,
+            summary,
+            outcome,
+        );
+    }
 }
 
 /// Dispatch the request through every loaded middleware in order.
+///
+/// Returns the matched handler's own `file_path` alongside the response
+/// (RFC 073 F-08) — `service()` needs it to emit `Outcome::Middleware`
+/// with something that identifies *which* middleware answered, since
+/// unlike a rule set there is no separate numeric index a trace
+/// consumer could otherwise cross-reference.
 async fn middleware_response(
     middlewares: &LoadedMiddlewares,
     parsed_request: &ParsedRequest,
     cors_allow_credentials_origins: &[String],
-) -> Option<Result<hyper::Response<BoxBody>, hyper::http::Error>> {
+) -> Option<(String, Result<hyper::Response<BoxBody>, hyper::http::Error>)> {
     for handler in middlewares.iter() {
         match handler
             .handle(
@@ -594,7 +673,7 @@ async fn middleware_response(
             )
             .await
         {
-            Some(x) => return Some(x),
+            Some(x) => return Some((handler.file_path.clone(), x)),
             None => continue,
         }
     }
@@ -605,14 +684,23 @@ async fn middleware_response(
 ///
 /// `canonical_rule_set_respond_dirs` is parallel to
 /// `config.service.rule_sets` — see `AppState::new`.
+///
+/// Returns the matched `(rule_set_index, rule_index)` alongside the
+/// response (RFC 073 F-08) — both were already computed here and
+/// previously discarded; `service()` needs them to emit
+/// `Outcome::Matched` with the real indices instead of a placeholder.
 async fn rule_set_response(
     config: &Config,
     parsed_request: &ParsedRequest,
     canonical_rule_set_respond_dirs: &[Option<PathBuf>],
     cors_allow_credentials_origins: &[String],
-) -> Option<Result<hyper::Response<BoxBody>, hyper::http::Error>> {
+) -> Option<(
+    usize,
+    usize,
+    Result<hyper::Response<BoxBody>, hyper::http::Error>,
+)> {
     for (rule_set_idx, rule_set) in config.service.rule_sets.iter().enumerate() {
-        if let Some((_rule_idx, respond)) = rule_set.find_matched(
+        if let Some((rule_idx, respond)) = rule_set.find_matched(
             parsed_request,
             config.service.strategy.as_ref(),
             rule_set_idx,
@@ -625,7 +713,9 @@ async fn rule_set_response(
             let confine_to = canonical_rule_set_respond_dirs
                 .get(rule_set_idx)
                 .and_then(|dir| dir.as_deref());
-            return Some(
+            return Some((
+                rule_set_idx,
+                rule_idx,
                 respond_response(
                     &respond,
                     dir_prefix.as_str(),
@@ -635,7 +725,7 @@ async fn rule_set_response(
                     cors_allow_credentials_origins,
                 )
                 .await,
-            );
+            ));
         }
     }
     None

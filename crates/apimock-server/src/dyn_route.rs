@@ -45,6 +45,37 @@ pub async fn dyn_route_content(
     confine_to: Option<&Path>,
     cors_allow_credentials_origins: &[String],
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
+    dyn_route_content_traced(
+        url_path,
+        fallback_respond_dir,
+        request_headers,
+        confine_to,
+        cors_allow_credentials_origins,
+    )
+    .await
+    .0
+}
+
+/// Same resolution as [`dyn_route_content`], additionally returning the
+/// resolved file path when one was actually found — used only by
+/// `server.rs`'s trace-event emission (RFC 073 F-08's "fallback"
+/// outcome needs the file that was actually served, not just the
+/// request's own URL path). Kept separate from the public
+/// `dyn_route_content` (which `apimock get`, RFC 055, also calls, and
+/// whose signature is public API) so that function's signature and the
+/// public API baseline are untouched by this — the resolved path is an
+/// internal detail this crate's own tracing needs, not something every
+/// caller of the public function should have to receive.
+pub(crate) async fn dyn_route_content_traced(
+    url_path: &str,
+    fallback_respond_dir: &str,
+    request_headers: &HeaderMap,
+    confine_to: Option<&Path>,
+    cors_allow_credentials_origins: &[String],
+) -> (
+    Result<hyper::Response<BoxBody>, hyper::http::Error>,
+    Option<String>,
+) {
     let base_dir = Path::new(fallback_respond_dir);
     let relative = url_path.strip_prefix('/').unwrap_or(url_path);
     let segments: Vec<&str> = relative.split('/').filter(|s| !s.is_empty()).collect();
@@ -78,10 +109,13 @@ pub async fn dyn_route_content(
         // Search in the fallback directory's own parent, not inside
         // itself — see the comment above.
         let Some(parent) = base_dir.parent() else {
-            return internal_server_error_response(
-                &format!("parent dir not found: url_path = {}", url_path),
-                request_headers,
-                cors_allow_credentials_origins,
+            return (
+                internal_server_error_response(
+                    &format!("parent dir not found: url_path = {}", url_path),
+                    request_headers,
+                    cors_allow_credentials_origins,
+                ),
+                None,
             );
         };
         parent
@@ -104,24 +138,34 @@ pub async fn dyn_route_content(
     }
     match resolve_final_segment(&naive_parent_dir, file_name).await {
         Ok(Some(found)) => {
-            return serve_found(
-                found,
-                request_headers,
-                confine_to,
-                cors_allow_credentials_origins,
-            )
-            .await;
+            let resolved_file_path = found.to_string_lossy().into_owned();
+            return (
+                serve_found(
+                    found,
+                    request_headers,
+                    confine_to,
+                    cors_allow_credentials_origins,
+                )
+                .await,
+                Some(resolved_file_path),
+            );
         }
         Ok(None) => {}
         Err(err) => {
-            return report_listing_failure(err, request_headers, cors_allow_credentials_origins);
+            return (
+                report_listing_failure(err, request_headers, cors_allow_credentials_origins),
+                None,
+            );
         }
     }
 
     if parent_segments.is_empty() {
         // No intermediate segment exists to have a case mismatch — the
         // fast path above already checked the only possible location.
-        return not_found_response(request_headers, cors_allow_credentials_origins);
+        return (
+            not_found_response(request_headers, cors_allow_credentials_origins),
+            None,
+        );
     }
 
     // RFC 075 F-05: the fast path missed. Walk every intermediate
@@ -132,12 +176,16 @@ pub async fn dyn_route_content(
     for &segment in parent_segments {
         match resolve_dir_segment(&resolved_parent_dir, segment).await {
             Ok(Some(next)) => resolved_parent_dir = next,
-            Ok(None) => return not_found_response(request_headers, cors_allow_credentials_origins),
+            Ok(None) => {
+                return (
+                    not_found_response(request_headers, cors_allow_credentials_origins),
+                    None,
+                );
+            }
             Err(err) => {
-                return report_listing_failure(
-                    err,
-                    request_headers,
-                    cors_allow_credentials_origins,
+                return (
+                    report_listing_failure(err, request_headers, cors_allow_credentials_origins),
+                    None,
                 );
             }
         }
@@ -145,16 +193,26 @@ pub async fn dyn_route_content(
 
     match resolve_final_segment(&resolved_parent_dir, file_name).await {
         Ok(Some(found)) => {
-            serve_found(
-                found,
-                request_headers,
-                confine_to,
-                cors_allow_credentials_origins,
+            let resolved_file_path = found.to_string_lossy().into_owned();
+            (
+                serve_found(
+                    found,
+                    request_headers,
+                    confine_to,
+                    cors_allow_credentials_origins,
+                )
+                .await,
+                Some(resolved_file_path),
             )
-            .await
         }
-        Ok(None) => not_found_response(request_headers, cors_allow_credentials_origins),
-        Err(err) => report_listing_failure(err, request_headers, cors_allow_credentials_origins),
+        Ok(None) => (
+            not_found_response(request_headers, cors_allow_credentials_origins),
+            None,
+        ),
+        Err(err) => (
+            report_listing_failure(err, request_headers, cors_allow_credentials_origins),
+            None,
+        ),
     }
 }
 

@@ -10,9 +10,10 @@ land in a new page rather than being folded into that one. Rename this
 file and its `SUMMARY.md` entry to match whatever the release process
 actually settles on.
 
-Two RFCs land here, from the external audit's fourth tranche. Both are
-**fixes that change what an existing setup does** — the same reasoning
-that made tranches 1–3 a minor, not a patch:
+Four RFCs land here so far, from the external audit's fourth and fifth
+tranches. All of these are **fixes that change what an existing setup
+does** — the same reasoning that made tranches 1–3 a minor, not a
+patch:
 
 | RFC | What breaks |
 |---|---|
@@ -20,6 +21,9 @@ that made tranches 1–3 a minor, not a patch:
 | [075](#a-rule-sets-url_path-prefix-now-matches-at-a-segment-boundary) | A rule set scoped to a prefix like `/api` stops matching a similarly-spelled sibling path like `/apiv2` |
 | [076](#json-files-are-now-served-exactly-as-written) | A `.json` `file_path` response is no longer minified or key-reordered |
 | [076](#library-api-the---format-json-envelope-field-order-changed) | *Library and script consumers only:* `--format json`'s field order changed from alphabetical to `schema`, `apimock`, `result`/`error` |
+| [073](#the-live-match-feed-now-reports-what-actually-happened) | *Library consumers of `apimock_server::trace` only:* every trace event used to report the wrong outcome; a new `Outcome::Middleware` variant needs handling in an exhaustive match |
+| [073](#verbose-logging-and-the-trace-channel-now-redact-query-strings-and-body-keys-too) | A query-string value or JSON body field matching the (now broader) credential denylist prints as `[redacted]` where it used to print verbatim |
+| [079](#a-few-internal-behaviours-that-were-never-real-are-gone) | `HttpMethod`'s `Display` output changed from a sentence to a bare value |
 
 Every one of these is a genuine correctness fix for behaviour the
 external audit found; none is a style or convenience change. If your
@@ -186,6 +190,108 @@ are unordered by specification, and nothing about this changes which
 keys exist or what they mean. It only affects a consumer comparing
 serialised bytes directly, or relying on iteration order over a parsed
 map.
+
+## The live match feed now reports what actually happened
+
+**RFC 073 F-08 — library consumers of `apimock_server::trace` only.**
+Before this fix, every trace event's `outcome` reported
+`Miss { status: 0 }` regardless of what the server actually did — a
+matched rule, a middleware response, a served fallback file and a
+genuine 404 were all indistinguishable on the wire:
+
+```
+// before: every event, whatever actually happened
+{"type":"miss","status":0}
+
+// after: what actually happened, for every response path
+{"type":"matched","rule_set_index":0,"rule_index":2}
+{"type":"middleware","file_path":"auth.rhai","status":200}
+{"type":"fallback","file_path":"data/users.json","status":200}
+{"type":"miss","status":404}
+```
+
+**If your consumer matches `Outcome` exhaustively**, the new
+`Middleware { file_path, status }` variant needs a match arm — nothing
+else in the enum's shape changed. If your consumer only reads specific
+fields (`event["outcome"]["type"]`, say), this only affects you insofar
+as the `type`/`status` values you now receive are the real ones instead
+of always `"miss"`/`0`.
+
+## Verbose logging and the trace channel now redact query strings and body keys too
+
+**RFC 073 S-05.** `log.verbose.body` used to print a request's raw
+query string and full JSON body with no redaction at all, even though
+`log.verbose.header` (and the trace channel's own header capture)
+already redacted credential-shaped headers:
+
+```
+$ curl 'http://localhost:3001/login?token=secret' -d '{"password":"hunter2"}'
+# before (log.verbose.body = true):
+#   [request.query] token=secret
+#   [request.body.json]
+#   { "password": "hunter2" }
+# after:
+#   [request.query] token=[redacted]
+#   [request.body.json]
+#   { "password": "[redacted]" }
+```
+
+The same denylist/allowlist that already governed headers
+(`header_denylist`/`header_allowlist`/`header_redaction`) now governs a
+query parameter's value and a JSON body's object keys too — recursively
+for the body, so a secret nested under a non-secret-named parent is
+still caught. The built-in default denylist also grew: `token`,
+`access_token`, `refresh_token`, `password`, `secret`, `client_secret`
+and `api_key` join the existing header names
+(`authorization`, `cookie`, `set-cookie`, `proxy-authorization`,
+`x-api-key`) — names a query string or body would plausibly use that a
+header never would.
+
+**If you had configured a custom `header_allowlist`/`header_denylist`**
+expecting it to govern headers only, it now also applies to query
+strings and bodies — the same list, one policy, not a second list to
+configure separately. **If your trace-channel subscriber reads
+`capture_body`'s captured body**, it now receives the same redacted
+version a verbose console log would show, not the raw one — this
+applies whether you connect over the in-process `subscribe()` API or
+the UDS/TCP transport.
+
+## The trace transport's access control (Unix sockets; TCP has none)
+
+**RFC 073.** A Unix-domain socket trace subscriber's socket file is now
+created with owner-only (`0600`) permissions — previously it inherited
+whatever the process umask produced, which on many default shell
+configurations left it group- or world-readable. **If another local
+user was relying on reading this socket**, that access is now refused;
+run apimock as that user, or use the TCP transport instead (no
+permissions model applies to a TCP port the same way).
+
+The TCP trace transport still has **no authentication of any kind**;
+apimock now logs a startup warning if the configured address isn't
+loopback, but does not refuse to bind one. This was already true before
+RFC 073 — only the warning is new — see the threat model's own
+statement of it.
+
+## A few internal behaviours that were never real are gone
+
+**RFC 079**, a cluster of small hygiene fixes with no behaviour change
+except one cosmetic one:
+
+- **`HttpMethod`'s `Display` output changed** from a sentence
+  (`"HTTP Method is GET"`) to a bare, backtick-quoted value
+  (`` method`GET` ``), matching every sibling condition's own `Display`
+  style (`` url_path`/foo` ``). Affects only code that formats an
+  `HttpMethod` directly and compares or displays the resulting string —
+  nothing in this project's own tests or docs did, so this is expected
+  to be a narrow change if it affects anyone at all.
+- **`RuleSet::validate()`, `DefaultRespond::validate()` and
+  `UrlPath::validate()` stay exactly as they were** — always `true`,
+  now documented as intentionally trivial rather than left to look like
+  an oversight. Nothing to update; noted here so the "kept, not
+  removed" decision reads as deliberate rather than accidental.
+- **`bad_request_response` (400) is still uncalled** — re-verified,
+  not newly discovered; kept for a future caller (audit F-09) with an
+  updated comment explaining why. No behaviour change; internal only.
 
 ## What isn't changing
 

@@ -37,6 +37,7 @@ pub mod root_config_dir {
         "apimock-rule-sets/server/routing/rule_set/rule/respond/body_source";
     pub const MIDDLEWARE: &str = "apimock-middleware";
     pub const CONFIG_FREE_ENV: &str = "apimock-rule-sets/@extra-test-cases/config-free-env";
+    pub const TRACE_OUTCOMES: &str = "apimock-trace-outcomes";
 }
 
 pub mod tls {

@@ -84,8 +84,16 @@ impl Request {
             None => true,
         };
 
-        let http_method_validate = true;
-
+        // RFC 079 M-04c: there used to be an `http_method_validate`
+        // binding here, hardcoded to `true` — `HttpMethod` has no
+        // `validate()` of its own (nothing about a parsed method needs
+        // checking beyond what `serde` already enforces at deserialize
+        // time), so the binding never varied and its presence in the
+        // final `&&` below asserted a check that didn't exist. Removed
+        // rather than kept as a silent no-op, unlike `url_path`/
+        // `headers`/`body`'s own `validate()` methods (see their own
+        // doc comments) — there is no `HttpMethod::validate` a reader
+        // could mistake this for calling.
         let headers_validate = match self.headers.as_ref() {
             Some(headers) => {
                 let ret = headers.validate();
@@ -116,7 +124,7 @@ impl Request {
             None => true,
         };
 
-        url_path_validate && http_method_validate && headers_validate && body_validate
+        url_path_validate && headers_validate && body_validate
     }
 }
 

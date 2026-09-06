@@ -223,7 +223,7 @@ fn render_request_log(
             .headers
             .iter()
             .map(|(name, value)| {
-                let rendered = if trace_config.is_header_redacted(name.as_str()) {
+                let rendered = if trace_config.is_redacted_key(name.as_str()) {
                     REDACTED_HEADER_VALUE
                 } else {
                     value.to_str().unwrap_or("<non-utf8>")
@@ -239,24 +239,32 @@ fn render_request_log(
 
     let mut is_verbose_body = false;
     if verbose.body {
+        // RFC 073 S-05: query strings and bodies used to print raw,
+        // unredacted, here — the same denylist/allowlist that already
+        // covers headers above (`trace_config.is_redacted_key`) now
+        // covers these too, so a credential doesn't reach the console
+        // just because it travelled in the query string or body
+        // instead of a header.
         let query = request.component_parts.uri.query();
         if let Some(query) = query {
-            printed.push_str(&format!("   [request.query] {}\n", query));
+            let redacted_query = trace_config.redact_query_string(query);
+            printed.push_str(&format!("   [request.query] {}\n", redacted_query));
             is_verbose_body = true;
         }
 
         if let Some(request_body_json_value) = &request.body_json {
             printed.push_str("   [request.body.json]\n");
 
-            let body_str = match to_string_pretty(request_body_json_value) {
+            let redacted_body_json_value = trace_config.redact_json_value(request_body_json_value);
+            let body_str = match to_string_pretty(&redacted_body_json_value) {
                 Ok(x) => x,
                 Err(err) => {
                     log::warn!(
                         "failed to prettify JSON: {} ({})",
-                        request_body_json_value,
+                        redacted_body_json_value,
                         err
                     );
-                    request_body_json_value.to_string()
+                    redacted_body_json_value.to_string()
                 }
             };
             let styled_body_str = body_str
@@ -400,5 +408,65 @@ mod tests {
     fn capture_in_log_public_two_argument_form_still_compiles_and_runs() {
         let request = request_with_headers(&[("authorization", "Bearer secret-token")]);
         capture_in_log(&request, VERBOSE_HEADERS_ONLY);
+    }
+
+    // ── RFC 073 S-05: query-string and body redaction in verbose output ──
+
+    const VERBOSE_BODY_ONLY: VerboseConfig = VerboseConfig::new(false, true);
+
+    /// Build a `ParsedRequest` with a query string, no body.
+    fn request_with_query(query: &str) -> ParsedRequest {
+        let req = hyper::Request::builder()
+            .method("GET")
+            .uri(format!("/search?{query}"))
+            .body(())
+            .unwrap();
+        let (component_parts, _) = req.into_parts();
+        ParsedRequest::new("/search".to_owned(), component_parts)
+    }
+
+    /// The tranche 5 handoff's own acceptance example, at the console
+    /// log: a `?token=secret` query parameter must not appear verbatim
+    /// under `log.verbose.body`'s default (redacted) settings — the
+    /// same denylist that already redacts headers above now covers the
+    /// query string too (RFC 073 S-05).
+    #[test]
+    fn verbose_query_string_redacts_a_token_by_default() {
+        let request = request_with_query("token=secret&page=2");
+        let rendered = render_request_log(&request, VERBOSE_BODY_ONLY, &TraceConfig::default());
+
+        assert!(!rendered.contains("secret"), "rendered: {rendered}");
+        assert!(
+            rendered.contains(REDACTED_HEADER_VALUE),
+            "rendered: {rendered}"
+        );
+        assert!(
+            rendered.contains("page=2"),
+            "a non-denied parameter must survive: {rendered}"
+        );
+    }
+
+    /// The handoff's other acceptance example: a secret in the JSON
+    /// body must not appear verbatim under default settings either.
+    #[test]
+    fn verbose_body_json_redacts_a_secret_by_default() {
+        let req = hyper::Request::builder()
+            .method("POST")
+            .uri("/login")
+            .body(())
+            .unwrap();
+        let (component_parts, _) = req.into_parts();
+        let request = ParsedRequest::new("/login".to_owned(), component_parts).with_body(
+            Some(serde_json::json!({"username": "alice", "password": "hunter2"})),
+            None,
+        );
+        let rendered = render_request_log(&request, VERBOSE_BODY_ONLY, &TraceConfig::default());
+
+        assert!(!rendered.contains("hunter2"), "rendered: {rendered}");
+        assert!(rendered.contains("alice"), "rendered: {rendered}");
+        assert!(
+            rendered.contains(REDACTED_HEADER_VALUE),
+            "rendered: {rendered}"
+        );
     }
 }

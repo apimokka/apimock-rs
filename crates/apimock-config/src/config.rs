@@ -269,6 +269,26 @@ impl Default for Config {
 }
 
 impl std::fmt::Display for Config {
+    /// RFC 079 M-03a: every `let _ = write!(f, ...)` / `writeln!` in a
+    /// `Display` impl across this workspace discards a `fmt::Result` on
+    /// purpose, not by oversight — written once here rather than at
+    /// each of the ~30 other sites, per the RFC's own "do the minimum"
+    /// instruction (30-odd near-identical edits would be churn, not
+    /// clarity).
+    ///
+    /// `write!`/`writeln!` against `f: &mut Formatter` can only fail if
+    /// the sink `Formatter` wraps fails, and every caller of a
+    /// `Display` impl in this project reaches one through `format!`,
+    /// `.to_string()`, or `println!` — all backed by a `String` (or, for
+    /// `println!`, stdout, which this project never checks either, and
+    /// for the same reason: a broken stdout pipe is not a case any of
+    /// these callers recover from or report on). `std::fmt::Write for
+    /// String` cannot return `Err` — the only way writing to a `String`
+    /// fails is running out of memory, which aborts the process rather
+    /// than returning a recoverable error. So `fmt::Error` is
+    /// unreachable in practice at every one of these call sites, and an
+    /// `if let Err(e) = write!(...)` handler at each would be a dead
+    /// branch dressed up as error handling, not real robustness.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let log = self.log.clone().unwrap_or_default();
         let _ = write!(f, "{}", log);
