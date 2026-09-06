@@ -182,7 +182,14 @@ impl FileResponse {
     fn text_file_content_response(&self) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
         match file_extension(self.file_path.as_str()) {
             Some(ext) => match ext.as_str() {
-                "json" | "json5" => self.json_file_content_response(),
+                // RFC 076: `.json` is served exactly as written — no
+                // parse/reserialise round-trip. `.json5` still converts
+                // (JSON5 is not JSON; converting it is the point, and a
+                // user writing JSON5 has already accepted a
+                // transformation) via `json_file_content_response` below,
+                // unchanged.
+                "json" => self.raw_json_file_content_response(),
+                "json5" => self.json_file_content_response(),
                 "csv" => self.csv_file_content_response(),
                 _ => text_response(
                     self.text_content.clone().unwrap_or_default().as_str(),
@@ -202,7 +209,35 @@ impl FileResponse {
         }
     }
 
-    /// json file response
+    /// `.json` file response — served byte-for-byte, no parsing.
+    ///
+    /// # RFC 076: why skipping the parse/reserialise round-trip is safe
+    ///
+    /// The old path here (still used for `.json5`, see
+    /// `json_file_content_response` below) parsed the file into a
+    /// `Value` and reserialised it — minifying it and, before RFC 076's
+    /// `preserve_order`, reordering keys alphabetically, relative to
+    /// what was on disk. Neither is a validity check: RFC 065 already
+    /// validates every `.json`/`.json5` `file_path` at config-load time
+    /// (`Respond::validate`, the same JSON5 parser this module still
+    /// uses for `.json5`), so parsing again here bought nothing but the
+    /// two side effects above. Serving the bytes this method already
+    /// read (`self.text_content`) is therefore both the byte-identical
+    /// fix and the elimination of a redundant parse. If RFC 065's
+    /// load-time validation is ever loosened or removed, this comment is
+    /// the signal to reconsider whether a content check belongs here.
+    fn raw_json_file_content_response(
+        &self,
+    ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
+        let json_str = self.text_content.clone().unwrap_or_default();
+        ResponseHandler::default()
+            .with_json_body(json_str)
+            .with_custom_headers(self.custom_headers.as_ref())
+            .into_response(&self.request_headers, &self.cors_allow_credentials_origins)
+    }
+
+    /// `.json5` file response — parsed and reserialised (unchanged by
+    /// RFC 076; converting JSON5 to JSON is the point, not a defect).
     fn json_file_content_response(&self) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
         let json_str = self.text_content.clone().unwrap_or_default();
         json_response(
@@ -391,5 +426,85 @@ mod tests {
             .unwrap()
             .to_bytes();
         assert_eq!(body.as_ref(), text.as_bytes());
+    }
+
+    /// RFC 076: a `.json` file with non-alphabetical keys and pretty
+    /// (non-minified) formatting is served byte-for-byte — comparing
+    /// bytes, not parsed equality, since a parse-and-recompare would
+    /// pass with the old minify-and-reorder behaviour still in place.
+    #[tokio::test]
+    async fn json_file_is_served_byte_identical_key_order_and_formatting_preserved() {
+        let dir = tempfile::tempdir().unwrap();
+        let bytes: &[u8] = b"{\n  \"zebra\": 1,\n  \"apple\": 2\n}\n";
+        let file_path = dir.path().join("data.json");
+        std::fs::write(&file_path, bytes).unwrap();
+        let confine_to = canonical_dir(dir.path().to_str().unwrap());
+
+        let mut file_response = FileResponse::new(
+            file_path.to_str().unwrap(),
+            None,
+            &HeaderMap::new(),
+            confine_to.as_deref(),
+            &[],
+        );
+        let response = file_response.file_content_response().await.unwrap();
+
+        assert_eq!(response.status(), hyper::StatusCode::OK);
+        assert_eq!(
+            response.headers().get("content-type").unwrap(),
+            "application/json"
+        );
+        let body = http_body_util::BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
+        assert_eq!(
+            body.as_ref(),
+            bytes,
+            "a .json file must be served exactly as written — not \
+             minified, not key-reordered"
+        );
+    }
+
+    /// RFC 076 non-goal: `.json5` still converts (parses and
+    /// reserialises) — JSON5 is not JSON, and converting it is the
+    /// point. Pinned so the `.json`/`.json5` split above can't
+    /// accidentally start treating them the same.
+    #[tokio::test]
+    async fn json5_file_still_converts_to_minified_json() {
+        let dir = tempfile::tempdir().unwrap();
+        // Trailing comma and unquoted-friendly spacing: valid JSON5,
+        // invalid strict JSON — proves this path still goes through the
+        // JSON5 parser rather than being served as raw bytes.
+        let source = b"{\n  \"zebra\": 1,\n  \"apple\": 2,\n}\n";
+        let file_path = dir.path().join("data.json5");
+        std::fs::write(&file_path, source).unwrap();
+        let confine_to = canonical_dir(dir.path().to_str().unwrap());
+
+        let mut file_response = FileResponse::new(
+            file_path.to_str().unwrap(),
+            None,
+            &HeaderMap::new(),
+            confine_to.as_deref(),
+            &[],
+        );
+        let response = file_response.file_content_response().await.unwrap();
+
+        assert_eq!(response.status(), hyper::StatusCode::OK);
+        let body = http_body_util::BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
+        // Converted: minified, trailing comma gone. Key order is a
+        // separate question (RFC 076's `preserve_order`) — this test
+        // only pins that conversion still happens at all.
+        assert_ne!(
+            body.as_ref(),
+            source,
+            ".json5 must still be converted, not served raw"
+        );
+        let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(parsed["zebra"], 1);
+        assert_eq!(parsed["apple"], 2);
     }
 }

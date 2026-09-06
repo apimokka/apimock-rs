@@ -1,7 +1,14 @@
+//! RFC 076 updated three assertions here (`port_env_arg_overwrites`,
+//! `fallback_response_dir_env_arg_overwrites`,
+//! `dir_flag_resolves_bare_and_dot_slash_identically`) from
+//! `json!({"hello": ...}).to_string()` (minified, alphabetical) to the
+//! underlying fixtures' own raw bytes, since a `.json` `file_path` is
+//! now served byte-for-byte. **Updated because the bytes are now
+//! correct.**
+
 use std::path::Path;
 
 use hyper::StatusCode;
-use serde_json::json;
 use util::{
     cli::bin,
     http::{test_request::TestRequest, test_response::response_body_str},
@@ -36,7 +43,7 @@ async fn port_env_arg_overwrites() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"hello": "index"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
 }
 
 #[tokio::test]
@@ -61,7 +68,7 @@ async fn fallback_response_dir_env_arg_overwrites() {
     let body_str = response_body_str(response).await;
     assert_eq!(
         body_str.as_str(),
-        json!({"hello": "custom fallback respond dir"}).to_string()
+        "{\n    \"hello\": \"custom fallback respond dir\"\n}"
     );
 }
 
@@ -917,6 +924,6 @@ async fn dir_flag_resolves_bare_and_dot_slash_identically() {
     let body_str = response_body_str(response).await;
     assert_eq!(
         body_str.as_str(),
-        json!({"hello": "custom fallback respond dir"}).to_string()
+        "{\n    \"hello\": \"custom fallback respond dir\"\n}"
     );
 }

@@ -1,3 +1,11 @@
+//! RFC 076 updated the `response{1,3,5}.json`-matching assertions here
+//! from `json!({"key": ...}).to_string()` (minified, alphabetical) to
+//! each fixture's own raw bytes, since a `.json` `file_path` is now
+//! served byte-for-byte. **Updated because the bytes are now correct.**
+//! `response{2,4,6}.json5` assertions are untouched — `.json5` still
+//! converts. `json!` is still used elsewhere in this file to build
+//! *request* bodies, which this RFC doesn't touch.
+
 use hyper::StatusCode;
 use serde_json::json;
 
@@ -29,7 +37,7 @@ async fn matches_single_level_1() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        json!({"key": "when_request_response1.json"}).to_string()
+        "{\n    \"key\": \"when_request_response1.json\"\n}"
     );
 }
 
@@ -177,7 +185,7 @@ async fn matches_multiple_condition_1() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        json!({"key": "when_request_response3.json"}).to_string()
+        "{\n    \"key\": \"when_request_response3.json\"\n}"
     );
 }
 
@@ -238,7 +246,7 @@ async fn matches_non_string_type_value_2() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        json!({"key": "when_request_response3.json"}).to_string()
+        "{\n    \"key\": \"when_request_response3.json\"\n}"
     );
 }
 
@@ -327,7 +335,7 @@ async fn matches_array_1() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        json!({"key": "when_request_response5.json"}).to_string()
+        "{\n    \"key\": \"when_request_response5.json\"\n}"
     );
 }
 
@@ -351,7 +359,7 @@ async fn matches_array_2() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        json!({"key": "when_request_response5.json"}).to_string()
+        "{\n    \"key\": \"when_request_response5.json\"\n}"
     );
 }
 

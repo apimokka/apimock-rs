@@ -580,6 +580,7 @@ pub mod apimock_routing::util::glob
 pub fn apimock_routing::util::glob::glob_match(&str, &str) -> bool
 pub mod apimock_routing::util::http
 pub fn apimock_routing::util::http::normalize_url_path(&str, core::option::Option<&str>) -> alloc::string::String
+pub fn apimock_routing::util::http::percent_decode_url_path(&str) -> alloc::borrow::Cow<'_, str>
 pub mod apimock_routing::util::json
 pub const apimock_routing::util::json::JSON_COMPATIBLE_EXTENSIONS: [&str; 3]
 pub fn apimock_routing::util::json::json_value_by_jsonpath<'a>(&'a serde_json::value::Value, &str) -> core::option::Option<&'a serde_json::value::Value>

@@ -25,6 +25,39 @@ async fn matches_prefix_url_path_prefix_1() {
     assert_eq!(body_str, "url path prefix if");
 }
 
+/// RFC 075 F-02: `/prefix` (normalised from the authored `/prefix/`)
+/// must not match `/prefixyz` — the old `starts_with` comparison did,
+/// making this rule set claim a sibling path it was never scoped to.
+/// `/prefixyz` matches no rule in this rule set and no other rule set
+/// exists in this config, so it falls through to the dyn-route fallback
+/// and 404s (there is no real file named `prefixyz` to serve).
+#[tokio::test]
+async fn does_not_match_a_sibling_path_that_merely_shares_the_prefix_as_a_string() {
+    let port = setup().await;
+
+    let response = TestRequest::default("/prefixyz", port).send().await;
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+}
+
+/// The companion positive case, named for what it proves rather than
+/// merely "the prefix matches": `/prefix` bare (no trailing segment)
+/// still reaches the rule set at all, even though it isn't the
+/// `/prefix/equal` shape the other two tests exercise. It falls to the
+/// rule set's own `not_equal "equal"` rule (the request's relative
+/// `url_path` is empty, not `"equal"`) rather than being scoped out
+/// before ever reaching rule matching.
+#[tokio::test]
+async fn matches_the_bare_prefix_itself() {
+    let port = setup().await;
+
+    let response = TestRequest::default("/prefix", port).send().await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body_str = response_body_str(response).await;
+    assert_eq!(body_str, "url path prefix else");
+}
+
 #[tokio::test]
 async fn matches_prefix_url_path_prefix_2() {
     let port = setup().await;

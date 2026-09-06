@@ -1,7 +1,10 @@
 use hyper::HeaderMap;
 use tokio::task;
 
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     response::{
@@ -20,9 +23,16 @@ use apimock_routing::util::json::JSON_COMPATIBLE_EXTENSIONS;
 /// This handler powers the zero-config experience where URL paths map
 /// onto files on disk. The two accommodations we make are:
 ///
-/// 1. **Case-insensitive filename match** — browsers often canonicalize
-///    paths (`/Users` vs `/users`), and operators rarely care. If a file
-///    matches in a case-insensitive compare we use it.
+/// 1. **Case-insensitive match, at every segment** (RFC 075 F-05) —
+///    browsers often canonicalize paths (`/Users` vs `/users`), and
+///    operators rarely care. apimock folds case itself rather than
+///    delegating to the filesystem, because filesystem case behaviour
+///    is not portable: Linux is case-sensitive, Windows and macOS
+///    (APFS default) are not, so the same config and request used to
+///    get different answers depending on which segment differed and
+///    which platform served it. Uniform, apimock-enforced folding is
+///    the only version of this that a committed rule set can rely on
+///    identically everywhere.
 /// 2. **Extension inference** — a request to `/foo` with no extension
 ///    looks for `foo.json`, `foo.json5`, `foo.csv` in that order, then
 ///    `foo/index.*`. This means operators can drop a single JSON file
@@ -35,97 +45,128 @@ pub async fn dyn_route_content(
     confine_to: Option<&Path>,
     cors_allow_credentials_origins: &[String],
 ) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
-    let request_path =
-        Path::new(fallback_respond_dir).join(url_path.strip_prefix("/").unwrap_or_default());
+    let base_dir = Path::new(fallback_respond_dir);
+    let relative = url_path.strip_prefix('/').unwrap_or(url_path);
+    let segments: Vec<&str> = relative.split('/').filter(|s| !s.is_empty()).collect();
 
-    let request_file_name = request_path
-        .file_name()
-        .unwrap_or_default()
-        .to_str()
-        .unwrap_or_default();
-
-    // Locate the parent dir. No parent at all (e.g. path was empty) →
-    // 500, since that indicates a bug elsewhere. Missing-parent-as-404
-    // is checked below, only if the fast paths below don't resolve the
-    // request — no need to stat it twice.
-    let Some(parent) = request_path.parent() else {
-        return internal_server_error_response(
-            &format!("parent dir not found: url_path = {}", url_path),
-            request_headers,
-            cors_allow_credentials_origins,
-        );
+    // A bare "/" (or an all-slashes path) has no segment of its own to
+    // resolve — this is the pre-existing "index" mechanism, unchanged
+    // by RFC 075: search for the fallback directory *itself*, by name,
+    // in its own parent. That candidate is a directory, not a file, and
+    // gets handed to `FileResponse` unfiltered exactly like any other
+    // directory match below — `resolve_with_json_compatible_extensions`
+    // there is what actually finds `index.json`/`index.json5`/
+    // `index.html` inside it.
+    //
+    // `file_name()` is `None` when `fallback_respond_dir` is exactly
+    // `.` (the default) — `.` is a special "current directory" path
+    // component, not a named one. Falling back to `""` reproduces the
+    // pre-RFC-075 code's own behaviour there exactly (it used
+    // `.unwrap_or_default()` at this same spot): the search degenerates
+    // to an empty name that can never match a real directory entry, so
+    // it falls straight through to 404 rather than 500 — a case-free
+    // config still 404s correctly, it just doesn't have an "own name"
+    // to look for.
+    let (file_name, parent_segments): (&str, &[&str]) = match segments.split_last() {
+        Some((&last, rest)) => (last, rest),
+        None => (
+            base_dir.file_name().and_then(|s| s.to_str()).unwrap_or(""),
+            &[],
+        ),
     };
-    let dir = parent.to_owned();
-
-    // RFC 077 P-06: resolve with bounded `stat`s before ever listing the
-    // directory. Before this fix, the whole directory was listed on
-    // every request — even the overwhelmingly common ones below, which
-    // never needed to see another file's name.
-    //
-    // # Deliberate precedence note
-    //
-    // The previous single-pass order tried a case-insensitive listing
-    // match before extension inference. This tries an exact-path stat,
-    // then extension inference, before falling back to the listing
-    // below. The two orders can only disagree when a directory holds
-    // both a bare, differently-cased file (e.g. `FOO`) *and* an
-    // extension match (`foo.json`) for the same request — a
-    // configuration nothing in this codebase's tests exercises. Plain
-    // case-insensitive matching is unchanged and still runs, below, for
-    // whatever neither stat resolves.
-    let mut found = if is_existing_file(&request_path).await {
-        Some(request_path.clone())
+    let search_base_dir = if segments.is_empty() {
+        // Search in the fallback directory's own parent, not inside
+        // itself — see the comment above.
+        let Some(parent) = base_dir.parent() else {
+            return internal_server_error_response(
+                &format!("parent dir not found: url_path = {}", url_path),
+                request_headers,
+                cors_allow_credentials_origins,
+            );
+        };
+        parent
     } else {
-        None
+        base_dir
     };
 
-    // Extension inference: `/foo` → `foo.json` / `foo.json5` / `foo.csv`.
-    // This is the shape the README's zero-config pitch relies on
-    // (`/hello` -> `hello.json`), and it was always a direct stat per
-    // candidate — it just never ran until after the listing above it.
-    if found.is_none()
-        && request_path.extension().is_none()
-        && let Some(stem) = request_path.file_stem().and_then(|s| s.to_str())
-    {
-        for ext in JSON_COMPATIBLE_EXTENSIONS {
-            let candidate = dir.join(format!("{}.{}", stem, ext));
-            if is_existing_file(&candidate).await {
-                found = Some(candidate);
-                break;
-            }
+    // RFC 077 P-06's fast path, preserved: try the whole remaining path
+    // as it was literally requested, one `stat` (plus bounded extension
+    // inference) against the *naive*, not-yet-case-corrected parent
+    // directory. On a case-insensitive filesystem this already resolves
+    // every segment correctly — the OS folds case for every segment at
+    // once, for free — so the common case still costs nothing beyond
+    // what P-06 already established. Falling through to the per-segment
+    // walk below is what makes Linux (case-sensitive) match what the
+    // other two platforms already gave for free here (RFC 075 F-05).
+    let mut naive_parent_dir = search_base_dir.to_owned();
+    for &segment in parent_segments {
+        naive_parent_dir.push(segment);
+    }
+    match resolve_final_segment(&naive_parent_dir, file_name).await {
+        Ok(Some(found)) => {
+            return serve_found(
+                found,
+                request_headers,
+                confine_to,
+                cors_allow_credentials_origins,
+            )
+            .await;
+        }
+        Ok(None) => {}
+        Err(err) => {
+            return report_listing_failure(err, request_headers, cors_allow_credentials_origins);
         }
     }
 
-    // Last resort: list the directory for a case-insensitive name match
-    // (e.g. a client-side path that canonicalised differently than the
-    // filesystem did). Only reached when neither stat above resolved
-    // the request.
-    if found.is_none() {
-        if !dir.exists() {
-            return not_found_response(request_headers, cors_allow_credentials_origins);
-        }
+    if parent_segments.is_empty() {
+        // No intermediate segment exists to have a case mismatch — the
+        // fast path above already checked the only possible location.
+        return not_found_response(request_headers, cors_allow_credentials_origins);
+    }
 
-        found = match find_by_case_insensitive_listing(&dir, request_file_name).await {
-            Ok(found) => found,
-            // Both `err` sources carry `dir`'s own filesystem path
-            // (RFC 065 D4) — logged in full, server-side; the client
-            // only ever sees a generic message naming the problem, not
-            // the server's directory layout.
+    // RFC 075 F-05: the fast path missed. Walk every intermediate
+    // segment through apimock's own case-insensitive comparison instead
+    // of the filesystem's, so Linux resolves a case-mismatched
+    // directory the same way macOS/Windows already did above.
+    let mut resolved_parent_dir = search_base_dir.to_owned();
+    for &segment in parent_segments {
+        match resolve_dir_segment(&resolved_parent_dir, segment).await {
+            Ok(Some(next)) => resolved_parent_dir = next,
+            Ok(None) => return not_found_response(request_headers, cors_allow_credentials_origins),
             Err(err) => {
-                log::error!("{}", err);
-                return internal_server_error_response(
-                    "failed to read fallback directory",
+                return report_listing_failure(
+                    err,
                     request_headers,
                     cors_allow_credentials_origins,
                 );
             }
-        };
+        }
     }
 
-    let Some(found) = found else {
-        return not_found_response(request_headers, cors_allow_credentials_origins);
-    };
+    match resolve_final_segment(&resolved_parent_dir, file_name).await {
+        Ok(Some(found)) => {
+            serve_found(
+                found,
+                request_headers,
+                confine_to,
+                cors_allow_credentials_origins,
+            )
+            .await
+        }
+        Ok(None) => not_found_response(request_headers, cors_allow_credentials_origins),
+        Err(err) => report_listing_failure(err, request_headers, cors_allow_credentials_origins),
+    }
+}
 
+/// Build the response for a resolved file — the one place `dyn_route_content`
+/// actually reads and serves content, shared by both the fast path and
+/// the per-segment-resolved fallback.
+async fn serve_found(
+    found: PathBuf,
+    request_headers: &HeaderMap,
+    confine_to: Option<&Path>,
+    cors_allow_credentials_origins: &[String],
+) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
     let file_path = found.to_str().unwrap_or_default();
     FileResponse::new(
         file_path,
@@ -138,6 +179,106 @@ pub async fn dyn_route_content(
     .await
 }
 
+/// A directory listing failed to read (as opposed to simply not
+/// containing a match) — both `resolve_final_segment` and
+/// `resolve_dir_segment`'s error carries `dir`'s own filesystem path
+/// (RFC 065 D4): logged in full, server-side; the client only ever sees
+/// a generic message naming the problem, not the server's directory
+/// layout.
+fn report_listing_failure(
+    err: String,
+    request_headers: &HeaderMap,
+    cors_allow_credentials_origins: &[String],
+) -> Result<hyper::Response<BoxBody>, hyper::http::Error> {
+    log::error!("{}", err);
+    internal_server_error_response(
+        "failed to read fallback directory",
+        request_headers,
+        cors_allow_credentials_origins,
+    )
+}
+
+/// Resolve the final path segment (`file_name`) inside `dir`, using the
+/// same three-tier strategy regardless of whether `dir` is the naive
+/// (requested-case) parent or one already resolved case-insensitively:
+/// exact stat, extension inference (only when `file_name` has no
+/// extension), then a case-insensitive directory listing as the last
+/// resort.
+///
+/// # The listing tier's result is *not* filtered to files
+///
+/// A resolved candidate here can be a directory — deliberately: this is
+/// the pre-existing mechanism (unchanged by RFC 075) behind both `/`
+/// resolving to `index.json` and `/subdir` resolving to
+/// `subdir/index.json5`. `dyn_route_content` hands whatever this
+/// returns straight to `FileResponse`, whose own
+/// `resolve_with_json_compatible_extensions` recognises a directory
+/// candidate and looks for `index.*` inside it. Filtering the listing
+/// tier to files-only here would silently break both of those.
+async fn resolve_final_segment(dir: &Path, file_name: &str) -> Result<Option<PathBuf>, String> {
+    let candidate = dir.join(file_name);
+    if is_existing_file(&candidate).await {
+        return Ok(Some(candidate));
+    }
+
+    // Extension inference: `/foo` → `foo.json` / `foo.json5` / `foo.csv`.
+    // This is the shape the README's zero-config pitch relies on
+    // (`/hello` -> `hello.json`), and it's always been a direct stat per
+    // candidate, independent of the listing below.
+    let inferred_names: Vec<String> = if Path::new(file_name).extension().is_none()
+        && let Some(stem) = Path::new(file_name).file_stem().and_then(|s| s.to_str())
+    {
+        for ext in JSON_COMPATIBLE_EXTENSIONS {
+            let candidate = dir.join(format!("{}.{}", stem, ext));
+            if is_existing_file(&candidate).await {
+                return Ok(Some(candidate));
+            }
+        }
+        JSON_COMPATIBLE_EXTENSIONS
+            .iter()
+            .map(|ext| format!("{}.{}", stem, ext))
+            .collect()
+    } else {
+        Vec::new()
+    };
+
+    if !dir.exists() {
+        return Ok(None);
+    }
+
+    // RFC 075 F-05: case-folding and extension inference must combine,
+    // not just each work alone — a request for `/CaseDir/file` must
+    // still resolve `File.json` even though neither the exact-stat tier
+    // above (case matched, no extension) nor the extension-inference
+    // tier above (extension matched, case didn't) can find it alone.
+    // Try the bare name first, then each extension-inferred name, all
+    // case-insensitively, in the same priority order the exact-stat
+    // tiers above already used.
+    let mut candidate_names = Vec::with_capacity(1 + inferred_names.len());
+    candidate_names.push(file_name.to_owned());
+    candidate_names.extend(inferred_names);
+    find_by_case_insensitive_listing(dir, &candidate_names).await
+}
+
+/// Resolve one intermediate directory segment inside `dir`: exact stat
+/// (as a directory), then a case-insensitive listing match that is also
+/// a directory. No extension inference — that's a final-segment concept
+/// only.
+async fn resolve_dir_segment(dir: &Path, segment: &str) -> Result<Option<PathBuf>, String> {
+    let candidate = dir.join(segment);
+    if is_existing_dir(&candidate).await {
+        return Ok(Some(candidate));
+    }
+
+    if !dir.exists() {
+        return Ok(None);
+    }
+    match find_by_case_insensitive_listing(dir, &[segment.to_owned()]).await? {
+        Some(found) if is_existing_dir(&found).await => Ok(Some(found)),
+        _ => Ok(None),
+    }
+}
+
 /// `true` iff `path` exists and is a regular file — a single `stat`,
 /// off the async runtime like the directory listing it lets most
 /// requests skip (see `dyn_route_content`).
@@ -148,9 +289,40 @@ async fn is_existing_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-/// The last resort in `dyn_route_content`: list `dir` and find
-/// `request_file_name` case-insensitively. Only reached when neither an
-/// exact-path stat nor extension inference resolved the request.
+/// `true` iff `path` exists and is a directory — `is_existing_file`'s
+/// counterpart, used to resolve intermediate path segments (RFC 075
+/// F-05) rather than the final one.
+async fn is_existing_dir(path: &Path) -> bool {
+    let path = path.to_owned();
+    task::spawn_blocking(move || path.is_dir())
+        .await
+        .unwrap_or(false)
+}
+
+/// The last resort in `resolve_final_segment` and `resolve_dir_segment`:
+/// list `dir` and find `name` case-insensitively. Only reached when an
+/// exact-path stat (and, for a final segment, extension inference)
+/// didn't resolve the request.
+///
+/// # Unicode-aware, not ASCII-only (RFC 075 § 2a)
+///
+/// Tranche 3's fast path (`is_existing_file`/`is_existing_dir` against
+/// the literal requested path) delegates to the OS's own `stat`, which
+/// on a case-insensitive filesystem folds *Unicode* case (a request for
+/// `CAFÉ.json` resolves `café.json` there for free). If this listing
+/// compared ASCII-only (`eq_ignore_ascii_case`), Linux would refuse the
+/// exact same request the fast path already accepts on macOS/Windows —
+/// reintroducing F-05's own defect for non-ASCII names specifically,
+/// through the fix meant to remove it. Comparing with `to_lowercase()`
+/// instead means this listing accepts everything the fast path's OS
+/// delegation already does, so the two can't disagree with each other:
+/// whichever one runs for a given request answers the same way the
+/// other would have. Full Unicode case-folding equivalence with any
+/// specific OS's own tables is not claimed or needed here — only that
+/// this project's two paths never contradict each other; the same
+/// class of limitation this project's own docs already carry for
+/// Unicode *normalisation* (RFC 075 § 4's NFC/NFD scope-out), just
+/// applied to folding instead of encoding.
 ///
 /// # Why `spawn_blocking` and not `tokio::fs`
 ///
@@ -159,37 +331,51 @@ async fn is_existing_file(path: &Path) -> bool {
 /// indirection while we iterate a `DirEntry` stream, so one
 /// `spawn_blocking` for the whole scan is simpler and uses the same
 /// thread pool underneath.
+/// `candidate_names` is checked in order — the first name (not the
+/// first directory entry) with a case-insensitive match wins, so a
+/// caller combining a bare name with extension-inferred variants (see
+/// `resolve_final_segment`) gets the same priority the exact-stat tiers
+/// ahead of this one already use, regardless of the OS's own (arbitrary)
+/// listing order.
 async fn find_by_case_insensitive_listing(
     dir: &Path,
-    request_file_name: &str,
+    candidate_names: &[String],
 ) -> Result<Option<std::path::PathBuf>, String> {
     let dir_for_blocking_task = dir.to_owned();
-    let request_file_name = request_file_name.to_owned();
+    let candidate_names_lower: Vec<String> =
+        candidate_names.iter().map(|n| n.to_lowercase()).collect();
     let read_dir_result =
         task::spawn_blocking(move || -> Result<Option<std::path::PathBuf>, String> {
-            let entries = fs::read_dir(dir_for_blocking_task.as_path()).map_err(|err| {
-                format!(
-                    "failed to get dir: {} ({})",
-                    dir_for_blocking_task.to_string_lossy(),
-                    err
-                )
-            })?;
-            for entry in entries {
-                let entry = entry.map_err(|err| {
+            let entries = fs::read_dir(dir_for_blocking_task.as_path())
+                .map_err(|err| {
                     format!(
-                        "failed to get dir entry from dir: {} ({})",
+                        "failed to get dir: {} ({})",
                         dir_for_blocking_task.to_string_lossy(),
                         err
                     )
-                })?;
-                let path = entry.path();
-                let name = path
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_str()
-                    .unwrap_or_default();
-                if name.eq_ignore_ascii_case(&request_file_name) {
-                    return Ok(Some(path));
+                })?
+                .map(|entry| {
+                    let entry = entry.map_err(|err| {
+                        format!(
+                            "failed to get dir entry from dir: {} ({})",
+                            dir_for_blocking_task.to_string_lossy(),
+                            err
+                        )
+                    })?;
+                    let path = entry.path();
+                    let name_lower = path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_str()
+                        .unwrap_or_default()
+                        .to_lowercase();
+                    Ok((name_lower, path))
+                })
+                .collect::<Result<Vec<(String, PathBuf)>, String>>()?;
+
+            for candidate_lower in &candidate_names_lower {
+                if let Some((_, path)) = entries.iter().find(|(name, _)| name == candidate_lower) {
+                    return Ok(Some(path.clone()));
                 }
             }
             Ok(None)

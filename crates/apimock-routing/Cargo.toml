@@ -31,6 +31,9 @@ thiserror                   = { workspace = true }
 # `apimock-server`'s `json_response` uses at request time, so load and
 # serve agree by construction.
 json5                       = { workspace = true }
+# RFC 075: percent-decode the incoming request path before dot-segment
+# normalisation — see `util/http.rs`'s `percent_decode_url_path`.
+percent-encoding            = { workspace = true }
 
 [dev-dependencies]
 # RFC 058's `RuleSet::new` tests load real files from a temp directory —

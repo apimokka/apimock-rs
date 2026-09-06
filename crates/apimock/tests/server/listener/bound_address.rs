@@ -1,3 +1,8 @@
+//! RFC 076 updated the `{"hello":"index"}` sanity-check assertions here
+//! to the underlying `index.json` fixture's own raw bytes, since a
+//! `.json` `file_path` is now served byte-for-byte. **Updated because
+//! the bytes are now correct.**
+
 use hyper::StatusCode;
 use local_ip_address::list_afinet_netifas;
 
@@ -26,7 +31,7 @@ async fn ipv4_localhost_bound_same_loopback_request() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"hello\":\"index\"}");
+    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
 }
 
 /// The property under test is that the server does not answer a request
@@ -93,7 +98,7 @@ async fn ipv4_global_bound_any_requests() {
         );
 
         let body_str = response_body_str(response).await;
-        assert_eq!(body_str.as_str(), "{\"hello\":\"index\"}");
+        assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
     }
 }
 
@@ -113,7 +118,7 @@ async fn ipv6_localhost_bound_same_loopback_request() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"hello\":\"index\"}");
+    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
 }
 
 #[tokio::test]
@@ -227,7 +232,7 @@ async fn ipv6_global_bound_any_requests() {
         );
 
         let body_str = response_body_str(response).await;
-        assert_eq!(body_str.as_str(), "{\"hello\":\"index\"}");
+        assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
     }
 }
 

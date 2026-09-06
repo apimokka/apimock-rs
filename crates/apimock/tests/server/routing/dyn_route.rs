@@ -8,3 +8,5 @@ mod dir;
 mod html;
 #[path = "dyn_route/json.rs"]
 mod json;
+#[path = "dyn_route/url_path_fidelity.rs"]
+mod url_path_fidelity;

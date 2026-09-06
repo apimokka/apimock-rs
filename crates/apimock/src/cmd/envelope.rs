@@ -167,6 +167,21 @@ pub fn kind_for_routing_error(e: &apimock_routing::RoutingError) -> ErrorKind {
 /// (`serde_json::json!` or a `Serialize` value converted with
 /// `serde_json::to_value`) and a `Value` keeps this module trivially
 /// reusable without threading a type parameter through every command.
+///
+/// # RFC 076 § 3: field order is now insertion order, by decision
+///
+/// Enabling `serde_json/preserve_order` for RFC 076 (byte-identical
+/// `.json` file serving) is a workspace-wide switch — every `Value` in
+/// every crate, this envelope included. Before it, `Value::Object`
+/// serialised alphabetically, so the wire order was `apimock`,
+/// `error`/`result`, `schema` — **not** the `schema`, `apimock`,
+/// `result` order every example in `docs/src/reference/cli-reference.md`
+/// already showed. **Decision: accept the change** — it makes the
+/// actual output match the documented example instead of silently
+/// disagreeing with it, which scoping `preserve_order` away from this
+/// one `Value` (by rewriting it as a typed struct, whose field order
+/// doesn't depend on the feature at all) would not have fixed. Pinned
+/// by `field_order_is_schema_then_apimock_then_result_or_error` below.
 pub fn ok(result: serde_json::Value) -> serde_json::Value {
     serde_json::json!({
         "schema": SCHEMA_VERSION,
@@ -226,6 +241,38 @@ mod tests {
         let reparsed: serde_json::Value =
             serde_json::from_str(&v.to_string()).expect("must still parse");
         assert_eq!(reparsed["result"]["a"], 1);
+    }
+
+    /// RFC 076 § 3's decision, made executable: the serialised field
+    /// order is `schema`, `apimock`, then `result`/`error` — insertion
+    /// order, matching every example in `cli-reference.md` — not the
+    /// alphabetical order `serde_json` produces without
+    /// `preserve_order`. Compares serialised text, not parsed access,
+    /// since parsing back into a `Value`/struct is exactly the step that
+    /// would hide an order regression.
+    #[test]
+    fn field_order_is_schema_then_apimock_then_result_or_error() {
+        let ok_json = ok(serde_json::json!({"a": 1})).to_string();
+        let expected_ok_prefix = format!(
+            "{{\"schema\":{},\"apimock\":\"{}\",\"result\":",
+            SCHEMA_VERSION,
+            env!("CARGO_PKG_VERSION")
+        );
+        assert!(
+            ok_json.starts_with(&expected_ok_prefix),
+            "expected {ok_json:?} to start with {expected_ok_prefix:?}"
+        );
+
+        let err_json = err(ErrorKind::Usage, "x").to_string();
+        let expected_err_prefix = format!(
+            "{{\"schema\":{},\"apimock\":\"{}\",\"error\":",
+            SCHEMA_VERSION,
+            env!("CARGO_PKG_VERSION")
+        );
+        assert!(
+            err_json.starts_with(&expected_err_prefix),
+            "expected {err_json:?} to start with {expected_err_prefix:?}"
+        );
     }
 
     #[test]

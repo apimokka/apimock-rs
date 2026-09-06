@@ -9,7 +9,10 @@
 //! server-layer activities, so they stay here as free functions.
 
 use apimock_config::config::log_config::verbose_config::VerboseConfig;
-use apimock_routing::{ParsedRequest, util::http::normalize_url_path};
+use apimock_routing::{
+    ParsedRequest,
+    util::http::{normalize_url_path, percent_decode_url_path},
+};
 use console::style;
 use http_body_util::{BodyExt, LengthLimitError, Limited};
 use hyper::header::ORIGIN;
@@ -120,7 +123,11 @@ pub async fn parsed_request_from(
         None
     };
 
-    let url_path = normalize_url_path(component_parts.uri.path(), None);
+    // RFC 075 F-03: percent-decode before normalising, never after —
+    // see `percent_decode_url_path`'s own doc comment for why the order
+    // is security-critical, not stylistic.
+    let decoded_url_path = percent_decode_url_path(component_parts.uri.path());
+    let url_path = normalize_url_path(&decoded_url_path, None);
 
     // RFC 050: propagate what's already been measured above (`has_body`,
     // `body_bytes`'s length) rather than computing anything new.

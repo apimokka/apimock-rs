@@ -20,7 +20,7 @@ async fn match_dyn_route_dir_root_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"hello": "index"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
 }
 
 #[tokio::test]
@@ -37,7 +37,7 @@ async fn match_dyn_route_dir_root_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"hello": "index"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
 }
 
 #[tokio::test]

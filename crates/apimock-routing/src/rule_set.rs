@@ -76,6 +76,30 @@ fn is_purely_current_dir(value: &str) -> bool {
             .all(|c| matches!(c, std::path::Component::CurDir))
 }
 
+/// `url_path` matches `prefix` at a segment boundary (RFC 075 F-02):
+/// `/api` matches `/api` and `/api/x`, never `/apixyz` or `/apix`. The
+/// old `url_path.starts_with(prefix)` matched all four — a rule set
+/// scoped to `/api` claiming requests it was never meant to own, which
+/// is what made F-02 the most dangerous of RFC 075's three findings
+/// even though it's the least visible (it fails *permissively*).
+///
+/// `prefix` is expected already normalised (`normalize_url_path`, at
+/// load time in `RuleSet::new`) — one leading slash, no trailing one —
+/// same as `url_path` always is by the time it reaches here.
+///
+/// A prefix of exactly `/` is a special case: it means "no real
+/// restriction" (every normalised `url_path` already starts with `/`),
+/// and treating it as a segment-boundary prefix like any other would
+/// require `url_path` to equal `/` or start with `//`, which nothing
+/// after normalisation ever does — silently turning a deliberate
+/// catch-all into one that only ever matches the bare root.
+fn url_path_matches_prefix(url_path: &str, prefix: &str) -> bool {
+    if prefix == "/" {
+        return true;
+    }
+    url_path == prefix || url_path.starts_with(&format!("{prefix}/"))
+}
+
 /// `#[non_exhaustive]` (RFC 041): the only public constructor is
 /// [`RuleSet::new`] (loads from a TOML file); nothing outside this
 /// crate builds one by literal today.
@@ -240,9 +264,10 @@ impl RuleSet {
         match self.prefix.as_ref() {
             Some(prefix)
                 if prefix.url_path_prefix.is_some()
-                    && !parsed_request
-                        .url_path
-                        .starts_with(prefix.url_path_prefix.as_ref().unwrap()) =>
+                    && !url_path_matches_prefix(
+                        parsed_request.url_path.as_str(),
+                        prefix.url_path_prefix.as_ref().unwrap(),
+                    ) =>
             {
                 return None;
             }
@@ -445,6 +470,28 @@ mod tests {
         when::{When, request::Request},
     };
     use crate::strategy::Strategy;
+
+    /// RFC 075 F-02: `/api` matches `/api` and `/api/x`, never `/apixyz`
+    /// or `/apix` — the old `starts_with` matched all four.
+    #[test]
+    fn url_path_matches_prefix_respects_segment_boundaries() {
+        assert!(url_path_matches_prefix("/api", "/api"));
+        assert!(url_path_matches_prefix("/api/x", "/api"));
+        assert!(url_path_matches_prefix("/api/x/y", "/api"));
+        assert!(!url_path_matches_prefix("/apixyz", "/api"));
+        assert!(!url_path_matches_prefix("/apix", "/api"));
+        assert!(!url_path_matches_prefix("/ap", "/api"));
+    }
+
+    /// A prefix of exactly `/` is a deliberate catch-all, not a
+    /// segment-boundary check against the literal string `/` — every
+    /// normalised `url_path` matches it.
+    #[test]
+    fn a_root_prefix_matches_everything() {
+        assert!(url_path_matches_prefix("/", "/"));
+        assert!(url_path_matches_prefix("/anything", "/"));
+        assert!(url_path_matches_prefix("/anything/nested", "/"));
+    }
 
     /// Build a minimal `ParsedRequest` matching `url_path`.
     fn get_req(url_path: &str) -> ParsedRequest {

@@ -23,6 +23,11 @@ async fn a_file_path_resolving_outside_respond_dir_is_refused() {
 
 /// A rule's `file_path` that legitimately stays inside `respond_dir`
 /// is unaffected.
+///
+/// RFC 076: the expected body is `responses/inside.json`'s own bytes
+/// (one space after the colon, trailing newline) — a `.json`
+/// `file_path` is now served byte-for-byte, not minified. **Updated
+/// because the bytes are now correct.**
 #[tokio::test]
 async fn a_file_path_resolving_inside_respond_dir_still_serves() {
     let port = setup().await;
@@ -31,7 +36,7 @@ async fn a_file_path_resolving_inside_respond_dir_still_serves() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"key\":\"inside\"}");
+    assert_eq!(body_str.as_str(), "{\"key\": \"inside\"}\n");
 }
 
 async fn setup() -> u16 {

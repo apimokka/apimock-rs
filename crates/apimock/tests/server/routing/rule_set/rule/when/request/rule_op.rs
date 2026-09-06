@@ -1,10 +1,16 @@
+//! RFC 076 updated every matched-body assertion here from
+//! `json!({"op": ...}).to_string()` (minified, alphabetical — the
+//! pre-fix defect, pinned as if correct) to each fixture's own raw
+//! bytes (`@respond-dir/*.json`, 4-space indented, no trailing
+//! newline), since a `.json` `file_path` is now served byte-for-byte.
+//! **Updated because the bytes are now correct.**
+
 use std::str::FromStr;
 
 use hyper::{
     HeaderMap, StatusCode,
     header::{HeaderName, HeaderValue},
 };
-use serde_json::json;
 
 use crate::{
     constant::root_config_dir,
@@ -28,7 +34,7 @@ async fn matches_equal_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "equal"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"equal\"\n}");
 }
 
 #[tokio::test]
@@ -75,7 +81,7 @@ async fn matches_not_equal_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "not-equal"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"not-equal\"\n}");
 }
 
 #[tokio::test]
@@ -104,7 +110,7 @@ async fn matches_not_equal_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "not-equal"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"not-equal\"\n}");
 }
 
 #[tokio::test]
@@ -144,7 +150,7 @@ async fn matches_starts_with_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "starts-with"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"starts-with\"\n}");
 }
 
 #[tokio::test]
@@ -163,7 +169,7 @@ async fn matches_starts_with_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "starts-with"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"starts-with\"\n}");
 }
 
 #[tokio::test]
@@ -226,7 +232,7 @@ async fn matches_contains_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "contains"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"contains\"\n}");
 }
 
 #[tokio::test]
@@ -245,7 +251,7 @@ async fn matches_contains_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "contains"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"contains\"\n}");
 }
 
 #[tokio::test]
@@ -264,7 +270,7 @@ async fn matches_contains_3() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "contains"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"contains\"\n}");
 }
 
 #[tokio::test]
@@ -294,7 +300,7 @@ async fn matches_wild_card_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "wild-card"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"wild-card\"\n}");
 }
 
 #[tokio::test]
@@ -313,7 +319,7 @@ async fn matches_wild_card_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"op": "wild-card"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"op\": \"wild-card\"\n}");
 }
 
 #[tokio::test]

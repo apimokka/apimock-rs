@@ -25,6 +25,11 @@ async fn a_middleware_returned_path_resolving_outside_its_dir_is_refused() {
 
 /// A middleware-returned path that legitimately stays inside the
 /// script's own directory is unaffected.
+///
+/// RFC 076: the expected body is `script/inside.json`'s own bytes (one
+/// space after the colon, trailing newline) — a `.json` `file_path` is
+/// now served byte-for-byte, not minified. **Updated because the bytes
+/// are now correct.**
 #[tokio::test]
 async fn a_middleware_returned_path_resolving_inside_its_dir_still_serves() {
     let port = setup().await;
@@ -33,7 +38,7 @@ async fn a_middleware_returned_path_resolving_inside_its_dir_still_serves() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"key\":\"inside\"}");
+    assert_eq!(body_str.as_str(), "{\"key\": \"inside\"}\n");
 }
 
 async fn setup() -> u16 {

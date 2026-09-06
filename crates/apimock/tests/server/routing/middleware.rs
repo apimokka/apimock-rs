@@ -1,3 +1,9 @@
+//! RFC 076 updated the `discovery`/`thisIs` assertions here from
+//! minified string literals to the underlying fixtures' own raw bytes
+//! (tab-indented, no trailing newline), since a middleware-returned
+//! `.json` `file_path` is now served byte-for-byte. **Updated because
+//! the bytes are now correct.**
+
 use hyper::StatusCode;
 
 use crate::{
@@ -24,7 +30,7 @@ async fn middleware_url_path_handled_string() {
     let body_str = response_body_str(response).await;
     assert_eq!(
         body_str.as_str(),
-        "{\"discovery\":\"reached by rhai script !\"}"
+        "{\n\t\"discovery\": \"reached by rhai script !\"\n}"
     );
 }
 
@@ -46,7 +52,7 @@ async fn middleware_url_path_handled_map_file_path() {
     let body_str = response_body_str(response).await;
     assert_eq!(
         body_str.as_str(),
-        "{\"discovery\":\"reached by rhai script !\"}"
+        "{\n\t\"discovery\": \"reached by rhai script !\"\n}"
     );
 }
 
@@ -120,7 +126,10 @@ async fn middleware_body_handled() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"thisIs\":\"missedByConfigToml\"}");
+    assert_eq!(
+        body_str.as_str(),
+        "{\n\t\"thisIs\": \"missedByConfigToml\"\n}"
+    );
 }
 
 #[tokio::test]

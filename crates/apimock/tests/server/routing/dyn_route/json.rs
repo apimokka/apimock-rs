@@ -1,3 +1,11 @@
+//! RFC 076 updated the `.json`-resolved assertions here (`root1.json`,
+//! `subdir.json`, `depth.json`) from `json!({...}).to_string()`
+//! (minified, alphabetical) to each fixture's own raw bytes, since a
+//! `.json` `file_path` is now served byte-for-byte. **Updated because
+//! the bytes are now correct.** The `.json5`-resolved ones are
+//! untouched — `.json5` still converts (parses and reserialises), so
+//! `json!(...).to_string()` remains the right comparison for those.
+
 use hyper::StatusCode;
 use serde_json::json;
 
@@ -20,7 +28,7 @@ async fn matches_dyn_route_json_root_json_ext_none() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"name": "root1.json"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"name\": \"root1.json\"\n}");
 }
 
 #[tokio::test]
@@ -37,7 +45,7 @@ async fn matches_dyn_route_json_root_json_ext_json() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"name": "root1.json"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"name\": \"root1.json\"\n}");
 }
 
 #[tokio::test]
@@ -120,10 +128,7 @@ async fn matches_dyn_route_json_subdir() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(
-        body_str.as_str(),
-        json!({"name": "subdir.json"}).to_string()
-    );
+    assert_eq!(body_str.as_str(), "{\n    \"name\": \"subdir.json\"\n}");
 }
 
 #[tokio::test]
@@ -142,5 +147,5 @@ async fn matches_dyn_route_json_depth() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"name": "depth.json"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"name\": \"depth.json\"\n}");
 }

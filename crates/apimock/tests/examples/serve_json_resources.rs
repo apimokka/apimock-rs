@@ -1,4 +1,18 @@
 //! Verifies `crates/apimock/examples/serve-json-resources/README.md`.
+//!
+//! # RFC 076 updated three of these expectations
+//!
+//! `users_collection`, `users_member` and `orders_collection` used to
+//! assert **minified, alphabetical-key** bodies
+//! (`{"email":...,"id":...,"name":...}`) — that was the pre-RFC-076
+//! defect itself, pinned as if it were correct. A `.json` `file_path`
+//! is now served byte-for-byte (see `file_response.rs`), so the
+//! expected bodies below are the fixture files' own bytes — pretty-
+//! printed, `id`/`name`/`email` order, exactly as authored in
+//! `data/*.json`. **Updated because the bytes are now correct, per RFC
+//! 076's own acceptance criterion asking this to be said explicitly.**
+//! `products_csv_converts_to_json` is unchanged: CSV conversion is an
+//! explicit RFC 076 non-goal, still parsed and reserialised.
 
 use hyper::StatusCode;
 
@@ -22,7 +36,7 @@ async fn users_collection() {
     );
     assert_eq!(
         response_body_str(response).await,
-        r#"[{"email":"ada@example.com","id":1,"name":"Ada Lovelace"},{"email":"grace@example.com","id":2,"name":"Grace Hopper"}]"#
+        "[\n  { \"id\": 1, \"name\": \"Ada Lovelace\", \"email\": \"ada@example.com\" },\n  { \"id\": 2, \"name\": \"Grace Hopper\", \"email\": \"grace@example.com\" }\n]\n"
     );
 }
 
@@ -33,7 +47,7 @@ async fn users_member() {
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(
         response_body_str(response).await,
-        r#"{"email":"ada@example.com","id":1,"name":"Ada Lovelace"}"#
+        "{ \"id\": 1, \"name\": \"Ada Lovelace\", \"email\": \"ada@example.com\" }\n"
     );
 }
 
@@ -44,7 +58,7 @@ async fn orders_collection() {
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(
         response_body_str(response).await,
-        r#"[{"id":101,"total":42.5,"userId":1},{"id":102,"total":17.0,"userId":2}]"#
+        "[\n  { \"id\": 101, \"userId\": 1, \"total\": 42.50 },\n  { \"id\": 102, \"userId\": 2, \"total\": 17.00 }\n]\n"
     );
 }
 

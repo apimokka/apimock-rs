@@ -1,3 +1,8 @@
+//! RFC 076 updated the `{"hello":"index"}` sanity-check assertions here
+//! to the underlying `index.json` fixture's own raw bytes, since a
+//! `.json` `file_path` is now served byte-for-byte. **Updated because
+//! the bytes are now correct.**
+
 use std::time::Duration;
 
 use hyper::StatusCode;
@@ -27,7 +32,7 @@ async fn tls_server_tls_client() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"hello\":\"index\"}");
+    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
 }
 
 #[tokio::test]
@@ -57,7 +62,7 @@ async fn nontls_server_nontls_client() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"hello\":\"index\"}");
+    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
 }
 
 /// internal setup fn on https support config

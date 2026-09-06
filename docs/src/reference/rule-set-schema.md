@@ -43,6 +43,11 @@ for the full syntax of all five.
 | `url_path` | Stripped from the front of the request path before this rule set's rules are matched — a rule's own `when.request.url_path` only needs to name what comes after it |
 | `respond_dir` | Prepended to every `respond.file_path` in this rule set |
 
+`url_path` matches at a segment boundary, not as a raw prefix: `/api`
+matches `/api` and `/api/x`, never `/apixyz` or `/apix`. A rule set
+scoped to `/api` never claims a request to an unrelated, similarly-
+spelled path.
+
 ## `[default]`
 
 The only field is `delay_response_milliseconds`. **It currently has no

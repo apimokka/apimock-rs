@@ -64,3 +64,40 @@ pub fn json_response(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    //! RFC 076: this function still parses and reserialises (used by
+    //! inline `respond.json` and by `.json5` `file_path`s — converting
+    //! JSON5 is the point for both, so neither is served raw). What
+    //! must not regress is *key order*: the workspace-wide
+    //! `serde_json/preserve_order` feature is what makes that hold —
+    //! without it, this test fails by alphabetising `zebra`/`apple`.
+    use hyper::HeaderMap;
+
+    use super::json_response;
+
+    #[tokio::test]
+    async fn key_order_survives_the_parse_and_reserialise_round_trip() {
+        let response = json_response(
+            r#"{"zebra":1,"apple":2}"#,
+            None,
+            None,
+            &HeaderMap::new(),
+            None,
+            &[],
+        )
+        .unwrap();
+
+        assert_eq!(response.status(), hyper::StatusCode::OK);
+        let body = http_body_util::BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes();
+        assert_eq!(
+            body.as_ref(),
+            br#"{"zebra":1,"apple":2}"#,
+            "key order must survive the round trip, not be alphabetised"
+        );
+    }
+}

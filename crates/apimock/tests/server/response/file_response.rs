@@ -1,3 +1,9 @@
+//! RFC 076 updated `matches_json_wo_ext`'s expectation from
+//! `json!({"key": "json"}).to_string()` (minified, alphabetical) to the
+//! fixture's own raw bytes, since a `.json` `file_path` is now served
+//! byte-for-byte. **Updated because the bytes are now correct.**
+//! `json5_wo_ext` is untouched — `.json5` still converts.
+
 use apimock_server::constant::CSV_RECORDS_DEFAULT_KEY;
 use hyper::StatusCode;
 use serde_json::json;
@@ -26,7 +32,7 @@ async fn matches_json_wo_ext() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), json!({"key": "json"}).to_string());
+    assert_eq!(body_str.as_str(), "{\n    \"key\": \"json\"\n}");
 }
 
 // note: caring about ext existence is somewhat hard on static routing instead of dynamic routing

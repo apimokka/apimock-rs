@@ -48,14 +48,58 @@ async fn a_mid_path_dot_dot_segment_is_refused() {
     assert_eq!(status, StatusCode::NOT_FOUND.as_u16());
 }
 
-/// The encoded form was already refused before RFC 063 — hyper does not
-/// decode `%2e%2e` into `..`. Regression coverage, not part of the
-/// fail-first ritual: this one never needed the fix.
+/// RFC 075: before percent-decoding existed, this was refused only
+/// because `%2e%2e` was never turned into `..` at all — hyper's raw
+/// path passes it through as a literal, meaningless segment, and
+/// nothing on disk is named `%2e%2e`. Now that decoding runs (ordered
+/// *before* dot-segment normalisation, per RFC 075's own security-
+/// critical requirement), this is refused for the intended reason:
+/// decoding turns it into `..`, and the same token-removal the
+/// plain-text form already gets strips it. Assert on the response, not
+/// the resolved path — per the tranche 4 handoff's explicit
+/// instruction that a resolved-path assertion can pass while the
+/// response still leaks.
 #[tokio::test]
 async fn an_encoded_dot_dot_segment_is_refused() {
     let port = setup().await;
 
     let status = raw_get_status("127.0.0.1", port, "/%2e%2e/outside.txt").await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND.as_u16());
+}
+
+/// RFC 075 § 1: the whole `../` sequence percent-encoded, not just the
+/// two dots — `%2f` must decode to `/` before dot-segment stripping
+/// runs, or this reaches path resolution as one meaningless segment
+/// instead of the traversal attempt it's disguising.
+#[tokio::test]
+async fn a_fully_encoded_dot_dot_slash_segment_is_refused() {
+    let port = setup().await;
+
+    let status = raw_get_status("127.0.0.1", port, "/%2e%2e%2foutside.txt").await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND.as_u16());
+}
+
+/// RFC 075 § 1: a literal `..` with only the trailing slash encoded —
+/// the partial-encoding case the handoff names explicitly.
+#[tokio::test]
+async fn a_dot_dot_segment_with_an_encoded_trailing_slash_is_refused() {
+    let port = setup().await;
+
+    let status = raw_get_status("127.0.0.1", port, "/..%2foutside.txt").await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND.as_u16());
+}
+
+/// RFC 075 § 1: mixed-case percent-encoding (`%2E` vs `%2e`) — hex
+/// digits in a percent-escape are case-insensitive by RFC 3986, so
+/// decoding must not depend on the escape's letter case.
+#[tokio::test]
+async fn a_mixed_case_encoded_dot_dot_segment_is_refused() {
+    let port = setup().await;
+
+    let status = raw_get_status("127.0.0.1", port, "/%2E%2E/outside.txt").await;
 
     assert_eq!(status, StatusCode::NOT_FOUND.as_u16());
 }
@@ -69,7 +113,10 @@ async fn a_file_actually_inside_the_respond_dir_still_serves() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"key\":\"hello\"}");
+    // RFC 076: `serve/hello.json`'s own bytes (one space after the
+    // colon, trailing newline) — served byte-for-byte, not minified.
+    // Updated because the bytes are now correct.
+    assert_eq!(body_str.as_str(), "{\"key\": \"hello\"}\n");
 }
 
 async fn setup() -> u16 {

@@ -80,10 +80,24 @@ console                     = "0"
 indexmap                    = { version = "2", features = ["serde"] }
 log                         = "0"
 serde                       = { version = "1", features = ["derive"] }
-serde_json                  = "1"
+# RFC 076: `preserve_order` so a `Value`'s map keeps insertion order
+# instead of being sorted alphabetically — needed so inline
+# `respond.json` and JSON5-file conversion preserve the key order they
+# were written in. This is a workspace-wide switch (every `Value` in
+# every crate), including the RFC 053 CLI envelope; see § 3 of the
+# tranche 4 review package for why that was accepted rather than
+# scoped around.
+serde_json                  = { version = "1", features = ["preserve_order"] }
 thiserror                   = "2"
 anyhow                      = "1"
 tempfile                    = "3"
+# RFC 075: percent-decoding the incoming request path. Already present
+# transitively (pulled in by `url`/`reqwest`, dev-dependencies of the
+# response-latency bench) — this makes it a direct dependency of the
+# one crate that needs it for something security-relevant, rather than
+# hand-rolling `%XX` decoding for the one place getting it wrong
+# reintroduces GHSA-72g6-wgrg-vhm7.
+percent-encoding            = "2"
 # Dev-dependency only (RFC 060) — property-tests apimock-config's write
 # path (Workspace::save). Shrinking on structured data is why this one
 # and not quickcheck: a minimal reproducing config is the deliverable,
