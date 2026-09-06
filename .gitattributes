@@ -1,0 +1,47 @@
+# RFC 076 exposed why this file needs to exist: a `.json` `file_path`
+# response is now served exactly as written, byte for byte, no
+# parse/reserialise round-trip. Before that fix, line endings inside a
+# JSON fixture were invisible — every request re-parsed and
+# re-serialised the content, so a checkout's own line-ending choice
+# never survived to a response. Now it does: a fixture checked out with
+# CRLF on Windows and LF on Linux/macOS produces two different response
+# bodies from the same source file — not a server bug (it faithfully
+# serves whatever is actually on disk), but a real, observed CI failure
+# (three tests failed on `test (windows-latest)` only) the moment a
+# byte-exact assertion met a platform-dependent checkout.
+#
+# `eol=lf` pins normal-text files to LF on checkout, on every platform,
+# so the bytes a test asserts on are the bytes every CI runner actually
+# has - not whatever `core.autocrlf` happened to be set to.
+* text=auto eol=lf
+
+# Explicit, not left to text=auto's content-sniffing heuristic — these
+# extensions are exercised by apimock-server's own binary-content-type
+# tests and dyn-route fixtures, and get this wrong (silently corrupted
+# on checkout) rather than loud if a heuristic ever misjudges one.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.webp binary
+*.ico binary
+*.mp3 binary
+*.wav binary
+*.flac binary
+*.ogg binary
+*.m4a binary
+*.aac binary
+*.weba binary
+*.mp4 binary
+*.m4v binary
+*.mpeg binary
+*.mpg binary
+*.avi binary
+*.mov binary
+*.webm binary
+*.ogv binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar.gz binary
