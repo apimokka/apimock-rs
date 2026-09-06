@@ -4,7 +4,22 @@
 (trace channel, redaction), [079](../../accepted/079-dead-and-misleading-code.md)
 (dead code). Accepted 2026-09-01.
 **Milestone.** Next minor.
-**Baseline.** `main` @ `5d9e5bc`.
+**Baseline.** **`main`'s head — cut from it.** No hash is pinned: this
+document cannot name the commit that contains it, and every tranche so
+far has shipped with a baseline that was stale on arrival. Tranches 1–4
+are merged; 6.1.0 is tagged.
+**Branch.** **Take one.** RFC 080 (adopted after this handoff was
+drafted) makes `main` the working branch, but its § 3 carve-out keeps a
+short-lived branch for anything that can behave differently on Windows
+or macOS. 073's transport-access-control item is exactly that — Unix
+socket permissions, with no Windows equivalent. Cut from `main`, merge
+green, delete.
+
+> **This handoff was refreshed on 2026-09-06 before being sent.** It was
+> written on 2026-09-01, before tranches 2–4 landed. Line numbers, one
+> count, one prediction and one justification had all gone stale; each
+> correction is marked inline below rather than silently applied, so you
+> can see what changed under it.
 
 ---
 
@@ -17,10 +32,16 @@ are cheap.
 
 ## 1. 073 — the trace channel
 
-**Verified:** `server.rs:413` emits `Outcome::Miss { status: 0 }` with
-the comment *"coarse-grained; fine-grained tracing is a future pass"* —
-for **every** request, matches included. The correct index is computed
-on the adjacent line and discarded.
+**Verified:** the emit is
+`grep -n 'Outcome::Miss' crates/apimock-server/src/server.rs` —
+`Outcome::Miss { status: 0 }`, with the comment *"coarse-grained;
+fine-grained tracing is a future pass"* — for **every** request, matches
+included. The correct index is computed on the adjacent line and
+discarded.
+
+> **Corrected on refresh:** this said `server.rs:413`. Tranche 3 (RFC
+> 071) restructured `server.rs`; the emit is now at line 565. Given as
+> a search, not a number — the number will move again.
 
 Nothing is emitted at all for middleware, fallback-directory, or 404
 responses.
@@ -55,20 +76,63 @@ equivalent and the docs should say so.
 
 ## 2. 079 — the hygiene tail, with two judgement calls
 
-**Verified:** all three are literally `pub fn validate(&self) -> bool
-{ true }` — `rule_set.rs:343`, `guard.rs:10`,
-`default_respond.rs:10`. And `bad_request_response` really is called
-from nowhere.
+**Verified — and there are four, not three.** Find them yourself
+rather than trusting a list:
 
-**Do not delete `bad_request_response`.** RFC 068 (tranche 1) gives it
-its first caller, and audit F-09 wants another. A dead function about to
-be used should get a comment saying so, not a removal.
+```
+grep -rn -A2 "pub fn validate(&self) -> bool" crates/apimock-routing/src/ | grep -B1 "true$"
+```
 
-**Do not remove the no-op `validate()` methods within 6.x.** They are
-public API; `RuleSet::validate()` is reachable by a consumer, and
-removal would move the API baseline and break the additive-only promise.
-The RFC recommends **documenting them as intentionally trivial** and
-revisiting at the next incompatible release.
+which today returns `rule_set.rs`, `rule_set/guard.rs`,
+`rule_set/default_respond.rs`, **and
+`rule_set/rule/when/request/url_path.rs`**.
+
+> **Corrected on refresh:** this said "all three", listing
+> `rule_set.rs:343`, `guard.rs:10`, `default_respond.rs:10`. All three
+> line numbers had moved (427, 11, 11), the `default_respond.rs` path
+> was wrong, and **`url_path.rs` was missed entirely**. That is the
+> fourth time a handoff of mine has shipped an incomplete file list, so
+> this one gives the search instead. If the grep returns five, treat
+> five as the answer — not this paragraph.
+
+**Do not delete `bad_request_response`** — but the reason has changed.
+
+> **Corrected on refresh:** this said "RFC 068 (tranche 1) gives it its
+> first caller." **Tranche 1 has merged and it did not.**
+> `grep -rn bad_request_response crates/ --include='*.rs'` returns only
+> its own definition. Do not take the prediction on trust; re-run that
+> grep, and if it is still uncalled, say so in your package.
+
+Audit F-09 still wants a caller for it, so a comment recording that is
+better than a removal. **But if you conclude it should simply go, make
+that case** — "a function kept for a caller that never arrived" is a
+finding too, and one this handoff was wrong about once already.
+
+**The no-op `validate()` methods: decide, don't default.**
+
+> **Corrected on refresh — this is the important one.** This said:
+> *"removal would move the API baseline and break the additive-only
+> promise."* **That justification has been retracted.** RFC 039 is a
+> *declaration* gate, not an additive-only one — its own non-goals say
+> deciding whether a break is allowed "is semver's job and the owner's,
+> not forbidden" — and `docs/src/library/api-stability.md` was corrected
+> accordingly at `52fa18b`. Since then 6.1.0 has removed
+> `RuleSet::round_robin_counter` and `AppState`'s `Clone` impl, both
+> declared and documented. A public removal inside 6.x is **permitted**,
+> not forbidden.
+
+So the constraint I gave you does not exist. What remains is a real
+choice, and it is yours to make and state:
+
+- **Keep and document them as intentionally trivial** — the RFC's own
+  recommendation, and still defensible: they cost nothing and removal
+  buys little.
+- **Remove them**, declare the baseline change, and write the migration
+  entry — now a legitimate option, on the same footing as the two
+  removals 6.1.0 already shipped.
+
+Either is acceptable. **Choosing by accident is not** — say which and
+why, the same way tranche 4 handled the envelope decision.
 
 **Do the minimum on M-03a.** 32 sites of `let _ = write!` swallow a
 `fmt::Error` that cannot occur when writing to a `String`. A comment at
@@ -93,10 +157,14 @@ report.**
 
 **079**
 - [ ] Full suite green, **no behaviour change anywhere**
-- [ ] **API baseline diff empty** — if it moved, something public was
-      removed and needs the § 2 decision
+- [ ] **API baseline diff empty *or* declared** — empty if you kept the
+      no-op `validate()` methods; declared, with a migration entry, if
+      you removed them. Either is a valid outcome of § 2's decision;
+      what is not valid is a baseline that moved without you saying so.
+- [ ] The § 2 `validate()` decision **stated with its reasoning**
 - [ ] `Display` renders a value, pinned by a test
-- [ ] `bad_request_response` retained, with a comment
+- [ ] `bad_request_response`: the grep re-run and its result reported,
+      and either retained with a comment or removed with the case made
 
 ## 4. Report back
 
