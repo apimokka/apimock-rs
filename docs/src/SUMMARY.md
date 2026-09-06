@@ -28,6 +28,7 @@
     - [Validate config in CI](./guides/validate-config-in-ci.md)
     - [Dry-run a rule](./guides/dry-run-a-rule.md)
     - [Watch matches live](./guides/watch-matches-live.md)
+    - [Troubleshooting](./guides/troubleshooting.md)
     - [Migrating to 6.0.0](./guides/migrating-to-6-0.md)
     - [Migrating to 6.1.0](./guides/migrating-to-6-1.md)
     - [Migrating to 6.2.0](./guides/migrating-to-6-2.md)

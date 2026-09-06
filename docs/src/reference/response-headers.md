@@ -11,7 +11,6 @@ headers. Some vary by request; none of this is configurable globally.
 | `access-control-allow-methods` | `GET, POST, PUT, DELETE, OPTIONS` |
 | `access-control-max-age` | `86400` |
 | `cache-control` | `no-store` |
-| `connection` | `keep-alive` |
 | `x-content-type-options` | `nosniff` |
 
 Source: `DEFAULT_RESPONSE_HEADERS` in
@@ -19,6 +18,31 @@ Source: `DEFAULT_RESPONSE_HEADERS` in
 on every response, but nothing in `apimock-server` sets it explicitly
 — it's added by the underlying HTTP transport layer, not application
 code.
+
+## `connection: keep-alive` — HTTP/1.1 only
+
+`apimock-server` sets `connection: keep-alive` on every response it
+builds, alongside the headers above — but unlike them, it isn't always
+present on the wire. `Connection` is a hop-by-hop header defined for
+HTTP/1.1's own connection-management model; HTTP/2 multiplexes many
+requests over one connection and has no equivalent concept, so RFC 9113
+§ 8.2.2 requires an intermediary to strip it, and hyper does so
+correctly before this project's own `DEFAULT_RESPONSE_HEADERS` value
+ever reaches the wire. This is a transport-layer removal, not something
+`apimock-server`'s own code special-cases per protocol.
+
+Verified against a running server, both protocols, same request:
+
+```
+$ curl -s -i --http1.1 http://127.0.0.1:3011/hello.json | grep -i connection
+connection: keep-alive
+
+$ curl -s -i -k --http2 https://127.0.0.1:3012/hello.json | grep -i connection
+$ # (no output — the header is genuinely absent, not empty)
+```
+
+If you're asserting on this header in a test against apimock, either
+force HTTP/1.1 or don't assert on it at all when HTTP/2 is in play.
 
 ## CORS — origin and credentials
 

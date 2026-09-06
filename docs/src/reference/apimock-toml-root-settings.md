@@ -87,7 +87,7 @@ they didn't get it.
 | Field | Type | Default | Meaning |
 |---|---|---|---|
 | `verbose.header` | bool | `false` | Log request headers. Credential-bearing headers (`authorization`, `cookie`, `set-cookie`, `proxy-authorization`, `x-api-key`) print as `[redacted]` — same policy, same defaults, as the trace channel (RFC 040, RFC 051) |
-| `verbose.body` | bool | `false` | Log request bodies. **Not redacted** — a JSON body's field values print verbatim, including any credentials it happens to carry. Name-based redaction doesn't transfer to body content (there are no header names to match against), and value-scanning bodies for secrets is out of scope for the same reason it is for the trace channel |
+| `verbose.body` | bool | `false` | Log request bodies and query strings. Redacted (RFC 073) — a query-string value or JSON body field whose *key* matches the same credential denylist that already governs headers (`token`, `password`, `api_key`, and friends — see the [threat model](./threat-model.md)) prints as `[redacted]`, recursively for nested body fields; everything else prints verbatim |
 
 ## `[service]`
 
