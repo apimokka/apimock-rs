@@ -18,7 +18,10 @@ use hyper::StatusCode;
 
 use crate::{
     common::example_test_setup,
-    util::http::{test_request::TestRequest, test_response::response_body_str},
+    util::http::{
+        test_request::TestRequest,
+        test_response::{platform_eol, response_body_str},
+    },
 };
 
 async fn setup() -> u16 {
@@ -36,7 +39,9 @@ async fn users_collection() {
     );
     assert_eq!(
         response_body_str(response).await,
-        "[\n  { \"id\": 1, \"name\": \"Ada Lovelace\", \"email\": \"ada@example.com\" },\n  { \"id\": 2, \"name\": \"Grace Hopper\", \"email\": \"grace@example.com\" }\n]\n"
+        platform_eol(
+            "[\n  { \"id\": 1, \"name\": \"Ada Lovelace\", \"email\": \"ada@example.com\" },\n  { \"id\": 2, \"name\": \"Grace Hopper\", \"email\": \"grace@example.com\" }\n]\n"
+        )
     );
 }
 
@@ -47,7 +52,7 @@ async fn users_member() {
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(
         response_body_str(response).await,
-        "{ \"id\": 1, \"name\": \"Ada Lovelace\", \"email\": \"ada@example.com\" }\n"
+        platform_eol("{ \"id\": 1, \"name\": \"Ada Lovelace\", \"email\": \"ada@example.com\" }\n")
     );
 }
 
@@ -58,7 +63,9 @@ async fn orders_collection() {
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(
         response_body_str(response).await,
-        "[\n  { \"id\": 101, \"userId\": 1, \"total\": 42.50 },\n  { \"id\": 102, \"userId\": 2, \"total\": 17.00 }\n]\n"
+        platform_eol(
+            "[\n  { \"id\": 101, \"userId\": 1, \"total\": 42.50 },\n  { \"id\": 102, \"userId\": 2, \"total\": 17.00 }\n]\n"
+        )
     );
 }
 

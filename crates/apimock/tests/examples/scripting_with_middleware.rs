@@ -15,7 +15,10 @@ use hyper::Method;
 
 use crate::{
     common::example_test_setup,
-    util::http::{test_request::TestRequest, test_response::response_body_str},
+    util::http::{
+        test_request::TestRequest,
+        test_response::{platform_eol, response_body_str},
+    },
 };
 
 async fn setup() -> u16 {
@@ -25,7 +28,9 @@ async fn setup() -> u16 {
 }
 
 /// `data/profile.json`'s own bytes — served as written since RFC 076.
-const PROFILE_JSON_FILE: &str = "{ \"plan\": \"pro\", \"source\": \"middleware-file\" }\n";
+fn profile_json_file() -> String {
+    platform_eol("{ \"plan\": \"pro\", \"source\": \"middleware-file\" }\n")
+}
 
 #[tokio::test]
 async fn profile_file_path_map_return() {
@@ -33,7 +38,7 @@ async fn profile_file_path_map_return() {
     let response = TestRequest::default("/profile/file-path", port)
         .send()
         .await;
-    assert_eq!(response_body_str(response).await, PROFILE_JSON_FILE);
+    assert_eq!(response_body_str(response).await, profile_json_file());
 }
 
 #[tokio::test]
@@ -60,7 +65,7 @@ async fn profile_text_map_return() {
 async fn profile_bare_string_return() {
     let port = setup().await;
     let response = TestRequest::default("/profile", port).send().await;
-    assert_eq!(response_body_str(response).await, PROFILE_JSON_FILE);
+    assert_eq!(response_body_str(response).await, profile_json_file());
 }
 
 #[tokio::test]

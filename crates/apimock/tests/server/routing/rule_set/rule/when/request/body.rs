@@ -12,7 +12,10 @@ use serde_json::json;
 use crate::{
     constant::root_config_dir,
     util::{
-        http::{test_request::TestRequest, test_response::response_body_str},
+        http::{
+            test_request::TestRequest,
+            test_response::{platform_eol, response_body_str},
+        },
         test_setup::TestSetup,
     },
 };
@@ -37,7 +40,7 @@ async fn matches_single_level_1() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        "{\n    \"key\": \"when_request_response1.json\"\n}"
+        platform_eol("{\n    \"key\": \"when_request_response1.json\"\n}")
     );
 }
 
@@ -185,7 +188,7 @@ async fn matches_multiple_condition_1() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        "{\n    \"key\": \"when_request_response3.json\"\n}"
+        platform_eol("{\n    \"key\": \"when_request_response3.json\"\n}")
     );
 }
 
@@ -246,7 +249,7 @@ async fn matches_non_string_type_value_2() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        "{\n    \"key\": \"when_request_response3.json\"\n}"
+        platform_eol("{\n    \"key\": \"when_request_response3.json\"\n}")
     );
 }
 
@@ -335,7 +338,7 @@ async fn matches_array_1() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        "{\n    \"key\": \"when_request_response5.json\"\n}"
+        platform_eol("{\n    \"key\": \"when_request_response5.json\"\n}")
     );
 }
 
@@ -359,7 +362,7 @@ async fn matches_array_2() {
     let body_json = response_body_str(response).await;
     assert_eq!(
         body_json,
-        "{\n    \"key\": \"when_request_response5.json\"\n}"
+        platform_eol("{\n    \"key\": \"when_request_response5.json\"\n}")
     );
 }
 

@@ -7,7 +7,10 @@ use hyper::StatusCode;
 use crate::{
     constant::root_config_dir,
     util::{
-        http::{test_request::TestRequest, test_response::response_body_str},
+        http::{
+            test_request::TestRequest,
+            test_response::{platform_eol, response_body_str},
+        },
         test_setup::TestSetup,
     },
 };
@@ -36,7 +39,7 @@ async fn a_file_path_resolving_inside_respond_dir_still_serves() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\"key\": \"inside\"}\n");
+    assert_eq!(body_str.as_str(), platform_eol("{\"key\": \"inside\"}\n"));
 }
 
 async fn setup() -> u16 {

@@ -13,7 +13,10 @@ use tokio::net::{TcpListener, TcpStream};
 use crate::{
     constant::root_config_dir::listener::TLS,
     util::{
-        http::{test_request::TestRequest, test_response::response_body_str},
+        http::{
+            test_request::TestRequest,
+            test_response::{platform_eol, response_body_str},
+        },
         test_setup::TestSetup,
         tls::{cert_file_path, generate_tls_credentials, key_file_path, tls_credentials_are_ready},
     },
@@ -32,7 +35,10 @@ async fn tls_server_tls_client() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"hello\": \"index\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -62,7 +68,10 @@ async fn nontls_server_nontls_client() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"hello\": \"index\"\n}")
+    );
 }
 
 /// internal setup fn on https support config

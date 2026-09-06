@@ -15,7 +15,10 @@ use hyper::{
 use crate::{
     constant::root_config_dir,
     util::{
-        http::{test_request::TestRequest, test_response::response_body_str},
+        http::{
+            test_request::TestRequest,
+            test_response::{platform_eol, response_body_str},
+        },
         test_setup::TestSetup,
     },
 };
@@ -34,7 +37,10 @@ async fn matches_equal_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"equal\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"equal\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -81,7 +87,10 @@ async fn matches_not_equal_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"not-equal\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"not-equal\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -110,7 +119,10 @@ async fn matches_not_equal_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"not-equal\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"not-equal\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -150,7 +162,10 @@ async fn matches_starts_with_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"starts-with\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"starts-with\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -169,7 +184,10 @@ async fn matches_starts_with_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"starts-with\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"starts-with\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -232,7 +250,10 @@ async fn matches_contains_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"contains\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"contains\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -251,7 +272,10 @@ async fn matches_contains_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"contains\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"contains\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -270,7 +294,10 @@ async fn matches_contains_3() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"contains\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"contains\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -300,7 +327,10 @@ async fn matches_wild_card_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"wild-card\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"wild-card\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -319,7 +349,10 @@ async fn matches_wild_card_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"op\": \"wild-card\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"op\": \"wild-card\"\n}")
+    );
 }
 
 #[tokio::test]

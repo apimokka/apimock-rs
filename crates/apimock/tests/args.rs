@@ -11,7 +11,10 @@ use std::path::Path;
 use hyper::StatusCode;
 use util::{
     cli::bin,
-    http::{test_request::TestRequest, test_response::response_body_str},
+    http::{
+        test_request::TestRequest,
+        test_response::{platform_eol, response_body_str},
+    },
     test_setup::TestSetup,
 };
 
@@ -43,7 +46,10 @@ async fn port_env_arg_overwrites() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"hello\": \"index\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -68,7 +74,7 @@ async fn fallback_response_dir_env_arg_overwrites() {
     let body_str = response_body_str(response).await;
     assert_eq!(
         body_str.as_str(),
-        "{\n    \"hello\": \"custom fallback respond dir\"\n}"
+        platform_eol("{\n    \"hello\": \"custom fallback respond dir\"\n}").as_str()
     );
 }
 
@@ -924,6 +930,6 @@ async fn dir_flag_resolves_bare_and_dot_slash_identically() {
     let body_str = response_body_str(response).await;
     assert_eq!(
         body_str.as_str(),
-        "{\n    \"hello\": \"custom fallback respond dir\"\n}"
+        platform_eol("{\n    \"hello\": \"custom fallback respond dir\"\n}").as_str()
     );
 }

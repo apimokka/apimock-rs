@@ -13,7 +13,10 @@ use crate::{
         IPV4_GLOBAL, IPV4_LOCALHOST, IPV6_GLOBAL, IPV6_LOCALHOST,
     },
     util::{
-        http::{test_request::TestRequest, test_response::response_body_str},
+        http::{
+            test_request::TestRequest,
+            test_response::{platform_eol, response_body_str},
+        },
         test_setup::TestSetup,
     },
 };
@@ -31,7 +34,10 @@ async fn ipv4_localhost_bound_same_loopback_request() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"hello\": \"index\"\n}")
+    );
 }
 
 /// The property under test is that the server does not answer a request
@@ -98,7 +104,10 @@ async fn ipv4_global_bound_any_requests() {
         );
 
         let body_str = response_body_str(response).await;
-        assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
+        assert_eq!(
+            body_str.as_str(),
+            platform_eol("{\n    \"hello\": \"index\"\n}")
+        );
     }
 }
 
@@ -118,7 +127,10 @@ async fn ipv6_localhost_bound_same_loopback_request() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"hello\": \"index\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -232,7 +244,10 @@ async fn ipv6_global_bound_any_requests() {
         );
 
         let body_str = response_body_str(response).await;
-        assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
+        assert_eq!(
+            body_str.as_str(),
+            platform_eol("{\n    \"hello\": \"index\"\n}")
+        );
     }
 }
 

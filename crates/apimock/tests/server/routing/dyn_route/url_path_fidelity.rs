@@ -6,7 +6,10 @@
 use hyper::StatusCode;
 
 use crate::util::{
-    http::{test_request::TestRequest, test_response::response_body_str},
+    http::{
+        test_request::TestRequest,
+        test_response::{platform_eol, response_body_str},
+    },
     test_setup::TestSetup,
 };
 
@@ -22,7 +25,10 @@ async fn percent_encoded_space_resolves() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = response_body_str(response).await;
-    assert_eq!(body, "{\n    \"fixture\": \"space in filename\"\n}");
+    assert_eq!(
+        body,
+        platform_eol("{\n    \"fixture\": \"space in filename\"\n}")
+    );
 }
 
 /// A non-ASCII filename, requested percent-encoded — unreachable before
@@ -37,7 +43,10 @@ async fn percent_encoded_non_ascii_filename_resolves() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = response_body_str(response).await;
-    assert_eq!(body, "{\n    \"fixture\": \"non-ascii filename\"\n}");
+    assert_eq!(
+        body,
+        platform_eol("{\n    \"fixture\": \"non-ascii filename\"\n}")
+    );
 }
 
 /// The same non-ASCII filename, requested with the literal UTF-8 bytes
@@ -53,7 +62,10 @@ async fn literal_utf8_non_ascii_filename_resolves() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = response_body_str(response).await;
-    assert_eq!(body, "{\n    \"fixture\": \"non-ascii filename\"\n}");
+    assert_eq!(
+        body,
+        platform_eol("{\n    \"fixture\": \"non-ascii filename\"\n}")
+    );
 }
 
 /// `+` in a path is not a space substitute — that's
@@ -70,7 +82,10 @@ async fn a_literal_plus_in_a_filename_resolves_unencoded() {
 
     assert_eq!(response.status(), StatusCode::OK);
     let body = response_body_str(response).await;
-    assert_eq!(body, "{\n    \"fixture\": \"literal plus in filename\"\n}");
+    assert_eq!(
+        body,
+        platform_eol("{\n    \"fixture\": \"literal plus in filename\"\n}")
+    );
 }
 
 /// RFC 075 F-05, the cross-platform assertion the tranche 4 handoff
@@ -102,7 +117,8 @@ async fn case_insensitivity_extends_to_every_segment_not_only_the_filename() {
         assert_eq!(response.status(), StatusCode::OK, "request path: {path}");
         let body = response_body_str(response).await;
         assert_eq!(
-            body, "{\n    \"fixture\": \"case-insensitive segment resolution\"\n}",
+            body,
+            platform_eol("{\n    \"fixture\": \"case-insensitive segment resolution\"\n}"),
             "request path: {path}"
         );
     }

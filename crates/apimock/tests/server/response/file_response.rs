@@ -11,7 +11,10 @@ use serde_json::json;
 use crate::{
     constant::root_config_dir,
     util::{
-        http::{test_request::TestRequest, test_response::response_body_str},
+        http::{
+            test_request::TestRequest,
+            test_response::{platform_eol, response_body_str},
+        },
         test_setup::TestSetup,
     },
 };
@@ -32,7 +35,10 @@ async fn matches_json_wo_ext() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"key\": \"json\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"key\": \"json\"\n}")
+    );
 }
 
 // note: caring about ext existence is somewhat hard on static routing instead of dynamic routing

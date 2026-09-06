@@ -9,7 +9,10 @@ use hyper::StatusCode;
 use crate::{
     constant::root_config_dir,
     util::{
-        http::{test_request::TestRequest, test_response::response_body_str},
+        http::{
+            test_request::TestRequest,
+            test_response::{platform_eol, response_body_str},
+        },
         test_setup::TestSetup,
     },
 };
@@ -30,7 +33,7 @@ async fn middleware_url_path_handled_string() {
     let body_str = response_body_str(response).await;
     assert_eq!(
         body_str.as_str(),
-        "{\n\t\"discovery\": \"reached by rhai script !\"\n}"
+        platform_eol("{\n\t\"discovery\": \"reached by rhai script !\"\n}")
     );
 }
 
@@ -52,7 +55,7 @@ async fn middleware_url_path_handled_map_file_path() {
     let body_str = response_body_str(response).await;
     assert_eq!(
         body_str.as_str(),
-        "{\n\t\"discovery\": \"reached by rhai script !\"\n}"
+        platform_eol("{\n\t\"discovery\": \"reached by rhai script !\"\n}")
     );
 }
 
@@ -128,7 +131,7 @@ async fn middleware_body_handled() {
     let body_str = response_body_str(response).await;
     assert_eq!(
         body_str.as_str(),
-        "{\n\t\"thisIs\": \"missedByConfigToml\"\n}"
+        platform_eol("{\n\t\"thisIs\": \"missedByConfigToml\"\n}")
     );
 }
 

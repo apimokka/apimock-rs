@@ -10,7 +10,10 @@ use hyper::StatusCode;
 use serde_json::json;
 
 use crate::util::{
-    http::{test_request::TestRequest, test_response::response_body_str},
+    http::{
+        test_request::TestRequest,
+        test_response::{platform_eol, response_body_str},
+    },
     test_setup::TestSetup,
 };
 
@@ -28,7 +31,10 @@ async fn matches_dyn_route_json_root_json_ext_none() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"name\": \"root1.json\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"name\": \"root1.json\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -45,7 +51,10 @@ async fn matches_dyn_route_json_root_json_ext_json() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"name\": \"root1.json\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"name\": \"root1.json\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -128,7 +137,10 @@ async fn matches_dyn_route_json_subdir() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"name\": \"subdir.json\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"name\": \"subdir.json\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -147,5 +159,8 @@ async fn matches_dyn_route_json_depth() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"name\": \"depth.json\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"name\": \"depth.json\"\n}")
+    );
 }

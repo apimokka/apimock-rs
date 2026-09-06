@@ -2,7 +2,10 @@ use hyper::StatusCode;
 use serde_json::json;
 
 use crate::util::{
-    http::{test_request::TestRequest, test_response::response_body_str},
+    http::{
+        test_request::TestRequest,
+        test_response::{platform_eol, response_body_str},
+    },
     test_setup::TestSetup,
 };
 
@@ -20,7 +23,10 @@ async fn match_dyn_route_dir_root_1() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"hello\": \"index\"\n}")
+    );
 }
 
 #[tokio::test]
@@ -37,7 +43,10 @@ async fn match_dyn_route_dir_root_2() {
     );
 
     let body_str = response_body_str(response).await;
-    assert_eq!(body_str.as_str(), "{\n    \"hello\": \"index\"\n}");
+    assert_eq!(
+        body_str.as_str(),
+        platform_eol("{\n    \"hello\": \"index\"\n}")
+    );
 }
 
 #[tokio::test]

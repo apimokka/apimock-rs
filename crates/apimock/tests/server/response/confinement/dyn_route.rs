@@ -12,8 +12,9 @@ use crate::{
     constant::root_config_dir,
     util::{
         http::{
-            raw_request::raw_get_status, test_request::TestRequest,
-            test_response::response_body_str,
+            raw_request::raw_get_status,
+            test_request::TestRequest,
+            test_response::{platform_eol, response_body_str},
         },
         test_setup::TestSetup,
     },
@@ -116,7 +117,7 @@ async fn a_file_actually_inside_the_respond_dir_still_serves() {
     // RFC 076: `serve/hello.json`'s own bytes (one space after the
     // colon, trailing newline) — served byte-for-byte, not minified.
     // Updated because the bytes are now correct.
-    assert_eq!(body_str.as_str(), "{\"key\": \"hello\"}\n");
+    assert_eq!(body_str.as_str(), platform_eol("{\"key\": \"hello\"}\n"));
 }
 
 async fn setup() -> u16 {
