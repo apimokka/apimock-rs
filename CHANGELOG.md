@@ -5,6 +5,88 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.0] - 2026-09-09
+
+**What you put in is what comes out.** 6.1.0 carried the external
+audit's security and correctness findings. This release carries the
+rest: the places where apimock quietly changed your data or your
+request on the way through — a URL path that would not resolve, a JSON
+file reformatted in transit, a live match feed that reported the wrong
+answer for every request — plus the documentation corrections that
+close the audit out.
+
+**Migrating:** [`docs/src/guides/migrating-to-6-2.md`](https://apimokka.github.io/apimock-rs/guides/migrating-to-6-2.html)
+covers every one, with the symptom you would see. The URL-path and
+JSON-serving changes are the two most likely to affect you.
+
+### Security
+
+- **Verbose logging and the trace channel now redact query strings and
+  JSON body keys**, not just headers. A bearer token in an
+  `Authorization` header was redacted; the same token in
+  `?access_token=` or a `{"password": …}` body was printed verbatim.
+  The credential denylist also grew (`token`, `access_token`,
+  `refresh_token`, `password`, `secret`, `client_secret`, `api_key`),
+  and a percent-encoded key is decoded before it is matched, so
+  `?%74oken=` cannot slip past it.
+- **A Unix-domain trace socket is created `0600`.** It previously
+  inherited the process umask, which on common shell defaults left it
+  group- or world-readable. The TCP trace transport still has **no
+  authentication** — unchanged, but apimock now warns at startup if its
+  address is not loopback.
+
+### Added
+
+- **A troubleshooting guide**, organised by symptom rather than by
+  subsystem — *"my file 404s"*, *"my rule matches everything"*,
+  *"my snapshot test broke"*.
+- **`Outcome::Middleware`** in the trace feed, so a middleware response
+  reports as itself.
+- **Back-pressure that actually exists**: a lagging subscriber's dropped
+  count is accumulated per subscriber and reported in `dropped_count`.
+  The previous documentation described a mechanism `broadcast` does not
+  have.
+- Regression tests pinning three path-traversal vectors that nothing
+  covered — double-encoded, backslash, and overlong-UTF-8 forms — run
+  on all three platforms.
+
+### Changed
+
+- **URL paths are percent-decoded**, so a file whose name needs
+  encoding is reachable: `/my%20file.json`, `/caf%C3%A9.json`.
+  Decoding runs **before** dot-segment normalisation; every existing
+  traversal refusal is unchanged and now covered by more tests.
+- **Case is folded at every path segment**, not only the filename.
+  `/SUB/users.json` resolves where it previously 404'd on a
+  case-sensitive filesystem.
+- **A rule set's `url_path` prefix matches at a segment boundary.**
+  `/api` no longer matches `/apiv2`.
+- **`.json` files are served exactly as written** — same key order,
+  same whitespace. They were previously parsed and re-serialised, which
+  silently minified them and sorted their keys.
+- **`--format json`'s envelope field order** is now `schema`,
+  `apimock`, `result`/`error` — insertion order, matching every
+  documented example. It was alphabetical, which contradicted the
+  documentation.
+- **Library:** `Outcome` is now `#[non_exhaustive]`. Adding
+  `Middleware` already broke an exhaustive match, so the marker is
+  applied once rather than repeating the break for every future
+  variant.
+- **`HttpMethod`'s `Display`** renders `` method`GET` `` rather than
+  the sentence `"HTTP Method is GET"`, matching its sibling conditions.
+
+### Fixed
+
+- **The live match feed reported `Miss` for every request**, matches
+  included, with the correct rule index computed and discarded.
+  Middleware, fallback-directory and 404 responses emitted nothing at
+  all.
+- **Four documented statements that were false**, including a TLS
+  reload workaround that cannot compile — `ServerHandle` is
+  `#[non_exhaustive]` and nothing constructs one — and
+  `connection: keep-alive` listed as always present when it is absent
+  over HTTP/2.
+
 ## [6.1.0] - 2026-09-05
 
 **What an external audit found, fixed.** An independent architect

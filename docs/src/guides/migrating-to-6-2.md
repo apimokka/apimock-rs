@@ -1,19 +1,18 @@
 # Migrating to 6.2.0
 
-**Filename and version number are a placeholder** — no release number
-has been decided for this cycle yet; RFC 066 § 2 keeps that decision
-outside this page's author entirely (versions, tags, and publishing are
-never touched without explicit instruction). `6.2.0` is written here
-only as "the next minor after 6.1.0" — 6.1.0 is already tagged and
-carries tranches 1–3 of the external audit, so this tranche's entries
-land in a new page rather than being folded into that one. Rename this
-file and its `SUMMARY.md` entry to match whatever the release process
-actually settles on.
+Everything on this page ships in **6.2.0**, completing the external
+audit that 6.1.0 began — tranches four, five and six. It is a minor
+release: nothing is removed and no configuration you already have
+becomes invalid, but several fixes change what an existing setup
+*does*.
 
-Four RFCs land here so far, from the external audit's fourth and fifth
-tranches. All of these are **fixes that change what an existing setup
-does** — the same reasoning that made tranches 1–3 a minor, not a
-patch:
+**Read the table first.** If none of its rows describes your setup, the
+upgrade is uneventful.
+
+Five RFCs land here. Four appear below; the fifth, **078**, is
+documentation-only — it corrects four false statements and adds a
+[troubleshooting guide](./troubleshooting.md), and changes no
+behaviour, so it has no migration entry of its own:
 
 | RFC | What breaks |
 |---|---|
@@ -23,6 +22,7 @@ patch:
 | [076](#library-api-the---format-json-envelope-field-order-changed) | *Library and script consumers only:* `--format json`'s field order changed from alphabetical to `schema`, `apimock`, `result`/`error` |
 | [073](#the-live-match-feed-now-reports-what-actually-happened) | *Library consumers of `apimock_server::trace` only:* every trace event used to report the wrong outcome; a new `Outcome::Middleware` variant needs handling in an exhaustive match, and `Outcome` is now `#[non_exhaustive]` |
 | [073](#verbose-logging-and-the-trace-channel-now-redact-query-strings-and-body-keys-too) | A query-string value or JSON body field matching the (now broader) credential denylist prints as `[redacted]` where it used to print verbatim |
+| [073](#the-trace-transports-access-control-unix-sockets-tcp-has-none) | A Unix-domain trace socket is now created `0600` — another local user who could read it before cannot now |
 | [079](#a-few-internal-behaviours-that-were-never-real-are-gone) | `HttpMethod`'s `Display` output changed from a sentence to a bare value |
 
 Every one of these is a genuine correctness fix for behaviour the
