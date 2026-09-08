@@ -32,25 +32,27 @@ ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 
 | ID  | Title | State |
 |-----|-------|-------|
-| 039 | [An additive-only gate for the public API](./accepted/039-public-api-additive-only-gate.md) — enable after 6.0.0 | **not started** — deliberately deferred; enable *after* 6.0.0 |
-| 067 | [CORS: stop reflecting any origin with credentials](./accepted/067-cors-credential-reflection.md) — audit S-01, **highest-ranked** | accepted 2026-09-01; handed off (tranche) |
-| 068 | [Bound what one request can consume](./accepted/068-bound-per-request-resources.md) — audit S-02, S-03 | accepted 2026-09-01; handed off (tranche) |
-| 069 | [Reject configuration we do not understand](./accepted/069-reject-unknown-config-keys.md) — audit F-17 | accepted 2026-09-01; handed off (tranche) |
-| 070 | [`round_robin` must rotate per match group](./accepted/070-round-robin-per-match-group.md) — audit F-01 | accepted 2026-09-01; handed off (tranche) |
-| 071 | [Stop deep-cloning application state per request](./accepted/071-share-application-state.md) — audit P-01, P-02 | accepted 2026-09-01; handed off (tranche) |
-| 072 | [Header matching must fail closed](./accepted/072-header-matching-fails-closed.md) — audit S-04 | accepted 2026-09-01; handed off (tranche) |
 | 073 | [Observability: correct events, honest limits, no leaks](./accepted/073-observability-correct-and-safe.md) — audit F-08, S-05, S-06 | accepted 2026-09-01; handed off (tranche) |
-| 074 | [TLS: bound the handshake, and fail loudly](./accepted/074-tls-availability.md) — audit S-07, S-08 | accepted 2026-09-01; handed off (tranche) |
 | 075 | [URL path fidelity](./accepted/075-url-path-fidelity.md) — audit F-03, F-05, F-02 | accepted 2026-09-01; handed off (tranche) |
 | 076 | [Serve JSON as it was written](./accepted/076-serve-responses-as-written.md) — audit F-04, P-04 | accepted 2026-09-01; handed off (tranche) |
-| 077 | [Work that should not be per-request](./accepted/077-per-request-work.md) — audit P-05–P-09 | accepted 2026-09-01; handed off (tranche) |
 | 078 | [Correct four false statements; add troubleshooting](./accepted/078-documentation-corrections.md) — audit D-01–D-07 | accepted 2026-09-01; handed off (tranche) |
 | 079 | [Remove code that says something untrue](./accepted/079-dead-and-misleading-code.md) — audit F-10, M-03, M-04, M-09 | accepted 2026-09-01; handed off (tranche) |
 
-> The other 20 that were here shipped in **6.0.0** (2026-08-28) and have
-> moved to `done/`. **039 stays**: it is approved and deliberately
-> unimplemented until *after* 6.0.0 — enabling an additive-only gate
-> before the major that breaks things would have been backwards.
+> **The five above** are the external audit's tranches 4–6. They are
+> implemented and merged to `main`, awaiting the release that carries
+> them.
+>
+> **What left this table.** Twenty RFCs shipped in **6.0.0**
+> (2026-08-28). Eleven more moved to `done/` on 2026-09-07:
+>
+> - **067, 068, 074** (tranche 1), **069, 070, 072** (tranche 2) and
+>   **071, 077** (tranche 3) — shipped in **6.1.0**.
+> - **039** — its additive-only gate was implemented and switched on
+>   after 6.0.0, as the RFC's own text required.
+> - **080** (trunk-based development) and **081** (tiered release
+>   confirmation) — process policies, in force; as with
+>   [RFC 066](./done/066-branching-and-merge-policy.md), adoption *is*
+>   implementation.
 
 Handoffs live under `handoffs/NNN-slug/` and inherit their status from
 the governing RFC — they are companion execution documents, not

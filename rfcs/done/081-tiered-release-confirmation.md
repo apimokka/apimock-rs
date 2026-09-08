@@ -1,6 +1,7 @@
 # RFC 081 — Tiered release confirmation: automate the eyeballing, keep the judgement
 
-**Status.** **Accepted** — owner approved 2026-09-06. Both unresolved
+**Status.** **Implemented** — owner approved 2026-09-06 and in force
+since; § 3's `assert-draft-release` job merged the same day. Both unresolved
 questions resolved on acceptance; see below.
 **Tracks.** Process / release. Amends
 [RFC 066](../done/066-branching-and-merge-policy.md) § 2 and

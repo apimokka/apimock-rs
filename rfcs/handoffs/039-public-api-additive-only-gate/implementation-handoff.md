@@ -1,6 +1,6 @@
 # Implementation Handoff — RFC 039, the additive-only public-API gate
 
-**Governing RFC.** [RFC 039](../../accepted/039-public-api-additive-only-gate.md)
+**Governing RFC.** [RFC 039](../../done/039-public-api-additive-only-gate.md)
 — approved 2026-08-20, deliberately held until after 6.0.0.
 **Milestone.** 6.x. **Not blocking anything; time-sensitive for one
 specific reason — see § 1.**

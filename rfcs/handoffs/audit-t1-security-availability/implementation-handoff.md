@@ -1,8 +1,8 @@
 # Handoff — Tranche 1: security and availability
 
-**Governing RFCs.** [067](../../accepted/067-cors-credential-reflection.md)
-(CORS), [068](../../accepted/068-bound-per-request-resources.md)
-(request resource bounds), [074](../../accepted/074-tls-availability.md)
+**Governing RFCs.** [067](../../done/067-cors-credential-reflection.md)
+(CORS), [068](../../done/068-bound-per-request-resources.md)
+(request resource bounds), [074](../../done/074-tls-availability.md)
 (TLS). All accepted 2026-09-01.
 **Source.** Independent audit of 6.0.0, 2026-08-31 → 09-01. Review at
 `.git-exclude/reviewed/external-audit-2026-09-01/REVIEW-001.md`.

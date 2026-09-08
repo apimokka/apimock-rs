@@ -1,6 +1,9 @@
 # RFC 039 — An additive-only gate for the public API
 
-**Status.** **Accepted** — approved by the project owner 2026-08-20.
+**Status.** **Implemented** — approved by the project owner 2026-08-20;
+gate switched on after 6.0.0 shipped, as this RFC's own § When this turns
+on required. Baselines checked in and the `public-api` CI job live since
+2026-08-31.
 **Not yet implemented, and deliberately not for 6.0.0** — the design is
 settled; the gate is enabled after 6.0.0 ships. See § When this turns on.
 **Tracks.** CI quality gates; API stability. Follows

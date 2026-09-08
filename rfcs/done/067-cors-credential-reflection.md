@@ -1,6 +1,7 @@
 # RFC 067 — CORS: stop reflecting any origin with credentials
 
-**Status.** Accepted — owner approved 2026-09-01.
+**Status.** **Done** — released in **6.1.0** (2026-09-07). Owner approved
+2026-09-01.
 **Tracks.** Security. **Highest-ranked finding of the 2026-09-01
 external audit** (S-01, D-04).
 **Touches.** `crates/apimock-server/src/response_handler.rs`,

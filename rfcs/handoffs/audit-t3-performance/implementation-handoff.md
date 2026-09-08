@@ -1,7 +1,7 @@
 # Handoff — Tranche 3: performance
 
-**Governing RFCs.** [071](../../accepted/071-share-application-state.md)
-(shared state), [077](../../accepted/077-per-request-work.md)
+**Governing RFCs.** [071](../../done/071-share-application-state.md)
+(shared state), [077](../../done/077-per-request-work.md)
 (per-request work). Accepted 2026-09-01.
 **Milestone.** Next minor. Independent of tranches 1 and 2.
 **Baseline.** `main` @ `88b3fc9`.

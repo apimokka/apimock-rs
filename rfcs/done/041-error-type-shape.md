@@ -127,7 +127,7 @@ not.
 
 ### It pairs with RFC 039, and neither substitutes for the other
 
-[RFC 039](../accepted/039-public-api-additive-only-gate.md) makes API changes
+[RFC 039](../done/039-public-api-additive-only-gate.md) makes API changes
 **visible** in review. `#[non_exhaustive]` makes additive ones
 **legal** without a major bump. A project with only the gate learns
 about every break after writing it; a project with only the attribute

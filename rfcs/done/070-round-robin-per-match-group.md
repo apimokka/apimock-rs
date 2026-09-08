@@ -1,6 +1,7 @@
 # RFC 070 — `round_robin` must rotate per match group
 
-**Status.** Accepted — owner approved 2026-09-01.
+**Status.** **Done** — released in **6.1.0** (2026-09-07). Owner approved
+2026-09-01.
 **Tracks.** Correctness. External audit 2026-09-01, F-01 (the High
 finding on the functionality axis) and D-01.
 **Touches.** `crates/apimock-routing/src/rule_set.rs`,

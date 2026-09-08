@@ -1,6 +1,7 @@
 # RFC 072 — Header matching must fail closed
 
-**Status.** Accepted — owner approved 2026-09-01.
+**Status.** **Done** — released in **6.1.0** (2026-09-07). Owner approved
+2026-09-01.
 **Tracks.** Correctness / security-adjacent. External audit 2026-09-01,
 S-04.
 **Touches.** `crates/apimock-routing/.../headers.rs`,

@@ -1,6 +1,8 @@
 # RFC 080 — Trunk-based development: `main` is the working branch
 
-**Status.** **Accepted** — owner approved 2026-09-04, carve-out kept as
+**Status.** **Implemented** — owner approved 2026-09-04 and in force
+since; a process policy's adoption is its implementation, as with
+[RFC 066](./066-branching-and-merge-policy.md). Carve-out kept as
 written. Adopts RFC 066 Amendment 3 with it (§ 2).
 **Tracks.** Process. Supersedes RFC 066's implicit branching practice;
 RFC 066's *who may move code* rules survive unchanged.

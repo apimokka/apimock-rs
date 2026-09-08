@@ -1,8 +1,8 @@
 # Handoff — Tranche 2: silent wrongness
 
-**Governing RFCs.** [069](../../accepted/069-reject-unknown-config-keys.md)
-(unknown config keys), [070](../../accepted/070-round-robin-per-match-group.md)
-(round-robin), [072](../../accepted/072-header-matching-fails-closed.md)
+**Governing RFCs.** [069](../../done/069-reject-unknown-config-keys.md)
+(unknown config keys), [070](../../done/070-round-robin-per-match-group.md)
+(round-robin), [072](../../done/072-header-matching-fails-closed.md)
 (header matching). All accepted 2026-09-01.
 **Milestone.** Next **minor** — see § 1.
 **Baseline.** `main` @ `ef9dac6` — tranche 1 is merged. It touched no

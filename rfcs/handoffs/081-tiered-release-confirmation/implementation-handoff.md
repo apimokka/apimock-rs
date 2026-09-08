@@ -1,6 +1,6 @@
 # Handoff — RFC 081 § 3: assert the draft before it can be published
 
-**Governing RFC.** [081](../../accepted/081-tiered-release-confirmation.md),
+**Governing RFC.** [081](../../done/081-tiered-release-confirmation.md),
 accepted 2026-09-06.
 **Milestone.** Next release. Not urgent — but the tier rule is already
 in force, so until this lands the asset/notes check is back to being

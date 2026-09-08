@@ -121,7 +121,7 @@ approves *code*; it never approves a release action.
 
 > ### Amendment 5 — adopted 2026-09-06: RFC 081 tiers the publish step
 >
-> [RFC 081](../accepted/081-tiered-release-confirmation.md) replaces
+> [RFC 081](../done/081-tiered-release-confirmation.md) replaces
 > § 2's blanket publish prohibition with two tiers. The clause
 >
 > > Publishing to crates.io or npm, or dispatching a workflow that does
@@ -307,7 +307,7 @@ its keep, which is precisely what my own document commits were not.
 
 > ### Amendment 4 — adopted 2026-09-04: RFC 080 supersedes the branching practice
 >
-> [RFC 080](../accepted/080-trunk-based-development.md) adopts
+> [RFC 080](../done/080-trunk-based-development.md) adopts
 > **trunk-based development**: work lands on `main` directly, with no
 > implementation branch, except for changes that can behave differently
 > on Windows or macOS — those keep a short-lived branch, because only
