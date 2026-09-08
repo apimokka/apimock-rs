@@ -112,9 +112,21 @@ which button they use.
 
 ### 2. Two tiers, classified mechanically
 
-A release is **Tier A** when **all four** hold:
+A release is **Tier A** when **all four** hold.
 
-| test | read from |
+> **These are classification conditions, not tests in the CI sense.** A
+> release that does not satisfy one has not failed anything — it simply
+> *contains* a security fix, or an API change, and is therefore Tier B.
+> That is the classifier working, not a defect to repair. Nothing about
+> a release should ever be changed in order to reach Tier A; the tier is
+> read off the release, never engineered into it.
+>
+> Wording corrected 2026-09-09 after the owner reasonably read "two of
+> the four tests fail" as something needing fixing before the next cut.
+> In a Rust project "test" means `cargo test`, and the risk of that
+> misreading is someone trimming a release to make the conditions pass.
+
+| condition | read from |
 |---|---|
 | The CHANGELOG entry has no `### Security` section | `CHANGELOG.md` |
 | No `crates/*/public-api.txt` changed since the previous release tag — **and the baselines exist at both tags; absence is not a pass** (Amendment 1 A) | `git diff <prev-tag>..<tag>` |
@@ -127,7 +139,7 @@ Otherwise it is **Tier B**.
 with the four results.
 **Tier B** — the owner publishes, as today.
 
-Every test reads an artifact that already exists. Two are fully
+Every condition reads an artifact that already exists. Two are fully
 mechanical; the third is a judgement, and it is deliberately worded to
 fail *towards* Tier B — if you are unsure whether a new default can
 refuse something, it can.
@@ -199,16 +211,16 @@ narrowing is.
 - The new job **fails** when the notes and the CHANGELOG section differ.
 - A dry-run classification against the last three releases (6.0.0,
   5.19.1, 5.19.0), reporting which tier each would have been. If any
-  reads Tier A that a person would call Tier B, the tests in § 2 are
+  reads Tier A that a person would call Tier B, the conditions in § 2 are
   wrong and this RFC needs changing before it is adopted.
 
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
-| A Tier A release turns out to carry security content | The `### Security` test is mechanical, and the third test fails towards Tier B. A misclassification is reportable, not silent. |
+| A Tier A release turns out to carry security content | The `### Security` condition is mechanical, and the third fails towards Tier B. A misclassification is reportable, not silent. |
 | The architect publishes its own inaccurate notes | Unchanged from today for Tier A's content, which by definition has no security claims and no API change — the two places notes have actually been wrong here. Tier B, where they could be, still needs the owner. |
-| Tiering becomes an argument each release | § 2's tests read existing artifacts, and § 5 requires them reported. |
+| Tiering becomes an argument each release | § 2's conditions read existing artifacts, and § 5 requires them reported. |
 | The new CI job blocks a legitimate release | It only asserts asset count and notes-match — both fixable by re-running the build phase, neither reachable after publish. |
 
 ## Amendment 1 — adopted 2026-09-06: two of this RFC's own claims were wrong
@@ -216,11 +228,11 @@ narrowing is.
 Both found by the § Testing dry-run classification, in the review of
 § 3's implementation
 (`.git-exclude/reviewed/081-tiered-release-confirmation/REVIEW-001.md`).
-The exercise existed to test these tests; it did.
+The exercise existed to check these conditions; it did.
 
 ### A. T2 must require the baselines to *exist*, not merely to be unchanged
 
-**§ 2's second test as written can pass without checking anything.**
+**§ 2's second condition as written can be satisfied without checking anything.**
 `crates/*/public-api.txt` was added in `1b7ebec` on 2026-08-31 — *after*
 6.0.0 was tagged on 2026-08-28. So for 6.0.0 and 5.19.1,
 
@@ -231,7 +243,7 @@ git diff <prev-tag>..<tag> -- 'crates/*/public-api.txt'
 is empty because **the files did not exist at either tag**, not because
 the public API held still. 6.0.0's own CHANGELOG documents real
 breaking library changes across that boundary — six types becoming
-`#[non_exhaustive]`, error variants boxed — that this test therefore
+`#[non_exhaustive]`, error variants boxed — that this condition therefore
 could not have seen. Read literally it *passes*; read for what it is
 trying to establish it is **not applicable**.
 
@@ -239,7 +251,7 @@ trying to establish it is **not applicable**.
 
 > No `crates/*/public-api.txt` changed since the previous release tag —
 > **and the baselines exist at both tags**. If they are absent at
-> either, the test is *not applicable*, which resolves to **Tier B**.
+> either, the condition is *not applicable*, which resolves to **Tier B**.
 > Absence is never a pass.
 
 In practice this changes nothing going forward: every release from

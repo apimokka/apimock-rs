@@ -148,9 +148,14 @@ Publishing means **causing the draft→published transition** by any means
 `release-publish.yaml` has no `push:` trigger; that transition is the
 only thing that fires it.
 
-A release is **Tier A** when **all four** hold:
+A release is **Tier A** when **all four** hold. **These are
+classification conditions, not tests in the CI sense** — a release that
+does not satisfy one has not failed anything, it simply *contains* a
+security fix or an API change, and is Tier B. Never change a release in
+order to reach Tier A; the tier is read off the release, not engineered
+into it.
 
-| test | read from |
+| condition | read from |
 |---|---|
 | No `### Security` section in its CHANGELOG entry | `CHANGELOG.md` |
 | No `crates/*/public-api.txt` changed since the previous release tag, **and the baselines exist at both tags** — absence is *not applicable* → Tier B, never a pass | `git diff <prev-tag>..<tag> -- 'crates/*/public-api.txt'` |
@@ -161,7 +166,7 @@ A release is **Tier A** when **all four** hold:
   in the release record **before** doing so.
 - **Tier B** — anything else. The owner publishes, as before.
 
-The third test is the only judgement in the set, and it is worded to
+The third condition is the only judgement in the set, and it is worded to
 fail **towards Tier B**: if you are unsure whether a new default can
 refuse something, it can.
 
