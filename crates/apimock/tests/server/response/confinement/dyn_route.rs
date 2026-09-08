@@ -105,6 +105,59 @@ async fn a_mixed_case_encoded_dot_dot_segment_is_refused() {
     assert_eq!(status, StatusCode::NOT_FOUND.as_u16());
 }
 
+/// Task 016 — double-encoded: `%252f` decodes *once* to the literal
+/// text `%2f`, not to `/`. Refused today for exactly that reason:
+/// decoding runs a single pass, so this segment never becomes `..`
+/// followed by a real separator, and reaches path resolution as one
+/// opaque, meaningless segment. Regression coverage for a future
+/// change that decoded twice, or decoded after normalising instead of
+/// before — either would let this traverse, and nothing today would
+/// say so.
+#[tokio::test]
+async fn a_double_encoded_dot_dot_slash_segment_is_refused() {
+    let port = setup().await;
+
+    let status = raw_get_status("127.0.0.1", port, "/..%252foutside.txt").await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND.as_u16());
+}
+
+/// Task 016 — backslash: `%5c` decodes to `\`, an ordinary filename
+/// character on Linux but a path separator on Windows, where this
+/// decodes to `/..\outside.txt`. On a case-insensitive, backslash-aware
+/// filesystem, RFC 075's own `normalize_url_path` (which only ever
+/// splits on `/`) very likely treats `..\outside.txt` as one opaque
+/// segment — meaning confinement (`crates/apimock-server/src/response/confine.rs`,
+/// `canonicalize()` + `starts_with(base)`) is the *only* layer refusing
+/// this on Windows, not defence in depth. This is exactly the situation
+/// RFC 075's own handoff warned about: relying on the second layer
+/// alone is how the original advisory (GHSA-72g6-wgrg-vhm7) happened.
+/// The Windows CI leg running this is the actual point of this test —
+/// a Linux-only green here would prove nothing about the platform
+/// where the risk is real.
+#[tokio::test]
+async fn a_backslash_encoded_dot_dot_segment_is_refused() {
+    let port = setup().await;
+
+    let status = raw_get_status("127.0.0.1", port, "/%2e%2e%5coutside.txt").await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND.as_u16());
+}
+
+/// Task 016 — overlong UTF-8: `%c0%af` is an invalid, overlong encoding
+/// of `/` (a two-byte sequence for a code point that fits in one byte).
+/// Some decoders have historically accepted overlong forms regardless
+/// of the encoding being technically malformed — this pins that
+/// apimock's own decoder does not.
+#[tokio::test]
+async fn an_overlong_utf8_encoded_slash_is_refused() {
+    let port = setup().await;
+
+    let status = raw_get_status("127.0.0.1", port, "/..%c0%afoutside.txt").await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND.as_u16());
+}
+
 /// Normal serving inside `fallback_respond_dir` is unaffected.
 #[tokio::test]
 async fn a_file_actually_inside_the_respond_dir_still_serves() {
