@@ -57,7 +57,7 @@ tokio                       = { version = "1.44", features = ["full"] }
 hyper                       = { version = "1", features = ["server", "http1", "http2"] }
 hyper-util                  = { version = "0", features = ["server", "http1", "http2", "tokio"] }
 http-body-util              = "0"
-rustls                      = { version = "0.23.43", default-features = false, features = ["log", "ring"] }
+rustls                      = { version = "0.23.45", default-features = false, features = ["log", "ring"] }
 tokio-rustls                = { version = "0.26.4", default-features = false, features = ["logging", "ring", "tls12"] }
 rhai                        = { version = "1", features = ["sync", "serde"] }
 toml                        = "1"
