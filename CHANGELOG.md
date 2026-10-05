@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.1] - 2026-10-06
+
+**A dependency security fix, and nothing else.** No behaviour change, no
+configuration change, and no public API change — the API baselines are
+byte-identical to 6.2.0's.
+
+**No migration steps.** If you upgrade, nothing you have written needs
+to change.
+
+### Security
+
+- **Upgraded `rustls` 0.23.43 → 0.23.45**, which fixes
+  [RUSTSEC-2026-0285](https://rustsec.org/advisories/RUSTSEC-2026-0285)
+  — *"TLS 1.3 handshake messages incorrectly accepted across encryption
+  level boundaries"*, severity 5.3 (medium), published 2026-09-14, six
+  days after 6.2.0 shipped. `rustls-webpki` moved 0.103.13 → 0.103.15
+  alongside it.
+
+  **Who this affects:** anyone running apimock with an HTTPS listener
+  configured (`[listener.tls]`). apimock builds a default rustls
+  `ServerConfig`, which enables TLS 1.3, so the affected handshake path
+  is live in that configuration. A plain-HTTP listener does not reach
+  it.
+
+  **The flaw is in rustls, not in apimock's own code** — there is no
+  apimock advisory to read, and nothing in this project was misusing the
+  library.
+
+  The **minimum supported `rustls` was raised to 0.23.45**, not merely
+  refreshed in our lockfile. If you depend on the `apimock-server`
+  crate, the previous requirement would still have let your build
+  resolve a vulnerable 0.23.43 or 0.23.44; a floor cannot.
+
+### Documentation
+
+- `apimock_server::respond_util::full_file_path` now documents that it
+  **resolves** a path and does **not** confine one — confinement is
+  applied by `FileResponse`'s read path. Calling it directly from a
+  library and reading the result bypasses that check. Behaviour is
+  unchanged; the function never confined. Prompted by an external report
+  that correctly identified the undocumented gap.
+
 ## [6.2.0] - 2026-09-09
 
 **What you put in is what comes out.** 6.1.0 carried the external
