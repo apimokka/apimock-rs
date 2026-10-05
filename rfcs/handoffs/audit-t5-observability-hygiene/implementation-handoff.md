@@ -1,7 +1,7 @@
 # Handoff — Tranche 5: observability and hygiene
 
-**Governing RFCs.** [073](../../accepted/073-observability-correct-and-safe.md)
-(trace channel, redaction), [079](../../accepted/079-dead-and-misleading-code.md)
+**Governing RFCs.** [073](../../done/073-observability-correct-and-safe.md)
+(trace channel, redaction), [079](../../done/079-dead-and-misleading-code.md)
 (dead code). Accepted 2026-09-01.
 **Milestone.** Next minor.
 **Baseline.** **`main`'s head — cut from it.** No hash is pinned: this

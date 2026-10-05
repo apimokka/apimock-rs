@@ -1,6 +1,7 @@
 # RFC 076 — Serve JSON as it was written
 
-**Status.** Accepted — owner approved 2026-09-01.
+**Status.** **Done** — released in **6.2.0** (2026-09-08). Owner approved
+2026-09-01.
 **Tracks.** Correctness / performance. External audit 2026-09-01, F-04
 and P-04.
 **Touches.** `crates/apimock-server/src/response/json_response.rs`,

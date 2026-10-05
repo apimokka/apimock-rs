@@ -30,23 +30,18 @@ Approved by the project owner: the design is settled and an implementer
 may start. An RFC sits here from approval until the version carrying it
 ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 
-| ID  | Title | State |
-|-----|-------|-------|
-| 073 | [Observability: correct events, honest limits, no leaks](./accepted/073-observability-correct-and-safe.md) — audit F-08, S-05, S-06 | accepted 2026-09-01; handed off (tranche) |
-| 075 | [URL path fidelity](./accepted/075-url-path-fidelity.md) — audit F-03, F-05, F-02 | accepted 2026-09-01; handed off (tranche) |
-| 076 | [Serve JSON as it was written](./accepted/076-serve-responses-as-written.md) — audit F-04, P-04 | accepted 2026-09-01; handed off (tranche) |
-| 078 | [Correct four false statements; add troubleshooting](./accepted/078-documentation-corrections.md) — audit D-01–D-07 | accepted 2026-09-01; handed off (tranche) |
-| 079 | [Remove code that says something untrue](./accepted/079-dead-and-misleading-code.md) — audit F-10, M-03, M-04, M-09 | accepted 2026-09-01; handed off (tranche) |
+*(None open.)*
 
-> **The five above** are the external audit's tranches 4–6. They are
-> implemented and merged to `main`, awaiting the release that carries
-> them.
->
-> **What left this table.** Twenty RFCs shipped in **6.0.0**
-> (2026-08-28). Eleven more moved to `done/` on 2026-09-07:
+> **What was here.** Twenty RFCs shipped in **6.0.0** (2026-08-28).
+> Eleven moved to `done/` on 2026-09-07 and the last five on
+> **2026-10-06**, which emptied this table for the first time since the
+> external audit opened:
 >
 > - **067, 068, 074** (tranche 1), **069, 070, 072** (tranche 2) and
->   **071, 077** (tranche 3) — shipped in **6.1.0**.
+>   **071, 077** (tranche 3) — shipped in **6.1.0** (2026-09-07).
+> - **073** (tranche 5), **075, 076** (tranche 4), **078** (tranche 6)
+>   and **079** (tranche 5) — shipped in **6.2.0** (2026-09-08),
+>   completing the audit.
 > - **039** — its additive-only gate was implemented and switched on
 >   after 6.0.0, as the RFC's own text required.
 > - **080** (trunk-based development) and **081** (tiered release

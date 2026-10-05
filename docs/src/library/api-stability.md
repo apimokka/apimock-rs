@@ -114,8 +114,12 @@ The error types you will meet: `WorkspaceError`, `ApplyError`,
   declared in the baseline, documented in that version's migration
   guide, and deprecation-warned first where that is practical. Upgrade
   with the release notes to hand.
-- **7.0** — may break. There is already one known candidate; see
-  [`06-known-gaps.md`](./known-limitations.md) § 1.
+- **The next incompatible release, if there is one** — may break. One
+  known candidate already exists; see
+  [`06-known-gaps.md`](./known-limitations.md) § 1. Whether and when
+  such a release happens is the project owner's decision; **no version
+  number is planned or reserved**, so do not read a particular one into
+  this page.
 - The four crates are **always published together at the same
   version.** `version.sh` bumps every manifest in lockstep and CI
   asserts it. Do not mix 6.0.0 of one with 6.1.0 of another; the

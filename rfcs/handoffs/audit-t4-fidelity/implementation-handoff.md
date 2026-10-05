@@ -1,7 +1,7 @@
 # Handoff — Tranche 4: fidelity
 
-**Governing RFCs.** [075](../../accepted/075-url-path-fidelity.md)
-(URL path), [076](../../accepted/076-serve-responses-as-written.md)
+**Governing RFCs.** [075](../../done/075-url-path-fidelity.md)
+(URL path), [076](../../done/076-serve-responses-as-written.md)
 (JSON bytes). Accepted 2026-09-01.
 **Milestone.** Next minor.
 **Baseline.** **`main`'s head — cut from it, whatever it is when you

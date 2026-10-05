@@ -1,6 +1,6 @@
 # Handoff — Tranche 6: documentation
 
-**Governing RFC.** [078](../../accepted/078-documentation-corrections.md).
+**Governing RFC.** [078](../../done/078-documentation-corrections.md).
 Accepted 2026-09-01.
 **Milestone.** Next minor.
 **Baseline.** **`main`'s head — cut from it.** No hash pinned; every
