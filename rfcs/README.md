@@ -46,23 +46,7 @@ ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 
 | RFC | Title | Ships how |
 |---|---|---|
-| 082 | [Match the methods users actually send (PATCH)](./accepted/082-match-the-methods-users-actually-send.md) — + Amendment 1: the refusal says *why* a method is excluded | **Implemented** `2184372`; ships in 6.3.0 |
-| 084 | [Assert the release notes are *true*](./accepted/084-assert-the-notes-are-true.md) — not merely present | Continuously published — a CI gate, no version bump |
 | 085 | [How a strategy is spelled](./accepted/085-strategy-spelling.md) — accept the bare name; a writer that only writes what loads | Next minor (6.4.0) |
-
-> **082** — approved **2026-10-06** with Amendment 1, implemented the
-> same day. Closes the external audit's **F-06**, the last open
-> user-visible finding from it.
->
-> **084** — approved **2026-10-06**. CI already asserts a release's
-> notes *equal* its CHANGELOG section; nothing asserts the section is
-> *accurate*, and that gap is the whole remaining content of the publish
-> click. Each assertion traces to a real incident here: an unapproved
-> API-stability promise that stood published for weeks, a draft
-> declaring versions unaffected by an advisory they were vulnerable to,
-> and prose dependency versions that `version.sh` never reads. On
-> approval it also absorbed RFC 083's Tier B summary (§ 5), which
-> loosens no gate — a scope widening recorded in its § Unresolved 2.
 
 > **What was here.** Twenty RFCs shipped in **6.0.0** (2026-08-28).
 > Eleven moved to `done/` on 2026-09-07 and the last five on
@@ -74,6 +58,8 @@ ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 > - **073** (tranche 5), **075, 076** (tranche 4), **078** (tranche 6)
 >   and **079** (tranche 5) — shipped in **6.2.0** (2026-09-08),
 >   completing the audit.
+>   **082** (PATCH matching) and **084** (CI asserts the release notes are
+>   true) — shipped in **6.3.0** (2026-10-07).
 > - **039** — its additive-only gate was implemented and switched on
 >   after 6.0.0, as the RFC's own text required.
 > - **080** (trunk-based development) and **081** (tiered release
@@ -187,6 +173,24 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 063 | [Confine the serve path](./done/063-serve-path-confinement.md) | v6.0.0 |
 | 064 | [Finish the CLI front door](./done/064-cli-front-door-completion.md) | v6.0.0 |
 | 065 | [The response body-source model](./done/065-response-body-source-model.md) | v6.0.0 |
+| 039 | [A public API baseline gate — it makes a change *declared*, not forbidden (the RFC's title says "additive-only"; its Non-goals say otherwise)](./done/039-public-api-additive-only-gate.md) | (CI gate) |
+| 067 | [CORS: stop reflecting any origin with credentials](./done/067-cors-credential-reflection.md) | v6.1.0 |
+| 068 | [Bound what one request can consume](./done/068-bound-per-request-resources.md) | v6.1.0 |
+| 069 | [Reject configuration we do not understand](./done/069-reject-unknown-config-keys.md) | v6.1.0 |
+| 070 | [`round_robin` must rotate per match group](./done/070-round-robin-per-match-group.md) | v6.1.0 |
+| 071 | [Stop deep-cloning application state on every request](./done/071-share-application-state.md) | v6.1.0 |
+| 072 | [Header matching must fail closed](./done/072-header-matching-fails-closed.md) | v6.1.0 |
+| 073 | [Observability: correct events, honest limits, no leaks](./done/073-observability-correct-and-safe.md) | v6.2.0 |
+| 074 | [TLS: bound the handshake, and fail loudly](./done/074-tls-availability.md) | v6.1.0 |
+| 075 | [URL path fidelity: decoding, case, and prefix boundaries](./done/075-url-path-fidelity.md) | v6.2.0 |
+| 076 | [Serve JSON as it was written](./done/076-serve-responses-as-written.md) | v6.2.0 |
+| 077 | [Work that should not be per-request](./done/077-per-request-work.md) | v6.1.0 |
+| 078 | [Correct four false statements, and give users somewhere to look](./done/078-documentation-corrections.md) | v6.2.0 |
+| 079 | [Remove code that says something untrue](./done/079-dead-and-misleading-code.md) | v6.2.0 |
+| 080 | [Trunk-based development: `main` is the working branch](./done/080-trunk-based-development.md) | (policy) |
+| 081 | [Tiered release confirmation: automate the eyeballing, keep the judgement](./done/081-tiered-release-confirmation.md) | (policy) |
+| 082 | [Match the methods users actually send (PATCH), and stop advertising ones we cannot](./done/082-match-the-methods-users-actually-send.md) | v6.3.0 |
+| 084 | [Assert the release notes are *true*, not merely present](./done/084-assert-the-notes-are-true.md) | v6.3.0 (CI gate; first live run on that tag) |
 
 ## Archive
 

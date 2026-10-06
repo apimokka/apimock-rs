@@ -1,6 +1,6 @@
 # Handoff — RFC 082: match PATCH, and make the refusal say why
 
-**Governing RFC.** [082](../../accepted/082-match-the-methods-users-actually-send.md),
+**Governing RFC.** [082](../../done/082-match-the-methods-users-actually-send.md),
 **accepted 2026-10-06 with Amendment 1**. Read both; Amendment 1 is at
 the end of the file and it is the larger half of the work.
 **Milestone.** Next minor. Closes the external audit's **F-06**, the

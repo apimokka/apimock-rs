@@ -1,7 +1,8 @@
 # RFC 082 — Match the methods users actually send (PATCH), and stop advertising ones we cannot
 
-**Status.** **Accepted — owner approved 2026-10-06**, together with
-Amendment 1. Ready for an implementer.
+**Status.** **Implemented — shipped in 6.3.0** (2026-10-07). Owner
+approved 2026-10-06 with Amendment 1; implemented at `2184372`; the
+casing hint that extends Amendment 1 followed at `9136df4` (task 018).
 **Tracks.** Functionality. External audit 2026-09-01, **F-06** — the last
 open user-visible finding from that audit.
 **Touches.**

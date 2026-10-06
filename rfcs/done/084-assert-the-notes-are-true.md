@@ -1,7 +1,8 @@
 # RFC 084 — Assert the release notes are *true*, not merely present
 
-**Status.** **Accepted — owner approved 2026-10-06**, together with the
-architect's recommendation on § Unresolved 1. Ready for an implementer.
+**Status.** **Implemented — in force since `f121c01`; first live run on
+the 6.3.0 tag** (build phase `37488097195`, PASS). Owner approved
+2026-10-06 with the architect's recommendation on § Unresolved 1.
 **Tracks.** Release process. Strengthens [RFC 081](../done/081-tiered-release-confirmation.md)
 § 3 rather than widening § 2.
 **Touches.** `.github/workflows/release-executable.yaml`, a new

@@ -1,6 +1,6 @@
 # Handoff — RFC 084: assert the release notes are *true*
 
-**Governing RFC.** [084](../../accepted/084-assert-the-notes-are-true.md),
+**Governing RFC.** [084](../../done/084-assert-the-notes-are-true.md),
 **accepted 2026-10-06** with both Unresolved questions decided on
 approval. § 5 was added at approval and is in scope.
 **Ships how.** Continuously published — this is a CI gate, **no version
