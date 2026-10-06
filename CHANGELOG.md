@@ -5,6 +5,85 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.0] - 2026-10-07
+
+**`apimock set` no longer deletes your settings.** Every release from
+6.0.0 to 6.2.1 had a defect: when `set` rewrote a configuration file, it
+silently deleted every key it did not know how to edit. That included
+limits you may have tightened. **Upgrading stops it, but does not restore
+anything already removed**, so if you have used `set`, please read the
+Security section below. This release also adds `PATCH` to the methods a
+rule can match, and deprecates `[guard]`.
+
+**Migrating:** [`docs/src/guides/migrating-to-6-3.md`](https://apimokka.github.io/apimock-rs/guides/migrating-to-6-3.html)
+lists exactly what may have been deleted, and covers the one change that
+needs code from Rust consumers.
+
+### Security
+
+- **`apimock set`, and `Workspace::save` in `apimock-config`, deleted
+  configuration they did not manage.** It exited 0, printed nothing, and
+  the rewritten file still validated. Among the deleted keys were
+  `[listener.tls] handshake_timeout_seconds` and `max_connections`, and
+  `[service] max_request_body_bytes`, `middleware_max_operations` and
+  `cors_allow_credentials_origins`. **A deleted limit reverts to its
+  default, which is looser than a limit you tightened.** For example, a
+  1 KiB request-body cap became 32 MiB, and a connection cap of 8 became
+  256. The same rewrite also deleted a rule set's `[default]`, every
+  rule's `weight`, `[guard]`, and comments above settings `set` manages.
+  It could turn a table-form `strategy` into a bare name that does not
+  load, and it rewrote CRLF files with LF throughout.
+
+  `set` and `save` now change only the keys they manage, and leave every
+  other key exactly as written, comment and line endings included.
+
+  **If you ran `apimock set`, or saved through a program built on
+  `apimock-config`, on any release from 6.0.0 to 6.2.1, please check your
+  `apimock.toml` and rule-set files** against version control and restore
+  anything listed above. `apimock.toml` was rewritten only when `set`
+  changed something in it; a rule-set file was rewritten by every `set`
+  that targeted it.
+
+  Only the person running `set` could trigger this, not a client of the
+  server. It is listed here because it silently reversed security limits
+  the operator had chosen.
+
+### Added
+
+- **`PATCH` is matchable.** `when.request.method = "PATCH"` loads and
+  matches, and `PATCH` is now included in `access-control-allow-methods`,
+  so a browser's CORS preflight allows it.
+
+### Changed
+
+- **`apimock_routing::HttpMethod` is `#[non_exhaustive]`**, and gains
+  `Patch`. A Rust `match` over it now needs a `_` arm. This is a
+  one-time change, after which further methods break nothing. Same shape
+  and reason as `Outcome` in 6.2.0; see the migration guide.
+- **A refused `method` says why.** `OPTIONS`, `HEAD`, `TRACE` and
+  `CONNECT` are refused with the valid set *and* the reason each is not
+  matchable. A value that is wrong only in its letter case (`"patch"`)
+  is refused with *did you mean `PATCH`?*. `apimock set --method` gives
+  the same reasons. Which spellings are accepted has not changed.
+
+### Deprecated
+
+- **`[guard]` in a rule-set file.** It has never done anything. It now
+  loads with a one-line warning on stderr, exit code 0. Delete the line;
+  a future release will refuse the key.
+
+### Documentation
+
+- **`[default] delay_response_milliseconds` works.** Four statements
+  across the rule-set schema and the slow-backends guide said it had no
+  effect. It has worked since 5.18.0's RFC 045 fix, and the pages now
+  say so.
+- **`uniform_random` and `weighted_random` must be written as tables**,
+  such as `strategy = { weighted_random = {} }`. The rule-set schema
+  listed them as bare strings, which do not load.
+- **What `apimock set` guarantees** is now stated in the CLI reference
+  and in the library's editing guide.
+
 ## [6.2.1] - 2026-10-06
 
 **A dependency security fix, and nothing else.** No behaviour change, no
