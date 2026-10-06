@@ -110,6 +110,11 @@ pub(super) fn build_rule_from_payload(
         build_respond_from_payload(payload.respond),
     );
     rule.priority = payload.priority; // RFC 027: surface from payload
+    // Task 019 R-01: `RulePayload` has no `weight`, so an update must carry
+    // the existing rule's across, as it does headers and body. The writer
+    // manages `weight` now; a rule rebuilt without it would have it deleted
+    // from the file by the next save.
+    rule.weight = existing.and_then(|prev| prev.weight);
 
     Ok(rule.compute_derived_fields(rule_set, rule_set.rules.len(), rs_idx))
 }

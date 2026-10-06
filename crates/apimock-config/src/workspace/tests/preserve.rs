@@ -336,6 +336,44 @@ fn moving_a_rule_moves_its_weight_with_it() {
     Workspace::load(root).expect("the rewritten config still loads");
 }
 
+/// R-01: a rule's `weight` is now emitted by the writer, so the rendered
+/// baseline (which decides `has_unsaved_changes` and which files a save
+/// rewrites) is produced by the same function that reads it back. A file
+/// with weights must therefore show no change when nothing was edited, and
+/// a save with no edits must write nothing.
+#[test]
+fn a_file_with_weights_shows_no_spurious_change() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut ws, root_text) = load(dir.path(), false);
+
+    assert!(
+        !ws.has_unsaved_changes(),
+        "weights make a fresh load look edited"
+    );
+    let saved = ws.save().unwrap();
+    assert!(saved.changed_files.is_empty(), "{:?}", saved.changed_files);
+    assert!(saved.diff_summary.is_empty(), "{:?}", saved.diff_summary);
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("rules.toml")).unwrap(),
+        with_eol(RULE_SET, false)
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("apimock.toml")).unwrap(),
+        root_text
+    );
+
+    // And after a real save, the workspace is clean again.
+    ws.apply(EditCommand::UpdateRootSetting {
+        key: RootSettingKey::ListenerPort,
+        value: EditValue::Integer(4000),
+    })
+    .unwrap();
+    assert!(ws.has_unsaved_changes());
+    let saved = ws.save().unwrap();
+    assert_eq!(saved.changed_files.len(), 1, "{:?}", saved.changed_files);
+    assert!(!ws.has_unsaved_changes());
+}
+
 // ---------------------------------------------------------------------
 // The fixture covers every key the docs list.
 // ---------------------------------------------------------------------

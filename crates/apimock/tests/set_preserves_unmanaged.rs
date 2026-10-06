@@ -216,6 +216,68 @@ fn set_does_not_turn_a_table_strategy_into_a_config_that_will_not_load() {
     assert_eq!(code, 0, "`set` left a config that no longer loads:\n{err}");
 }
 
+/// R-01, the review's reproduction. Two rules on one path with different
+/// weights; `set` edits rule 0 so it looks exactly like rule 1 apart from the
+/// weight, then edits rule 1 back. Row pairing by content ties at that
+/// moment, and a weight carried by the pairing crossed over: rule 0 ended
+/// with 5 and rule 1 with 3, though no command touched a weight, and
+/// `weighted_random` then served the two at the opposite ratio. Asserted by
+/// index, against the loaded model and not only the text.
+#[test]
+fn two_rules_that_briefly_look_alike_keep_their_own_weights() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("apimock.toml"),
+        "[service]\nrule_sets = [\"rules.toml\"]\nfallback_respond_dir = \".\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("rules.toml"),
+        "strategy = { weighted_random = { seed = 7 } }\n\n\
+         [[rules]]\nweight = 3\nwhen.request.url_path = \"/a\"\nrespond.text = \"x\"\n\n\
+         [[rules]]\nweight = 5\nwhen.request.url_path = \"/a\"\nrespond.text = \"y\"\n",
+    )
+    .unwrap();
+
+    for (rule, text) in [("0", "y"), ("1", "x")] {
+        let (code, _out, err) = run_full(
+            dir.path(),
+            &[
+                "set",
+                "rule",
+                "-c",
+                "apimock.toml",
+                "--rule-set",
+                "rules.toml",
+                "--rule",
+                rule,
+                "--text",
+                text,
+            ],
+        );
+        assert_eq!(code, 0, "stderr:\n{err}");
+    }
+
+    let config_path = dir
+        .path()
+        .join("apimock.toml")
+        .to_string_lossy()
+        .into_owned();
+    let config = apimock_config::Config::new(Some(&config_path), None).expect("config loads");
+    let rules = &config.service.rule_sets[0].rules;
+    assert_eq!(rules.len(), 2);
+    assert_eq!(
+        (rules[0].weight, rules[0].respond.text.as_deref()),
+        (Some(3), Some("y")),
+        "rule 0 keeps weight 3"
+    );
+    assert_eq!(
+        (rules[1].weight, rules[1].respond.text.as_deref()),
+        (Some(5), Some("x")),
+        "rule 1 keeps weight 5"
+    );
+}
+
 /// Task 018's deprecation warning must still fire once on `set`, with the
 /// `[guard]` line now preserved rather than deleted.
 #[test]

@@ -237,6 +237,14 @@ pub(crate) fn rule_table(r: &Rule) -> Table {
     if let Some(p) = r.priority {
         t.insert("priority".to_owned(), Value::Integer(i64::from(p)));
     }
+    // Task 019 R-01: inside `[[rules]]` the writer manages every field the
+    // model holds. A rule's identity is ambiguous across an edit (`set`
+    // addresses it by index, the writer pairs rows by content), so a value
+    // carried along by that pairing can land on the wrong rule. A value
+    // emitted from the model cannot.
+    if let Some(w) = r.weight {
+        t.insert("weight".to_owned(), Value::Integer(i64::from(w)));
+    }
     t.insert("when".to_owned(), Value::Table(when_table(&r.when)));
     t.insert(
         "respond".to_owned(),
@@ -450,8 +458,7 @@ fn respond_table(r: &Respond) -> Table {
 /// editable-subset target did not contain. The target is built from what
 /// the writer *models*, so every key the schema gained after the writer
 /// was written (`[listener.tls] max_connections`, `[service]
-/// max_request_body_bytes`, a rule set's `[default]`, a rule's `weight`)
-/// was silently deleted by the first `set`, and the file still validated.
+/// max_request_body_bytes`, a rule set's `[default]`) was silently deleted by the first `set`, and the file still validated.
 ///
 /// The rule is now: **the writer may only delete or rewrite keys it
 /// manages.** A key it does not list here is never touched, whatever else
@@ -584,10 +591,11 @@ static RESPOND: Owned = Owned {
     children: &[("headers", &RESPOND_HEADERS)],
     each: None,
 };
-/// A rule. `weight` is deliberately absent: the writer does not emit it,
-/// so it is not the writer's to delete.
+/// A rule. Every field the model holds is managed here (R-01): rows are
+/// paired by content, which cannot be exact, so nothing may ride along on
+/// that pairing except comments.
 static RULE: Owned = Owned {
-    keys: &["priority"],
+    keys: &["priority", "weight"],
     children: &[("when", &WHEN), ("respond", &RESPOND)],
     each: None,
 };
@@ -784,10 +792,12 @@ fn replace_item(doc: &mut dyn toml_edit::TableLike, key: &str, item: toml_edit::
 /// Reconcile a `[[rules]]`-style array of tables.
 ///
 /// Rows are matched to their previous selves by what they say, not by
-/// index (see [`match_rows`]), so a key the writer does not manage
-/// (`weight`) stays on the rule it belongs to when a rule is deleted or
-/// moved. Matching by index, as this used to, would hand a deleted
-/// rule's unmanaged keys to its neighbour.
+/// index (see [`match_rows`]). That decides one thing: which rule a
+/// *comment* stays with when a rule is deleted or moved. It carries no
+/// values. Inside a rule the writer manages every field the model holds
+/// (R-01), because the match cannot be exact: two rules that briefly look
+/// alike tie, and a value carried across a tie can land on the wrong rule.
+/// A tie can put a comment on the wrong rule, which is cosmetic.
 fn reconcile_array_of_tables(
     doc: &mut dyn toml_edit::TableLike,
     key: &str,
@@ -873,7 +883,10 @@ fn existing_rows(item: &toml_edit::Item) -> Vec<toml_edit::Table> {
 /// pairs are the same rule edited. Pairs are taken best-first, each row
 /// used once, so the choice does not depend on how many rules were added
 /// or removed around it. A target row that shares nothing with any
-/// leftover row is a new rule and starts with no unmanaged keys.
+/// leftover row is a new rule and starts with no comments or unmanaged keys.
+/// The match is a heuristic and ties are possible (two rules that differ in
+/// nothing the writer reads); nothing that changes behaviour may depend on
+/// it, which is why a rule's fields are all managed (R-01).
 fn match_rows(
     existing: &[toml_edit::Table],
     target: &[&Table],
@@ -1345,18 +1358,20 @@ respond = { text = \"ok\", future_respond = 1 }
         let original = "\
 [[rules]]
 priority = 3
-weight = 7 # keep-weight
+weight = 7
+future_rule = 7 # keep-future
 when.request.url_path = \"/x\"
 respond = { text = \"ok\", status = 201, delay_response_milliseconds = 5 }
 ";
-        // The model cleared priority, status and the delay.
+        // The model cleared priority, weight, status and the delay.
         let target =
             table_of("[[rules]]\nwhen.request.url_path = \"/x\"\nrespond = { text = \"ok\" }\n");
         let out = apply_in_place(original, &target, rule_set_owned()).unwrap();
         assert!(!out.contains("priority"), "{out}");
+        assert!(!out.contains("weight"), "{out}");
         assert!(!out.contains("status"), "{out}");
         assert!(!out.contains("delay_response_milliseconds"), "{out}");
-        assert!(out.contains("weight = 7 # keep-weight"), "{out}");
+        assert!(out.contains("future_rule = 7 # keep-future"), "{out}");
         assert!(out.contains("text = \"ok\""), "{out}");
     }
 
@@ -1508,6 +1523,39 @@ port = 3001 # beside-port
 
     const MAXIMAL_ROOT: &str = include_str!("../tests/fixtures/maximal/apimock.toml");
     const MAXIMAL_RULE_SET: &str = include_str!("../tests/fixtures/maximal/rules.toml");
+
+    /// R-01. Inside `[[rules]]` the writer must emit every field the model
+    /// holds, because a value it does not emit can only survive a save by
+    /// riding along on the row pairing, and that pairing is a heuristic. The
+    /// fixture sets every rule-level key the docs list (and a docs-driven
+    /// test keeps it that way), so a rule key the writer does not emit for
+    /// the loaded model shows up here as a difference, instead of as a value
+    /// silently lost or moved to another rule. This is the test that would
+    /// have caught `weight`.
+    #[test]
+    fn every_rule_key_the_fixture_sets_is_emitted_for_the_loaded_model() {
+        let owned_rule = rule_set_owned().below("rules");
+
+        let raw = table_of(MAXIMAL_RULE_SET);
+        let mut in_file = std::collections::BTreeSet::new();
+        for row in raw["rules"].as_array().unwrap() {
+            emitted_paths(row.as_table().unwrap(), owned_rule, "rules", &mut in_file);
+        }
+
+        let model: RuleSet = toml::from_str(MAXIMAL_RULE_SET).expect("rule-set fixture");
+        let emitted_table = rule_set_table(&model);
+        let mut emitted = std::collections::BTreeSet::new();
+        for row in emitted_table["rules"].as_array().unwrap() {
+            emitted_paths(row.as_table().unwrap(), owned_rule, "rules", &mut emitted);
+        }
+
+        let unemitted: Vec<_> = in_file.difference(&emitted).collect();
+        assert!(
+            unemitted.is_empty(),
+            "the fixture sets these rule keys but the writer does not emit them for the \
+             loaded model, so a save cannot keep them attached to their rule: {unemitted:?}"
+        );
+    }
 
     /// The ownership tree and the emitters are one description of what
     /// the writer manages, written twice. This keeps them in step in both
