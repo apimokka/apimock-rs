@@ -1,7 +1,7 @@
 # RFC 085 — How a strategy is spelled, and a writer that cannot spell it
 
-**Status.** Proposed — **awaiting the owner's choice among the options
-in § 3.** The writer fix in § 2 is needed under every option.
+**Status.** **Accepted — owner approved 2026-10-07: § 2 plus Option B**,
+the architect's recommendation. Ready for an implementer.
 **Tracks.** Configuration usability; a pre-existing library defect.
 Found by the dev team in task 019 (their Q1); the documentation half
 was found in the architect's review.
@@ -10,7 +10,7 @@ was found in the architect's review.
 `crates/apimock-config/src/workspace/edit/root_setting.rs`,
 `crates/apimock-config/src/view.rs`, `docs/src/reference/rule-set-schema.md`,
 `docs/src/reference/apimock-toml-root-settings.md`, the strategy guide.
-**Not a 6.3.0 blocker.** Library-only, and the failure is loud.
+**Not a 6.3.0 blocker** (6.3.0 shipped without it). Library-only, and the failure is loud.
 
 ## 1. What is wrong today
 
@@ -77,7 +77,7 @@ strategy "weighted_random" takes options, so it is written as a table:
   "the defaults" — remains the only way to ask for the defaults, and
   that is a shape a user can reasonably misread.
 
-### Option B — accept the bare name as "that strategy, default options" *(recommended)*
+### Option B — accept the bare name as "that strategy, default options" *(chosen)*
 
 `strategy = "weighted_random"` loads as `WeightedRandom { seed: None }`.
 The table form keeps working, and is needed only to set an option. The
@@ -171,6 +171,9 @@ that is actually broken.
 
 ## 6. Unresolved
 
-1. **Which option?** The owner's.
-2. **Release.** Not 6.3.0. The next minor, or earlier only if a GUI
-   starts saving strategies first.
+1. ~~**Which option?**~~ **Decided 2026-10-07: § 2 plus Option B.**
+   Option E stays deferred until a GUI needs to set a `seed` or a
+   `tiebreaker`.
+2. ~~**Release.**~~ **The next minor (6.4.0).** It widens the syntax
+   the loader accepts, which is a feature, not a patch. 6.3.0 shipped
+   without it.

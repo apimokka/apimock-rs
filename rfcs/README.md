@@ -24,7 +24,6 @@ depends-on, and the rest of the planned portfolio.
 
 | RFC | Title | Blocking |
 |---|---|---|
-| 085 | [How a strategy is spelled](./proposed/085-strategy-spelling.md) — and a writer that cannot spell it | Owner's choice among options A–F |
 | 083 | [Publish without a click](./proposed/083-publish-without-a-click.md) — **on hold**, premise measured false | Do not implement; see its amendment note |
 
 > **083 is on hold.** Written for issue
@@ -49,6 +48,7 @@ ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 |---|---|---|
 | 082 | [Match the methods users actually send (PATCH)](./accepted/082-match-the-methods-users-actually-send.md) — + Amendment 1: the refusal says *why* a method is excluded | **Implemented** `2184372`; ships in 6.3.0 |
 | 084 | [Assert the release notes are *true*](./accepted/084-assert-the-notes-are-true.md) — not merely present | Continuously published — a CI gate, no version bump |
+| 085 | [How a strategy is spelled](./accepted/085-strategy-spelling.md) — accept the bare name; a writer that only writes what loads | Next minor (6.4.0) |
 
 > **082** — approved **2026-10-06** with Amendment 1, implemented the
 > same day. Closes the external audit's **F-06**, the last open
