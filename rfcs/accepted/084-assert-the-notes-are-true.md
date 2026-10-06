@@ -132,8 +132,9 @@ for fewer manual steps, and it **loosens no gate**: the owner still
 publishes every Tier B release.
 
 Today the owner opens a draft and has to work out for themselves whether
-it is sound. Instead, the build phase posts — on the draft Release
-itself, where the decision is actually made — a short block stating:
+it is sound. Instead, the build phase posts — **to the build-phase
+run's job summary**, linked by run id (see the correction below) — a
+short block stating:
 
 - the **tier**, with each of RFC 081 § 2's four conditions and its
   result
@@ -152,6 +153,22 @@ the notes' unmachine-checkable parts fair?*
 enforced and which remain trusted prose (§ 4). A summary that reads as
 "verified" when prose was never judged would be the same defect class
 this RFC exists to remove, aimed at the owner instead of at users.
+
+> **Corrected 2026-10-06, on review of the implementation.** This
+> section originally said to post the block *"on the draft Release
+> itself, where the decision is actually made"*. **That was wrong, and
+> would have broken the build phase.** The only writable part of a
+> draft is its body, and `assert-draft-release` compares the body to
+> the CHANGELOG section strictly
+> (`.github/workflows/release-executable.yaml:335`,
+> `[ "$EXPECTED_NOTES" != "$ACTUAL_NOTES" ]`). A CI block there makes
+> them differ and fails the workflow it sits in. It would also publish
+> internal assertion text to crates.io at the click. The implementer
+> caught it and used the job summary instead, which is where
+> `RELEASING.md` already sends the owner to confirm the build phase is
+> green by run id. **Do not "fix" the implementation back to the
+> original wording.** Review:
+> `.git-exclude/reviewed/084-assert-notes-are-true/REVIEW-001.md`.
 
 ## Testing and verification
 
