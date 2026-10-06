@@ -30,7 +30,12 @@ Approved by the project owner: the design is settled and an implementer
 may start. An RFC sits here from approval until the version carrying it
 ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 
-*(None open.)*
+| RFC | Title | Ships how |
+|---|---|---|
+| 082 | [Match the methods users actually send (PATCH)](./accepted/082-match-the-methods-users-actually-send.md) — + Amendment 1: the refusal says *why* a method is excluded | Next minor |
+
+> Approved **2026-10-06** with Amendment 1. Closes the external audit's
+> **F-06**, the last open user-visible finding from it.
 
 > **What was here.** Twenty RFCs shipped in **6.0.0** (2026-08-28).
 > Eleven moved to `done/` on 2026-09-07 and the last five on

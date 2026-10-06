@@ -1,6 +1,7 @@
 # RFC 082 — Match the methods users actually send (PATCH), and stop advertising ones we cannot
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted — owner approved 2026-10-06**, together with
+Amendment 1. Ready for an implementer.
 **Tracks.** Functionality. External audit 2026-09-01, **F-06** — the last
 open user-visible finding from that audit.
 **Touches.**
@@ -28,7 +29,9 @@ refuse the PATCH a user just configured.
 **Deliberately not adding `Head` or `Options`**, which F-06 also names.
 Each needs a behaviour decision beyond matching, and shipping either as
 a matcher alone would create a rule that looks right and does the wrong
-thing. § 4 states both, as owner questions rather than silent omissions.
+thing. § 4 states both, and both were decided on approval — see
+§ Unresolved questions. Amendment 1 makes the refusal explain each
+exclusion to the user rather than leaving it in the docs.
 
 ## Motivation
 
@@ -153,8 +156,9 @@ without also suppressing the response body would let
 `respond.text = "..."` answer a HEAD request with content, which clients
 and proxies are entitled to mishandle.
 
-Both are genuine gaps; neither is a matcher change. **Owner questions in
-§ Unresolved.**
+Both are genuine gaps; neither is a matcher change. **Both decided on
+approval 2026-10-06** — see § Unresolved questions. Amendment 1 carries
+these two reasons into the refusal message itself.
 
 ### 5. API impact — declared, not avoided
 
@@ -197,20 +201,152 @@ round-trip `--method PATCH`).
 | Risk | Mitigation |
 |---|---|
 | A consumer's exhaustive `match` on `HttpMethod` stops compiling | Declared in the baseline and in the migration guide, with the `_`-arm fix stated. One-time, by design — that is what `#[non_exhaustive]` buys. |
-| Closing PATCH makes HEAD/OPTIONS look finished | § 4 states both as open, and the schema docs will say which methods are matchable and why OPTIONS is not. |
+| Closing PATCH makes HEAD/OPTIONS look finished | **Amendment 1 is the mitigation**: the refusal for `HEAD`/`OPTIONS` names the reason, so a user meets it in the error rather than only in the docs. The schema docs state which methods are matchable and why OPTIONS is not. |
 | PATCH added to the matcher but not to `allow-methods` | § 2 is in scope precisely so this cannot happen. |
 
 ## Unresolved questions
 
-1. **`Head` — add it, with body suppression?** Matching HEAD is only
-   correct if the response body is dropped. Recommend doing both, in a
-   separate RFC, rather than shipping a matcher that invites an invalid
-   response. The owner may prefer it folded in here.
-2. **`Options` — should a rule be able to answer a preflight?** Today
-   the built-in handler owns OPTIONS unconditionally. Letting a rule
-   take precedence is a CORS-visible behaviour change and wants its own
-   decision. Recommend leaving preflight authoritative and documenting
-   it.
+**1 and 2 were decided on approval, 2026-10-06; 3 remains open.**
+
+1. ~~**`Head` — add it, with body suppression?**~~ **Decided
+   2026-10-06: a separate RFC, and it must carry body suppression with
+   it.** A HEAD matcher alone would let `respond.text` answer a HEAD
+   request with a body HTTP forbids — a rule that looks right and
+   responds invalidly. Not in this RFC's scope; Amendment 1 instead makes
+   the *refusal* say why HEAD is absent.
+2. ~~**`Options` — should a rule be able to answer a preflight?**~~
+   **Decided 2026-10-06: preflight stays authoritative**, and the schema
+   docs say so. Letting a rule outrank the built-in handler is a
+   CORS-visible behaviour change; nothing has asked for it. Amendment 1
+   makes the refusal explain this rather than leaving the user to guess.
 3. **Does `DEFAULT_ALLOWED_METHODS` belong in config at all?** It is a
    constant today. Out of scope here; noted because this RFC is the
    first thing to need it changed.
+
+---
+
+## Amendment 1 — adopted 2026-10-06: the refusal must say *why*, not just *what*
+
+**Adopted — owner approved 2026-10-06.** Raised by the architect during
+a self-review against the owner's stated design philosophy, before the
+owner's review. **This widens the RFC's scope**; it is recorded as an
+amendment rather than folded silently into § Design.
+
+### The gap
+
+The body above closes PATCH and leaves HEAD and OPTIONS out with
+reasons stated in § 4 — but those reasons reach the user **only if they
+read the schema docs**. What they actually hit is serde's generic
+refusal:
+
+```
+unknown variant `OPTIONS`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`
+```
+
+That names the valid set and says nothing about **intent**. The user
+cannot tell whether OPTIONS is an oversight or a decision, so the
+reasonable inference is that apimock is incomplete — and the likeliest
+next action is to file F-06 again.
+
+By the project owner's second clause — *APIs and UI/UX for users not to
+be confused or misunderstand* — this is a defect even though the code
+behaves correctly and the refusal is already loud and enumerated. A
+message that is accurate about the valid set and silent about intent
+still leaves the user with a wrong belief.
+
+### The design
+
+Refuse with the enumerated set **plus the reason**, for every method we
+deliberately do not match:
+
+```
+unknown variant `OPTIONS`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`
+  — OPTIONS is answered by the built-in CORS preflight handler before rule
+    sets are consulted, so it cannot be matched by a rule
+```
+
+Implement by replacing the `Deserialize` derive with
+`#[serde(try_from = "String")]` and a `TryFrom<String>` impl, driven by
+two `const` tables:
+
+```rust
+/// The single source of truth for what config accepts. The refusal
+/// message is generated from this, so the two cannot drift.
+const MATCHABLE: [(&str, HttpMethod); 5] = [
+    ("GET", HttpMethod::Get),
+    ("POST", HttpMethod::Post),
+    ("PUT", HttpMethod::Put),
+    ("DELETE", HttpMethod::Delete),
+    ("PATCH", HttpMethod::Patch),
+];
+
+/// Methods a user will plausibly try that we deliberately do not match,
+/// each with the reason the refusal quotes.
+const NOT_MATCHABLE: [(&str, &str); 4] = [
+    ("OPTIONS", "answered by the built-in CORS preflight handler before \
+                 rule sets are consulted, so it cannot be matched by a rule"),
+    ("HEAD",    "not matchable yet: a rule could answer it with a response \
+                 body, which HTTP forbids for HEAD"),
+    ("TRACE",   "not supported; TRACE is commonly disabled as a security \
+                 measure and has no meaning for a mock server"),
+    ("CONNECT", "not supported; CONNECT is a proxy mechanism with no \
+                 meaning for a mock server"),
+];
+```
+
+- A token in `MATCHABLE` deserializes, case-sensitively, exactly as
+  today.
+- A token in `NOT_MATCHABLE` is refused with the enumerated set **and**
+  its reason.
+- Anything else — a typo — is refused with the enumerated set alone,
+  which is what `"GTE"` gets today.
+
+### Why this does not weaken § 3's rejection of option (b)
+
+§ 3 praised serde for giving the enumerated refusal *free*, and this
+amendment hand-writes it. **That argument weakens; the rejection does
+not**, because it never rested on the free message. It rested on
+behaviour: an arbitrary-token matcher lets `method = "GTE"` load clean
+and produce a rule that silently never matches, which is the RFC 069 /
+audit F-17 failure class. A hand-written message is a maintenance cost;
+a silently-never-matching rule is a wrong answer to a user. Those are
+not the same kind of thing.
+
+### Drift, which is this repo's own repeated defect
+
+A hand-maintained list that must track a variant set is exactly the
+mechanism behind the duplicated-validator findings. Three things hold it
+in place:
+
+1. `MATCHABLE` is the **only** list; the message is generated from it.
+2. `as_str` stays an exhaustive `match`, so **the compiler** rejects a
+   new variant that does not handle it.
+3. A test asserts every `MATCHABLE` entry round-trips —
+   `parse(s).as_str() == s` — and that the refusal text lists exactly
+   `MATCHABLE`'s keys.
+
+The one residual gap is adding a variant and forgetting `MATCHABLE`:
+that variant would simply be unconfigurable, and § Testing already
+requires a loading test per matchable method, which would fail.
+
+### Deliberate non-change, flagged
+
+**Config stays case-sensitive.** Today `rename_all = "UPPERCASE"`
+accepts `"PATCH"` and refuses `"patch"`, while `is_match` is
+case-*insensitive* on the wire. Hand-rolling the parse makes accepting
+`"patch"` nearly free, and it is arguably friendlier — but it widens
+accepted config syntax beyond this RFC's subject, and the inconsistency
+is pre-existing rather than introduced here. **Left exactly as it is**,
+and recorded as a candidate question rather than quietly changed.
+
+### Acceptance, added to § Testing and verification
+
+- `method = "OPTIONS"` and `method = "HEAD"` are each refused with a
+  message containing both the enumerated set and that method's reason —
+  **quote both messages verbatim** in the review package.
+- `method = "GTE"` is refused with the enumerated set and **no**
+  reason clause, unchanged from today.
+- `method = "patch"` is still refused — the non-change above, pinned so
+  it cannot drift silently.
+- The refusal text's method list is generated, not literal: a test
+  proves it equals `MATCHABLE`'s keys.
