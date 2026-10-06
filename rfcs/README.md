@@ -24,6 +24,7 @@ depends-on, and the rest of the planned portfolio.
 
 | RFC | Title | Blocking |
 |---|---|---|
+| 085 | [How a strategy is spelled](./proposed/085-strategy-spelling.md) — and a writer that cannot spell it | Owner's choice among options A–F |
 | 083 | [Publish without a click](./proposed/083-publish-without-a-click.md) — **on hold**, premise measured false | Do not implement; see its amendment note |
 
 > **083 is on hold.** Written for issue
