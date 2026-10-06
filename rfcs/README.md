@@ -24,17 +24,8 @@ depends-on, and the rest of the planned portfolio.
 
 | RFC | Title | Blocking |
 |---|---|---|
-| 084 | [Assert the release notes are *true*](./proposed/084-assert-the-notes-are-true.md) — not merely present | Owner approval |
 | 083 | [Publish without a click](./proposed/083-publish-without-a-click.md) — **on hold**, premise measured false | Do not implement; see its amendment note |
 
-> **084** is the live one. CI already asserts a release's notes *equal*
-> its CHANGELOG section; nothing asserts the section is *accurate*, and
-> that gap is the whole remaining content of the publish click. Each
-> assertion it adds traces to a real incident here: an unapproved
-> API-stability promise that stood published for weeks, a draft
-> declaring versions unaffected by an advisory they were vulnerable to,
-> and prose dependency versions that `version.sh` never reads.
->
 > **083 is on hold.** Written for issue
 > [#82](https://github.com/apimokka/apimock-rs/issues/82), and its
 > reasoning about the Tier A click stands — but Tier A has **never
@@ -55,10 +46,22 @@ ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 
 | RFC | Title | Ships how |
 |---|---|---|
-| 082 | [Match the methods users actually send (PATCH)](./accepted/082-match-the-methods-users-actually-send.md) — + Amendment 1: the refusal says *why* a method is excluded | Next minor |
+| 082 | [Match the methods users actually send (PATCH)](./accepted/082-match-the-methods-users-actually-send.md) — + Amendment 1: the refusal says *why* a method is excluded | **Implemented** `2184372`; ships in 6.3.0 |
+| 084 | [Assert the release notes are *true*](./accepted/084-assert-the-notes-are-true.md) — not merely present | Continuously published — a CI gate, no version bump |
 
-> Approved **2026-10-06** with Amendment 1. Closes the external audit's
-> **F-06**, the last open user-visible finding from it.
+> **082** — approved **2026-10-06** with Amendment 1, implemented the
+> same day. Closes the external audit's **F-06**, the last open
+> user-visible finding from it.
+>
+> **084** — approved **2026-10-06**. CI already asserts a release's
+> notes *equal* its CHANGELOG section; nothing asserts the section is
+> *accurate*, and that gap is the whole remaining content of the publish
+> click. Each assertion traces to a real incident here: an unapproved
+> API-stability promise that stood published for weeks, a draft
+> declaring versions unaffected by an advisory they were vulnerable to,
+> and prose dependency versions that `version.sh` never reads. On
+> approval it also absorbed RFC 083's Tier B summary (§ 5), which
+> loosens no gate — a scope widening recorded in its § Unresolved 2.
 
 > **What was here.** Twenty RFCs shipped in **6.0.0** (2026-08-28).
 > Eleven moved to `done/` on 2026-09-07 and the last five on

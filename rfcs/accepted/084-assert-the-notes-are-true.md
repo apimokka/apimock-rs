@@ -1,6 +1,7 @@
 # RFC 084 — Assert the release notes are *true*, not merely present
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Accepted — owner approved 2026-10-06**, together with the
+architect's recommendation on § Unresolved 1. Ready for an implementer.
 **Tracks.** Release process. Strengthens [RFC 081](../done/081-tiered-release-confirmation.md)
 § 3 rather than widening § 2.
 **Touches.** `.github/workflows/release-executable.yaml`, a new
@@ -120,8 +121,37 @@ Two steps, in order, neither of which loosens a gate:
    so the owner confirms a summary instead of conducting an
    investigation.
 
-[RFC 083](./083-publish-without-a-click.md) stays proposed and should
+[RFC 083](../proposed/083-publish-without-a-click.md) stays proposed and should
 not be implemented on a manufactured premise.
+
+### 5. The Tier B confirmation becomes a summary, not an investigation
+
+**Added on approval, 2026-10-06** — moved here from RFC 083, which is on
+hold. This is the part that most directly answers the owner's request
+for fewer manual steps, and it **loosens no gate**: the owner still
+publishes every Tier B release.
+
+Today the owner opens a draft and has to work out for themselves whether
+it is sound. Instead, the build phase posts — on the draft Release
+itself, where the decision is actually made — a short block stating:
+
+- the **tier**, with each of RFC 081 § 2's four conditions and its
+  result
+- `assert-draft-release`'s outcome: the five assets, and notes ==
+  CHANGELOG
+- **this RFC's assertions**, itemised: the API claim, each advisory ID
+  resolved, each dependency version checked
+- the build-phase **run id**, so "green on the tag" is a link rather
+  than an instruction to go and confirm by hand
+
+Then the click is confirming a summary that CI stands behind, which is
+the manual step actually worth keeping: *should this go out now, and are
+the notes' unmachine-checkable parts fair?*
+
+**It must not overstate.** The block says plainly which claims were
+enforced and which remain trusted prose (§ 4). A summary that reads as
+"verified" when prose was never judged would be the same defect class
+this RFC exists to remove, aimed at the owner instead of at users.
 
 ## Testing and verification
 
@@ -150,9 +180,14 @@ not be implemented on a manufactured premise.
 
 ## Unresolved questions
 
-1. **Should § 2's unaffectedness rule ship on, or off, first?** Starting
-   on is my recommendation and the safer default; the owner may prefer a
-   release of observation first.
-2. **Does the Tier B summary comment belong here or in RFC 083?** It is
-   the part that most directly answers the owner's request and it
-   loosens nothing, so it could ship independently of either RFC.
+1. ~~**Should § 2's unaffectedness rule ship on, or off, first?**~~
+   **Decided 2026-10-06: it ships ON.** Erring towards a failed build
+   beats erring towards a permanent public claim — a build failure is
+   fixed by correcting the CHANGELOG and re-tagging, while a wrong
+   unaffectedness statement on crates.io cannot be withdrawn. If it
+   proves too blunt in practice, narrowing it is a cheap amendment.
+2. ~~**Does the Tier B summary comment belong here or in RFC 083?**~~
+   **Decided 2026-10-06: here — see § 5.** RFC 083 is on hold, so
+   leaving it there would orphan the one piece that most directly
+   answers the owner's request. **This widens § Design, and is recorded
+   rather than folded in silently.**

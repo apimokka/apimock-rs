@@ -2,7 +2,7 @@
 
 **Status.** Proposed — **on hold, and not to be implemented as it
 stands.** See § Amendment note below: its premise was measured after
-drafting and is false. [RFC 084](./084-assert-the-notes-are-true.md) is
+drafting and is false. [RFC 084](../accepted/084-assert-the-notes-are-true.md) is
 the route taken instead.
 **Tracks.** Release process. Closes issue
 [#82](https://github.com/apimokka/apimock-rs/issues/82) — *"ci: cargo
@@ -290,7 +290,7 @@ permanent.
 
 ### What replaces it
 
-[RFC 084](./084-assert-the-notes-are-true.md): make CI assert the
+[RFC 084](../accepted/084-assert-the-notes-are-true.md): make CI assert the
 notes' machine-checkable claims, so the click's remaining content stops
 resting on the architect reviewing the architect's prose. Then the gate
 can shrink **on evidence**.
