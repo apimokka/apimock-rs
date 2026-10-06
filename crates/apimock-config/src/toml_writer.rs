@@ -54,6 +54,7 @@ use apimock_routing::{
         },
     },
 };
+use apimock_routing::{Strategy, strategy::PriorityTiebreaker};
 use toml::{Value, value::Table};
 
 use crate::{Config, ListenerConfig, ServiceConfig, config::log_config::LogConfig};
@@ -121,7 +122,7 @@ pub(crate) fn rule_set_table(rule_set: &RuleSet) -> Table {
 
     // RFC 025: per-rule-set strategy override.
     if let Some(strategy) = rule_set.strategy.as_ref() {
-        root.insert("strategy".to_owned(), Value::String(strategy.to_string()));
+        root.insert("strategy".to_owned(), strategy_value(strategy));
     }
 
     if !rule_set.rules.is_empty() {
@@ -146,6 +147,51 @@ fn render_table_pretty(root: &Table) -> String {
 // Each returns a `toml::Table` rather than a `Value` so callers can
 // decide whether to skip empty tables.
 // -------------------------------------------------------------------
+
+/// The spelling of a strategy the writer emits (RFC 085 § 2): the shortest
+/// form that loads and gives back the same strategy. The bare name when
+/// every option is at its default; the table form, with its options, when
+/// any is not.
+///
+/// The writer used to emit every strategy as its bare name. Before RFC 085
+/// that did not load for three of the five, and for any non-default `seed`
+/// or `tiebreaker` it would have dropped the option.
+///
+/// `Strategy` is `#[non_exhaustive]`, so a strategy added later falls to
+/// the bare name, which is what `Display` gives it; `tests::every_strategy_round_trips`
+/// is where such a variant must be added.
+pub(crate) fn strategy_value(strategy: &Strategy) -> Value {
+    let with_option = |name: &str, key: &str, value: Value| {
+        let mut options = Table::new();
+        options.insert(key.to_owned(), value);
+        let mut outer = Table::new();
+        outer.insert(name.to_owned(), Value::Table(options));
+        Value::Table(outer)
+    };
+    match strategy {
+        // A TOML integer is an i64, so a seed above `i64::MAX` cannot be
+        // written, and no file can hold one to be loaded either. No editor
+        // command sets a seed, so this is unreachable in practice.
+        Strategy::UniformRandom { seed: Some(n) } => with_option(
+            "uniform_random",
+            "seed",
+            Value::Integer(i64::try_from(*n).unwrap_or(i64::MAX)),
+        ),
+        Strategy::WeightedRandom { seed: Some(n) } => with_option(
+            "weighted_random",
+            "seed",
+            Value::Integer(i64::try_from(*n).unwrap_or(i64::MAX)),
+        ),
+        Strategy::Priority {
+            tiebreaker: PriorityTiebreaker::UniformRandom,
+        } => with_option(
+            "priority",
+            "tiebreaker",
+            Value::String("uniform_random".to_owned()),
+        ),
+        other => Value::String(other.to_string()),
+    }
+}
 
 fn listener_table(l: &ListenerConfig) -> Table {
     let mut t = Table::new();
@@ -212,10 +258,7 @@ fn file_tree_view_table(c: &crate::config::file_tree_config::FileTreeViewConfig)
 fn service_table(s: &ServiceConfig) -> Table {
     let mut t = Table::new();
     if let Some(strategy) = s.strategy.as_ref() {
-        t.insert(
-            "strategy".to_owned(),
-            Value::String(format!("{}", strategy)),
-        );
+        t.insert("strategy".to_owned(), strategy_value(strategy));
     }
     if let Some(paths) = s.rule_sets_file_paths.as_ref() {
         let arr: Vec<Value> = paths.iter().map(|p| Value::String(p.clone())).collect();
@@ -751,6 +794,10 @@ fn reconcile_table(doc: &mut dyn toml_edit::TableLike, target: &Table, owned: &O
 
     for (key, value) in target.iter() {
         let below = owned.below(key);
+        if key == STRATEGY_KEY && owned.keys.contains(&STRATEGY_KEY) {
+            reconcile_strategy(doc, key, value);
+            continue;
+        }
         match value {
             Value::Table(sub) => reconcile_subtable(doc, key, sub, below),
             Value::Array(items) if is_table_array(items) => {
@@ -758,6 +805,88 @@ fn reconcile_table(doc: &mut dyn toml_edit::TableLike, target: &Table, owned: &O
             }
             leaf => set_scalar(doc, key, edit_value_from_leaf(leaf)),
         }
+    }
+}
+
+/// The key a strategy is written under, at the root's `[service]` and at the
+/// top of a rule-set file. Both are the same type, so both are handled by
+/// [`reconcile_strategy`].
+const STRATEGY_KEY: &str = "strategy";
+
+/// Reconcile a strategy against what the file already says.
+///
+/// A strategy is a bare name or a table, and the target can be either, so
+/// it cannot go through the leaf or table paths: a table target reconciled
+/// key by key would leave the old variant's key behind next to the new one.
+///
+/// **The comparison is on the whole model, not the variant name** (task 019
+/// compared names, which was safe only while the writer could not carry
+/// options; with options, comparing names would silently ignore a changed
+/// `seed` or `tiebreaker`). Both sides are loaded with the real loader and
+/// compared as strategies:
+///
+/// - **unchanged**: the line is left exactly as the user wrote it, bare or
+///   table, comment included, so an unrelated `set` never rewrites it
+///   (`{ weighted_random = {} }` and `"weighted_random"` are the same
+///   strategy and neither is touched);
+/// - **changed** or unreadable: it is replaced with the shortest spelling
+///   from [`strategy_value`], keeping the trailing comment.
+fn reconcile_strategy(doc: &mut dyn toml_edit::TableLike, key: &str, target: &Value) {
+    if let Some(item) = doc.get_mut(key) {
+        if strategy_is_unchanged(item, target) {
+            return;
+        }
+        let decor = item.as_value().map(|old| old.decor().clone());
+        let mut new_value = inline_value(target);
+        if let Some(decor) = decor {
+            *new_value.decor_mut() = decor;
+        }
+        *item = toml_edit::Item::Value(new_value);
+        return;
+    }
+    doc.insert(key, toml_edit::Item::Value(inline_value(target)));
+}
+
+fn strategy_is_unchanged(existing: &toml_edit::Item, target: &Value) -> bool {
+    let Some(old) = plain_value(existing) else {
+        return false;
+    };
+    match (
+        old.try_into::<Strategy>(),
+        target.clone().try_into::<Strategy>(),
+    ) {
+        // `Strategy` has no `PartialEq`; its derived `Debug` shows every
+        // option, so equal text is an equal strategy.
+        (Ok(a), Ok(b)) => format!("{a:?}") == format!("{b:?}"),
+        _ => false,
+    }
+}
+
+/// An item as a plain `toml::Value`, every key kept (unlike [`project`],
+/// which keeps only what the writer manages).
+fn plain_value(item: &toml_edit::Item) -> Option<Value> {
+    if let Some(table) = item.as_table_like() {
+        let mut out = Table::new();
+        for (key, child) in table.iter() {
+            out.insert(key.to_owned(), plain_value(child)?);
+        }
+        return Some(Value::Table(out));
+    }
+    item.as_value().and_then(value_from_edit)
+}
+
+/// A `toml::Value` as an inline value, tables included, so a strategy table
+/// is written as `{ weighted_random = { seed = 7 } }` on the key's own line.
+fn inline_value(value: &Value) -> toml_edit::Value {
+    match value {
+        Value::Table(table) => {
+            let mut inline = toml_edit::InlineTable::new();
+            for (key, child) in table {
+                inline.insert(key, inline_value(child));
+            }
+            toml_edit::Value::InlineTable(inline)
+        }
+        leaf => edit_value_from_leaf(leaf),
     }
 }
 
@@ -1013,23 +1142,10 @@ fn set_scalar(doc: &mut dyn toml_edit::TableLike, key: &str, mut new_value: toml
 
 /// Whether the existing item already says what `new` says.
 ///
-/// Two spellings count as the same: a value equal in meaning (`'a'` and
-/// `"a"`), and a strategy written as a table
-/// (`strategy = { weighted_random = { seed = 7 } }`) when the target
-/// names the same variant. The target models a strategy as its bare name,
-/// so it cannot say `seed`; overwriting would silently drop it, and for
-/// `priority` it would turn a valid table into a bare string, which does
-/// not load.
+/// A value equal in meaning counts as the same (`'a'` and `"a"`). A
+/// strategy is not a leaf and is handled by [`reconcile_strategy`].
 fn leaf_is_unchanged(existing: &toml_edit::Item, new: &toml_edit::Value) -> bool {
-    if let Some(old) = existing.as_value()
-        && same_value(old, new)
-    {
-        return true;
-    }
-    if let (Some(table), Some(name)) = (existing.as_table_like(), new.as_str()) {
-        return table.len() == 1 && table.iter().next().is_some_and(|(key, _)| key == name);
-    }
-    false
+    existing.as_value().is_some_and(|old| same_value(old, new))
 }
 
 fn same_value(a: &toml_edit::Value, b: &toml_edit::Value) -> bool {
@@ -1082,6 +1198,12 @@ fn edit_value_from_leaf(value: &Value) -> toml_edit::Value {
 /// no prior formatting to preserve.
 fn fill_table(dst: &mut toml_edit::Table, src: &Table) {
     for (key, value) in src.iter() {
+        // A strategy is one value, in the same inline spelling
+        // `reconcile_strategy` writes into an existing file.
+        if key == STRATEGY_KEY {
+            dst.insert(key, toml_edit::Item::Value(inline_value(value)));
+            continue;
+        }
         match value {
             Value::Table(sub) => {
                 let mut nested = toml_edit::Table::new();
@@ -1416,75 +1538,187 @@ port = 3001 # beside-port
         assert_eq!(out, "[listener]\n# above-port\nport = 4000 # beside-port\n");
     }
 
-    /// A strategy written as a table keeps its parameters when the model
-    /// names the same variant. The model holds only the name, so
-    /// overwriting would drop `seed`, and for `priority` it would turn a
-    /// table that loads into a bare string that does not.
+    /// RFC 085 § 2, and task 019's strategy guard made whole-model. An
+    /// existing strategy whose model is unchanged is left exactly as the
+    /// user wrote it, in whichever spelling, comment included.
     #[test]
-    fn a_strategy_table_survives_when_the_variant_is_unchanged() {
-        let original = "strategy = { priority = { tiebreaker = \"uniform_random\" } } # keep\n";
-        let target = table_of("strategy = \"priority\"\n");
-        let out = apply_in_place(original, &target, rule_set_owned()).unwrap();
-        assert_eq!(out, original);
+    fn an_unchanged_strategy_is_left_exactly_as_written_in_either_spelling() {
+        for original in [
+            "strategy = { priority = { tiebreaker = \"uniform_random\" } } # keep\n",
+            "strategy = { weighted_random = {} } # keep\n",
+            "strategy = { weighted_random = { seed = 7 } } # keep\n",
+            "strategy = \"weighted_random\" # keep\n",
+            "strategy = \"priority\"\n",
+            "[strategy.weighted_random]\nseed = 7\n",
+        ] {
+            let model: Strategy = toml::from_str::<Holder>(original).unwrap().strategy;
+            let target = single("strategy", strategy_value(&model));
+            let out = apply_in_place(original, &target, rule_set_owned()).unwrap();
+            assert_eq!(out, original, "an unrelated save rewrote {original:?}");
+        }
+    }
 
-        // A real change is still a change.
-        let target = table_of("strategy = \"round_robin\"\n");
+    #[derive(serde::Deserialize)]
+    struct Holder {
+        strategy: Strategy,
+    }
+
+    fn single(key: &str, value: Value) -> Table {
+        let mut t = Table::new();
+        t.insert(key.to_owned(), value);
+        t
+    }
+
+    /// A changed option is written, not dropped. No editor command sets a
+    /// seed, so the model is changed directly: 7 becomes 8.
+    #[test]
+    fn a_changed_seed_or_tiebreaker_is_written_not_dropped() {
+        let original = "strategy = { weighted_random = { seed = 7 } } # keep\n";
+        let target = single(
+            "strategy",
+            strategy_value(&Strategy::WeightedRandom { seed: Some(8) }),
+        );
+        let out = apply_in_place(original, &target, rule_set_owned()).unwrap();
+        assert_eq!(
+            out,
+            "strategy = { weighted_random = { seed = 8 } } # keep\n"
+        );
+
+        // Comparing variant names (task 019) would have called these the
+        // same strategy and left the 7 in place.
+        let original = "strategy = { priority = { tiebreaker = \"first_match\" } }\n";
+        let target = single(
+            "strategy",
+            strategy_value(&Strategy::Priority {
+                tiebreaker: PriorityTiebreaker::UniformRandom,
+            }),
+        );
+        let out = apply_in_place(original, &target, rule_set_owned()).unwrap();
+        assert_eq!(
+            out,
+            "strategy = { priority = { tiebreaker = \"uniform_random\" } }\n"
+        );
+    }
+
+    /// Changing the variant replaces the whole value: no key of the old
+    /// variant is left beside the new one, and the comment stays.
+    #[test]
+    fn changing_the_variant_replaces_the_value_and_keeps_the_comment() {
+        let original = "strategy = { weighted_random = { seed = 7 } } # keep\n";
+        let target = single("strategy", strategy_value(&Strategy::RoundRobin));
         let out = apply_in_place(original, &target, rule_set_owned()).unwrap();
         assert_eq!(out, "strategy = \"round_robin\" # keep\n");
+
+        let target = single(
+            "strategy",
+            strategy_value(&Strategy::UniformRandom { seed: Some(3) }),
+        );
+        let out = apply_in_place(original, &target, rule_set_owned()).unwrap();
+        assert_eq!(out, "strategy = { uniform_random = { seed = 3 } } # keep\n");
     }
 
-    /// `toml_edit` converts `\r\n` to `\n` on parse, so a CRLF file used to
-    /// come back LF-only with every line changed, not just the one that was
-    /// edited. Found by the Windows leg of CI on task 019's first push, where
-    /// git's `autocrlf` gives every fixture CRLF line endings.
+    /// RFC 085 § 2 and § 4: every strategy, with default and non-default
+    /// options, in every spelling that loads, at both levels (`[service]`
+    /// and a rule set): loaded, written by the writer, re-loaded, and equal
+    /// to the original; and the writer picks the shortest spelling. Add a
+    /// row here when a strategy is added: `strategy_value` falls back to the
+    /// bare name for a variant it does not know.
     #[test]
-    fn a_crlf_file_keeps_its_line_endings() {
-        let original = "# top\r\n[listener]\r\nport = 3001 # p\r\nfuture = 1 # keep\r\n\r\n[service]\r\nfallback_respond_dir = \".\"\r\n";
+    fn every_strategy_round_trips() {
+        // (spelling in the file, expected spelling the writer emits)
+        let cases: &[(&str, &str)] = &[
+            ("\"first_match\"", "\"first_match\""),
+            ("\"round_robin\"", "\"round_robin\""),
+            ("\"uniform_random\"", "\"uniform_random\""),
+            ("{ uniform_random = {} }", "\"uniform_random\""),
+            (
+                "{ uniform_random = { seed = 7 } }",
+                "{ uniform_random = { seed = 7 } }",
+            ),
+            ("\"weighted_random\"", "\"weighted_random\""),
+            ("{ weighted_random = {} }", "\"weighted_random\""),
+            (
+                "{ weighted_random = { seed = 7 } }",
+                "{ weighted_random = { seed = 7 } }",
+            ),
+            ("\"priority\"", "\"priority\""),
+            ("{ priority = {} }", "\"priority\""),
+            (
+                "{ priority = { tiebreaker = \"first_match\" } }",
+                "\"priority\"",
+            ),
+            (
+                "{ priority = { tiebreaker = \"uniform_random\" } }",
+                "{ priority = { tiebreaker = \"uniform_random\" } }",
+            ),
+        ];
+        let rule = "[[rules]]\nwhen.request.url_path = \"/a\"\nrespond.text = \"a\"\n";
+        let debug = |s: &Strategy| format!("{s:?}");
 
-        // Nothing changed: byte-identical, which a parse-and-print alone is not.
-        let target = table_of(&without_future_keys(original).replace("\r\n", "\n"));
-        let out = apply_in_place(original, &target, root_owned()).unwrap();
-        assert_eq!(out, original);
+        for (spelling, shortest) in cases {
+            // ── Rule-set level ──────────────────────────────────────────
+            let text = format!("strategy = {spelling}\n{rule}");
+            let model: RuleSet =
+                toml::from_str(&text).unwrap_or_else(|e| panic!("{spelling}: {e}"));
+            let original = debug(model.strategy.as_ref().unwrap());
 
-        // One value changed: that value changes, every line is still CRLF.
-        let mut changed = target.clone();
-        changed
-            .get_mut("listener")
-            .and_then(Value::as_table_mut)
-            .unwrap()
-            .insert("port".to_owned(), Value::Integer(4000));
-        let out = apply_in_place(original, &changed, root_owned()).unwrap();
-        assert_eq!(out, original.replace("port = 3001 # p", "port = 4000 # p"));
-        assert!(
-            !out.replace("\r\n", "").contains('\n'),
-            "bare LF in: {out:?}"
-        );
-    }
+            // The canonical render (the diff baseline) must load...
+            let canonical = render_rule_set_toml(&model);
+            let again: RuleSet = toml::from_str(&canonical).unwrap_or_else(|e| {
+                panic!("canonical render does not load for {spelling}: {e}\n{canonical}")
+            });
+            assert_eq!(
+                original,
+                debug(again.strategy.as_ref().unwrap()),
+                "{spelling}"
+            );
 
-    /// A line added to a CRLF file is CRLF too, and an LF file stays LF.
-    #[test]
-    fn added_lines_follow_the_files_line_endings() {
-        let target = table_of("[[rules]]\nwhen.request.url_path = \"/a\"\nrespond.text = \"a\"\n");
-        let crlf = apply_in_place("", &target, rule_set_owned()).unwrap();
-        assert!(
-            !crlf.contains('\r'),
-            "an empty file has no CRLF to keep: {crlf:?}"
-        );
+            // ...and so must what a save writes into a file, in the shortest spelling.
+            let saved = apply_in_place("", &rule_set_table(&model), rule_set_owned()).unwrap();
+            assert!(
+                saved.contains(&format!("strategy = {shortest}")),
+                "{spelling}: expected `strategy = {shortest}` in:\n{saved}"
+            );
+            let again: RuleSet = toml::from_str(&saved).unwrap_or_else(|e| {
+                panic!(
+                    "the writer wrote a rule set that does not load for {spelling}: {e}\n{saved}"
+                )
+            });
+            assert_eq!(
+                original,
+                debug(again.strategy.as_ref().unwrap()),
+                "{spelling}"
+            );
 
-        let original = "[[rules]]\r\nwhen.request.url_path = \"/a\"\r\nrespond.text = \"a\"\r\n";
-        let two = table_of(
-            "[[rules]]\nwhen.request.url_path = \"/a\"\nrespond.text = \"a\"\n[[rules]]\nwhen.request.url_path = \"/b\"\nrespond.text = \"b\"\n",
-        );
-        let out = apply_in_place(original, &two, rule_set_owned()).unwrap();
-        assert!(out.starts_with(original), "{out:?}");
-        assert!(
-            !out.replace("\r\n", "").contains('\n'),
-            "bare LF in: {out:?}"
-        );
+            // ── `[service]` level ───────────────────────────────────────
+            let text = format!("[service]\nstrategy = {spelling}\nfallback_respond_dir = \".\"\n");
+            let model: Config = toml::from_str(&text).unwrap_or_else(|e| panic!("{spelling}: {e}"));
+            let original = debug(model.service.strategy.as_ref().unwrap());
 
-        let lf = original.replace("\r\n", "\n");
-        let out = apply_in_place(&lf, &two, rule_set_owned()).unwrap();
-        assert!(!out.contains('\r'), "an LF file must stay LF: {out:?}");
+            let canonical = render_apimock_toml(&model);
+            let again: Config = toml::from_str(&canonical).unwrap_or_else(|e| {
+                panic!("canonical render does not load for {spelling}: {e}\n{canonical}")
+            });
+            assert_eq!(
+                original,
+                debug(again.service.strategy.as_ref().unwrap()),
+                "{spelling}"
+            );
+
+            let saved = apply_in_place("", &root_table(&model), root_owned()).unwrap();
+            assert!(
+                saved.contains(&format!("strategy = {shortest}")),
+                "{spelling}: expected `strategy = {shortest}` in:\n{saved}"
+            );
+            let again: Config = toml::from_str(&saved).unwrap_or_else(|e| {
+                panic!("the writer wrote a config that does not load for {spelling}: {e}\n{saved}")
+            });
+            assert_eq!(
+                original,
+                debug(again.service.strategy.as_ref().unwrap()),
+                "service: {spelling}"
+            );
+        }
     }
 
     /// Key paths of an emitted table, with a user-chosen name (a header
@@ -1509,6 +1743,12 @@ port = 3001 # beside-port
                 format!("{prefix}.{segment}")
             };
             out.insert(path.clone());
+            // A strategy is a bare name or a table of its options, written
+            // and compared as one value by `reconcile_strategy`; what is
+            // inside it is not a set of keys the writer manages one by one.
+            if key == STRATEGY_KEY {
+                continue;
+            }
             match value {
                 Value::Table(sub) => emitted_paths(sub, owned.below(key), &path, out),
                 Value::Array(rows) if is_table_array(rows) => {

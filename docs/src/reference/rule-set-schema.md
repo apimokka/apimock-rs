@@ -26,11 +26,14 @@ weight = 3
 
 ## `strategy` (top-level, optional)
 
-A bare string for `"first_match"` or `"round_robin"`. The other three
-— `uniform_random`, `weighted_random` and `priority` — take options, so
-each is **always written as a table, even with no options**:
-`strategy = { weighted_random = {} }`, or `{ weighted_random = { seed = 7 } }`
-to fix the seed. Overrides `service.strategy` for this rule set only.
+Name the strategy: `strategy = "first_match"`, `"round_robin"`,
+`"uniform_random"`, `"weighted_random"` or `"priority"`. A bare name is
+that strategy with every option at its default. **Add a table only to set
+an option:** `strategy = { weighted_random = { seed = 7 } }`, or
+`strategy = { priority = { tiebreaker = "uniform_random" } }`. A table
+with no options, `{ weighted_random = {} }`, means the same as the bare
+name. Overrides `service.strategy` for this rule set only. A name that is
+none of the five is refused, with the five listed.
 
 > **Corrected 2026-10-06.** This page previously listed
 > `"uniform_random"` and `"weighted_random"` as bare strings. **That was
@@ -38,6 +41,13 @@ to fix the seed. Overrides `service.strategy` for this rule set only.
 > type: unit variant, expected struct variant"*. Both have taken options
 > (a `seed`) since at least 5.18.0, so the bare form has never worked.
 > The guide below always showed the table form correctly.
+
+> **Changed in 6.4.0 (RFC 085, 2026-10-07).** The bare names now load.
+> What the note above describes is true of 6.3.0 and earlier: there,
+> `strategy = "weighted_random"` failed to load, and only the table form
+> worked. From 6.4.0 both spellings load to the same strategy, and the
+> table form is needed only to set a `seed` or a `tiebreaker`. Nothing
+> that loaded before stops loading.
 
 See [Vary the response for one path](../guides/vary-the-response-for-one-path.md)
 for the full syntax of all five.

@@ -3,6 +3,13 @@
 When more than one rule matches the same request, the rule set's
 `strategy` decides which one answers. Five exist.
 
+Name the one you want: `strategy = "round_robin"`. A bare name uses that
+strategy's default options. To set an option (a `seed`, a `tiebreaker`),
+write a table instead: `strategy = { weighted_random = { seed = 7 } }`. The
+examples below show the table form where an option is the point;
+`{ weighted_random = {} }` and `"weighted_random"` are the same strategy.
+Before 6.4.0 only `first_match` and `round_robin` loaded as bare names.
+
 ## `first_match` (the default)
 
 No configuration needed — the first matching rule in file order wins,
@@ -28,9 +35,9 @@ priority = 10
 Among matching rules, the highest `priority` wins — deterministically,
 regardless of file order. `tiebreaker` (`first_match` or
 `uniform_random`) decides what happens when two matching rules share
-the top priority. Note `priority` always needs its own table, even for
-a default tiebreaker — `strategy = "priority"` as a bare string is a
-parse error, unlike the other four.
+the top priority. With the default tiebreaker you can write just
+`strategy = "priority"`; the table is for choosing `uniform_random`.
+(Before 6.4.0 the bare string was a parse error for `priority`.)
 
 ## `weighted_random`
 

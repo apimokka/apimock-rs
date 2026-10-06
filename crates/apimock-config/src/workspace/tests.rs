@@ -25,6 +25,7 @@ mod respond_validator_agreement;
 mod rfc_024_025;
 mod rfc_027_029;
 mod save;
+mod strategy;
 mod url_path_op;
 mod workspace_core;
 mod write_path_properties;
