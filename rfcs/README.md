@@ -22,7 +22,16 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-*(None open.)*
+| RFC | Title | Blocking |
+|---|---|---|
+| 083 | [Publish without a click](./proposed/083-publish-without-a-click.md) — finish the act the tag already started | Owner approval; and a precondition (core npm verification) |
+
+> Written **2026-10-06** for issue
+> [#82](https://github.com/apimokka/apimock-rs/issues/82). Carries one
+> technical finding that decides the design: a release published by CI
+> with the default `GITHUB_TOKEN` does **not** fire the publish phase,
+> so the naive fix would publish a GitHub Release and nothing to either
+> registry.
 
 ## Accepted
 
