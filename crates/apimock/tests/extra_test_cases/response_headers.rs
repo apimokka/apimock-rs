@@ -15,7 +15,7 @@ const REQUIRED_RESPONSE_HEADERS: &[(&str, Option<&str>)] = &[
     ("access-control-max-age", Some("86400")),
     (
         "access-control-allow-methods",
-        Some("GET, POST, PUT, DELETE, OPTIONS"),
+        Some("GET, POST, PUT, DELETE, PATCH, OPTIONS"),
     ),
     ("x-content-type-options", Some("nosniff")),
     ("connection", Some("keep-alive")),

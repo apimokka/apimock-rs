@@ -1,6 +1,6 @@
 pub const CSV_RECORDS_DEFAULT_KEY: &str = "records";
 
-const DEFAULT_ALLOWED_METHODS: &str = "GET, POST, PUT, DELETE, OPTIONS";
+const DEFAULT_ALLOWED_METHODS: &str = "GET, POST, PUT, DELETE, PATCH, OPTIONS";
 pub const DEFAULT_RESPONSE_HEADERS: &[(&str, &str)] = &[
     ("access-control-allow-headers", "*"),
     ("access-control-allow-methods", DEFAULT_ALLOWED_METHODS),

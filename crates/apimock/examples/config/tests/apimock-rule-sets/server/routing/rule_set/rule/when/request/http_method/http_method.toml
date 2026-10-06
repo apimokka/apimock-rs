@@ -28,3 +28,10 @@ url_path = "/delete"
 method = "DELETE"
 [rules.respond]
 text = "http-method DELETE matched"
+
+[[rules]]
+[rules.when.request]
+url_path = "/patch"
+method = "PATCH"
+[rules.respond]
+text = "http-method PATCH matched"

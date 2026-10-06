@@ -1,13 +1,53 @@
 use hyper::Method;
 use serde::Deserialize;
 
+/// Every method a rule's `method = "..."` accepts, with the variant it
+/// names. This is the one list config is checked against and the one
+/// refusal messages are generated from, so the two cannot drift.
+/// RFC 082 Amendment 1.
+const MATCHABLE: [(&str, HttpMethod); 5] = [
+    ("GET", HttpMethod::Get),
+    ("POST", HttpMethod::Post),
+    ("PUT", HttpMethod::Put),
+    ("DELETE", HttpMethod::Delete),
+    ("PATCH", HttpMethod::Patch),
+];
+
+/// Methods a user will plausibly try that are deliberately not matchable,
+/// each with the reason its refusal quotes. The clause follows the method
+/// name in the message. RFC 082 § 4 and Amendment 1.
+const NOT_MATCHABLE: [(&str, &str); 4] = [
+    (
+        "OPTIONS",
+        "is answered by the built-in CORS preflight handler before rule sets are consulted, so it cannot be matched by a rule",
+    ),
+    (
+        "HEAD",
+        "is not matchable yet: a rule could answer it with a response body, which HTTP forbids for HEAD",
+    ),
+    (
+        "TRACE",
+        "is not supported: TRACE is commonly disabled as a security measure and has no meaning for a mock server",
+    ),
+    (
+        "CONNECT",
+        "is not supported: CONNECT is a proxy mechanism with no meaning for a mock server",
+    ),
+];
+
+/// An HTTP method a rule can match on.
+///
+/// `#[non_exhaustive]` (RFC 082): the next method added is not a breaking
+/// change for a consumer's `match` — which must carry a `_` arm.
 #[derive(Clone, Deserialize, Debug)]
-#[serde(rename_all = "UPPERCASE")]
+#[serde(try_from = "String")]
+#[non_exhaustive]
 pub enum HttpMethod {
     Get,
     Post,
     Put,
     Delete,
+    Patch,
 }
 
 impl HttpMethod {
@@ -27,13 +67,71 @@ impl HttpMethod {
     }
 
     /// as str
+    ///
+    /// Deliberately an exhaustive `match`: a new variant that is not
+    /// given a name here fails to compile, which is the first of the
+    /// three things keeping config and the variant set in step (RFC 082
+    /// Amendment 1).
     pub fn as_str(&self) -> &'static str {
         match self {
             HttpMethod::Get => "GET",
             HttpMethod::Post => "POST",
             HttpMethod::Put => "PUT",
             HttpMethod::Delete => "DELETE",
+            HttpMethod::Patch => "PATCH",
         }
+    }
+
+    /// The method named by a config token, matched exactly and
+    /// case-sensitively — the same spelling TOML config accepts. `None`
+    /// for anything not in the matchable set, including every
+    /// [`unmatchable_reason`](Self::unmatchable_reason) method.
+    pub fn parse_config_token(token: &str) -> Option<HttpMethod> {
+        MATCHABLE
+            .iter()
+            .find(|(name, _)| *name == token)
+            .map(|(_, method)| method.clone())
+    }
+
+    /// The names a rule's `method` accepts, in the order refusal messages
+    /// list them. RFC 082 Amendment 1.
+    pub fn matchable_names() -> Vec<&'static str> {
+        MATCHABLE.iter().map(|(name, _)| *name).collect()
+    }
+
+    /// Why a method a user might try is deliberately not matchable, as a
+    /// clause that follows the method's name (`"is answered by …"`).
+    /// `None` for a method that is not in the deliberate-exclusion list —
+    /// including a plain typo. RFC 082 Amendment 1.
+    pub fn unmatchable_reason(token: &str) -> Option<&'static str> {
+        NOT_MATCHABLE
+            .iter()
+            .find(|(name, _)| *name == token)
+            .map(|(_, reason)| *reason)
+    }
+}
+
+impl TryFrom<String> for HttpMethod {
+    type Error = String;
+
+    /// The refusal a config load produces for a token that is not
+    /// matchable. It always names the valid set. For a method we
+    /// deliberately exclude it also says why, so a user cannot read the
+    /// refusal as apimock being incomplete (RFC 082 Amendment 1).
+    fn try_from(token: String) -> Result<Self, Self::Error> {
+        if let Some(method) = HttpMethod::parse_config_token(&token) {
+            return Ok(method);
+        }
+        let names = HttpMethod::matchable_names()
+            .iter()
+            .map(|name| format!("`{name}`"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let mut message = format!("unknown variant `{token}`, expected one of {names}");
+        if let Some(reason) = HttpMethod::unmatchable_reason(&token) {
+            message.push_str(&format!("\n  — {token} {reason}"));
+        }
+        Err(message)
     }
 }
 
@@ -81,6 +179,22 @@ mod tests {
         assert!(!HttpMethod::Put.is_match(&Method::DELETE));
     }
 
+    /// RFC 082: PATCH matches a PATCH wire method, and only that.
+    #[test]
+    fn patch_matches_patch_and_nothing_else() {
+        assert!(HttpMethod::Patch.is_match(&Method::PATCH));
+        assert!(!HttpMethod::Patch.is_match(&Method::GET));
+        assert!(!HttpMethod::Get.is_match(&Method::PATCH));
+    }
+
+    /// RFC 082 § 4 decision, pinned: a lowercase method on the wire still
+    /// matches — the wire is case-insensitive even though config is not.
+    #[test]
+    fn a_lowercase_patch_on_the_wire_matches() {
+        let lowercase_patch = Method::from_bytes(b"patch").unwrap();
+        assert!(HttpMethod::Patch.is_match(&lowercase_patch));
+    }
+
     /// RFC 079 M-09: renders the method value, not a sentence — pins
     /// the fix so `HTTP Method is GET` (nonsense once interpolated into
     /// `Request`'s own composed `Display`) can't come back.
@@ -89,5 +203,128 @@ mod tests {
         assert_eq!(format!("{}", HttpMethod::Get), "method`GET`");
         assert_eq!(format!("{}", HttpMethod::Post), "method`POST`");
         assert!(!format!("{}", HttpMethod::Delete).contains("HTTP Method is"));
+    }
+
+    /// Every matchable name parses to the variant it names, and that
+    /// variant names itself back — the round-trip RFC 082 Amendment 1
+    /// requires.
+    #[test]
+    fn every_matchable_name_round_trips() {
+        for name in HttpMethod::matchable_names() {
+            let method = HttpMethod::parse_config_token(name)
+                .unwrap_or_else(|| panic!("{name} is listed as matchable but does not parse"));
+            assert_eq!(method.as_str(), name);
+        }
+    }
+
+    /// The residual gap Amendment 1 names: adding a variant and forgetting
+    /// `MATCHABLE` would leave it silently unconfigurable. This exhaustive
+    /// match forces the list to be checked whenever a variant is added.
+    #[test]
+    fn every_variant_is_matchable() {
+        fn variant_name(m: &HttpMethod) -> &'static str {
+            match m {
+                HttpMethod::Get => "GET",
+                HttpMethod::Post => "POST",
+                HttpMethod::Put => "PUT",
+                HttpMethod::Delete => "DELETE",
+                HttpMethod::Patch => "PATCH",
+            }
+        }
+        for method in [
+            HttpMethod::Get,
+            HttpMethod::Post,
+            HttpMethod::Put,
+            HttpMethod::Delete,
+            HttpMethod::Patch,
+        ] {
+            let name = variant_name(&method);
+            assert!(
+                HttpMethod::matchable_names().contains(&name),
+                "{name} is a variant but not in MATCHABLE"
+            );
+        }
+    }
+
+    /// Case is part of config's spelling: `"patch"` is refused, exactly as
+    /// `"get"` always was (RFC 082 § 4, pinned so it cannot drift silently).
+    #[test]
+    fn config_spelling_is_case_sensitive() {
+        assert!(HttpMethod::parse_config_token("PATCH").is_some());
+        assert!(HttpMethod::parse_config_token("patch").is_none());
+        assert!(HttpMethod::try_from("patch".to_owned()).is_err());
+    }
+
+    /// Pull the backtick-quoted names out of a refusal's "expected one of"
+    /// list, in order.
+    fn enumerated_names(refusal: &str) -> Vec<String> {
+        let after = refusal
+            .split("expected one of ")
+            .nth(1)
+            .expect("refusal names the valid set");
+        let list = after.split('\n').next().unwrap();
+        list.split('`')
+            .enumerate()
+            .filter(|(i, _)| i % 2 == 1)
+            .map(|(_, name)| name.to_owned())
+            .collect()
+    }
+
+    /// RFC 082 Amendment 1, the drift test: the list a refusal enumerates
+    /// is exactly `MATCHABLE`'s keys, in order.
+    #[test]
+    fn refusal_enumerates_exactly_the_matchable_names() {
+        let refusal = HttpMethod::try_from("GTE".to_owned()).unwrap_err();
+        let listed = enumerated_names(&refusal);
+        let expected: Vec<String> = HttpMethod::matchable_names()
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+        assert_eq!(listed, expected);
+    }
+
+    /// A typo gets the enumerated set and no reason clause — unchanged in
+    /// shape from before RFC 082, only the list grew.
+    #[test]
+    fn a_typo_is_refused_with_the_set_and_no_reason() {
+        let refusal = HttpMethod::try_from("GTE".to_owned()).unwrap_err();
+        assert_eq!(
+            refusal,
+            "unknown variant `GTE`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`"
+        );
+    }
+
+    /// RFC 082 Amendment 1: OPTIONS is refused with both the enumerated
+    /// set and the reason it is not matchable.
+    #[test]
+    fn options_is_refused_with_the_set_and_its_reason() {
+        let refusal = HttpMethod::try_from("OPTIONS".to_owned()).unwrap_err();
+        assert_eq!(
+            refusal,
+            "unknown variant `OPTIONS`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`\n  — OPTIONS is answered by the built-in CORS preflight handler before rule sets are consulted, so it cannot be matched by a rule"
+        );
+    }
+
+    /// RFC 082 Amendment 1: HEAD is refused with both the set and its reason.
+    #[test]
+    fn head_is_refused_with_the_set_and_its_reason() {
+        let refusal = HttpMethod::try_from("HEAD".to_owned()).unwrap_err();
+        assert_eq!(
+            refusal,
+            "unknown variant `HEAD`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`\n  — HEAD is not matchable yet: a rule could answer it with a response body, which HTTP forbids for HEAD"
+        );
+    }
+
+    /// Every deliberate exclusion has a reason, and no matchable method
+    /// is also listed as excluded.
+    #[test]
+    fn exclusions_are_disjoint_from_the_matchable_set() {
+        for (name, _) in NOT_MATCHABLE {
+            assert!(
+                HttpMethod::parse_config_token(name).is_none(),
+                "{name} is both matchable and excluded"
+            );
+            assert!(HttpMethod::unmatchable_reason(name).is_some());
+        }
     }
 }

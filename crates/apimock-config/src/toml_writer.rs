@@ -395,8 +395,9 @@ fn body_kind_key(kind: &BodyKind) -> &'static str {
     }
 }
 
-/// Serialize an HTTP method back to its TOML form. Inverse of the
-/// `Deserialize` derive on `HttpMethod`.
+/// Serialize an HTTP method back to its TOML form. Inverse of
+/// `HttpMethod::parse_config_token` (RFC 082): `as_str` yields exactly the
+/// spelling that parse accepts.
 fn http_method_name(m: &HttpMethod) -> String {
     m.as_str().to_owned()
 }

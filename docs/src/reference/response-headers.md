@@ -8,7 +8,7 @@ headers. Some vary by request; none of this is configurable globally.
 | Header | Value |
 |---|---|
 | `access-control-allow-headers` | `*` |
-| `access-control-allow-methods` | `GET, POST, PUT, DELETE, OPTIONS` |
+| `access-control-allow-methods` | `GET, POST, PUT, DELETE, PATCH, OPTIONS` |
 | `access-control-max-age` | `86400` |
 | `cache-control` | `no-store` |
 | `x-content-type-options` | `nosniff` |

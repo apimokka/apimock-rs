@@ -78,12 +78,38 @@ one rule are ANDed.
 | Field | Shape |
 |---|---|
 | `url_path` | A bare string (implies `op = "equal"`), or `{ value = "...", op = "..." }` |
-| `method` | A bare HTTP method string: `"GET"`, `"POST"`, `"PUT"`, or `"DELETE"` |
+| `method` | A bare HTTP method string, spelled in uppercase: `"GET"`, `"POST"`, `"PUT"`, `"DELETE"`, or `"PATCH"`. Config is case-sensitive, so `"patch"` is refused; a request's method on the wire still matches case-insensitively. Two methods are deliberately not matchable — see below |
 | `headers.<name>` | `{ value = "...", op = "..." }` per header, ANDed; header names match case-insensitively |
 | `body.json."<dotted.path>"` | `{ value = "...", op = "..." }` per path, ANDed — see [Body path syntax](./body-path-syntax.md) |
 
 Every operator for `url_path`/`headers`/`body.json` is listed in the
 [Operator reference](./operator-reference.md).
+
+#### Which methods a rule can match, and why not all of them
+
+A rule's `method` accepts `GET`, `POST`, `PUT`, `DELETE`, and `PATCH`.
+Any other method is refused when the config loads, and the refusal says
+why when there is a reason:
+
+```
+unknown variant `OPTIONS`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`
+  — OPTIONS is answered by the built-in CORS preflight handler before rule sets are consulted, so it cannot be matched by a rule
+```
+
+- **`OPTIONS` cannot be matched.** Every `OPTIONS` request is answered by
+  apimock's CORS preflight handler before rule sets are consulted, so a
+  rule naming it would validate and then never run. Preflight stays
+  authoritative. A rule cannot override it.
+- **`HEAD` is not matchable yet.** A rule that answers `HEAD` could return
+  a response body, which HTTP forbids for `HEAD`. Matching `HEAD` needs
+  body suppression first, and that is a separate change.
+- **`TRACE` and `CONNECT` are not supported.** `TRACE` is commonly disabled
+  as a security measure and has no meaning for a mock server. `CONNECT` is a
+  proxy mechanism with no meaning here.
+
+Config spelling is case-sensitive, so `method = "patch"` is refused, the
+same as `"get"` always was. A request's method on the wire is matched
+case-insensitively, so a client sending `patch` still matches a `PATCH` rule.
 
 ### `respond`
 

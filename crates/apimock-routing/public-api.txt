@@ -326,16 +326,23 @@ impl core::marker::UnsafeUnpin for apimock_routing::rule_set::rule::when::reques
 impl core::panic::unwind_safe::RefUnwindSafe for apimock_routing::rule_set::rule::when::request::headers::Headers
 impl core::panic::unwind_safe::UnwindSafe for apimock_routing::rule_set::rule::when::request::headers::Headers
 pub mod apimock_routing::rule_set::rule::when::request::http_method
-pub enum apimock_routing::rule_set::rule::when::request::http_method::HttpMethod
+#[non_exhaustive] pub enum apimock_routing::rule_set::rule::when::request::http_method::HttpMethod
 pub apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::Delete
 pub apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::Get
+pub apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::Patch
 pub apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::Post
 pub apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::Put
 impl apimock_routing::rule_set::rule::when::request::http_method::HttpMethod
 pub fn apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::as_str(&self) -> &'static str
 pub fn apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::is_match(&self, &http::method::Method) -> bool
+pub fn apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::matchable_names() -> alloc::vec::Vec<&'static str>
+pub fn apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::parse_config_token(&str) -> core::option::Option<apimock_routing::rule_set::rule::when::request::http_method::HttpMethod>
+pub fn apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::unmatchable_reason(&str) -> core::option::Option<&'static str>
 impl core::clone::Clone for apimock_routing::rule_set::rule::when::request::http_method::HttpMethod
 pub fn apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::clone(&self) -> apimock_routing::rule_set::rule::when::request::http_method::HttpMethod
+impl core::convert::TryFrom<alloc::string::String> for apimock_routing::rule_set::rule::when::request::http_method::HttpMethod
+pub type apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::Error = alloc::string::String
+pub fn apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::try_from(alloc::string::String) -> core::result::Result<Self, Self::Error>
 impl core::fmt::Debug for apimock_routing::rule_set::rule::when::request::http_method::HttpMethod
 pub fn apimock_routing::rule_set::rule::when::request::http_method::HttpMethod::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for apimock_routing::rule_set::rule::when::request::http_method::HttpMethod

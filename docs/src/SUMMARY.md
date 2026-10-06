@@ -32,6 +32,7 @@
     - [Migrating to 6.0.0](./guides/migrating-to-6-0.md)
     - [Migrating to 6.1.0](./guides/migrating-to-6-1.md)
     - [Migrating to 6.2.0](./guides/migrating-to-6-2.md)
+    - [Migrating to 6.3.0](./guides/migrating-to-6-3.md)
 
 ---
 

@@ -18,6 +18,7 @@ mod common;
 mod conditions;
 mod file_tree_filter;
 mod headers_body;
+mod method;
 mod respond_validator_agreement;
 mod rfc_024_025;
 mod rfc_027_029;

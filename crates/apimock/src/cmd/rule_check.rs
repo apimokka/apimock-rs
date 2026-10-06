@@ -93,13 +93,8 @@ fn check_method(
     parsed: &ParsedRequest,
     out: &mut Vec<ConditionCheck>,
 ) {
-    use apimock_routing::rule_set::rule::when::request::http_method::HttpMethod;
-    let expected = match req.http_method.as_ref() {
-        None => return,
-        Some(HttpMethod::Get) => "GET",
-        Some(HttpMethod::Post) => "POST",
-        Some(HttpMethod::Put) => "PUT",
-        Some(HttpMethod::Delete) => "DELETE",
+    let Some(expected) = req.http_method.as_ref().map(|m| m.as_str()) else {
+        return;
     };
     let actual = parsed.component_parts.method.as_str();
     let matched = actual.eq_ignore_ascii_case(expected);

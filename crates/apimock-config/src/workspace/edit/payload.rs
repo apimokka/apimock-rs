@@ -65,19 +65,21 @@ pub(super) fn build_rule_from_payload(
     });
 
     let http_method = match payload.method.as_deref() {
-        Some("GET") | Some("get") => Some(HttpMethod::Get),
-        Some("POST") | Some("post") => Some(HttpMethod::Post),
-        Some("PUT") | Some("put") => Some(HttpMethod::Put),
-        Some("DELETE") | Some("delete") => Some(HttpMethod::Delete),
-        Some(other) => {
-            return Err(ApplyError::InvalidPayload {
-                reason: format!(
-                    "unsupported HTTP method `{}` — supported: GET, POST, PUT, DELETE",
-                    other
-                ),
-            });
-        }
         None => None,
+        Some(token) => match parse_set_method(token) {
+            Some(method) => Some(method),
+            None => {
+                let mut reason = format!(
+                    "unsupported HTTP method `{}` — supported: {}",
+                    token,
+                    HttpMethod::matchable_names().join(", ")
+                );
+                if let Some(why) = HttpMethod::unmatchable_reason(token) {
+                    reason.push_str(&format!("; {token} {why}"));
+                }
+                return Err(ApplyError::InvalidPayload { reason });
+            }
+        },
     };
 
     // ── Headers (RFC 002) ─────────────────────────────────────────────
@@ -134,6 +136,24 @@ fn url_path_op_to_routing(
 }
 
 // ── RFC 002 / RFC 017 helpers ─────────────────────────────────────────
+
+/// The `set` CLI accepts a method's config spelling, or the all-lowercase
+/// form of it — the same two spellings it has always accepted (`get` and
+/// `GET`, never `Get`). Both spellings come from the one matchable list, so
+/// adding a method here needs no second edit. RFC 082 § 3.
+fn parse_set_method(
+    token: &str,
+) -> Option<apimock_routing::rule_set::rule::when::request::http_method::HttpMethod> {
+    use apimock_routing::rule_set::rule::when::request::http_method::HttpMethod;
+    HttpMethod::parse_config_token(token).or_else(|| {
+        let is_lowercase = token == token.to_ascii_lowercase();
+        if is_lowercase {
+            HttpMethod::parse_config_token(&token.to_ascii_uppercase())
+        } else {
+            None
+        }
+    })
+}
 
 fn build_headers(
     input: &[crate::view::HeaderConditionPayload],
