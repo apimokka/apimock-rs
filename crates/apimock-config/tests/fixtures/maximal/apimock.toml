@@ -1,0 +1,32 @@
+# top-of-file comment
+[listener]
+# above-ip comment
+ip_address = "127.0.0.1" # ip-comment
+port = 3991 # port-comment
+
+[listener.tls]
+cert = "@DIR@/cert.pem"
+key = "@DIR@/key.pem"
+port = 3992
+handshake_timeout_seconds = 3 # hs-comment
+max_connections = 8 # mc-comment
+
+[log]
+verbose = { header = true, body = true }
+
+[service]
+strategy = "first_match"
+rule_sets = ["rules.toml"]
+middlewares = ["mw.rhai"]
+fallback_respond_dir = "."
+# above-cors comment
+cors_allow_credentials_origins = ["https://app.example.test"] # cors-comment
+max_request_body_bytes = 1024 # body-comment
+middleware_max_operations = 5000 # ops-comment
+
+[file_tree_view]
+show_hidden = true
+builtin_excludes = false
+extra_excludes = ["*.bak"]
+include = ["*.json"]
+respect_gitignore = true

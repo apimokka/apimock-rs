@@ -11,6 +11,7 @@
 //! | `file_tree_filter` | RFC 012 — config-driven FileTreeFilter |
 //! | `conditions` | RFC 016 — per-condition NodeId (Add/Remove Header/Body) |
 //! | `write_path_properties` | RFC 060 — property tests over the four write-path invariants |
+//! | `preserve` | Task 019 — `save` deletes only the keys the writer manages; the maximal fixture and its docs-driven coverage |
 //! | `respond_validator_agreement` | Post-6.0.0 test-integrity — `Respond::validate` and `respond_node_validation` agree over a shared corpus |
 
 mod common;
@@ -19,6 +20,7 @@ mod conditions;
 mod file_tree_filter;
 mod headers_body;
 mod method;
+mod preserve;
 mod respond_validator_agreement;
 mod rfc_024_025;
 mod rfc_027_029;

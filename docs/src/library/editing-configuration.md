@@ -10,6 +10,14 @@ not by TOML text.** You never write TOML; you issue an `EditCommand`
 and the workspace applies it, preserving the file's comments and
 formatting (RFC 056 — `toml_edit`, not re-serialisation).
 
+**`save()` writes only the keys the workspace manages.** A key it does
+not manage — a setting added to the schema after the editor was written,
+a rule set's `[default]`, a rule's `weight` — is never deleted, at any
+level of the file, and keeps its value, its comment and its position. A
+key it *does* manage that you clear through a command is removed. A rule
+you delete or move takes its own comments and unmanaged keys with it, and
+they stay with it, not with whichever rule now sits at the same index.
+
 ```rust
 use apimock_config::{Workspace, view::EditCommand};
 

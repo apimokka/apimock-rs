@@ -373,7 +373,11 @@ apimock set rule [-c <config>] [--rule-set <path>] [--rule <n>] \
 
 Adds a rule (the default), or changes an existing one when `--rule` is
 given, and writes it to the rule-set file — keeping that file's
-comments and formatting (RFC 056).
+comments and formatting (RFC 056). `set` only ever changes the keys it
+manages; every other key in the files it rewrites, at any level — a
+rule set's `[default]`, a rule's `weight`, `[listener.tls]
+max_connections`, `[service] max_request_body_bytes` — is left exactly
+as written, comment included.
 Neither the root config nor the rule-set file need to exist yet — a
 fresh directory gets a minimal starting pair of files, not the
 example-filled scaffold `--init` writes.

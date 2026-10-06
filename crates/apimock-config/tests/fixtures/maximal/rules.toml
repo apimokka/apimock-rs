@@ -1,0 +1,36 @@
+# rules header comment
+strategy = { weighted_random = { seed = 7 } } # strategy-comment
+
+[prefix]
+url_path = "/api" # prefix-comment
+respond_dir = "responses"
+
+[default] # default-comment
+delay_response_milliseconds = 1500 # delay-comment
+
+[guard] # guard-comment
+
+# rule one: slow
+[[rules]]
+priority = 10 # priority-comment
+weight = 3 # weight-one
+# above-url_path comment
+when.request.url_path = "/slow"
+respond.text = "slow"
+
+# rule two: orders
+[[rules]]
+weight = 5 # weight-two
+when.request.url_path = { value = "/orders", op = "equal" }
+when.request.method = "POST"
+when.request.headers.x-api-key = { op = "exists" }
+when.request.headers.x-token = { op = "equal", value = "t" }
+when.request.body.json."customer.tier" = { op = "equal", value = "gold" }
+respond = { json = '{"ok":true}', status = 201, headers = { x-extra = "1" }, delay_response_milliseconds = 0 }
+
+# rule three: data
+[[rules]]
+priority = -1
+weight = 9 # weight-three
+when.request.url_path = "/data"
+respond = { file_path = "data.csv", csv_records_key = "rows" }

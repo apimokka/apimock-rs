@@ -24,6 +24,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::error::SaveError;
+use crate::toml_writer::Owned;
 use crate::view::SaveResult;
 
 use super::Workspace;
@@ -45,7 +46,9 @@ impl Workspace {
     /// 4. Mutate each file's own previous text in place
     ///    (`toml_writer::apply_in_place`) rather than rebuilding it, so
     ///    comments, blank lines and key order survive; only the values
-    ///    that actually changed do. Write atomically via
+    ///    that actually changed do. Only keys the writer manages
+    ///    (`toml_writer::Owned`) are ever deleted: anything else in the
+    ///    file is left byte-for-byte as it was. Write atomically via
     ///    `tempfile::NamedTempFile::persist` (same-directory rename(2)
     ///    on POSIX, `MoveFileExW` on Windows). On any single-file
     ///    write failure, the partial state is whatever rename(2)s have
@@ -78,16 +81,23 @@ impl Workspace {
         // Unchanged in spirit from before RFC 056: compares the
         // canonical render to the canonical baseline, so hand
         // formatting on a never-edited file is never "changed".
-        let mut to_write: Vec<(PathBuf, toml::value::Table, String)> = Vec::new();
+        // Each file carries the ownership tree for its kind: what the
+        // writer may delete from it (`toml_writer::Owned`).
+        let mut to_write: Vec<(PathBuf, toml::value::Table, String, &'static Owned)> = Vec::new();
 
         let baseline_root = self.baseline_files.get(&self.root_path);
         if baseline_root.map(String::as_str) != Some(new_root_toml.as_str()) {
-            to_write.push((self.root_path.clone(), root_target, new_root_toml));
+            to_write.push((
+                self.root_path.clone(),
+                root_target,
+                new_root_toml,
+                crate::toml_writer::root_owned(),
+            ));
         }
         for (path, target, text) in rule_set_renders {
             let baseline = self.baseline_files.get(&path);
             if baseline.map(String::as_str) != Some(text.as_str()) {
-                to_write.push((path, target, text));
+                to_write.push((path, target, text, crate::toml_writer::rule_set_owned()));
             }
         }
 
@@ -98,7 +108,7 @@ impl Workspace {
         // into `Conflict` — the two need different remedies, and
         // `Conflict`'s message ("reload before saving") would be
         // actively wrong advice for a permission error. --------------
-        for (path, _, _) in &to_write {
+        for (path, _, _, _) in &to_write {
             if let Some(original) = self.original_text.get(path) {
                 match std::fs::read_to_string(path) {
                     Ok(current) if &current != original => {
@@ -122,18 +132,17 @@ impl Workspace {
         let mut written: Vec<PathBuf> = Vec::with_capacity(to_write.len());
         let mut fresh_text: HashMap<PathBuf, String> = HashMap::new();
         let mut fresh_baseline: HashMap<PathBuf, String> = HashMap::new();
-        for (path, target, rendered) in &to_write {
-            let text =
-                match self.original_text.get(path) {
-                    Some(original) => crate::toml_writer::apply_in_place(original, target)
-                        .map_err(|source| SaveError::Inconsistent {
-                            reason: format!(
-                                "`{}` could not be re-parsed for an in-place save: {source}",
-                                path.display()
-                            ),
-                        })?,
-                    None => rendered.clone(),
-                };
+        for (path, target, rendered, owned) in &to_write {
+            let text = match self.original_text.get(path) {
+                Some(original) => crate::toml_writer::apply_in_place(original, target, owned)
+                    .map_err(|source| SaveError::Inconsistent {
+                        reason: format!(
+                            "`{}` could not be re-parsed for an in-place save: {source}",
+                            path.display()
+                        ),
+                    })?,
+                None => rendered.clone(),
+            };
             atomic_write(path, &text)?;
             fresh_text.insert(path.clone(), text);
             fresh_baseline.insert(path.clone(), rendered.clone());
