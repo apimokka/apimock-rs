@@ -173,6 +173,18 @@ impl RuleSet {
                 source: Box::new(e),
             })?;
 
+        // `[guard]` has never done anything (its only field set is empty and
+        // `validate` always passes). It still loads, so this is a warning on
+        // stderr and never an error: a deprecation must not fail a config
+        // that works. Written straight to stderr rather than through `log`,
+        // because the CLI's logger sends every record to stdout.
+        if ret.guard.is_some() {
+            eprintln!(
+                "apimock: warning: `[guard]` in rule-set file `{rule_set_file_path}` has no effect \
+                 and will be rejected in a future release; remove it."
+            );
+        }
+
         // - prefix (RFC 058): normalize what was authored, in place —
         //   never manufacture a `[prefix]` section that wasn't there.
         //   `ret.prefix` stays exactly `None` if the file never had one

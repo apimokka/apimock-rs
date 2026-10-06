@@ -213,6 +213,28 @@ async fn lowercase_patch_in_config_is_still_refused() {
     assert!(err.contains("unknown variant `patch`"), "{err}");
 }
 
+/// Task 018: the refusal of a lowercase `patch` names the correct spelling.
+#[tokio::test]
+async fn lowercase_patch_in_config_gets_the_casing_hint() {
+    let err = config_load_error_for_method("patch").await;
+    assert!(
+        err.contains("\n  — did you mean `PATCH`? method values are upper-case"),
+        "{err}"
+    );
+}
+
+/// Task 018, precedence: a wrong-cased excluded method gets its reason, not
+/// a casing hint, because the correct case would still be refused.
+#[tokio::test]
+async fn lowercase_options_in_config_gets_the_reason_not_a_hint() {
+    let err = config_load_error_for_method("options").await;
+    assert!(
+        err.contains("\n  — OPTIONS is answered by the built-in CORS preflight handler"),
+        "{err}"
+    );
+    assert!(!err.contains("did you mean"), "{err}");
+}
+
 /// RFC 082 Amendment 1, quoted: OPTIONS is refused with the enumerated set and
 /// its reason.
 #[tokio::test]

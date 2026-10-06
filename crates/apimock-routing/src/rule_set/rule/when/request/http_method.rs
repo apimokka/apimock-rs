@@ -118,6 +118,13 @@ impl TryFrom<String> for HttpMethod {
     /// matchable. It always names the valid set. For a method we
     /// deliberately exclude it also says why, so a user cannot read the
     /// refusal as apimock being incomplete (RFC 082 Amendment 1).
+    ///
+    /// When the token is a matchable name or an excluded one in the wrong
+    /// case, the line after the set names the correct spelling (task 018).
+    /// An excluded method gets its reason instead of a casing hint:
+    /// fixing the case would still leave it unmatchable, so a hint would
+    /// send the user to a dead end. Both are looked up in the upper-cased
+    /// token, so the name shown is always the canonical one.
     fn try_from(token: String) -> Result<Self, Self::Error> {
         if let Some(method) = HttpMethod::parse_config_token(&token) {
             return Ok(method);
@@ -128,8 +135,16 @@ impl TryFrom<String> for HttpMethod {
             .collect::<Vec<_>>()
             .join(", ");
         let mut message = format!("unknown variant `{token}`, expected one of {names}");
-        if let Some(reason) = HttpMethod::unmatchable_reason(&token) {
-            message.push_str(&format!("\n  — {token} {reason}"));
+        let upper = token.to_ascii_uppercase();
+        if let Some(reason) = HttpMethod::unmatchable_reason(&upper) {
+            message.push_str(&format!("\n  — {upper} {reason}"));
+        } else if let Some(canonical) = HttpMethod::matchable_names()
+            .into_iter()
+            .find(|name| name.eq_ignore_ascii_case(&token))
+        {
+            message.push_str(&format!(
+                "\n  — did you mean `{canonical}`? method values are upper-case"
+            ));
         }
         Err(message)
     }
@@ -313,6 +328,70 @@ mod tests {
             refusal,
             "unknown variant `HEAD`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`\n  — HEAD is not matchable yet: a rule could answer it with a response body, which HTTP forbids for HEAD"
         );
+    }
+
+    /// Task 018: a matchable name in the wrong case is refused as before,
+    /// with a hint naming the correct spelling after the set.
+    #[test]
+    fn lowercase_patch_gets_a_casing_hint() {
+        let err = HttpMethod::try_from("patch".to_owned()).unwrap_err();
+        assert_eq!(
+            err,
+            "unknown variant `patch`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`\n  — did you mean `PATCH`? method values are upper-case"
+        );
+    }
+
+    /// Task 018: the hint names the canonical spelling, whatever the
+    /// casing the user typed.
+    #[test]
+    fn mixed_case_patch_gets_the_same_casing_hint() {
+        let err = HttpMethod::try_from("Patch".to_owned()).unwrap_err();
+        assert!(err.ends_with("\n  — did you mean `PATCH`? method values are upper-case"));
+    }
+
+    /// Task 018: the hint is generated from `MATCHABLE`, so every matchable
+    /// name in the wrong case gets a hint for itself, with no second list.
+    #[test]
+    fn every_matchable_name_in_the_wrong_case_is_hinted_with_itself() {
+        for name in HttpMethod::matchable_names() {
+            let wrong = name.to_ascii_lowercase();
+            let err = HttpMethod::try_from(wrong.clone()).unwrap_err();
+            assert!(
+                err.ends_with(&format!(
+                    "\n  — did you mean `{name}`? method values are upper-case"
+                )),
+                "{wrong} should be hinted with {name}, got: {err}"
+            );
+        }
+    }
+
+    /// Task 018, precedence: a deliberately excluded method in the wrong
+    /// case gets its reason, not a casing hint. Fixing the case would
+    /// still leave it unmatchable, so the hint would be a dead end.
+    #[test]
+    fn wrong_cased_exclusion_gets_the_reason_not_a_casing_hint() {
+        let err = HttpMethod::try_from("options".to_owned()).unwrap_err();
+        assert_eq!(
+            err,
+            "unknown variant `options`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`\n  — OPTIONS is answered by the built-in CORS preflight handler before rule sets are consulted, so it cannot be matched by a rule"
+        );
+        assert!(!err.contains("did you mean"));
+    }
+
+    /// Task 018: a plain typo gets neither the hint nor a reason, in the
+    /// exact spelling or the wrong one.
+    #[test]
+    fn a_wrong_cased_typo_gets_no_hint() {
+        for token in ["gte", "GTE"] {
+            let err = HttpMethod::try_from(token.to_owned()).unwrap_err();
+            assert_eq!(
+                err,
+                "unknown variant `".to_owned()
+                    + token
+                    + "`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATCH`",
+                "{token}"
+            );
+        }
     }
 
     /// Every deliberate exclusion has a reason, and no matchable method

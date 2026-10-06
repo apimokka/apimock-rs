@@ -75,9 +75,11 @@ source for a rule-set-wide condition that was never implemented, and
 nothing reads it.
 
 **If you have `[guard]` in a rule-set file, delete the line.** It has no
-effect, so removing it cannot change how your rules behave. A future
-release will reject the key outright, at which point a file still
-carrying it will fail to load with the key named.
+effect, so removing it cannot change how your rules behave. Loading a
+file that contains it prints a warning on stderr naming the file; the
+file still loads, and the command still exits 0. A future release will
+reject the key outright, at which point a file still carrying it will
+fail to load with the key named.
 
 ## `[[rules]]`
 
@@ -122,8 +124,11 @@ unknown variant `OPTIONS`, expected one of `GET`, `POST`, `PUT`, `DELETE`, `PATC
   proxy mechanism with no meaning here.
 
 Config spelling is case-sensitive, so `method = "patch"` is refused, the
-same as `"get"` always was. A request's method on the wire is matched
-case-insensitively, so a client sending `patch` still matches a `PATCH` rule.
+same as `"get"` always was. The refusal names the correct spelling
+(``did you mean `PATCH`?``), or, for a method that is excluded on purpose, gives
+its reason instead, since the right case would still not match. A request's
+method on the wire is matched case-insensitively, so a client sending `patch`
+still matches a `PATCH` rule.
 
 ### `respond`
 
