@@ -93,13 +93,13 @@ for the exact syntax.
 - **Per-rule-set `strategy`** changes *which rule within that set*
   answers, as above — it has no effect on whether that rule set is
   reached in the first place.
-- **`[guard]` does nothing.** It's a zero-field struct
-  (`crates/apimock-routing/src/rule_set/guard.rs`) carrying only a
-  `// todo:` comment for a condition that was never implemented. A
-  `[guard]` table in a rule set has no effect on matching, on ordering,
-  or on anything else — do not configure it expecting it to gate a rule
-  set. Its future is an open decision, not something this documentation
-  can describe as working.
+- **`[guard]` does nothing, and is deprecated.** It's a zero-field
+  struct (`crates/apimock-routing/src/rule_set/guard.rs`) carrying only
+  a `// todo:` comment for a condition that was never implemented. A
+  `[guard]` table has no effect on matching, on ordering, or on anything
+  else. **Deprecated 2026-10-06 and scheduled for removal** — if you
+  have the line, delete it; it cannot change how your rules behave. See
+  [Rule-set schema](../reference/rule-set-schema.md).
 
 ## One more thing that looks like it should affect this page, but doesn't
 

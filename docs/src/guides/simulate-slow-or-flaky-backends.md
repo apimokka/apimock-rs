@@ -14,10 +14,17 @@ respond = { text = "eventually...", delay_response_milliseconds = 800 }
 useful for exercising a client's timeout, retry, or loading-state
 handling against a predictable, artificial delay.
 
-Set it **per rule**, on `respond`. A rule-set-wide `[default]
-delay_response_milliseconds` also exists in the schema, but currently
-has no effect on any response — see
+Set it **per rule**, on `respond` — or set a default for a whole
+rule-set file with `[default] delay_response_milliseconds`, which
+applies to every rule in that file that does not set its own. A
+per-rule value always wins, and `respond.delay_response_milliseconds =
+0` cancels the default for that one rule. See
 [Rule-set schema](../reference/rule-set-schema.md#default).
+
+> **Corrected 2026-10-06.** This guide previously said the rule-set-wide
+> default "has no effect on any response". That was false — it has
+> worked since RFC 045 (Defect 2), and this page was steering you away
+> from a feature that does what its name says.
 
 There's no built-in mechanism for a genuinely *flaky* backend (randomly
 failing a fraction of requests) — only a fixed, deterministic delay. If

@@ -12,9 +12,7 @@ url_path = "/api/v2"
 respond_dir = "responses"
 
 [default]
-delay_response_milliseconds = 1000   # currently has no effect — see below
-
-[guard]                              # currently has no effect at all — see below
+delay_response_milliseconds = 1000   # applies to rules that set no delay of their own
 
 [[rules]]
 when.request.method = "POST"
@@ -50,20 +48,36 @@ spelled path.
 
 ## `[default]`
 
-The only field is `delay_response_milliseconds`. **It currently has no
-effect on any response** — it's parsed and printed in the startup log,
-but nothing applies it. The per-rule
-`respond.delay_response_milliseconds` (below) works correctly; this
-rule-set-wide equivalent does not. See
-[Simulate slow or flaky backends](../guides/simulate-slow-or-flaky-backends.md).
+The only field is `delay_response_milliseconds`. It sets a delay for
+**every rule in this file that does not set one itself** — a per-rule
+`respond.delay_response_milliseconds` always wins, including when it is
+`0`, which cancels the default for that one rule.
 
-## `[guard]`
+> **Corrected 2026-10-06.** This page previously said this field "has no
+> effect on any response". **That was false.** It was implemented by
+> RFC 045 (Defect 2) and has worked since; the documentation described a
+> limitation that the fix had already removed. Verified against a
+> running server: with `[default] delay_response_milliseconds = 1500`, a
+> rule that sets no delay answers in 1.502s, and a rule setting
+> `respond.delay_response_milliseconds = 0` answers in 0.001s.
 
-A zero-field table today — there is nothing to put inside it, and a
-`[guard]` block with any content fails to parse. It carries a `// todo:`
-comment in the source for a rule-set-wide condition that was never
-implemented. Don't configure it expecting it to gate anything; nothing
-reads it beyond printing an empty line in the startup log.
+See [Simulate slow or flaky backends](../guides/simulate-slow-or-flaky-backends.md).
+
+## `[guard]` — deprecated, do not use
+
+**Deprecated as of 2026-10-06 and scheduled for removal.** It is no
+longer shown in the example above, because it never did anything and
+this page should not teach it.
+
+A zero-field table — there is nothing to put inside it, and a `[guard]`
+block with any content fails to parse. It carries a `// todo:` in the
+source for a rule-set-wide condition that was never implemented, and
+nothing reads it.
+
+**If you have `[guard]` in a rule-set file, delete the line.** It has no
+effect, so removing it cannot change how your rules behave. A future
+release will reject the key outright, at which point a file still
+carrying it will fail to load with the key named.
 
 ## `[[rules]]`
 
@@ -122,7 +136,7 @@ At least one of `file_path`, `text`, `json`, or `status` is required.
 | `json` | A literal response body, declared as JSON — served as `application/json` (unless overridden by `headers`). Validated at load time: must parse, and loading fails otherwise (see below) |
 | `status` | The HTTP status code |
 | `headers` | Custom headers, honoured uniformly on every shape above — see [Response headers](./response-headers.md) |
-| `delay_response_milliseconds` | Sleep this long before responding — works correctly at the per-rule level |
+| `delay_response_milliseconds` | Sleep this long before responding. Overrides the rule set's `[default]` value, including `0` to cancel it |
 | `csv_records_key` | For a CSV `file_path`, the dotted path under which the parsed rows are nested in the JSON response (default key: `records`) |
 
 **Content-type is derived from which field is set** — `file_path` from
