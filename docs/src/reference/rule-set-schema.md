@@ -26,12 +26,20 @@ weight = 3
 
 ## `strategy` (top-level, optional)
 
-A bare string for a unit strategy (`"first_match"`, `"round_robin"`,
-`"uniform_random"`, `"weighted_random"`), or a table for `priority`
-(which always needs its own table, even to accept default settings —
-`priority = "..."` is a parse error). Overrides `service.strategy` for
-this rule set only. See
-[Vary the response for one path](../guides/vary-the-response-for-one-path.md)
+A bare string for `"first_match"` or `"round_robin"`. The other three
+— `uniform_random`, `weighted_random` and `priority` — take options, so
+each is **always written as a table, even with no options**:
+`strategy = { weighted_random = {} }`, or `{ weighted_random = { seed = 7 } }`
+to fix the seed. Overrides `service.strategy` for this rule set only.
+
+> **Corrected 2026-10-06.** This page previously listed
+> `"uniform_random"` and `"weighted_random"` as bare strings. **That was
+> false:** written that way, the config fails to load with *"invalid
+> type: unit variant, expected struct variant"*. Both have taken options
+> (a `seed`) since at least 5.18.0, so the bare form has never worked.
+> The guide below always showed the table form correctly.
+
+See [Vary the response for one path](../guides/vary-the-response-for-one-path.md)
 for the full syntax of all five.
 
 ## `[prefix]`
