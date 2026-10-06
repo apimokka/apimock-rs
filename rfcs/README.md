@@ -24,14 +24,28 @@ depends-on, and the rest of the planned portfolio.
 
 | RFC | Title | Blocking |
 |---|---|---|
-| 083 | [Publish without a click](./proposed/083-publish-without-a-click.md) — finish the act the tag already started | Owner approval; and a precondition (core npm verification) |
+| 084 | [Assert the release notes are *true*](./proposed/084-assert-the-notes-are-true.md) — not merely present | Owner approval |
+| 083 | [Publish without a click](./proposed/083-publish-without-a-click.md) — **on hold**, premise measured false | Do not implement; see its amendment note |
 
-> Written **2026-10-06** for issue
-> [#82](https://github.com/apimokka/apimock-rs/issues/82). Carries one
-> technical finding that decides the design: a release published by CI
-> with the default `GITHUB_TOKEN` does **not** fire the publish phase,
-> so the naive fix would publish a GitHub Release and nothing to either
-> registry.
+> **084** is the live one. CI already asserts a release's notes *equal*
+> its CHANGELOG section; nothing asserts the section is *accurate*, and
+> that gap is the whole remaining content of the publish click. Each
+> assertion it adds traces to a real incident here: an unapproved
+> API-stability promise that stood published for weeks, a draft
+> declaring versions unaffected by an advisory they were vulnerable to,
+> and prose dependency versions that `version.sh` never reads.
+>
+> **083 is on hold.** Written for issue
+> [#82](https://github.com/apimokka/apimock-rs/issues/82), and its
+> reasoning about the Tier A click stands — but Tier A has **never
+> occurred** (5.19.1, 6.0.0, 6.1.0, 6.2.0 and 6.2.1 are all Tier B,
+> most for two independent reasons), so it would restructure the
+> publish path to automate a branch that does not arise. The architect's
+> proposal to *widen* Tier A to fix that was withdrawn as loosening a
+> gate for convenience. It also carries a finding worth keeping: a
+> release published by CI with the default `GITHUB_TOKEN` does **not**
+> fire the publish phase, so the naive fix would publish a GitHub
+> Release and nothing to either registry.
 
 ## Accepted
 

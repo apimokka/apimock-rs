@@ -1,6 +1,9 @@
 # RFC 083 — Publish without a click: finish the act the tag already started
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** Proposed — **on hold, and not to be implemented as it
+stands.** See § Amendment note below: its premise was measured after
+drafting and is false. [RFC 084](./084-assert-the-notes-are-true.md) is
+the route taken instead.
 **Tracks.** Release process. Closes issue
 [#82](https://github.com/apimokka/apimock-rs/issues/82) — *"ci: cargo
 publish when building executables is successful"*.
@@ -230,10 +233,72 @@ less likely.
    entry, because `assert-draft-release` requires the release notes to
    equal that section verbatim — a marker there would ship to crates.io
    as part of the notes.
-2. **Does the owner want Tier A to stay as narrow as it is?** This RFC
-   deliberately does not touch the conditions. If auto-publishing makes
-   the owner want Tier A narrower, that is a change to RFC 081 § 2 and
-   belongs here before adoption rather than after.
+2. ~~**Does the owner want Tier A to stay as narrow as it is?**~~
+   **Answered 2026-10-06: it stays exactly as narrow.** The architect
+   proposed *widening* it — dropping RFC 081 § 2's no-API-change
+   condition — and withdrew that on review. See § Amendment note.
 3. **Should `apimock`'s own crates.io publish order change?** No reason
    found; raised only because § 3(b) is the first thing to restructure
    that path.
+
+
+---
+
+## Amendment note — 2026-10-06: the premise is false, and must not be manufactured
+
+**This RFC is on hold.** Not withdrawn — its reasoning about the Tier A
+click stands — but it **automates a branch that has never executed.**
+
+### Measured, after drafting
+
+Every recent release is Tier B, most for two independent reasons:
+
+| release | `crates/*/public-api.txt` changed | `### Security` | major | tier |
+|---|---|---|---|---|
+| 5.19.1 | 0 | yes | same | **B** |
+| 6.0.0 | 0 | yes | bumped | **B** |
+| 6.1.0 | 4 | yes | same | **B** |
+| 6.2.0 | 2 | yes | same | **B** |
+| 6.2.1 | 0 | yes | same | **B** |
+
+**Tier A has never happened.** So this RFC would restructure the
+project's most dangerous code path — three production failures behind it
+— to automate a case that does not arise.
+
+### The withdrawn proposal, recorded because it was wrong
+
+On noticing the above, the architect recommended **dropping RFC 081
+§ 2's no-API-change condition**, so Tier A would become reachable and
+6.3.0 would be the first Tier A release. **That recommendation is
+withdrawn.**
+
+It is loosening a release gate *because the automation it was designed
+for is otherwise unusable* — a structural property traded for
+convenience, which inverts the owner's standing position that the less
+secure option is the one to avoid. RFC 081's own wording covers the
+spirit of it: *"Nothing about a release should ever be changed in order
+to reach Tier A; the tier is read off the release, never engineered into
+it."* Editing the conditions is not editing a release, so not the
+letter — but the motivation was to manufacture the premise, which is the
+same error wearing a different hat.
+
+The condition is also load-bearing, not ceremony: an API break reaching
+users with a wrong or missing migration note is the confusion the
+owner's philosophy ranks highest, crates.io has no unpublish, and that
+click is the last human read of a migration entry before it is
+permanent.
+
+### What replaces it
+
+[RFC 084](./084-assert-the-notes-are-true.md): make CI assert the
+notes' machine-checkable claims, so the click's remaining content stops
+resting on the architect reviewing the architect's prose. Then the gate
+can shrink **on evidence**.
+
+And for the owner's actual request — fewer manual steps — the honest
+target is the tier they actually click: make the **Tier B**
+confirmation cheap (CI posts the classification and every assertion
+result, so they confirm a summary rather than conduct an
+investigation), not make Tier A reachable.
+
+**Revisit this RFC only if a Tier A release occurs on its own.**
