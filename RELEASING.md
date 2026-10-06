@@ -136,8 +136,47 @@ substitute.
   here means the tagged commit wasn't actually green — re-tag after
   fixing, following the recovery steps below.
 
-If either fails, no draft Release is created and nothing downstream
-runs.
+- **`assert-changelog-claims`** (RFC 084) — runs after `build`, on the tag.
+  It asserts the CHANGELOG section's machine-checkable claims are true, and
+  prints a Tier and claims summary to the run's job summary. It cannot block
+  the publish transition, any more than `assert-draft-release` can: a red run
+  means **do not publish**, and the fix is a corrected CHANGELOG and a new tag.
+
+If either of the first two fails, no draft Release is created and nothing
+downstream runs. `assert-changelog-claims` runs after the draft exists, so
+its failure leaves a publishable draft behind: see the section below.
+
+### What the CHANGELOG assertion enforces, and what it does not
+
+**Enforced by CI** (`.github/workflows/scripts/assert-changelog-claims.sh`):
+
+- **API claims.** A section asserting "byte-identical", "no public API
+  change" or "no API change" requires an empty `public-api.txt` diff against
+  the previous tag, with the baselines present at both tags. Absence is a
+  failure, not a pass. Baselines that moved require a `### Added`,
+  `### Changed` or `### Removed` heading, or a migration-guide link.
+- **Advisory identifiers.** Every `RUSTSEC-`, `GHSA-` and `CVE-` identifier
+  must resolve. Network failures fail closed; they are never skipped.
+- **Unaffectedness.** A sentence that says versions are "unaffected" and
+  names a version or an advisory must cite an advisory record (a
+  `rustsec.org` or GitHub security-advisory link) in the same section. The
+  job checks that the citation exists, not that the analysis is right.
+- **Dependency versions.** A `<crate> X → Y` (or `->`) claim, where the crate
+  is in `Cargo.lock`, must have `Y` equal to the version the lockfile resolves.
+
+**Not enforced: trusted prose.** Whether a feature description is fair, the
+wording, the length, and whether a new default can refuse a
+previously-accepted request. The last of these is also the third tier
+condition, and it stays with the architect.
+
+**The previous tag** is the greatest semver tag strictly lower than the
+release being checked. It is not "the tag before it in history", so a
+backport tag does not change which release is compared against. A release
+whose previous tag is not visible fails, rather than skipping, which is why
+the job fetches full history and tags.
+
+The job summary states these same two lists for each release, so a summary
+cannot read as more verified than it is.
 
 ## The draft — who publishes it, and what to check
 

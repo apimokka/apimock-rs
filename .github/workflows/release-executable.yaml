@@ -338,3 +338,32 @@ jobs:
             exit 1
           fi
           echo "Release notes match CHANGELOG.md's section for ${{ env.TAG }} exactly."
+
+  # RFC 084: assert the CHANGELOG section's machine-checkable claims are true,
+  # on the tagged commit, before anything is published. Prose is not judged
+  # (RFC 084 § 4). Runs the same way assert-draft-release does: after build.
+  assert-changelog-claims:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository with full history and tags
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Assert CHANGELOG claims against the tagged commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUMMARY_FILE: ${{ runner.temp }}/changelog-claims-summary.md
+        run: bash .github/workflows/scripts/assert-changelog-claims.sh "${{ env.TAG }}"
+
+      - name: Post the tier and claim summary to the job summary
+        # Non-blocking (RFC 084 § 5): reporting must never fail the gate.
+        if: always()
+        env:
+          SUMMARY_FILE: ${{ runner.temp }}/changelog-claims-summary.md
+        run: |
+          if [ -f "$SUMMARY_FILE" ]; then
+            cat "$SUMMARY_FILE" >> "$GITHUB_STEP_SUMMARY" || true
+          fi
