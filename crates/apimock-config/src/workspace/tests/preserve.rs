@@ -42,14 +42,23 @@ const ROOT_DOC: &str =
     include_str!("../../../../../docs/src/reference/apimock-toml-root-settings.md");
 const RULE_SET_DOC: &str = include_str!("../../../../../docs/src/reference/rule-set-schema.md");
 
+/// `text` with every line ending made `\r\n` or `\n`, whatever a checkout
+/// (git's `autocrlf` on Windows) made of it. The tests that compare whole
+/// files run in both, so the CRLF case is exercised on every platform and
+/// not only where a checkout happens to produce it.
+fn with_eol(text: &str, crlf: bool) -> String {
+    let lf = text.replace("\r\n", "\n");
+    if crlf { lf.replace('\n', "\r\n") } else { lf }
+}
+
 /// Write the fixture into `dir`, with the TLS paths made absolute (they
 /// resolve against the process's working directory, not the config's).
 /// Returns the root config's path and its exact text.
-fn instantiate(dir: &Path) -> (PathBuf, String) {
+fn instantiate(dir: &Path, crlf: bool) -> (PathBuf, String) {
     let here = dir.to_string_lossy().replace('\\', "/");
-    let root = ROOT_TEMPLATE.replace("@DIR@", &here);
+    let root = with_eol(&ROOT_TEMPLATE.replace("@DIR@", &here), crlf);
     std::fs::write(dir.join("apimock.toml"), &root).unwrap();
-    std::fs::write(dir.join("rules.toml"), RULE_SET).unwrap();
+    std::fs::write(dir.join("rules.toml"), with_eol(RULE_SET, crlf)).unwrap();
     std::fs::write(dir.join("cert.pem"), "x\n").unwrap();
     std::fs::write(dir.join("key.pem"), "x\n").unwrap();
     std::fs::write(dir.join("mw.rhai"), "// middleware\n").unwrap();
@@ -58,8 +67,8 @@ fn instantiate(dir: &Path) -> (PathBuf, String) {
     (dir.join("apimock.toml"), root)
 }
 
-fn load(dir: &Path) -> (Workspace, String) {
-    let (root_path, root_text) = instantiate(dir);
+fn load(dir: &Path, crlf: bool) -> (Workspace, String) {
+    let (root_path, root_text) = instantiate(dir, crlf);
     (
         Workspace::load(root_path).expect("the fixture loads"),
         root_text,
@@ -115,78 +124,92 @@ fn rules_on_disk(dir: &Path) -> Vec<(String, Option<i64>)> {
 #[test]
 fn the_fixture_loads() {
     let dir = tempfile::tempdir().unwrap();
-    let (ws, _) = load(dir.path());
+    let (ws, _) = load(dir.path(), false);
     assert_eq!(rule_nodes(&ws).len(), 3);
 }
 
 /// § 1, the root fixture: an edit unrelated to the five keys the writer
-/// used to delete changes one value and nothing else.
+/// used to delete changes one value and nothing else, in LF and CRLF.
 #[test]
 fn an_unrelated_root_edit_changes_only_that_value() {
-    let dir = tempfile::tempdir().unwrap();
-    let (mut ws, root_text) = load(dir.path());
+    for crlf in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut ws, root_text) = load(dir.path(), crlf);
 
-    ws.apply(EditCommand::UpdateRootSetting {
-        key: RootSettingKey::ListenerPort,
-        value: EditValue::Integer(4000),
-    })
-    .unwrap();
-    ws.save().unwrap();
+        ws.apply(EditCommand::UpdateRootSetting {
+            key: RootSettingKey::ListenerPort,
+            value: EditValue::Integer(4000),
+        })
+        .unwrap();
+        ws.save().unwrap();
 
-    let after = std::fs::read_to_string(dir.path().join("apimock.toml")).unwrap();
-    assert_eq!(
-        after,
-        root_text.replace("port = 3991 # port-comment", "port = 4000 # port-comment")
-    );
-    // Every key the writer used to delete is in that text, because the
-    // whole file is equal apart from the one value.
-    for kept in [
-        "handshake_timeout_seconds = 3 # hs-comment",
-        "max_connections = 8 # mc-comment",
-        "cors_allow_credentials_origins = [\"https://app.example.test\"] # cors-comment",
-        "max_request_body_bytes = 1024 # body-comment",
-        "middleware_max_operations = 5000 # ops-comment",
-    ] {
-        assert!(after.contains(kept), "lost `{kept}`:\n{after}");
+        let after = std::fs::read_to_string(dir.path().join("apimock.toml")).unwrap();
+        assert_eq!(
+            after,
+            root_text.replace("port = 3991 # port-comment", "port = 4000 # port-comment"),
+            "crlf={crlf}"
+        );
+        // Every key the writer used to delete is in that text, because the
+        // whole file is equal apart from the one value.
+        for kept in [
+            "handshake_timeout_seconds = 3 # hs-comment",
+            "max_connections = 8 # mc-comment",
+            "cors_allow_credentials_origins = [\"https://app.example.test\"] # cors-comment",
+            "max_request_body_bytes = 1024 # body-comment",
+            "middleware_max_operations = 5000 # ops-comment",
+        ] {
+            assert!(after.contains(kept), "crlf={crlf}: lost `{kept}`:\n{after}");
+        }
     }
 }
 
 /// Adding a rule leaves the whole of the existing file as it was: the new
 /// rule is appended and nothing before it moves. `[default]` and
-/// `[guard]` are in that file.
+/// `[guard]` are in that file. In LF and CRLF, and in CRLF every added line
+/// is CRLF too.
 #[test]
 fn adding_a_rule_appends_and_leaves_the_rest_byte_for_byte() {
-    let dir = tempfile::tempdir().unwrap();
-    let (mut ws, root_text) = load(dir.path());
-    let parent = rule_set_node(&ws);
+    for crlf in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut ws, root_text) = load(dir.path(), crlf);
+        let parent = rule_set_node(&ws);
 
-    ws.apply(EditCommand::AddRule {
-        parent,
-        rule: RulePayload {
-            url_path: Some("/new".to_owned()),
-            respond: RespondPayload {
-                text: Some("new".to_owned()),
+        ws.apply(EditCommand::AddRule {
+            parent,
+            rule: RulePayload {
+                url_path: Some("/new".to_owned()),
+                respond: RespondPayload {
+                    text: Some("new".to_owned()),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        },
-    })
-    .unwrap();
-    ws.save().unwrap();
+        })
+        .unwrap();
+        ws.save().unwrap();
 
-    let after = std::fs::read_to_string(dir.path().join("rules.toml")).unwrap();
-    assert!(
-        after.starts_with(RULE_SET),
-        "the existing file changed:\n{after}"
-    );
-    assert!(after.contains("url_path = \"/new\""), "{after}");
-    assert!(after.contains("[default] # default-comment"));
-    assert!(after.contains("[guard] # guard-comment"));
-    // The root was not part of this change and was not rewritten.
-    assert_eq!(
-        std::fs::read_to_string(dir.path().join("apimock.toml")).unwrap(),
-        root_text
-    );
+        let after = std::fs::read_to_string(dir.path().join("rules.toml")).unwrap();
+        assert!(
+            after.starts_with(&with_eol(RULE_SET, crlf)),
+            "crlf={crlf}: the existing file changed:\n{after:?}"
+        );
+        assert!(after.contains("url_path = \"/new\""), "{after}");
+        assert!(after.contains("[default] # default-comment"));
+        assert!(after.contains("[guard] # guard-comment"));
+        if crlf {
+            assert!(
+                !after.replace("\r\n", "").contains('\n'),
+                "bare LF in {after:?}"
+            );
+        } else {
+            assert!(!after.contains('\r'), "CR in an LF file: {after:?}");
+        }
+        // The root was not part of this change and was not rewritten.
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("apimock.toml")).unwrap(),
+            root_text
+        );
+    }
 }
 
 /// Editing a rule keeps the keys on it the writer does not manage, and
@@ -194,7 +217,7 @@ fn adding_a_rule_appends_and_leaves_the_rest_byte_for_byte() {
 #[test]
 fn editing_a_rule_keeps_its_weight_and_comments() {
     let dir = tempfile::tempdir().unwrap();
-    let (mut ws, _) = load(dir.path());
+    let (mut ws, _) = load(dir.path(), false);
     let rule = rule_nodes(&ws)[0];
 
     ws.apply(EditCommand::UpdateRule {
@@ -227,7 +250,7 @@ fn editing_a_rule_keeps_its_weight_and_comments() {
 #[test]
 fn a_managed_key_removed_through_the_editor_is_removed_from_the_file() {
     let dir = tempfile::tempdir().unwrap();
-    let (mut ws, _) = load(dir.path());
+    let (mut ws, _) = load(dir.path(), false);
     let rule = rule_nodes(&ws)[0];
     assert!(
         std::fs::read_to_string(dir.path().join("rules.toml"))
@@ -264,7 +287,7 @@ fn a_managed_key_removed_through_the_editor_is_removed_from_the_file() {
 #[test]
 fn deleting_a_rule_takes_its_weight_with_it() {
     let dir = tempfile::tempdir().unwrap();
-    let (mut ws, _) = load(dir.path());
+    let (mut ws, _) = load(dir.path(), false);
     let first = rule_nodes(&ws)[0];
 
     ws.apply(EditCommand::DeleteRule { id: first }).unwrap();
@@ -288,7 +311,7 @@ fn deleting_a_rule_takes_its_weight_with_it() {
 #[test]
 fn moving_a_rule_moves_its_weight_with_it() {
     let dir = tempfile::tempdir().unwrap();
-    let (mut ws, _) = load(dir.path());
+    let (mut ws, _) = load(dir.path(), false);
     let last = rule_nodes(&ws)[2];
 
     ws.apply(EditCommand::MoveRule {

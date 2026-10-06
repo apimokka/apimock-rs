@@ -700,7 +700,25 @@ pub(crate) fn apply_in_place(
 ) -> Result<String, toml_edit::TomlError> {
     let mut doc: toml_edit::DocumentMut = original.parse()?;
     reconcile_table(doc.as_table_mut(), target, owned);
-    Ok(doc.to_string())
+    Ok(restore_line_endings(original, doc.to_string()))
+}
+
+/// Give `text` the line endings `original` had.
+///
+/// `toml_edit` turns every `\r\n` into `\n` when it parses, even on a
+/// round trip that changes nothing, so without this a save would rewrite
+/// every line of a CRLF file (the usual case on Windows, and under git's
+/// `autocrlf`), including all the lines the writer never touched. The
+/// ending that was used more often wins, so a file edited by hand into a
+/// mix comes out in whichever it mostly was.
+fn restore_line_endings(original: &str, text: String) -> String {
+    let crlf = original.matches("\r\n").count();
+    let bare_lf = original.matches('\n').count() - crlf;
+    if crlf > bare_lf {
+        text.replace("\r\n", "\n").replace('\n', "\r\n")
+    } else {
+        text
+    }
 }
 
 /// Reconcile one table — standard or inline — against the corresponding
@@ -1398,6 +1416,60 @@ port = 3001 # beside-port
         let target = table_of("strategy = \"round_robin\"\n");
         let out = apply_in_place(original, &target, rule_set_owned()).unwrap();
         assert_eq!(out, "strategy = \"round_robin\" # keep\n");
+    }
+
+    /// `toml_edit` converts `\r\n` to `\n` on parse, so a CRLF file used to
+    /// come back LF-only with every line changed, not just the one that was
+    /// edited. Found by the Windows leg of CI on task 019's first push, where
+    /// git's `autocrlf` gives every fixture CRLF line endings.
+    #[test]
+    fn a_crlf_file_keeps_its_line_endings() {
+        let original = "# top\r\n[listener]\r\nport = 3001 # p\r\nfuture = 1 # keep\r\n\r\n[service]\r\nfallback_respond_dir = \".\"\r\n";
+
+        // Nothing changed: byte-identical, which a parse-and-print alone is not.
+        let target = table_of(&without_future_keys(original).replace("\r\n", "\n"));
+        let out = apply_in_place(original, &target, root_owned()).unwrap();
+        assert_eq!(out, original);
+
+        // One value changed: that value changes, every line is still CRLF.
+        let mut changed = target.clone();
+        changed
+            .get_mut("listener")
+            .and_then(Value::as_table_mut)
+            .unwrap()
+            .insert("port".to_owned(), Value::Integer(4000));
+        let out = apply_in_place(original, &changed, root_owned()).unwrap();
+        assert_eq!(out, original.replace("port = 3001 # p", "port = 4000 # p"));
+        assert!(
+            !out.replace("\r\n", "").contains('\n'),
+            "bare LF in: {out:?}"
+        );
+    }
+
+    /// A line added to a CRLF file is CRLF too, and an LF file stays LF.
+    #[test]
+    fn added_lines_follow_the_files_line_endings() {
+        let target = table_of("[[rules]]\nwhen.request.url_path = \"/a\"\nrespond.text = \"a\"\n");
+        let crlf = apply_in_place("", &target, rule_set_owned()).unwrap();
+        assert!(
+            !crlf.contains('\r'),
+            "an empty file has no CRLF to keep: {crlf:?}"
+        );
+
+        let original = "[[rules]]\r\nwhen.request.url_path = \"/a\"\r\nrespond.text = \"a\"\r\n";
+        let two = table_of(
+            "[[rules]]\nwhen.request.url_path = \"/a\"\nrespond.text = \"a\"\n[[rules]]\nwhen.request.url_path = \"/b\"\nrespond.text = \"b\"\n",
+        );
+        let out = apply_in_place(original, &two, rule_set_owned()).unwrap();
+        assert!(out.starts_with(original), "{out:?}");
+        assert!(
+            !out.replace("\r\n", "").contains('\n'),
+            "bare LF in: {out:?}"
+        );
+
+        let lf = original.replace("\r\n", "\n");
+        let out = apply_in_place(&lf, &two, rule_set_owned()).unwrap();
+        assert!(!out.contains('\r'), "an LF file must stay LF: {out:?}");
     }
 
     /// Key paths of an emitted table, with a user-chosen name (a header
