@@ -24,6 +24,7 @@ depends-on, and the rest of the planned portfolio.
 
 | RFC | Title | Blocking |
 |---|---|---|
+| 086 | [The cut authorises the publish](./proposed/086-the-cut-authorises-the-publish.md) — on any tier, after every gate is green on the tag; supersedes 083 | Owner approval |
 | 083 | [Publish without a click](./proposed/083-publish-without-a-click.md) — **on hold**, premise measured false | Do not implement; see its amendment note |
 
 > **083 is on hold.** Written for issue
