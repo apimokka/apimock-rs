@@ -9,14 +9,16 @@ does not repeat that list.
 ## The flow
 
 ```
-owner:  ./version.sh --update X.Y.Z, update CHANGELOG.md, commit, push main
-owner:  git tag X.Y.Z && git push origin X.Y.Z      ← the only release trigger
+owner:  authorise the cut                            ← nothing below starts without it
+arch.:  ./version.sh --update X.Y.Z, update CHANGELOG.md, commit, push main
+arch.:  git tag X.Y.Z && git push origin X.Y.Z      ← the only release trigger
 CI:     version-consistency-check, quality-gate
 CI:     create a DRAFT Release, notes from CHANGELOG.md
 CI:     build 5 targets, attach every asset to the draft
 CI:     assert 5 assets present and notes == CHANGELOG section
         ↑ fails the build phase if either is wrong (RFC 081 § 3)
-  ?:    publish the draft — Tier A: the architect may; Tier B: the owner
+  ?:    publish the draft — minor: the architect (the cut authorised it);
+        patch: RFC 081's tier; major or embargoed advisory: the owner
         ↑ only once the build phase is GREEN on the tag — the draft has
           been publishable since "create a DRAFT Release", long before
           anything was asserted about it. See below.
@@ -25,9 +27,10 @@ CI:     cargo publish --workspace (4 crates, dependency order)
 CI:     verify published artifacts against the Release assets
 ```
 
-The tag push is the only thing triggered directly, and it stays the
-owner's under RFC 066 § 2 — Tier A loosens *publish*, never *cut*, so a
-release cannot begin without the owner regardless of tier.
+The tag push is the only thing triggered directly, and it is never made
+without the owner's authorisation of the cut (RFC 066 § 2), on any
+version or tier. RFC 081 and RFC 086 loosen *publish*, never *cut*. The
+architect performs the steps marked `arch.` on that authorisation.
 
 Everything from "create a DRAFT Release" onward is
 `release-executable.yaml` (`.github/workflows/release-executable.yaml`);
@@ -180,12 +183,38 @@ cannot read as more verified than it is.
 
 ## The draft — who publishes it, and what to check
 
-### Who publishes (RFC 081, RFC 066 Amendment 5)
+### Who publishes (RFC 086, RFC 081, RFC 066 Amendments 5–6)
 
 Publishing means **causing the draft→published transition** by any means
 — the GitHub UI, `gh release edit <tag> --draft=false`, or the API.
 `release-publish.yaml` has no `push:` trigger; that transition is the
 only thing that fires it.
+
+**Decided by the kind of release first:**
+
+| release | who publishes |
+|---|---|
+| **minor** `X.Y.0` | **the architect**, because the owner's cut authorisation covers it (RFC 086), on either tier, unless the owner reserves the publish when authorising |
+| **patch** `X.Y.Z` (`Z` > 0) | **by tier**, as below: Tier A, the architect may; Tier B, the owner |
+| **major** `X.0.0` | **the owner** |
+| coordinated with an **embargoed security advisory** | **the owner**, whatever the version |
+
+**When the architect publishes,** with `gh` authenticated as a user (never
+from inside Actions, whose `GITHUB_TOKEN` would not fire
+`release-publish.yaml`). Every check in *Before publishing* below must be
+green on the tag, verified by run id, and recorded in
+`.git-exclude/release/<version>/` first. After publishing, the architect
+verifies both registries independently and reports.
+
+> **Owed on the first minor published this way:** confirm by run id that
+> `release-publish.yaml` fired on the architect's publish. GitHub
+> documents that a user-token event fires workflows; this project has not
+> yet observed it on an architect's publish. If it did not fire, nothing
+> reached a registry: the owner publishes that release from the UI, and
+> RFC 086 is revisited before it is used again.
+
+**The tier is classified and recorded for every release**, including the
+ones where it no longer decides who publishes.
 
 A release is **Tier A** when **all four** hold. **These are
 classification conditions, not tests in the CI sense** — a release that
@@ -201,9 +230,10 @@ into it.
 | No new or lowered default that can refuse a previously-accepted request or connection | the CHANGELOG's Added/Changed sections |
 | The major component did not change | the version |
 
-- **Tier A** — the architect may publish, and states the four results
-  in the release record **before** doing so.
-- **Tier B** — anything else. The owner publishes, as before.
+- **Tier A** — the architect may publish a *patch*, and states the four
+  results in the release record **before** doing so.
+- **Tier B** — anything else. The owner publishes a Tier B *patch*. (For
+  a minor, see the table above.)
 
 The third condition is the only judgement in the set, and it is worded to
 fail **towards Tier B**: if you are unsure whether a new default can
@@ -220,10 +250,11 @@ the tag being published — not that "a green run exists".
 This is not a formality. `create-draft-release` runs **before** `build`,
 so the draft exists and is publishable from that moment — well before
 `assert-draft-release` has said anything about it. The job below fails
-the build phase loudly; it cannot block the publish transition. Under
-Tier B the owner is a second pair of eyes; under **Tier A there is
-none**, so this check is the only thing standing between a failed
-assertion and the registries.
+the build phase loudly; it cannot block the publish transition. When the
+owner publishes (a major, a Tier B patch, an embargoed release) they are
+a second pair of eyes. **When the architect publishes (every minor, and
+a Tier A patch) there is none**, so this check is the only thing standing
+between a failed assertion and the registries.
 
 Same discipline as RFC 066 Amendment 3: verify the run, never assume it.
 

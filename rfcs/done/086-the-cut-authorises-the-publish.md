@@ -1,26 +1,38 @@
-# RFC 086 — The cut authorises the publish
+# RFC 086 — For a minor release, the cut authorises the publish
 
-**Status.** Proposed — awaiting owner approval.
+**Status.** **Implemented — in force from 2026-10-07.** Owner approved
+2026-10-07, **scoped to minor releases**: *"My proposal is around minor
+version releases only."* A process policy, so adoption is
+implementation, as with RFC 080 and RFC 081. One check is still owed:
+the first minor released under it must prove by run id that
+`release-publish.yaml` fired (§ 4).
 **Origin.** The owner, 2026-10-07: *"When I authorize the cut, you may
 publish GitHub release in addition to tagging."* The same wish they
 stated when RFC 081 was being written: *"I want it independent of my
 manual operation as possible."*
-**Amends.** [RFC 081](../done/081-tiered-release-confirmation.md) (who
-publishes), [RFC 066 § 2](../done/066-branching-and-merge-policy.md) as
+**Amends.** [RFC 081](./081-tiered-release-confirmation.md) (who
+publishes), [RFC 066 § 2](./066-branching-and-merge-policy.md) as
 amended by its Amendment 5, and `RELEASING.md`.
-**Supersedes.** [RFC 083](./083-publish-without-a-click.md), which is on
-hold. On approval it moves to `archive/`.
+**Supersedes.** [RFC 083](../archive/083-publish-without-a-click.md), moved to `archive/` on approval.
 **Touches.** Documents only. **No workflow file changes.**
 
 ## Summary
 
-When the owner authorises a cut, that authorisation also covers
-**publishing the GitHub Release** — the draft-to-published transition
-that fires `release-publish.yaml`. The architect does it, on any tier,
-once the build phase is green on the tag and recorded. The owner keeps
-two things: the right to reserve the publish when authorising, and the
-publish itself for a release coordinated with an embargoed security
-advisory.
+When the owner authorises the cut of a **minor release** (`X.Y.0`), that
+authorisation also covers **publishing the GitHub Release**: the
+draft-to-published transition that fires `release-publish.yaml`. The
+architect does it, on either tier, once the build phase is green on the
+tag and recorded. The owner keeps the right to reserve the publish when
+authorising, and still publishes **majors**, **patch releases that RFC
+081 classifies as Tier B**, and any release coordinated with an
+embargoed security advisory.
+
+| release | who publishes |
+|---|---|
+| **minor** `X.Y.0` | **the architect**, on the owner's cut authorisation, on either tier, unless the owner reserves it |
+| **patch** `X.Y.Z` (`Z` > 0) | unchanged: **RFC 081 decides**. Tier A, the architect may; Tier B, the owner |
+| **major** `X.0.0` | **the owner** |
+| coordinated with an **embargoed advisory** | **the owner**, whatever the version |
 
 ## Motivation
 
@@ -64,7 +76,9 @@ the first release prove it. No new credential, and no workflow changes.
 
 ### 1. What a cut authorisation covers
 
-**Tag and publish**, on either tier, unless the owner says otherwise.
+For a **minor release**: **tag and publish**, on either tier, unless the
+owner says otherwise. For a patch or a major, it covers the tag only, as
+before; who publishes is in the Summary's table.
 
 The owner may **reserve** the publish when authorising: for example
 *"cut it, but I'll publish"*, or *"not before 09:00 UTC"*. A reservation
@@ -96,11 +110,12 @@ binds rather than depending on attention.
   and publishing the release is effectively publishing the advisory. The
   owner publishes, or names the minute.
 
-**Majors are not an exception.** RFC 081 keeps *"who decides a major's
-timing"* with the owner, and that is decided by authorising the cut. A
-major still needs that authorisation; it does not need a second one.
-*(If the owner prefers to keep majors as a second exception, it is a
-one-line change.)*
+- **Majors.** The owner publishes. *(The proposal had suggested majors
+  be covered by the cut authorisation; the owner decided otherwise on
+  approval.)*
+- **Patch releases** remain under RFC 081 unchanged. A Tier B patch,
+  which is typically a security fix such as 6.2.1, is the owner's to
+  publish.
 
 ### 4. After publishing
 
@@ -152,5 +167,5 @@ advisory, keeps the owner's own click.
 
 ## Unresolved
 
-1. **Majors** — an exception, or covered by the cut authorisation like
-   everything else? The RFC proposes *covered*.
+1. ~~**Majors**~~ — **decided on approval: the owner publishes majors**,
+   and the RFC covers **minor releases only**.

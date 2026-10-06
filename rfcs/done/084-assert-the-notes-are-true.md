@@ -122,8 +122,9 @@ Two steps, in order, neither of which loosens a gate:
    so the owner confirms a summary instead of conducting an
    investigation.
 
-[RFC 083](../proposed/083-publish-without-a-click.md) stays proposed and should
-not be implemented on a manufactured premise.
+[RFC 083](../archive/083-publish-without-a-click.md) was not implemented on a
+manufactured premise; it was archived on 2026-10-07, superseded by
+[RFC 086](./086-the-cut-authorises-the-publish.md).
 
 ### 5. The Tier B confirmation becomes a summary, not an investigation
 

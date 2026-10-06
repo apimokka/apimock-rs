@@ -22,22 +22,12 @@ implemented yet.
 See [ROADMAP.md](../ROADMAP.md) for themes, milestones, priority,
 depends-on, and the rest of the planned portfolio.
 
-| RFC | Title | Blocking |
-|---|---|---|
-| 086 | [The cut authorises the publish](./proposed/086-the-cut-authorises-the-publish.md) — on any tier, after every gate is green on the tag; supersedes 083 | Owner approval |
-| 083 | [Publish without a click](./proposed/083-publish-without-a-click.md) — **on hold**, premise measured false | Do not implement; see its amendment note |
+*(None open.)*
 
-> **083 is on hold.** Written for issue
-> [#82](https://github.com/apimokka/apimock-rs/issues/82), and its
-> reasoning about the Tier A click stands — but Tier A has **never
-> occurred** (5.19.1, 6.0.0, 6.1.0, 6.2.0 and 6.2.1 are all Tier B,
-> most for two independent reasons), so it would restructure the
-> publish path to automate a branch that does not arise. The architect's
-> proposal to *widen* Tier A to fix that was withdrawn as loosening a
-> gate for convenience. It also carries a finding worth keeping: a
-> release published by CI with the default `GITHUB_TOKEN` does **not**
-> fire the publish phase, so the naive fix would publish a GitHub
-> Release and nothing to either registry.
+> **What was here.** **083** (publish without a click) was held on
+> 2026-10-06, after its premise turned out false: Tier A had never
+> occurred. It was archived on 2026-10-07, superseded by **086**, which
+> meets the owner's goal for minor releases with no workflow change.
 
 ## Accepted
 
@@ -192,12 +182,14 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 081 | [Tiered release confirmation: automate the eyeballing, keep the judgement](./done/081-tiered-release-confirmation.md) | (policy) |
 | 082 | [Match the methods users actually send (PATCH), and stop advertising ones we cannot](./done/082-match-the-methods-users-actually-send.md) | v6.3.0 |
 | 084 | [Assert the release notes are *true*, not merely present](./done/084-assert-the-notes-are-true.md) | v6.3.0 (CI gate; first live run on that tag) |
+| 086 | [For a minor release, the cut authorises the publish](./done/086-the-cut-authorises-the-publish.md) — patches stay under 081; majors and embargoed advisories stay the owner's | (policy) |
 
 ## Archive
 
 | ID  | Title | Reason |
 |-----|-------|--------|
 | 018 | [ConditionalFallback audit](./archive/018-conditional-fallback-strategy.md) | Withdrawn — existing dispatch covers the case |
+| 083 | [Publish without a click](./archive/083-publish-without-a-click.md) | Superseded by 086. Kept for its `GITHUB_TOKEN` finding |
 
 ---
 

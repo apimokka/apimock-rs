@@ -26,7 +26,7 @@ Replace that blanket rule with two tiers:
 - **Tier A** — the architect may publish. Routine releases with no
   security content, no public API change, and no new default that can
   refuse something previously accepted.
-- **Tier B** — the owner publishes. Everything else.
+- **Tier B** — the owner publishes. Everything else. *(For a **minor** release this no longer decides who publishes — see Amendment 2.)*
 
 And **move the checks a human currently performs by eye into CI**, as a
 job that turns either failure into a red build phase on the tag — paired
@@ -137,7 +137,7 @@ Otherwise it is **Tier B**.
 
 **Tier A** — the architect may publish, and reports the classification
 with the four results.
-**Tier B** — the owner publishes, as today.
+**Tier B** — the owner publishes, as today. *(For a **minor** release this no longer decides who publishes — see Amendment 2.)*
 
 Every condition reads an artifact that already exists. Two are fully
 mechanical; the third is a judgement, and it is deliberately worded to
@@ -295,6 +295,32 @@ it — applied to the release path, and it is what makes § 3's job
 load-bearing rather than advisory. Mirrored into `RELEASING.md` § "The
 draft — who publishes it, and what to check".
 
+
+## Amendment 2 — adopted 2026-10-07: minor releases leave the tiers
+
+**Adopted — owner approved 2026-10-07**, by
+[RFC 086](./086-the-cut-authorises-the-publish.md).
+
+**Who publishes no longer depends on the tier for a minor release.** For
+`X.Y.0`, the owner's authorisation of the cut also authorises the
+architect to publish, on either tier, unless the owner reserves it.
+
+| release | who publishes |
+|---|---|
+| minor `X.Y.0` | the architect, on the owner's cut authorisation, unless reserved |
+| patch `X.Y.Z` | **this RFC, unchanged**: Tier A, the architect may; Tier B, the owner |
+| major `X.0.0` | the owner |
+| coordinated with an embargoed advisory | the owner, whatever the version |
+
+**The classification is still computed, recorded and reported for every
+release.** § 5 still binds: the tier and its four results go into the
+release record before publishing. For a minor, the tier informs the
+report rather than deciding who clicks. `assert-changelog-claims` (RFC
+084) prints it on every build phase.
+
+**What this amendment does not change:** § 2's conditions, § 3's
+assertions, Amendment 1, and the rule that the tier is read off the
+release and never engineered into it.
 
 ## Unresolved questions
 

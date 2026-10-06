@@ -1,9 +1,14 @@
 # RFC 083 — Publish without a click: finish the act the tag already started
 
-**Status.** Proposed — **on hold, and not to be implemented as it
-stands.** See § Amendment note below: its premise was measured after
-drafting and is false. [RFC 084](../done/084-assert-the-notes-are-true.md) is
-the route taken instead.
+**Status.** **Archived 2026-10-07 — superseded by
+[RFC 086](../done/086-the-cut-authorises-the-publish.md).** Not
+implemented. The owner's goal — releases independent of their manual
+operation — is met for minor releases by RFC 086, which needs no
+workflow change, no long-lived credential and no `workflow_call`
+restructuring: the architect publishes with user-authenticated `gh`.
+**Kept for its finding:** a release published by CI with Actions'
+default `GITHUB_TOKEN` does not fire `release-publish.yaml`. Anyone who
+later revisits publishing *from inside CI* should start from § 3.
 **Tracks.** Release process. Closes issue
 [#82](https://github.com/apimokka/apimock-rs/issues/82) — *"ci: cargo
 publish when building executables is successful"*.

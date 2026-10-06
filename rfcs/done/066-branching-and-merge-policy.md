@@ -119,7 +119,39 @@ architect's for minor/patch, and the publish path has failed three times
 in ways only visible during a live release. A review disposition
 approves *code*; it never approves a release action.
 
+> ### Amendment 6 — adopted 2026-10-07: for a minor release, the cut authorises the publish
+>
+> **Adopted — owner approved 2026-10-07**, by
+> [RFC 086](./086-the-cut-authorises-the-publish.md). The publish clause,
+> as Amendment 5 left it, now reads:
+>
+> > Publishing to crates.io or npm, or causing the draft→published
+> > transition that dispatches a workflow that does — **except**: for a
+> > **minor release** (`X.Y.0`), the owner's authorisation of the cut
+> > also authorises the architect to publish, on either tier, unless the
+> > owner reserves it; and for a **patch release**, a Tier A release as
+> > defined in RFC 081 § 2, which the architect may publish.
+>
+> **Still the owner's:** every **major**, every **Tier B patch**, and any
+> release coordinated with an **embargoed security advisory**, whatever
+> its version. **Unchanged:** the cut itself (the tag) is never taken
+> without the owner's authorisation, on any version or tier, and every
+> gate that runs before publishing must still be green on the tag.
+> RFC 086 § 2 makes it binding that each is verified by run id and
+> recorded before the architect publishes.
+>
+> **Why.** The owner asked for it; their standing request is releases
+> *"independent of my manual operation as possible"*. RFC 084 now checks
+> the claim types this project has actually got wrong in its notes. That
+> makes the click's remaining content, one human reading the prose,
+> proportionate to keep only where an error is costliest: majors, and
+> releases whose timing is agreed with a third party. § 2's own
+> rationale already gave majors' timing to the owner.
+
 > ### Amendment 5 — adopted 2026-09-06: RFC 081 tiers the publish step
+>
+> *Superseded in part by Amendment 6 above: for a minor release, the cut
+> authorises the publish.*
 >
 > [RFC 081](../done/081-tiered-release-confirmation.md) replaces
 > § 2's blanket publish prohibition with two tiers. The clause
