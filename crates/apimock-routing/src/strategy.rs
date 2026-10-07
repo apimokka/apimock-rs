@@ -336,6 +336,17 @@ mod tests {
     /// name. The match has no wildcard, so a variant added to `Strategy` and
     /// not listed here fails to compile (this is inside the defining crate,
     /// where `#[non_exhaustive]` does not apply).
+    ///
+    /// **If you are here because this stopped compiling, a new variant needs
+    /// two more changes in `apimock-config`, and nothing there will fail to
+    /// compile if you skip them:**
+    ///
+    /// 1. an arm in `toml_writer::strategy_value`. `Strategy` is
+    ///    `#[non_exhaustive]`, so that `match` has a wildcard, and a variant
+    ///    with options that falls into it is written as its bare name,
+    ///    **silently dropping the options**;
+    /// 2. a row in `toml_writer::tests::every_strategy_round_trips`, which is
+    ///    the test that proves the writer carries every option.
     #[test]
     fn every_variant_has_a_bare_name() {
         fn name(s: &Strategy) -> &'static str {

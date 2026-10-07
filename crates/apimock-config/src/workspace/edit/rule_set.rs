@@ -180,6 +180,14 @@ impl Workspace {
             }
         };
 
+        // Choosing the strategy a rule set already has keeps its options
+        // (RFC 085 review R-01); see `strategy_after_choosing`.
+        let strategy = strategy.map(|chosen| {
+            super::payload::strategy_after_choosing(
+                self.config.service.rule_sets[rs_idx].strategy.as_ref(),
+                chosen,
+            )
+        });
         self.config.service.rule_sets[rs_idx].strategy = strategy;
 
         let rs_id = self

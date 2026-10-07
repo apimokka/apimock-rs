@@ -119,6 +119,28 @@ pub(super) fn build_rule_from_payload(
     Ok(rule.compute_derived_fields(rule_set, rule_set.rules.len(), rs_idx))
 }
 
+/// The strategy an editor command that names one should leave in the model.
+///
+/// The editor chooses a strategy by **name only**, so it can say "weighted
+/// random" but not "weighted random with seed 7". If the chosen name is the
+/// one already in the model, the user has not asked for anything to change;
+/// building the strategy afresh would reset its options (`seed`,
+/// `tiebreaker`) to their defaults, and the writer (which carries options
+/// faithfully since RFC 085) would then write that, silently dropping a seed
+/// the user wrote. So the current strategy is kept, options included. A
+/// different name gives that strategy with default options. A name-only API
+/// cannot express "reset the options", so keeping them is the one reading
+/// that loses nothing (RFC 085 review R-01).
+pub(super) fn strategy_after_choosing(
+    current: Option<&apimock_routing::Strategy>,
+    chosen: apimock_routing::Strategy,
+) -> apimock_routing::Strategy {
+    match current {
+        Some(current) if current.to_string() == chosen.to_string() => current.clone(),
+        _ => chosen,
+    }
+}
+
 // ── RFC 001 / RFC 017 helper ──────────────────────────────────────────
 
 fn url_path_op_to_routing(

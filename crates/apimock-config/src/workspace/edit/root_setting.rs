@@ -13,7 +13,9 @@ use crate::view::{EditValue, NodeId};
 
 use super::super::Workspace;
 use super::super::id_index::NodeAddress;
-use super::payload::{value_as_bool, value_as_integer, value_as_string, value_as_string_list};
+use super::payload::{
+    strategy_after_choosing, value_as_bool, value_as_integer, value_as_string, value_as_string_list,
+};
 
 impl Workspace {
     pub(super) fn cmd_update_root_setting(
@@ -60,7 +62,10 @@ impl Workspace {
                         });
                     }
                 };
-                self.config.service.strategy = Some(strategy);
+                self.config.service.strategy = Some(strategy_after_choosing(
+                    self.config.service.strategy.as_ref(),
+                    strategy,
+                ));
             }
 
             // ── TLS (RFC 003) ──────────────────────────────────────────

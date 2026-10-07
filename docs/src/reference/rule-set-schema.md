@@ -26,14 +26,17 @@ weight = 3
 
 ## `strategy` (top-level, optional)
 
-Name the strategy: `strategy = "first_match"`, `"round_robin"`,
-`"uniform_random"`, `"weighted_random"` or `"priority"`. A bare name is
-that strategy with every option at its default. **Add a table only to set
-an option:** `strategy = { weighted_random = { seed = 7 } }`, or
-`strategy = { priority = { tiebreaker = "uniform_random" } }`. A table
+**From 6.4.0, name the strategy:** `strategy = "first_match"`,
+`"round_robin"`, `"uniform_random"`, `"weighted_random"` or `"priority"`.
+A bare name is that strategy with every option at its default. **Add a
+table only to set an option:** `strategy = { weighted_random = { seed = 7 } }`,
+or `strategy = { priority = { tiebreaker = "uniform_random" } }`. A table
 with no options, `{ weighted_random = {} }`, means the same as the bare
-name. Overrides `service.strategy` for this rule set only. A name that is
-none of the five is refused, with the five listed.
+name. **On 6.3.0 and earlier, only `"first_match"` and `"round_robin"` load
+as bare names; the other three must be written as a table**, even with no
+options (`{ weighted_random = {} }`), or the config fails to load. The table
+form works on every release. Overrides `service.strategy` for this rule set
+only. A name that is none of the five is refused, with the five listed.
 
 > **Corrected 2026-10-06.** This page previously listed
 > `"uniform_random"` and `"weighted_random"` as bare strings. **That was
