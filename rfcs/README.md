@@ -35,9 +35,7 @@ Approved by the project owner: the design is settled and an implementer
 may start. An RFC sits here from approval until the version carrying it
 ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 
-| RFC | Title | Ships how |
-|---|---|---|
-| 085 | [How a strategy is spelled](./accepted/085-strategy-spelling.md) — accept the bare name; a writer that only writes what loads | Next minor (6.4.0) |
+*(None open.)*
 
 > **What was here.** Twenty RFCs shipped in **6.0.0** (2026-08-28).
 > Eleven moved to `done/` on 2026-09-07 and the last five on
@@ -51,6 +49,8 @@ ships — see [RFC 000](./done/000-rfc-lifecycle-policy.md).
 >   completing the audit.
 >   **082** (PATCH matching) and **084** (CI asserts the release notes are
 >   true) — shipped in **6.3.0** (2026-10-07).
+>   **085** (a strategy can be written by its name) — shipped in **6.4.0**
+>   (2026-10-07).
 > - **039** — its additive-only gate was implemented and switched on
 >   after 6.0.0, as the RFC's own text required.
 > - **080** (trunk-based development) and **081** (tiered release
@@ -182,6 +182,7 @@ separate lifecycle items (see [RFC 000](./done/000-rfc-lifecycle-policy.md)).
 | 081 | [Tiered release confirmation: automate the eyeballing, keep the judgement](./done/081-tiered-release-confirmation.md) | (policy) |
 | 082 | [Match the methods users actually send (PATCH), and stop advertising ones we cannot](./done/082-match-the-methods-users-actually-send.md) | v6.3.0 |
 | 084 | [Assert the release notes are *true*, not merely present](./done/084-assert-the-notes-are-true.md) | v6.3.0 (CI gate; first live run on that tag) |
+| 085 | [How a strategy is spelled — and a writer that cannot spell it](./done/085-strategy-spelling.md) | v6.4.0 |
 | 086 | [For a minor release, the cut authorises the publish](./done/086-the-cut-authorises-the-publish.md) — patches stay under 081; majors and embargoed advisories stay the owner's | (policy) |
 
 ## Archive

@@ -3,9 +3,11 @@
 **Status.** **Implemented — in force from 2026-10-07.** Owner approved
 2026-10-07, **scoped to minor releases**: *"My proposal is around minor
 version releases only."* A process policy, so adoption is
-implementation, as with RFC 080 and RFC 081. One check is still owed:
-the first minor released under it must prove by run id that
-`release-publish.yaml` fired (§ 4).
+implementation, as with RFC 080 and RFC 081. **First used for 6.4.0, and
+its owed check is satisfied:** the architect published at `00:42:09Z` and
+`release-publish.yaml` ran two seconds later as run `37553345299` (event
+`release`, ref `6.4.0`), completing 12/12. A user-authenticated `gh`
+publish fires the workflow exactly as the owner's click does.
 **Origin.** The owner, 2026-10-07: *"When I authorize the cut, you may
 publish GitHub release in addition to tagging."* The same wish they
 stated when RFC 081 was being written: *"I want it independent of my

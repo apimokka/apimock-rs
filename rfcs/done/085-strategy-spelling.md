@@ -1,7 +1,8 @@
 # RFC 085 — How a strategy is spelled, and a writer that cannot spell it
 
-**Status.** **Accepted — owner approved 2026-10-07: § 2 plus Option B**,
-the architect's recommendation. Ready for an implementer.
+**Status.** **Implemented — shipped in 6.4.0** (2026-10-07). Owner approved
+2026-10-07: § 2 plus Option B. Implemented at `b83b7b9`, review follow-ups
+at `591eeca`.
 **Tracks.** Configuration usability; a pre-existing library defect.
 Found by the dev team in task 019 (their Q1); the documentation half
 was found in the architect's review.

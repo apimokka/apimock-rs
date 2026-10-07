@@ -206,12 +206,12 @@ green on the tag, verified by run id, and recorded in
 `.git-exclude/release/<version>/` first. After publishing, the architect
 verifies both registries independently and reports.
 
-> **Owed on the first minor published this way:** confirm by run id that
-> `release-publish.yaml` fired on the architect's publish. GitHub
-> documents that a user-token event fires workflows; this project has not
-> yet observed it on an architect's publish. If it did not fire, nothing
-> reached a registry: the owner publishes that release from the UI, and
-> RFC 086 is revisited before it is used again.
+> **Confirmed on 6.4.0** (the first minor published this way): the
+> architect's `gh release edit 6.4.0 --draft=false --latest` at `00:42:09Z`
+> started `release-publish.yaml` two seconds later, run `37553345299`
+> (event `release`), which completed 12/12. Still confirm the run by id
+> after every publish. If one ever does not appear, nothing has reached a
+> registry, and the owner publishes from the UI.
 
 **The tier is classified and recorded for every release**, including the
 ones where it no longer decides who publishes.

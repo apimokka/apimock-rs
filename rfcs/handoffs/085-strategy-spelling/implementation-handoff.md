@@ -1,6 +1,6 @@
 # Handoff — RFC 085: accept a bare strategy name, and write only what loads
 
-**Governing RFC.** [085](../../accepted/085-strategy-spelling.md),
+**Governing RFC.** [085](../../done/085-strategy-spelling.md),
 **accepted 2026-10-07: § 2 plus Option B.** Options A, C, D, E and F are
 *not* in scope; E (a typed editor API) is explicitly deferred.
 **Milestone.** 6.4.0. Nothing is tagged, bumped or published (RFC 066 § 2).
