@@ -1,10 +1,5 @@
 # Migrating to 6.4.0
 
-**Filename and version number are a placeholder** — the release number is
-decided by the release process, not by this page (RFC 066 § 2). `6.4.0` is
-written here as the next minor after 6.3.0. Rename this file and its
-`SUMMARY.md` entry to match whatever the release actually is.
-
 **Nothing breaks.** This release only widens what loads; every
 configuration that loaded before loads the same way.
 
@@ -29,20 +24,26 @@ strategy = { weighted_random = {} }               # unchanged, and the same as t
 
 This works for `[service] strategy` and for a rule set's own `strategy`.
 
-**A typo now says what was wrong.** A name that is none of the five is
-refused with the five listed, where it used to give a message about serde
-variants:
+**A misspelled bare name is refused in apimock's own words.** 6.3.0
+already listed the five names, as serde's ``unknown variant `x`, expected
+one of …``. 6.4.0 says `strategy`, and lists them in the order the docs
+use:
 
 ```
 unknown strategy `weigthed_random`, expected one of `first_match`, `round_robin`, `uniform_random`, `weighted_random`, `priority`
 ```
 
-**What the editor writes.** `apimock set` never writes a strategy, so it
-does not apply there. A program built on `apimock-config` that chooses a
-strategy through `Workspace` used to write a file apimock itself could not
-load, for the three strategies above. It now writes the shortest spelling
+A misspelling *inside the table form* (`{ weigthed_random = {} }`) still
+gets serde's message, unchanged from 6.3.0. It lists the same five names.
+
+**What the editor writes.** `apimock set` has no option for choosing a
+strategy, so this applies only to programs built on `apimock-config`. Such
+a program, choosing a strategy through `Workspace`, used to write a file
+apimock itself could not load, for the three strategies above. It now writes the shortest spelling
 that loads back to the same strategy: the bare name when every option is at
-its default, the table when one is not.
+its default, the table when one is not. And choosing the strategy a file
+already has keeps its options. Choosing `weighted_random` again no longer
+drops a `seed = 7`.
 
 **An unrelated edit does not rewrite your strategy.** If a save does not
 change the strategy, the line stays exactly as you wrote it, in whichever

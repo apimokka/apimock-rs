@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.4.0] - 2026-10-07
+
+**Write a strategy by its name.** `strategy = "weighted_random"` now
+loads, as that strategy with its default options. A table is needed only
+to set an option. Nothing that loaded before stops loading, and the public
+API baselines are byte-identical to 6.3.0's.
+
+**Migrating:** [`docs/src/guides/migrating-to-6-4.md`](https://apimokka.github.io/apimock-rs/guides/migrating-to-6-4.html)
+— there is nothing to migrate; the page shows both spellings.
+
+### Added
+
+- **A bare strategy name loads** for `uniform_random`, `weighted_random`
+  and `priority`, as well as `first_match` and `round_robin`, both in
+  `[service] strategy` and in a rule set's own `strategy`. Before 6.4.0
+  those three loaded only as a table, even with no options
+  (`{ weighted_random = {} }`). The table form still works, and is what
+  sets a `seed` or a `tiebreaker`.
+- A misspelled bare name is refused as ``unknown strategy `x`, expected
+  one of …``, listing the five in the order the docs use.
+
+### Fixed
+
+- **A program built on `apimock-config` could write a strategy that
+  apimock would not load.** Choosing `uniform_random`, `weighted_random`
+  or `priority` through `Workspace` wrote the bare name, which 6.3.0 and
+  earlier refused to load. The writer now writes the shortest spelling that
+  loads back to the same strategy, keeping every option.
+- **Choosing the strategy a file already has keeps its options.** Before,
+  choosing `weighted_random` again on a file with `seed = 7` would have
+  dropped the seed.
+- **A save that does not change the strategy leaves its line exactly as
+  written**, in either spelling, comment included.
+
+`apimock set` has no option for choosing a strategy, so these fixes
+apply to programs built on `apimock-config`.
+
 ## [6.3.0] - 2026-10-07
 
 **`apimock set` no longer deletes your settings.** Every release from
